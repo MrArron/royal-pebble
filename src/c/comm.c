@@ -140,6 +140,8 @@ static void handle_begin(DictionaryIterator *iter, uint16_t slice_id) {
   find_str(iter, MESSAGE_KEY_day_status, s_day.status, sizeof(s_day.status));
   find_str(iter, MESSAGE_KEY_day_location, s_day.location, sizeof(s_day.location));
   find_str(iter, MESSAGE_KEY_ship_name, s_meta.ship_name, sizeof(s_meta.ship_name));
+  find_str(iter, MESSAGE_KEY_sail_port, s_meta.sail_port, sizeof(s_meta.sail_port));
+  s_meta.cruise_starred = (uint8_t)find_int(iter, MESSAGE_KEY_cruise_starred);
 
   // Tomorrow's card (an older phone sends none: DAY_NONE).
   s_tomorrow.kind = (DayKind)find_int_or(iter, MESSAGE_KEY_tmr_kind, DAY_NONE);

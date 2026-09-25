@@ -207,6 +207,119 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
   return y + 4;
 }
 
+// ---- Days to sail (docs/DESIGN_V1_1.md §8.2) --------------------------------
+
+// Before the cruise, Home counts the days itself from the sail date, so it
+// stays right without the phone until the embark day starts at 04:00.
+static bool sail_ahead(void) {
+  return data_ready() && data_day()->kind == DAY_NONE && data_day()->index < 0 &&
+         cruise_day_index(now_cruise()) < 0;
+}
+
+// Calendar days until the sail date: 1 the day before, 0 after midnight on it.
+static int days_to_sail(void) {
+  int32_t now = now_cruise();
+  return now >= 0 ? 0 : (int)((-now + MINUTES_PER_DAY - 1) / MINUTES_PER_DAY);
+}
+
+static const char *const WEEKDAYS[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+static const char *const MONTHS[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+// "Sat Mar 6 · Galveston", without the weekday when that doesn't fit.
+static void fmt_sail_line(char *buf, size_t size, GFont font, int width) {
+  // Month and day from days since 1970-01-01 (Howard Hinnant's civil_from_days).
+  int32_t z = data_meta()->sail_days + 719468;
+  int32_t era = (z >= 0 ? z : z - 146096) / 146097;
+  int32_t doe = z - era * 146097;
+  int32_t yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+  int32_t doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+  int32_t mp = (5 * doy + 2) / 153;
+  int day = (int)(doy - (153 * mp + 2) / 5 + 1);
+  int month = (int)(mp < 10 ? mp + 3 : mp - 9);
+  int weekday = (int)((data_meta()->sail_days % 7 + 11) % 7);  // 1970-01-01 was a Thursday
+
+  const char *port = data_meta()->sail_port;
+  const char *sep = port[0] ? " \xc2\xb7 " : "";
+  snprintf(buf, size, "%s %s %d%s%s", WEEKDAYS[weekday], MONTHS[month - 1], day, sep, port);
+  int w = graphics_text_layout_get_content_size(buf, font, GRect(0, 0, 400, 30),
+                                                GTextOverflowModeTrailingEllipsis,
+                                                GTextAlignmentLeft).w;
+  if (w > width) {
+    snprintf(buf, size, "%s %d%s%s", MONTHS[month - 1], day, sep, port);
+  }
+}
+
+static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int x, int y,
+                      int w, int h) {
+  graphics_context_set_text_color(ctx, color);
+  graphics_draw_text(ctx, text, font, GRect(x, y, w, h), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentLeft, NULL);
+}
+
+static void draw_sail_countdown(GContext *ctx, int width) {
+  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  GFont medium = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  int w = width - 2 * PAD;
+  int days = days_to_sail();
+  int y = 2;
+
+  draw_line(ctx, days > 1 ? "SAILS IN" : "SAILS", small, g_theme->muted, PAD, y, w, 18);
+  y += 16;
+  if (days > 1) {
+    char count[8];
+    snprintf(count, sizeof(count), "%d", days);
+    GFont big = fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS);
+    int count_w = graphics_text_layout_get_content_size(count, big, GRect(0, 0, w, 50),
+                                                        GTextOverflowModeFill,
+                                                        GTextAlignmentLeft).w;
+    draw_line(ctx, count, big, g_theme->text, PAD, y, count_w + 2, 50);
+    draw_line(ctx, "days", medium, g_theme->text, PAD + count_w + 6, y + 31, w - count_w - 6, 22);
+    y += 50;
+  } else {
+    draw_line(ctx, days == 1 ? "Tomorrow" : "Today", fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
+              g_theme->text, PAD, y - 4, w, 34);
+    y += 30;
+  }
+
+  char sail[48];
+  fmt_sail_line(sail, sizeof(sail), medium, w);
+  draw_line(ctx, sail, medium, g_theme->muted, PAD, y, w, 22);
+  y += 20;
+  if (data_meta()->ship_name[0]) {
+    draw_line(ctx, data_meta()->ship_name, small, g_theme->muted, PAD, y, w, 18);
+    y += 16;
+  }
+  draw_divider(ctx, y + 4, width);
+  y += 8;
+
+  // The last 3 days: the sync-before-departure reminder.
+  if (days <= 3) {
+    draw_line(ctx, "Sync before you leave", medium, g_theme->port_accent, PAD, y, w, 22);
+    y += 20;
+    draw_line(ctx, "Works offline after a full sync", small, g_theme->muted, PAD, y, w, 18);
+    y += 16;
+    const char *last_sync = data_my_info()->last_sync;
+    if (last_sync[0]) {
+      char line[40];
+      snprintf(line, sizeof(line), "Last sync %s", last_sync);
+      draw_line(ctx, line, small, g_theme->muted, PAD, y, w, 18);
+      y += 16;
+    }
+    y += 2;
+  }
+
+  uint8_t starred = data_meta()->cruise_starred;
+  if (starred == 0) {
+    draw_line(ctx, "Nothing starred yet", small, g_theme->muted, PAD, y, w, 18);
+  } else {
+    char line[32];
+    snprintf(line, sizeof(line), "%d starred so far", starred);
+    draw_star(ctx, GPoint(PAD + 6, y + 9), g_theme->sea_accent);
+    draw_line(ctx, line, small, g_theme->text, PAD + 16, y, w - 16, 18);
+  }
+}
+
 // Big muted message with a smaller line under it.
 static void draw_message(GContext *ctx, int width, const char *title, const char *hint) {
   graphics_context_set_text_color(ctx, g_theme->text);
@@ -227,6 +340,10 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
     draw_message(ctx, b.size.w, connected ? "Loading..." : "Phone not connected",
                  connected ? "Getting today's schedule from your phone."
                            : "Royal Pebble needs your phone nearby to load the schedule.");
+    return;
+  }
+  if (sail_ahead()) {
+    draw_sail_countdown(ctx, b.size.w);
     return;
   }
   if (cruise_day_index(now_cruise()) > day->index) {
@@ -260,9 +377,13 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
 static void apply_style(void) {
   const Day *day = data_day();
   window_set_background_color(s_window, g_theme->bg);
+  // The countdown names the ship and date itself, so the bar just says Home.
+  bool counting = sail_ahead();
   top_bar_set(s_top_bar, day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL,
-              data_ready() ? day->location
-                           : (connection_service_peek_pebble_app_connection() ? "Loading..." : "No phone"));
+              counting ? "Home"
+              : data_ready() ? day->location
+                             : (connection_service_peek_pebble_app_connection() ? "Loading..." : "No phone"));
+  top_bar_set_right(s_top_bar, counting || !data_ready() ? "" : day->status, false, 0);
 }
 
 static void up_click(ClickRecognizerRef recognizer, void *context) { info_window_push(); }
