@@ -6,7 +6,7 @@ Condensed standing in for Gothic.
 import os
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-OUT = os.path.join(REPO, "docs", "mockups", "phase2-draft")
+OUT = os.path.join(REPO, "docs", "mockups", "phase2")
 os.makedirs(OUT, exist_ok=True)
 
 LIGHT = dict(name="light", bg="#FFFFFF", text="#000000", muted="#555555", divider="#AAAAAA",
