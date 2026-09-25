@@ -475,6 +475,9 @@ turns them into mockups; the owner then confirms the open decisions at the end.
   `WatchCountdown` (far away and the last day), `WatchClashToast`,
   `WatchClashDetails`, `EventsClash` (phone), `WatchLastChance` (a Today row and
   event details).
+- **Draft mockups** (2026-09-24, not approved): `docs/mockups/phase2-draft/`.
+  Its `NOTES.md` lists shortened text, the new drawn `!` and a recommendation
+  for each open decision in 8.6; `preview.png` shows every screen.
 
 **What the watch knows today** (`docs/WATCH_PROTOCOL.md`):
 - The sail date, and today's type, location, status and all-aboard time.
@@ -639,3 +642,4 @@ Where it shows:
 | `WatchReminder.dc.html` | Reminder alert with route from the previous venue |
 | `WatchDirectory.dc.html`, `WatchDeck.dc.html` | Ship directory |
 | `WatchResNeeded/ResReserved/ResHome.dc.html` | Reserved states on the watch |
+| `../phase2-draft/*.dc.html` | §8 daily view drafts, not approved (see its `NOTES.md`) |
