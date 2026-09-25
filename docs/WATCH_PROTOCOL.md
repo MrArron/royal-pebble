@@ -78,7 +78,8 @@ Counts follow the Filters like the day's events (hidden categories left out
 unless starred). **Last chance** is the last performance of a featured show in
 the cruise, matched by title (trimmed, any case) across all days; a featured
 show on only once is an **only show** (`slice.finalShows`, §8.4). Of tomorrow's,
-the earliest last chance is sent, else the earliest only show.
+the earliest last chance is sent, else the earliest only show. Today's events
+carry the same as flags 16 and 32 (Packed events).
 
 String values are cut on the phone between UTF-8 characters to fit the watch's
 buffers.
@@ -105,7 +106,7 @@ The phone also sends a slice by itself whenever the app starts (`ready`).
 |---|---|
 | 4 | `start`: int32 cruise minutes, −1 for untimed |
 | 2 | `minutes`: uint16 duration, 0 if unknown |
-| 1 | `flags`: 1 starred, 2 featured, 4 reservation needed, 8 personal entry |
+| 1 | `flags`: 1 starred, 2 featured, 4 reservation needed, 8 personal entry, 16 last chance, 32 only show |
 | 4 | `where`: where the venue is (below) |
 | 1 | title length `n` (≤ 63) |
 | n | title, UTF-8 |

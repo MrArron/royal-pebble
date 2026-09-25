@@ -56,6 +56,13 @@ void draw_bang(GContext *ctx, GPoint top_left, int h, GColor color);
 // "1 clash" in Gothic 14 bold, port accent. Draws nothing and returns 0 when
 // there are none; otherwise returns the line height.
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);
+// "Last chance" or "Only show" for a featured show's final performance
+// (docs/DESIGN_V1_1.md §8.4), else NULL.
+const char *event_final_tag(const Event *e);
+// One line: `tag` in `tag_color`, then " · rest" in `rest_color` (just `rest`
+// when `tag` is NULL). The tag is never cut; the rest gets the ellipsis.
+void draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const char *rest,
+                      GColor rest_color, GFont font, GRect box);
 
 // ---- Where a venue is (docs/DESIGN_V1_1.md §2) ------------------------------
 

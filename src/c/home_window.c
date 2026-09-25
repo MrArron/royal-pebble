@@ -66,7 +66,7 @@ static int pick_next_items(int *out, int32_t now, int skip, bool starred_first) 
 }
 
 // Each item: "1:00p Title" (starred ones with a star), then the venue with
-// its deck in short form ("Studio B · 4 Mid"). Items that don't fit above
+// its deck in short form ("Studio B · 4 Mid"), after "Last chance · " when tagged. Items that don't fit above
 // `bottom` are left out.
 static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t now, int skip,
                             bool starred_first) {
@@ -78,7 +78,8 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
     Event *e = data_event(items[k]);
     char venue_line[VENUE_LEN + 20];
     fmt_venue_where(venue_line, sizeof(venue_line), e->venue, &e->where);
-    int height = 22 + (venue_line[0] ? 16 : 0);
+    const char *tag = event_final_tag(e);
+    int height = 22 + (venue_line[0] || tag ? 16 : 0);
     if (y + height > bottom) {
       break;
     }
@@ -97,10 +98,9 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
     }
     graphics_draw_text(ctx, e->title, bold, GRect(text_x, y, width - text_x - PAD, 22),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-    if (venue_line[0]) {
-      graphics_context_set_text_color(ctx, g_theme->muted);
-      graphics_draw_text(ctx, venue_line, small, GRect(PAD, y + 20, width - 2 * PAD, 18),
-                         GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+    if (venue_line[0] || tag) {
+      draw_tagged_line(ctx, tag, g_theme->port_accent, venue_line, g_theme->muted, small,
+                       GRect(PAD, y + 20, width - 2 * PAD, 18));
     }
     y += height + 2;
   }
@@ -204,6 +204,14 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
                      GTextAlignmentLeft, NULL);
   y += detail_size.h + 2;
   y += draw_where_short(ctx, false, g_theme->muted, PAD, y, width - 2 * PAD, &e->where);
+  const char *tag = event_final_tag(e);
+  if (tag) {
+    graphics_context_set_text_color(ctx, g_theme->port_accent);
+    graphics_draw_text(ctx, tag, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                       GRect(PAD, y, width - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 16;
+  }
   return y + 4;
 }
 

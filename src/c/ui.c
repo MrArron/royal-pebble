@@ -208,6 +208,32 @@ int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now) {
   return 16;
 }
 
+const char *event_final_tag(const Event *e) {
+  return (e->flags & EVENT_LAST_CHANCE) ? "Last chance"
+         : (e->flags & EVENT_ONLY_SHOW) ? "Only show" : NULL;
+}
+
+void draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const char *rest,
+                      GColor rest_color, GFont font, GRect box) {
+  int x = box.origin.x;
+  if (tag) {
+    int tag_w = graphics_text_layout_get_content_size(tag, font, box, GTextOverflowModeTrailingEllipsis,
+                                                      GTextAlignmentLeft).w;
+    graphics_context_set_text_color(ctx, tag_color);
+    graphics_draw_text(ctx, tag, font, GRect(x, box.origin.y, tag_w + 2, box.size.h),
+                       GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+    if (!rest[0]) {
+      return;
+    }
+    x += tag_w;
+  }
+  char buf[64];
+  snprintf(buf, sizeof(buf), "%s%s", tag ? " \xc2\xb7 " : "", rest);
+  graphics_context_set_text_color(ctx, rest_color);
+  graphics_draw_text(ctx, buf, font, GRect(x, box.origin.y, box.origin.x + box.size.w - x, box.size.h),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+}
+
 void draw_divider(GContext *ctx, int y, int width) {
   graphics_context_set_stroke_color(ctx, g_theme->divider);
   graphics_draw_line(ctx, GPoint(PAD, y), GPoint(width - PAD, y));

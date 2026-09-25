@@ -32,6 +32,8 @@ enum {
   EVENT_FEATURED = 1 << 1,
   EVENT_RESERVATION = 1 << 2,
   EVENT_PERSONAL = 1 << 3,
+  EVENT_LAST_CHANCE = 1 << 4,  // the last performance of a featured show (§8.4)
+  EVENT_ONLY_SHOW = 1 << 5,    // a featured show that is on only once
 };
 
 // Where a venue is, worked out by the phone (docs/WATCH_PROTOCOL.md, Packed
