@@ -204,6 +204,10 @@ void today_window_refresh(void) {
     rebuild_rows();
     menu_layer_reload_data(s_menu);
     menu_layer_set_selected_index(s_menu, MenuIndex(0, row_for_event(selected)), MenuRowAlignNone, false);
+    // The theme may have changed (settings page).
+    window_set_background_color(s_window, g_theme->bg);
+    menu_layer_set_normal_colors(s_menu, g_theme->bg, g_theme->text);
+    menu_layer_set_highlight_colors(s_menu, g_theme->cursor_bg, g_theme->cursor_text);
     layer_mark_dirty(s_top_bar);
   }
 }

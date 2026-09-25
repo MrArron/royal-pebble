@@ -431,9 +431,14 @@ void dir_window_push(int32_t ref, const char *title) {
 
 void dir_window_refresh(void) {
   for (int i = 0; i < s_depth; i++) {
-    if (s_views[i]->menu) {
-      layer_mark_dirty(s_views[i]->top_bar);
-      layer_mark_dirty(menu_layer_get_layer(s_views[i]->menu));
+    View *v = s_views[i];
+    if (v->menu) {
+      // The theme may have changed (settings page).
+      window_set_background_color(v->window, g_theme->bg);
+      menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);
+      menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
+      layer_mark_dirty(v->top_bar);
+      layer_mark_dirty(menu_layer_get_layer(v->menu));
     }
   }
 }

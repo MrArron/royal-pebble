@@ -183,6 +183,8 @@ static void window_unload(Window *window) {
 
 void notice_window_refresh(void) {
   if (s_layer) {
+    // The theme may have changed (settings page).
+    window_set_background_color(s_window, g_theme->bg);
     layer_mark_dirty(s_top_bar);
     layer_mark_dirty(s_layer);
   }
