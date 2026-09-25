@@ -141,6 +141,41 @@ test('settings page with ship venues embeds the table, edits and venue rules', f
   console.log('    page with venues ' + Math.round(html.length / 1024) + ' KB');
 });
 
+test('clashes: overlaps count, back-to-back and untimed do not', function() {
+  var c = config.findClashes([
+    {at: 780, minutes: 60},    // 0: 1:00p-2:00p
+    {at: 810, minutes: 60},    // 1: 1:30p-2:30p, overlaps 0 and 2
+    {at: 840, minutes: 30},    // 2: 2:00p, back-to-back with 0
+    {at: 900, minutes: 0},     // 3: 3:00p, no length: 30 minutes
+    {at: 925, minutes: 45},    // 4: 3:25p, inside 3's 30 minutes
+    {at: 930, minutes: 0},     // 5: 3:30p, back-to-back with 3
+    {at: null, minutes: 0}     // 6: untimed
+  ]);
+  assert.deepStrictEqual(c, [[1], [0, 2], [1], [4], [3, 5], [4], []]);
+});
+
+test('clashes: across midnight on one clock', function() {
+  // 11:30p-12:30a on the evening's date and 12:15a (after midnight, same date).
+  assert.deepStrictEqual(config.findClashes([{at: 1410, minutes: 60}, {at: 1455, minutes: 30}]), [[1], [0]]);
+  assert.deepStrictEqual(config.findClashes([{at: 1410, minutes: 60}, {at: 1470, minutes: 30}]), [[], []]);
+});
+
+test('settings page with starred overlaps builds with the clash filter code', function() {
+  var state = {ships: [], status: {}, me: {}, theme: 'light', reminderLead: 15,
+    cruise: {shipCode: 'HM', shipName: 'Harmony of the Seas', sailDate: '2027-03-06', days: 4, nights: 3,
+             published: true, events: 2, lastSync: 'today'},
+    schedule: {venues: ['Studio B', 'On Air'], cats: [['Shows', '']],
+               fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation'],
+               events: [['Ice Show', 0, 0, '2027-03-07', '13:30', 60, 0, 0],
+                        ['Trivia', 1, 0, '2027-03-07', '13:00', 45, 0, 0]]},
+    personal: [{title: 'Lunch', venue: '', date: '2027-03-07', time: '13:15', minutes: 30}],
+    api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('function findClashes(') !== -1, 'clash rule embedded');
+  assert.ok(html.indexOf("'clashes'") !== -1, 'Clashes filter');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {

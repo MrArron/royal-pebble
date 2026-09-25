@@ -126,6 +126,9 @@ var CSS = [
   '.ev{display:flex;gap:14px;align-items:center;padding:6px 8px 6px 20px}',
   '.ev .tm{width:56px;flex:none;font-weight:600;color:var(--on-surface-variant)}',
   '.ev .t{flex:1;min-width:0}.ev b{display:block;font-weight:600}',
+  '.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}',
+  '.schip.clash{display:inline-flex;align-items:center;gap:6px;background:var(--warning-container);',
+  'color:var(--on-warning-container)}.schip.clash svg{width:6px;height:14px;flex:none}',
   '.mine .ev{width:100%;padding:8px 0;background:none;color:inherit;text-align:left;min-height:48px}',
   '.mine .ev .tm{color:inherit;font-weight:700}',
   '.star{width:48px;height:48px;flex:none;border-radius:24px;background:transparent;',
@@ -301,6 +304,24 @@ var BODY = [
   '<button data-screen="me"><span class="ind"><svg viewBox="0 0 24 24"><path d="M12 12c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8',
   '-4 4 1.8 4 4 4zm0 2c-2.7 0-8 1.3-8 4v2h16v-2c0-2.7-5.3-4-8-4z"/></svg></span>Me</button></nav>'
 ].join('');
+
+// Clashes (docs/DESIGN_V1_1.md §8.3), worked out like the watch does: two
+// starred events or personal entries whose times overlap. One with no length
+// lasts 30 minutes; back-to-back isn't a clash. `items` are {at, minutes}, with
+// `at` in minutes on one clock (null when untimed). Returns, for each item, the
+// indexes of the items it clashes with, earliest first. Also runs in the page.
+function findClashes(items) {
+  var end = function(x) { return x.at + (x.minutes > 0 ? x.minutes : 30); };
+  return items.map(function(x, i) {
+    if (x.at === null) {
+      return [];
+    }
+    return items.map(function(o, j) { return j; }).filter(function(j) {
+      var o = items[j];
+      return j !== i && o.at !== null && x.at < end(o) && o.at < end(x);
+    }).sort(function(a, b) { return items[a].at - items[b].at; });
+  });
+}
 
 // Runs inside the page. `S` is the state embedded by buildPage(); `V` is
 // venues.js venueLib().
@@ -1089,7 +1110,7 @@ function pageMain(S, V) {
   var editing = null;    // index in personal, -1 for a new entry, null when closed
   var allEvents = [];
   var evDates = [];
-  var evDay = null;      // a date, or 'starred'
+  var evDay = null;      // a date, 'starred' or 'clashes'
   var STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 ' +
     '1-6.1-4.4-4.3 6.1-.9z"/></svg>';
 
@@ -1164,6 +1185,60 @@ function pageMain(S, V) {
     return starChanges.hasOwnProperty(key) ? starChanges[key] : !!savedStars[key];
   }
 
+  // Clash chips (docs/DESIGN_V1_1.md §8.3) by event key and by personal entry
+  // index, among upcoming starred events and timed entries. Worked out again
+  // whenever stars or entries change.
+  var clashes = {byKey: {}, byEntry: {}, count: 0};
+  var BANG_SVG = '<svg viewBox="0 0 8 24" aria-hidden="true"><rect x="1" y="0" width="6" height="15" rx="2" ' +
+    'fill="currentColor"/><rect x="1" y="18" width="6" height="6" rx="2" fill="currentColor"/></svg>';
+
+  // Minutes on one clock for all days (after-midnight times count on the evening's date).
+  function atMinutes(date, time) {
+    if (!time || !date) {
+      return null;
+    }
+    return Date.UTC(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10)) / 60000 + dayMinutes(time);
+  }
+
+  function updateClashes() {
+    var items = [];
+    allEvents.forEach(function(e) {
+      if (isStarred(e.key) && e.time && !isFinished(e.date, e.time, e.minutes)) {
+        items.push({at: atMinutes(e.date, e.time), minutes: e.minutes, title: e.title, time: e.time, key: e.key});
+      }
+    });
+    personal.forEach(function(p, i) {
+      if (p.time && !isFinished(p.date, p.time, p.minutes)) {
+        items.push({at: atMinutes(p.date, p.time), minutes: p.minutes || 0, title: p.title, time: p.time, entry: i});
+      }
+    });
+    var found = findClashes(items);
+    clashes = {byKey: {}, byEntry: {}, count: 0};
+    items.forEach(function(x, i) {
+      var others = found[i];
+      if (!others.length) {
+        return;
+      }
+      var o = items[others[0]];
+      var text = 'Clashes with ' + o.title + ' ' + shortClock(o.time) +
+        (others.length > 1 ? ' +' + (others.length - 1) + ' more' : '');
+      if (x.key !== undefined) {
+        clashes.byKey[x.key] = text;
+      } else {
+        clashes.byEntry[x.entry] = text;
+      }
+      clashes.count++;
+    });
+    if (evDay === 'clashes' && !clashes.count) {
+      evDay = 'starred';
+    }
+  }
+
+  function clashTag(text) {
+    return text ? '<span class="tags"><span class="schip clash">' + BANG_SVG + '<span>' + esc(text) +
+      '</span></span></span>' : '';
+  }
+
   function hiddenOnWatch(e) {
     return hidden.indexOf(e.cat[0]) !== -1 || hidden.indexOf(e.cat[0] + ' / ' + (e.cat[1] || '')) !== -1;
   }
@@ -1201,13 +1276,17 @@ function pageMain(S, V) {
         esc(shortClock(c.time)) : esc(c.venue)) + '</span>');
     }
     return '<div class="ev"><span class="tm">' + shortClock(e.time) + '</span><span class="t"><b>' + esc(e.title) +
-      '</b><span class="muted">' + bits.join(' &middot; ') + '</span></span>' +
+      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + clashTag(clashes.byKey[e.key]) + '</span>' +
       '<button class="star" data-act="star" data-key="' + esc(e.key) + '" aria-pressed="' + on + '" aria-label="' +
       (on ? 'Unstar ' : 'Star ') + esc(e.title) + '">' + STAR_SVG + '</button></div>';
   }
 
   function renderEvDays() {
-    $('evDays').innerHTML = (evDates.length ? [['starred', '&starf; Starred']] : []).concat(evDates.map(function(d) {
+    var lead = evDates.length ? [['starred', '&starf; Starred']] : [];
+    if (clashes.count) {
+      lead.push(['clashes', 'Clashes &middot; ' + clashes.count]);
+    }
+    $('evDays').innerHTML = lead.concat(evDates.map(function(d) {
       return [d, esc(dayLabel(d))];
     })).map(function(c) {
       return '<button class="fchip" data-day="' + c[0] + '" aria-pressed="' + (evDay === c[0]) + '">' + c[1] +
@@ -1216,7 +1295,7 @@ function pageMain(S, V) {
   }
 
   function entryForm() {
-    var p = editing >= 0 ? personal[editing] : {title: '', venue: '', date: evDay !== 'starred' && evDay || evDates[0],
+    var p = editing >= 0 ? personal[editing] : {title: '', venue: '', date: evDates.indexOf(evDay) !== -1 ? evDay : evDates[0],
                                                 time: '', minutes: 0};
     var lengths = [[0, 'Not set'], [30, '30 min'], [45, '45 min'], [60, '1 hour'], [90, '1.5 hours'], [120, '2 hours'],
                    [180, '3 hours']];
@@ -1252,15 +1331,17 @@ function pageMain(S, V) {
       html += entryForm();
     } else {
       var list = personal.map(function(p, i) { return {p: p, i: i}; }).filter(function(x) {
-        return (evDay === 'starred' || x.p.date === evDay) && !isFinished(x.p.date, x.p.time, x.p.minutes);
+        var shown = evDay === 'starred' || (evDay === 'clashes' ? !!clashes.byEntry[x.i] : x.p.date === evDay);
+        return shown && !isFinished(x.p.date, x.p.time, x.p.minutes);
       }).sort(function(a, b) {
         return a.p.date < b.p.date ? -1 : a.p.date > b.p.date ? 1 : dayMinutes(a.p.time) - dayMinutes(b.p.time);
       });
       html += list.length ? list.map(function(x) {
         return '<button class="ev" data-act="peEdit" data-i="' + x.i + '"><span class="tm">' + shortClock(x.p.time) +
           '</span><span class="t"><b>' + esc(x.p.title) + '</b><span class="muted">' +
-          [evDay === 'starred' ? esc(dayLabel(x.p.date)) : '', esc(x.p.venue),
-           x.p.minutes ? x.p.minutes + ' min' : ''].filter(Boolean).join(' &middot; ') + '</span></span></button>';
+          [evDates.indexOf(evDay) === -1 ? esc(dayLabel(x.p.date)) : '', esc(x.p.venue),
+           x.p.minutes ? x.p.minutes + ' min' : ''].filter(Boolean).join(' &middot; ') + '</span>' +
+          clashTag(clashes.byEntry[x.i]) + '</span></button>';
       }).join('') : '<p class="muted">Dinner reservations, shows you booked, meet-ups. They show on the watch ' +
         'with a reminder.</p>';
     }
@@ -1299,6 +1380,8 @@ function pageMain(S, V) {
         });
       } else if (evDay === 'starred') {
         list = upcoming.filter(function(e) { return isStarred(e.key); });
+      } else if (evDay === 'clashes') {
+        list = upcoming.filter(function(e) { return !!clashes.byKey[e.key]; });
       } else {
         list = upcoming.filter(function(e) {
           if (e.date !== evDay) {
@@ -1313,9 +1396,9 @@ function pageMain(S, V) {
       }
       var shown = list.slice(0, 150);
       html = shown.length ? '<div class="ev-list">' + shown.map(function(e) {
-        return eventRow(e, !!q || evDay === 'starred');
+        return eventRow(e, !!q || evDates.indexOf(evDay) === -1);
       }).join('') + '</div>' : '<div class="card"><p class="muted">' + (q ? 'No events match.' :
-        evDay === 'starred' ? 'Nothing starred coming up. Tap the star next to an event, here or on the watch ' +
+        evDay === 'clashes' ? 'No clashes left.' : evDay === 'starred' ? 'Nothing starred coming up. Tap the star next to an event, here or on the watch ' +
           '(hold Select).' : 'No events this day.') + '</p></div>';
       if (list.length > shown.length) {
         html += '<p class="help">Showing the first ' + shown.length + ' of ' + list.length + '. Search to narrow it down.</p>';
@@ -1338,6 +1421,7 @@ function pageMain(S, V) {
   }
 
   function renderEvents() {
+    updateClashes();
     renderEvDays();
     renderMine();
     renderEvList();
@@ -1375,6 +1459,18 @@ function pageMain(S, V) {
     }
     b.setAttribute('aria-pressed', String(on));
     b.setAttribute('aria-label', (on ? 'Unstar ' : 'Star ') + b.closest('.ev').querySelector('b').textContent);
+    // Clash chips change with the star; rows stay put so a star can be undone.
+    updateClashes();
+    renderEvDays();
+    renderMine();
+    Array.prototype.forEach.call($('evList').querySelectorAll('[data-act=star]'), function(sb) {
+      var t = sb.closest('.ev').querySelector('.t');
+      var old = t.querySelector('.tags');
+      if (old) {
+        t.removeChild(old);
+      }
+      t.insertAdjacentHTML('beforeend', clashTag(clashes.byKey[sb.getAttribute('data-key')]));
+    });
   });
 
   $('evMine').addEventListener('click', function(ev) {
@@ -1414,7 +1510,7 @@ function pageMain(S, V) {
       default:
         return;
     }
-    renderMine();
+    renderEvents();  // entries can clash with starred events
     if (editing !== null) {
       $('peTitle').focus();
     }
@@ -1910,7 +2006,7 @@ function buildPage(state, now) {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<title>Royal Pebble</title><style>' + CSS + '</style></head><body>' + BODY +
-    '<script>(' + pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')());</script>' +
+    '<script>' + findClashes.toString() + ';(' + pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')());</script>' +
     '</body></html>';
 }
 
@@ -1918,4 +2014,4 @@ function pageUrl(state, now) {
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(buildPage(state, now));
 }
 
-module.exports = {buildPage: buildPage, pageUrl: pageUrl};
+module.exports = {buildPage: buildPage, pageUrl: pageUrl, findClashes: findClashes};
