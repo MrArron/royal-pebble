@@ -57,7 +57,22 @@
       "dir_label",
       "dir_rel",
       "dir_where",
-      "dir_rows"
+      "dir_rows",
+      "arrive",
+      "depart",
+      "ship_name",
+      "tmr_kind",
+      "tmr_status",
+      "tmr_location",
+      "tmr_arrive",
+      "tmr_depart",
+      "tmr_all_aboard",
+      "tmr_starred",
+      "tmr_featured",
+      "tmr_first",
+      "tmr_first_start",
+      "tmr_last",
+      "tmr_last_kind"
     ],
     "resources": {
       "media": []

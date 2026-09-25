@@ -462,7 +462,8 @@ authoritative for this flag until it's acknowledged.
 
 **Status: as returned, approved 2026-09-24.** Written as the brief for a Claude
 Design pass; the mockups came back and the owner answered the open decisions
-(8.6). Nothing here is built yet. Item 9 (reservation reminder) is designed in
+(8.6). Item 5 (the morning summary) is built, except its clash line, which comes
+with item 7; items 6-8 aren't yet. Item 9 (reservation reminder) is designed in
 §5. The layouts below are the original text sketches at watch size; the mockups
 and their `NOTES.md` are the final word on text and layout.
 

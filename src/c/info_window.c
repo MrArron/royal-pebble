@@ -2,12 +2,35 @@
 #include "data.h"
 #include "ui.h"
 
-// My info: stateroom (with deck and stairs), muster station, ship clock note,
-// last sync, and the way into the ship directory (Select).
+// My info: the day's summary (docs/DESIGN_V1_1.md §8.1) at the top, then the
+// stateroom (with deck and stairs), muster station, ship clock note, last sync,
+// and the way into the ship directory. Up and Down move the cursor between the
+// summary and the directory, Select opens it; the screen scrolls up a little
+// for the directory.
 
 static Window *s_window;
 static Layer *s_top_bar;
 static Layer *s_body;
+
+enum { ROW_SUMMARY, ROW_DIRECTORY };
+static int s_cursor;
+#define SUMMARY_ROW_HEIGHT 32
+
+// A row Select opens, filled when under the cursor.
+static void draw_button(GContext *ctx, const char *text, int y, int width, bool selected) {
+  GRect button = GRect(PAD, y, width - 2 * PAD, 28);
+  if (selected) {
+    graphics_context_set_fill_color(ctx, g_theme->cursor_bg);
+    graphics_fill_rect(ctx, button, 4, GCornersAll);
+  } else {
+    graphics_context_set_stroke_color(ctx, g_theme->divider);
+    graphics_draw_round_rect(ctx, button, 4);
+  }
+  graphics_context_set_text_color(ctx, selected ? g_theme->cursor_text : g_theme->text);
+  graphics_draw_text(ctx, text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(button.origin.x + 8, button.origin.y + 2, button.size.w - 16, 22),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+}
 
 static void draw_label(GContext *ctx, const char *text, int y, int width) {
   graphics_context_set_text_color(ctx, g_theme->muted);
@@ -31,7 +54,19 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   const MyInfo *info = data_my_info();
   int w = b.size.w;
-  int y = 2;
+  bool summary = summary_available();
+  if (!summary) {
+    s_cursor = ROW_DIRECTORY;
+  }
+  // The content ends with the directory button, 202 px below the rows above.
+  int content = 202 + (summary ? SUMMARY_ROW_HEIGHT : 0);
+  int scroll = s_cursor == ROW_DIRECTORY && content > b.size.h ? content - b.size.h : 0;
+  int y = 2 - scroll;
+  if (summary) {
+    draw_button(ctx, summary_shows_tomorrow() ? "Tomorrow's summary" : "Today's summary", y, w,
+                s_cursor == ROW_SUMMARY);
+    y += SUMMARY_ROW_HEIGHT;
+  }
 
   draw_label(ctx, "STATEROOM", y, w);
   graphics_context_set_text_color(ctx, g_theme->text);
@@ -52,22 +87,29 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
 
   y = draw_row(ctx, "LAST SYNC", info->last_sync, y, w);
 
-  // Ship directory, drawn like a list row under the cursor: Select opens it.
-  GRect button = GRect(PAD, y + 2, w - 2 * PAD, 28);
-  graphics_context_set_fill_color(ctx, g_theme->cursor_bg);
-  graphics_fill_rect(ctx, button, 4, GCornersAll);
-  graphics_context_set_text_color(ctx, g_theme->cursor_text);
-  graphics_draw_text(ctx, "Ship directory", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(button.origin.x + 8, button.origin.y + 2, button.size.w - 16, 22),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  draw_button(ctx, "Ship directory", y + 2, w, s_cursor == ROW_DIRECTORY);
 }
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
-  dir_window_push(0, "Ship");
+  if (s_cursor == ROW_SUMMARY && summary_available()) {
+    summary_window_push(summary_shows_tomorrow(), false);
+  } else {
+    dir_window_push(0, "Ship");
+  }
+}
+
+static void move_click(ClickRecognizerRef recognizer, void *context) {
+  int cursor = click_recognizer_get_button_id(recognizer) == BUTTON_ID_UP ? ROW_SUMMARY : ROW_DIRECTORY;
+  if (cursor != s_cursor && (cursor == ROW_DIRECTORY || summary_available())) {
+    s_cursor = cursor;
+    layer_mark_dirty(s_body);
+  }
 }
 
 static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
+  window_single_click_subscribe(BUTTON_ID_UP, move_click);
+  window_single_click_subscribe(BUTTON_ID_DOWN, move_click);
 }
 
 static void window_load(Window *window) {
@@ -100,6 +142,7 @@ void info_window_refresh(void) {
 }
 
 void info_window_push(void) {
+  s_cursor = ROW_SUMMARY;
   s_window = window_create();
   window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){

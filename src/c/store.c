@@ -17,7 +17,7 @@
 // The first starred event or alert that doesn't fit is then the "cutoff": the
 // phone has to be back before then.
 
-#define STORE_VERSION 4  // 4: one packed blob, chosen by priority
+#define STORE_VERSION 5  // 4: one packed blob, chosen by priority; 5: summary fields
 #define STORE_MAX_KEYS 40
 #define STORE_MAX_BUDGET (STORE_MAX_KEYS * PERSIST_DATA_MAX_LENGTH)
 #define STORE_MIN_BUDGET (4 * PERSIST_DATA_MAX_LENGTH)
@@ -40,12 +40,29 @@ enum {
 // Header: int32 sail_days, uint8 bits (1 dark, 2 featured, 4 demo), uint8
 // reminder lead, uint16 slice id, int32 day index, uint8 day kind, int32
 // all-aboard, int16 local offset, int32 cutoff, uint8 alert count, uint8 event
-// count; then the day's status and location and My info's six texts.
-#define HEADER_FIXED 26
+// count, a spare byte; then for the summary int32 arrive and depart, and
+// tomorrow's uint8 kind, int32 arrive, depart, all-aboard and first start,
+// uint8 starred, featured and last kind. Then the texts: the day's status and
+// location, My info's six, the ship name, and tomorrow's status, location,
+// first and last.
+#define HEADER_FIXED 54
+#define HEADER_TEXTS 13
 
-static uint8_t s_blob[STORE_MAX_BUDGET];
+// On the heap, not static: the app's code, data and static buffers must stay
+// under 64 KB (the SDK stores that size in a uint16), and the heap has room.
+static uint8_t *s_blob;
 static int32_t s_cutoff = NO_TIME;
 static int s_length;
+
+static bool blob_ready(void) {
+  if (!s_blob) {
+    s_blob = malloc(STORE_MAX_BUDGET);
+    if (!s_blob) {
+      APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for the stored slice");
+    }
+  }
+  return s_blob != NULL;
+}
 
 int32_t store_cutoff(void) { return s_cutoff; }
 int store_saved_bytes(void) { return s_length; }
@@ -58,20 +75,28 @@ static int budget(void) {
 }
 
 static int info_size(const MyInfo *info, const Day *day) {
-  return HEADER_FIXED + 8 + codec_str_len(day->status, sizeof(day->status) - 1) +
+  const SliceMeta *meta = data_meta();
+  const Tomorrow *t = data_tomorrow();
+  return HEADER_FIXED + HEADER_TEXTS + codec_str_len(day->status, sizeof(day->status) - 1) +
          codec_str_len(day->location, sizeof(day->location) - 1) +
          codec_str_len(info->stateroom, sizeof(info->stateroom) - 1) +
          codec_str_len(info->deck, sizeof(info->deck) - 1) +
          codec_str_len(info->stairs, sizeof(info->stairs) - 1) +
          codec_str_len(info->muster, sizeof(info->muster) - 1) +
          codec_str_len(info->clock_note, sizeof(info->clock_note) - 1) +
-         codec_str_len(info->last_sync, sizeof(info->last_sync) - 1);
+         codec_str_len(info->last_sync, sizeof(info->last_sync) - 1) +
+         codec_str_len(meta->ship_name, sizeof(meta->ship_name) - 1) +
+         codec_str_len(t->status, sizeof(t->status) - 1) +
+         codec_str_len(t->location, sizeof(t->location) - 1) +
+         codec_str_len(t->first, sizeof(t->first) - 1) +
+         codec_str_len(t->last, sizeof(t->last) - 1);
 }
 
 static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   const SliceMeta *meta = data_meta();
   const Day *day = data_day();
   const MyInfo *info = data_my_info();
+  const Tomorrow *t = data_tomorrow();
   codec_write_int32(p, meta->sail_days);
   p[4] = (meta->dark_theme ? 1 : 0) | (meta->show_featured ? 2 : 0) | (meta->is_demo ? 4 : 0);
   p[5] = meta->reminder_lead;
@@ -86,6 +111,16 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   p[23] = (uint8_t)alarms;
   p[24] = (uint8_t)events;
   p[25] = 0;  // spare
+  codec_write_int32(p + 26, day->arrive);
+  codec_write_int32(p + 30, day->depart);
+  p[34] = (uint8_t)t->kind;
+  codec_write_int32(p + 35, t->arrive);
+  codec_write_int32(p + 39, t->depart);
+  codec_write_int32(p + 43, t->all_aboard);
+  codec_write_int32(p + 47, t->first_start);
+  p[51] = t->starred;
+  p[52] = t->featured;
+  p[53] = t->last_kind;
   p += HEADER_FIXED;
   p = codec_write_str(p, day->status, sizeof(day->status) - 1);
   p = codec_write_str(p, day->location, sizeof(day->location) - 1);
@@ -94,7 +129,12 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   p = codec_write_str(p, info->stairs, sizeof(info->stairs) - 1);
   p = codec_write_str(p, info->muster, sizeof(info->muster) - 1);
   p = codec_write_str(p, info->clock_note, sizeof(info->clock_note) - 1);
-  return codec_write_str(p, info->last_sync, sizeof(info->last_sync) - 1);
+  p = codec_write_str(p, info->last_sync, sizeof(info->last_sync) - 1);
+  p = codec_write_str(p, meta->ship_name, sizeof(meta->ship_name) - 1);
+  p = codec_write_str(p, t->status, sizeof(t->status) - 1);
+  p = codec_write_str(p, t->location, sizeof(t->location) - 1);
+  p = codec_write_str(p, t->first, sizeof(t->first) - 1);
+  return codec_write_str(p, t->last, sizeof(t->last) - 1);
 }
 
 static void earlier(int32_t *cutoff, int32_t t) {
@@ -118,7 +158,7 @@ static bool event_wanted(const Event *e, int32_t now) {
 }
 
 void store_save(void) {
-  if (!data_ready()) {
+  if (!data_ready() || !blob_ready()) {
     return;
   }
   int32_t now = now_cruise();
@@ -253,7 +293,7 @@ bool store_load(void) {
     return false;
   }
   int length = persist_read_int(KEY_LENGTH);
-  if (length < HEADER_FIXED || length > STORE_MAX_BUDGET) {
+  if (length < HEADER_FIXED || length > STORE_MAX_BUDGET || !blob_ready()) {
     return false;
   }
   for (int start = 0, k = 0; start < length; start += PERSIST_DATA_MAX_LENGTH, k++) {
@@ -279,6 +319,18 @@ bool store_load(void) {
     .kind = (DayKind)p[12],
     .all_aboard = codec_read_int32(p + 13),
     .local_offset = (int16_t)(p[17] | (p[18] << 8)),
+    .arrive = codec_read_int32(p + 26),
+    .depart = codec_read_int32(p + 30),
+  };
+  Tomorrow tomorrow = {
+    .kind = (DayKind)p[34],
+    .arrive = codec_read_int32(p + 35),
+    .depart = codec_read_int32(p + 39),
+    .all_aboard = codec_read_int32(p + 43),
+    .first_start = codec_read_int32(p + 47),
+    .starred = p[51],
+    .featured = p[52],
+    .last_kind = p[53],
   };
   s_cutoff = codec_read_int32(p + 19);
   int alarms = p[23] < MAX_ALARMS ? p[23] : MAX_ALARMS;
@@ -292,7 +344,12 @@ bool store_load(void) {
       !codec_read_str(&p, end, info.stairs, sizeof(info.stairs)) ||
       !codec_read_str(&p, end, info.muster, sizeof(info.muster)) ||
       !codec_read_str(&p, end, info.clock_note, sizeof(info.clock_note)) ||
-      !codec_read_str(&p, end, info.last_sync, sizeof(info.last_sync))) {
+      !codec_read_str(&p, end, info.last_sync, sizeof(info.last_sync)) ||
+      !codec_read_str(&p, end, meta.ship_name, sizeof(meta.ship_name)) ||
+      !codec_read_str(&p, end, tomorrow.status, sizeof(tomorrow.status)) ||
+      !codec_read_str(&p, end, tomorrow.location, sizeof(tomorrow.location)) ||
+      !codec_read_str(&p, end, tomorrow.first, sizeof(tomorrow.first)) ||
+      !codec_read_str(&p, end, tomorrow.last, sizeof(tomorrow.last))) {
     return false;
   }
   int a = 0;
@@ -303,7 +360,7 @@ bool store_load(void) {
   while (e < events && codec_read_event(&p, end, data_event(e))) {
     e++;
   }
-  data_commit(slice_id, &meta, &day, &info, e, a);
+  data_commit(slice_id, &meta, &day, &tomorrow, &info, e, a);
   APP_LOG(APP_LOG_LEVEL_INFO, "Loaded stored slice: %d events, %d alerts, %d bytes (storage max %d)",
           e, a, length, (int)persist_get_max_size());
   return true;

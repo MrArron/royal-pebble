@@ -24,6 +24,7 @@ static void refresh_all(void) {
   details_window_refresh();
   alert_window_refresh();
   notice_window_refresh();
+  summary_window_refresh();
 }
 
 // After each save: tell the phone what didn't fit (for its settings page), and
@@ -70,6 +71,8 @@ static void slice_received(void) {
   store_save();
   alarms_schedule();
   refresh_all();
+  // A launch with yesterday's slice (or none) shows the summary once today's arrives.
+  summary_check();
   stars_send();
   after_save();
 }
@@ -114,9 +117,13 @@ static void init(void) {
 
   WakeupId id;
   int32_t cookie;
-  if (launch_reason() == APP_LAUNCH_WAKEUP && wakeup_get_launch_event(&id, &cookie)) {
+  AppLaunchReason reason = launch_reason();
+  if (reason == APP_LAUNCH_WAKEUP && wakeup_get_launch_event(&id, &cookie)) {
     alert_window_push(cookie, true);
   }
+  // Only an open by the user uses up the day's summary, not an alert.
+  summary_set_user_open(reason == APP_LAUNCH_USER || reason == APP_LAUNCH_QUICK_LAUNCH);
+  summary_check();
   alarms_schedule();
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }

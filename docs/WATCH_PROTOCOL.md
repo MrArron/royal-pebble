@@ -40,7 +40,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 
 | `msg_type` | Name | Other keys |
 |---|---|---|
-| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `reminder_lead` (minutes), `alarm_count` |
+| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `ship_name`, `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
 | 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_clock`, `info_sync` (display strings) |
 | 3 | EVENTS | `event_first` (index of the first event in this chunk), `events` (bytes, below) |
 | 5 | ALARMS | `alarm_first`, `alarms` (bytes, below) |
@@ -51,6 +51,33 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
 e.g. `SAILS MAR 6` or `CRUISE ENDED`.
+
+`arrive` and `depart` are the itinerary's port-local times turned into ship time
+(minus the day's offset), for the morning summary; a departure after midnight
+is a larger number, as for all-aboard. None on sea days, no arrival on the
+embark day and no departure on the debark day.
+
+**Tomorrow's block** (the evening's tomorrow card, `docs/DESIGN_V1_1.md` §8.1;
+the watch only has today's events, so the phone works it out):
+
+| Key | Value |
+|---|---|
+| `tmr_kind` | the next watch day's `day_kind`; 2 when it is outside the cruise, and the rest is then empty or −1 |
+| `tmr_status`, `tmr_location` | as `day_status` and `day_location` |
+| `tmr_arrive`, `tmr_depart`, `tmr_all_aboard` | as for today, cruise minutes, −1 none |
+| `tmr_starred` | starred events and personal entries (≤ 255) |
+| `tmr_featured` | featured events (≤ 255) |
+| `tmr_first`, `tmr_first_start` | the first timed one of them: title (≤ 39 bytes) and start (−1 none) |
+| `tmr_last`, `tmr_last_kind` | a show to catch: title (≤ 39 bytes) and 1 last chance, 2 only show, 0 none |
+
+Counts follow the Filters like the day's events (hidden categories left out
+unless starred). **Last chance** is the last performance of a featured show in
+the cruise, matched by title (trimmed, any case) across all days; a featured
+show on only once is an **only show** (`slice.finalShows`, §8.4). Of tomorrow's,
+the earliest last chance is sent, else the earliest only show.
+
+String values are cut on the phone between UTF-8 characters to fit the watch's
+buffers.
 
 ### Watch → phone
 
@@ -242,9 +269,12 @@ The watch saves what it needs without the phone after every slice and star chang
 (`src/c/store.c`), and loads it at launch. It is one blob in the packed layouts
 above, spread over 256-byte values (keys 40 on):
 
-1. Header (26 bytes: sail date, settings bits, reminder lead, slice id, day
-   index and kind, all-aboard, local offset, cutoff, alert and event counts),
-   then the day's status and location and My info's six texts.
+1. Header (54 bytes: sail date, settings bits, reminder lead, slice id, day
+   index and kind, all-aboard, local offset, cutoff, alert and event counts,
+   then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
+   first start, starred and featured counts and last kind), then the day's
+   status and location, My info's six texts, the ship name, and tomorrow's
+   status, location, first and last.
 2. Alerts, then events, each as packed above, in time order.
 
 The blob's budget follows `persist_get_max_size()`: the limit minus 1.5 kB kept
@@ -270,12 +300,28 @@ the one shown has passed (the last one shown is kept in key 5). It also sends
 SAVED, and the phone's settings page shows the cutoff while it is ahead, plus
 how much storage the saved schedule uses.
 
-The storage has a version (4 since the blob); a different version is ignored and
-the watch waits for the phone. With the phone
+The storage has a version (4 since the blob, 5 with the summary fields); a
+different version is ignored and the watch waits for the phone. With the phone
 away the app still shows the countdown and next events, and alerts keep firing.
 After the 04:00 rollover without a new slice, Home says to connect the phone
 instead of showing yesterday. Stars made on a stored slice are queued like any
 other (see Star changes) and reach the phone once it is back.
+
+## Morning summary
+
+The summary card (`src/c/summary_window.c`, `docs/DESIGN_V1_1.md` §8.1) is
+drawn from the stored slice, so it works without the phone. It replaces Home on
+the first user open (`APP_LAUNCH_USER` or quick launch, not an alert wakeup or
+an install) of each watch day once the slice is today's; from 20:00 that first
+open shows tomorrow's card instead (none on the last evening). A launch with
+yesterday's slice shows it when today's arrives, if Home is still on top.
+Persistent key 6 holds the last card shown by itself: the sail date's days and
+`watch day * 2`, plus 1 for tomorrow's card. My info's top row reopens it any
+time (`Tomorrow's summary` from 20:00).
+
+Today's counts come from the day's events on the watch, so stars made on the
+watch count. On a slice loaded from storage, finished events aren't there, so
+the count covers the rest of the day.
 
 ## Ship directory
 

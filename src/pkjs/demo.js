@@ -49,6 +49,12 @@ var SEA_EVENTS = [
   ['Silent Disco', 'Boardwalk', 4, 330, 90, 0, 0, 0]
 ];
 
+// Tomorrow's events, as above but with a clock time instead of an offset.
+var TOMORROW_EVENTS = [
+  ['Sunrise Pilates', 'Solarium', 3, '08:30', 45, 0, 0, 1],
+  ['Mamma Mia!', 'Royal Theater', 0, '20:00', 120, 1, 1, 0]
+];
+
 function pad2(n) {
   return (n < 10 ? '0' : '') + n;
 }
@@ -110,6 +116,19 @@ function make(now, variant) {
       stars[slice.starKey(e[0], date, time, e[1])] = true;
     }
     return [e[0], venues.indexOf(e[1]), e[2], date, time, e[4], e[5], e[6]];
+  });
+  // Tomorrow, for the evening's tomorrow card: a starred class, and a featured
+  // show that is the sea day's show again (a last chance) or, on port
+  // variants, its only showing.
+  var tomorrow = slice.isoFromDays(nowDays + 1);
+  TOMORROW_EVENTS.forEach(function(e) {
+    if (venues.indexOf(e[1]) === -1) {
+      venues.push(e[1]);
+    }
+    if (e[7]) {
+      stars[slice.starKey(e[0], tomorrow, e[3], e[1])] = true;
+    }
+    events.push([e[0], venues.indexOf(e[1]), e[2], tomorrow, e[3], e[4], e[5], e[6]]);
   });
   if (alertTest) {
     // A starred show ending 7 minutes before the class, so the reminder shows

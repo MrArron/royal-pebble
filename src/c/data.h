@@ -64,8 +64,34 @@ typedef struct {
   char status[16];       // "DOCKED", "AT SEA", "SAILS MAR 6"
   char location[32];     // "St. Thomas", "At Sea"
   int32_t all_aboard;    // cruise minutes; NO_TIME when there is none
+  int32_t arrive;        // cruise minutes, ship time; NO_TIME when there is none
+  int32_t depart;        // cruise minutes, ship time; NO_TIME when there is none
   int16_t local_offset;  // local time = ship time + offset (minutes)
 } Day;
+
+// What the show to catch tomorrow is (Tomorrow.last_kind).
+typedef enum {
+  FINAL_NONE = 0,
+  FINAL_LAST_CHANCE = 1,  // the last performance of a featured show
+  FINAL_ONLY_SHOW = 2,    // a featured show that is on only once
+} FinalKind;
+
+// The next watch day, for the evening's tomorrow card (docs/DESIGN_V1_1.md
+// §8.1), worked out by the phone since the watch only has today's events.
+typedef struct {
+  DayKind kind;              // DAY_NONE: tomorrow is outside the cruise
+  char status[16];           // "DOCKED", "DEBARK"
+  char location[32];
+  int32_t arrive;            // cruise minutes, ship time; NO_TIME when none
+  int32_t depart;
+  int32_t all_aboard;
+  int32_t first_start;       // the first timed starred item; NO_TIME when none
+  uint8_t starred;           // starred events and personal entries
+  uint8_t featured;
+  uint8_t last_kind;         // FinalKind
+  char first[SHORT_TITLE_LEN];
+  char last[SHORT_TITLE_LEN];  // a show to catch (last_kind)
+} Tomorrow;
 
 typedef struct {
   char stateroom[12];
@@ -156,10 +182,12 @@ typedef struct {
   bool is_demo;
   bool from_storage;       // loaded from the watch, not fresh from the phone
   uint8_t reminder_lead;   // minutes before starred events
+  char ship_name[32];
 } SliceMeta;
 
 bool data_ready(void);
 const Day *data_day(void);
+const Tomorrow *data_tomorrow(void);
 const MyInfo *data_my_info(void);
 const SliceMeta *data_meta(void);
 uint16_t data_slice_id(void);
@@ -170,8 +198,8 @@ Alarm *data_alarm(int index);
 
 // Replaces the slice (called when a complete slice has arrived from the phone
 // or was loaded from storage).
-void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const MyInfo *info,
-                 int event_count, int alarm_count);
+void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const Tomorrow *tomorrow,
+                 const MyInfo *info, int event_count, int alarm_count);
 
 // Adds or removes the reminder for a starred event (kept sorted by time).
 void data_set_reminder(const Event *e, bool on);

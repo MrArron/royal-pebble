@@ -33,6 +33,25 @@ function utf8(text, max) {
   return out;
 }
 
+// `text` cut at a character boundary to at most `max` UTF-8 bytes, for string
+// values the watch copies into fixed buffers.
+function cutText(text, max) {
+  var bytes = 0;
+  var i = 0;
+  text = text || '';
+  while (i < text.length) {
+    var c = text.charCodeAt(i);
+    var pair = c >= 0xD800 && c <= 0xDBFF && i + 1 < text.length;
+    var n = pair ? 4 : c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+    if (bytes + n > max) {
+      break;
+    }
+    bytes += n;
+    i += pair ? 2 : 1;
+  }
+  return text.slice(0, i);
+}
+
 var WHERE_ASHORE = 4;
 var WHERE_REL = 8;
 
@@ -181,7 +200,7 @@ function encodeStarChange(c) {
 
 module.exports = {packEvents: packEvents, packAlarms: packAlarms, packNotices: packNotices,
                   encodeEvent: encodeEvent, encodeAlarm: encodeAlarm, encodeWhere: encodeWhere,
-                  encodeNotice: encodeNotice, utf8: utf8,
+                  encodeNotice: encodeNotice, utf8: utf8, cutText: cutText,
                   decodeStarChanges: decodeStarChanges, encodeStarChange: encodeStarChange,
                   TITLE_MAX: TITLE_MAX, VENUE_MAX: VENUE_MAX,
                   ALARM_TITLE_MAX: ALARM_TITLE_MAX, ALARM_VENUE_MAX: ALARM_VENUE_MAX,

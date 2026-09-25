@@ -210,6 +210,8 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
       status: before ? 'SAILS ' + MONTHS[sail.m - 1] + ' ' + sail.d : 'CRUISE ENDED',
       location: (bundle.ship && bundle.ship.name) || 'Your cruise',
       allAboard: NO_TIME,
+      arrive: NO_TIME,
+      depart: NO_TIME,
       localOffset: 0
     };
   }
@@ -229,12 +231,25 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
     }
   }
 
+  // Arrival and departure for the morning summary, in ship time like
+  // all-aboard (a departure after midnight is a larger number).
+  var arrive = NO_TIME;
+  var departShip = NO_TIME;
+  if (it.type !== 'CRUISING') {
+    var arr = minutesFromHhmm(it.arrive);
+    var dep = afterMidnight(minutesFromHhmm(it.depart), arr);
+    arrive = arr === null ? NO_TIME : dayIndex * MINUTES_PER_DAY + arr - offset;
+    departShip = dep === null ? NO_TIME : dayIndex * MINUTES_PER_DAY + dep - offset;
+  }
+
   return {
     date: date,
     kind: it.type === 'CRUISING' ? DAY_SEA : DAY_PORT,
     status: dayStatus(it.type),
     location: it.type === 'CRUISING' ? 'At Sea' : (shortPort(it.port) || 'Port'),
     allAboard: allAboard,
+    arrive: arrive,
+    depart: departShip,
     localOffset: offset
   };
 }
@@ -498,7 +513,7 @@ function scheduleEvents(bundle) {
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
   return (sched.events || []).map(function(row) {
     var e = {title: row[f.title], venue: (sched.venues || [])[row[f.venue]] || '', date: row[f.date],
-             time: row[f.time] || null, minutes: row[f.minutes] || 0};
+             time: row[f.time] || null, minutes: row[f.minutes] || 0, featured: !!row[f.featured]};
     e.key = starKey(e.title, e.date, e.time, e.venue);
     return e;
   });
@@ -628,6 +643,77 @@ function buildNotices(sailDate, changes) {
       oldVenue: moved && c.to.venue !== c.venue ? c.venue : ''
     };
   });
+}
+
+// The last performance of each featured show in the cruise, matched by title
+// across all days (docs/DESIGN_V1_1.md §8.4): {starKey: FINAL_LAST_CHANCE, or
+// FINAL_ONLY_SHOW when the show is on only once}. Personal entries and
+// unfeatured events never get one.
+var FINAL_LAST_CHANCE = 1;
+var FINAL_ONLY_SHOW = 2;
+
+function finalShows(bundle) {
+  var sailDays = daysFromIso(bundle.sailDate);
+  var byTitle = {};
+  scheduleEvents(bundle).forEach(function(e) {
+    if (!e.featured) {
+      return;
+    }
+    var t = (e.title || '').trim().toLowerCase();
+    var shows = byTitle[t] = byTitle[t] || {};
+    shows[e.key] = eventStart(sailDays, e.date, e.time);
+  });
+  var out = {};
+  Object.keys(byTitle).forEach(function(t) {
+    var keys = Object.keys(byTitle[t]);
+    var last = keys[0];
+    keys.forEach(function(k) {
+      if (byTitle[t][k] > byTitle[t][last]) {
+        last = k;
+      }
+    });
+    out[last] = keys.length === 1 ? FINAL_ONLY_SHOW : FINAL_LAST_CHANCE;
+  });
+  return out;
+}
+
+// Tomorrow's card for the evening summary (docs/DESIGN_V1_1.md §8.1): the
+// day, how many starred events and personal entries it holds and the first
+// timed one, how many featured events, and a show to catch (`last`, with
+// `lastKind` a FINAL_ value, 0 none): a last chance before an only show, the
+// earliest of each.
+function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
+  var day = buildDay(bundle, settings, dayIndex + 1, sailDays);
+  var t = {kind: day.kind, status: '', location: '', arrive: NO_TIME, depart: NO_TIME,
+           allAboard: NO_TIME, starred: 0, featured: 0, first: '', firstStart: NO_TIME,
+           last: '', lastKind: 0};
+  if (day.kind === DAY_NONE) {
+    return t;
+  }
+  t.status = day.status;
+  t.location = day.location;
+  t.arrive = day.arrive;
+  t.depart = day.depart;
+  t.allAboard = day.allAboard;
+  var finals = finalShows(bundle);
+  buildEvents(bundle, settings, stars, dayIndex + 1, sailDays).forEach(function(e) {
+    if (e.flags & (FLAG_STARRED | FLAG_PERSONAL)) {
+      t.starred++;
+      if (t.firstStart === NO_TIME && e.start !== NO_TIME) {
+        t.first = e.title;
+        t.firstStart = e.start;
+      }
+    }
+    if (e.flags & FLAG_FEATURED) {
+      t.featured++;
+    }
+    var kind = finals[e.key];
+    if (kind && (!t.lastKind || kind < t.lastKind)) {
+      t.last = e.title;
+      t.lastKind = kind;
+    }
+  });
+  return t;
 }
 
 function formatSync(iso) {
@@ -767,6 +853,8 @@ function buildSlice(bundle, settings, stars, now, testAt) {
     sailDate: bundle.sailDate,
     dayIndex: dayIndex,
     day: buildDay(bundle, settings, dayIndex, sailDays),
+    tomorrow: buildTomorrow(bundle, settings, stars, dayIndex, sailDays),
+    shipName: (bundle.ship && bundle.ship.name) || '',
     events: buildEvents(bundle, settings, stars, dayIndex, sailDays),
     alarms: buildAlarms(bundle, settings, stars, now, testAt),
     reminderLead: [5, 15, 30].indexOf(settings.reminderLead) !== -1 ? settings.reminderLead : 15,
@@ -799,6 +887,10 @@ module.exports = {
   NOTICE_MOVED: NOTICE_MOVED,
   NOTICE_CANCELLED: NOTICE_CANCELLED,
   NOTICE_CHECK: NOTICE_CHECK,
+  FINAL_LAST_CHANCE: FINAL_LAST_CHANCE,
+  FINAL_ONLY_SHOW: FINAL_ONLY_SHOW,
+  finalShows: finalShows,
+  buildTomorrow: buildTomorrow,
   buildEvents: buildEvents,
   buildAlarms: buildAlarms,
   reconcileStars: reconcileStars,
