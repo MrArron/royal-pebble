@@ -50,6 +50,12 @@ void top_bar_destroy(Layer *bar);
 
 void draw_star(GContext *ctx, GPoint center, GColor color);
 void draw_divider(GContext *ctx, int y, int width);
+// Drawn "!" clash marker (docs/mockups/phase2/NOTES.md): a bar and a dot, `h`
+// tall (12 beside Gothic 18, 24 on the toast).
+void draw_bang(GContext *ctx, GPoint top_left, int h, GColor color);
+// "1 clash" in Gothic 14 bold, port accent. Draws nothing and returns 0 when
+// there are none; otherwise returns the line height.
+int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);
 
 // ---- Where a venue is (docs/DESIGN_V1_1.md §2) ------------------------------
 

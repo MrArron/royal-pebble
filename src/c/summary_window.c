@@ -219,8 +219,8 @@ static void draw_today_plan(GContext *ctx, int y, int w, int bottom, bool sea) {
     fmt_clock(time_buf, sizeof(time_buf), e->start);
     if (!sea) {
       snprintf(buf, sizeof(buf), "%s %s %s", before ? "Next" : "First", time_buf, e->title);
-      line(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 16);
-      return;
+      y = line(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 16);
+      break;
     }
     char venue_line[VENUE_LEN + 20];
     fmt_venue_where(venue_line, sizeof(venue_line), e->venue, &e->where);
@@ -233,6 +233,10 @@ static void draw_today_plan(GContext *ctx, int y, int w, int bottom, bool sea) {
     if (venue_line[0]) {
       y = line(ctx, venue_line, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 3, w, 16);
     }
+  }
+  // "1 clash" (item 7), when there's room.
+  if (y + 14 <= bottom) {
+    draw_clash_count(ctx, PAD, y - 2, w, now);
   }
 }
 

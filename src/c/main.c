@@ -40,10 +40,15 @@ static void after_save(void) {
   }
 }
 
-void toggle_star(int event_index) {
+int toggle_star(int event_index) {
   Event *e = data_event(event_index);
   e->flags ^= EVENT_STARRED;
   bool on = (e->flags & EVENT_STARRED) != 0;
+  // A clash is a warning, not a block: the star is still made.
+  int clash = -1;
+  if (on) {
+    data_clashes_with(event_index, now_cruise(), &clash);
+  }
   if (!(e->flags & EVENT_PERSONAL)) {
     data_set_reminder(e, on);
   }
@@ -52,9 +57,14 @@ void toggle_star(int event_index) {
   stars_send();
   store_save();
   alarms_schedule();
-  vibes_short_pulse();
+  if (clash >= 0) {
+    vibes_double_pulse();
+  } else {
+    vibes_short_pulse();
+  }
   refresh_all();
   after_save();
+  return clash;
 }
 
 void demo_next(void) {

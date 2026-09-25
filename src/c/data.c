@@ -129,6 +129,56 @@ bool event_is_finished(const Event *e, int32_t now) {
   return (e->minutes > 0 ? event_end(e) : e->start + FINISHED_GRACE) <= now;
 }
 
+bool event_can_clash(const Event *e) {
+  return (e->flags & (EVENT_STARRED | EVENT_PERSONAL)) && event_is_timed(e);
+}
+
+static int32_t clash_end(const Event *e) {
+  return e->start + (e->minutes > 0 ? e->minutes : FINISHED_GRACE);
+}
+
+static bool overlap(const Event *a, const Event *b) {
+  return a->start < clash_end(b) && b->start < clash_end(a);
+}
+
+static bool clash_candidate(const Event *e, int32_t now) {
+  return event_can_clash(e) && !event_is_finished(e, now);
+}
+
+int data_clashes_with(int index, int32_t now, int *first) {
+  if (first) {
+    *first = -1;
+  }
+  const Event *e = &s_events[index];
+  if (!clash_candidate(e, now)) {
+    return 0;
+  }
+  int n = 0;
+  for (int i = 0; i < s_event_count; i++) {
+    const Event *o = &s_events[i];
+    if (i != index && clash_candidate(o, now) && overlap(e, o)) {
+      // Events are sorted by start, so the first found is the earliest.
+      if (n++ == 0 && first) {
+        *first = i;
+      }
+    }
+  }
+  return n;
+}
+
+int data_clash_count(int32_t now) {
+  int n = 0;
+  for (int i = 0; i < s_event_count; i++) {
+    if (!clash_candidate(&s_events[i], now)) {
+      continue;
+    }
+    for (int j = i + 1; j < s_event_count; j++) {
+      n += clash_candidate(&s_events[j], now) && overlap(&s_events[i], &s_events[j]);
+    }
+  }
+  return n;
+}
+
 // Days since 1970-01-01 (Howard Hinnant's algorithm; the phone uses the same).
 int32_t days_from_civil(int y, int m, int d) {
   y -= m <= 2;

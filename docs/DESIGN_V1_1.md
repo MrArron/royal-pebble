@@ -462,8 +462,8 @@ authoritative for this flag until it's acknowledged.
 
 **Status: as returned, approved 2026-09-24.** Written as the brief for a Claude
 Design pass; the mockups came back and the owner answered the open decisions
-(8.6). Item 5 (the morning summary) is built, except its clash line, which comes
-with item 7. Item 6 (the countdown) is built; items 7 and 8 aren't yet. Item 9 (reservation reminder) is designed in
+(8.6). Items 5 (the morning summary), 6 (the countdown) and 7 (the clash
+warning) are built; item 8 isn't yet. Item 9 (reservation reminder) is designed in
 §5. The layouts below are the original text sketches at watch size; the mockups
 and their `NOTES.md` are the final word on text and layout.
 
@@ -587,6 +587,16 @@ Phone (settings page, Events tab):
 - A warning-container chip `Clashes with Trivia 1:00p` on the event row, on both
   events.
 - A filter chip `Clashes · N` after `To reserve`, hidden when N is 0.
+
+As built (item 7):
+- The watch's `1 clash` counts **pairs** of clashing items; the phone's
+  `Clashes · N` counts the **items** it lists. Finished items don't count on
+  either.
+- Home shows the count under the NEXT card, and under the all-aboard countdown
+  on port days.
+- The settings page has no `To reserve` chip yet, so `Clashes · N` sits after
+  `★ Starred` in the day chip row. Personal entries get the chip too.
+- The toast doesn't say `+1 more`; details does.
 
 ### 8.4 Last-chance tag (item 8)
 
