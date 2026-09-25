@@ -1,0 +1,69 @@
+{
+  "name": "cruise-watch",
+  "author": "MrArron",
+  "version": "0.1.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Royal Pebble",
+    "uuid": "c2b564f0-f418-4968-b545-08825e3fef19",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "msg_type",
+      "slice_id",
+      "sail_date",
+      "day_index",
+      "day_kind",
+      "day_status",
+      "day_location",
+      "all_aboard",
+      "local_offset",
+      "event_count",
+      "theme",
+      "show_featured",
+      "is_demo",
+      "info_stateroom",
+      "info_deck",
+      "info_stairs",
+      "info_muster",
+      "info_clock",
+      "info_sync",
+      "event_first",
+      "events",
+      "reminder_lead",
+      "alarm_count",
+      "alarm_first",
+      "alarms",
+      "notice_count",
+      "notices",
+      "star_changes",
+      "star_count",
+      "star_ack",
+      "saved_cutoff",
+      "saved_bytes",
+      "saved_max",
+      "dir_ref",
+      "dir_title",
+      "dir_label",
+      "dir_rel",
+      "dir_where",
+      "dir_rows"
+    ],
+    "resources": {
+      "media": []
+    },
+    "capabilities": [
+      "configurable"
+    ]
+  }
+}

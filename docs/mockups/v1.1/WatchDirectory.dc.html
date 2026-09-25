@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Watch – ship directory by deck</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 400px; height: 456px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #000000; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; display: flex; flex-direction: column">
+<div style="height: 44px; flex-shrink: 0; background: #555555; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; position: relative">
+<span style="position: absolute; left: 50%; transform: translateX(-50%); color: #FFFFFF; font-size: 28px; font-weight: 700">2:15p</span>
+<span style="color: #FFFFFF; font-size: 28px; font-weight: 700">Ship</span>
+<span style="color: #AAFFFF; font-size: 26px; font-weight: 700; font-variant: small-caps">by deck</span>
+</div>
+<div style="display: flex; flex-direction: column">
+<div style="padding: 8px 14px; border-bottom: 2px solid #AAAAAA; font-size: 30px; line-height: 36px; font-weight: 700; color: #555555">Browse by area</div>
+<div style="padding: 6px 14px; border-bottom: 2px solid #AAAAAA; display: flex; flex-direction: column">
+<span style="font-size: 34px; line-height: 38px; font-weight: 700">Deck 4</span>
+<span style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">Entertainment Place · 5</span>
+</div>
+<div style="padding: 6px 14px; background: #0055AA; color: #FFFFFF; display: flex; flex-direction: column">
+<span style="font-size: 34px; line-height: 38px; font-weight: 700">Deck 5</span>
+<span style="font-size: 26px; line-height: 30px; font-weight: 700">Royal Promenade · 6</span>
+</div>
+<div style="padding: 6px 14px; border-bottom: 2px solid #AAAAAA; display: flex; flex-direction: column">
+<span style="font-size: 34px; line-height: 38px; font-weight: 700">Deck 6 · your deck</span>
+<span style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">Boardwalk · Spa · 5</span>
+</div>
+<div style="padding: 6px 14px; border-bottom: 2px solid #AAAAAA; display: flex; flex-direction: column">
+<span style="font-size: 34px; line-height: 38px; font-weight: 700">Deck 8</span>
+<span style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">Central Park · 2</span>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":456}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

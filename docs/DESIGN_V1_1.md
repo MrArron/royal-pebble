@@ -1,0 +1,641 @@
+# Royal Pebble — v1.1 design (venue table, wayfinding, reservations, daily view)
+
+Returned from Claude Design on 2026-09-24 and approved by the owner. Build from
+this file; the mockups in `docs/mockups/v1.1/` are reference. `docs/DESIGN.md`
+still covers everything v1.1 doesn't change.
+
+**Decisions made after the return** (these override the text below):
+
+- **Top bar:** ship time moves from the right to the **center** of every watch
+  top bar (§4), so it's in the same place on every screen. The `SHIP TIME`
+  label goes; the right side holds the small context label.
+- **Thin top bar** (owner's choice, 2026-09-24): the mockups' one-line 22 px bar
+  replaces v1's two-line 56 px bar on every screen, alert and schedule-change
+  screens included. The date line goes. Built as: screen name on the left
+  (Home shows the port or `At Sea`, since the Today list is already "Today";
+  alerts say `Reminder` / `All aboard`; schedule changes say `Schedule`), ship
+  time centered, the day's status (`DOCKED`, `AT SEA`) in the small-caps color on
+  the right. The right label is dropped when it doesn't fit or repeats the name.
+- **Alert screens** lose their tall colored band: `IN 10 MIN` is the first body
+  line (sea accent; all-aboard keeps it large, Gothic 28, in the port accent).
+  A reminder without "From" directions shows the cabin-relative line under the
+  deck line, as on event details.
+- **Venue logic stays on the phone.** The phone sends each event's deck,
+  deck range, position, Ashore and decks-from-cabin as numbers
+  (`docs/WATCH_PROTOCOL.md`); the watch only formats them, so other ships need
+  no watch change.
+- **Home short form** on the cabin deck reads `Deck 6 Aft · your deck`; list
+  items at Ashore venues read `Venue · Ashore`.
+- **Reserved** (§5) is built together with item 9 (reservation reminder) in
+  phase 2, not with the wayfinding items.
+- **"From" directions** (§2, reminder alert) follow the brief's rule: they start
+  from the previous starred event or personal entry only when it ends less than
+  15 minutes before this one starts (or overlaps it; no length = 30 minutes).
+  Otherwise directions are relative to the cabin. As built (item 3):
+  - When several stops qualify, the one that started last is used. The first
+    stop after 04:00 can start from one the night before.
+  - The deck line and the route use the pair of entrances nearest each other
+    (Royal Theater 3-5 to Pool Deck 15 goes from deck 5).
+  - Route line: `↑10 decks · Fore → Mid`; `Same deck · Fore → Mid` on the same
+    deck; one position (`· Mid`) when both are the same or the previous one
+    isn't known; none when the venue has no position.
+  - `Same area · Deck 5` only when the neighborhood, the deck and the position
+    all match (or a position isn't set, like Royal Promenade). Otherwise, even
+    in the same neighborhood, the route line shows.
+  - No "From" block when either venue is Ashore, not in the table, or missing;
+    the reminder falls back to the cabin line.
+- **Ship directory as built** (item 4, §3; protocol in
+  `docs/WATCH_PROTOCOL.md`, Ship directory):
+  - My info ends with a `Ship directory` row drawn under the cursor; Select
+    opens it. Levels: the decks (or `Browse by area`), one deck or area, one
+    place.
+  - Deck rows: `Deck 5` over the two areas with the most places there and the
+    count (`Promenade · Boardwalk · 28`; short area names on this line), or
+    `1 place` with no area. A venue with several entrances counts on each deck.
+  - A deck page groups by `FORE` / `MID` / `AFT`, then `FULL LENGTH` for places
+    with no position (Royal Promenade). The top bar's right side is the drawn
+    `↓3 decks` (or `your deck`).
+  - An area page groups by deck and position (`DECK 8 · MID`); a place with
+    several entrances shows once, under the entrance nearest the cabin. Area
+    names don't fit beside the ship time, so the top bar says `Area` and the
+    name is a Gothic 24 bold heading.
+  - A place page (top bar `Place`): the name, `Deck 5 · Mid`, `↓3 decks from
+    cabin`, the area, then `LATER TODAY` with the events still to come there
+    (title, time, star), or `Nothing more today`.
+  - Without the phone: `Connect your phone`; Select tries again.
+- **Reminder alerts keep shorter text** so they take little of the watch's
+  storage (sized when it was thought to be 4 kB in all): title 31 bytes, venue
+  and previous venue 17 bytes each. Long venue names have a short name in the
+  table for the alert only (`Main Dining 5`, `Playmakers`, `Ocean Theater`,
+  `Perfect Storm`...); the rest are cut (`Boardwalk Dog Hou`). Event details,
+  Home and Today keep the full names.
+- **Cabin deck** comes from the Me tab's free-text Deck field; the phone reads
+  the digits out of it ("Deck 9" → 9). No digits → no relative lines.
+- **Venues with entrances on several decks** (Harmony: Royal Theater 3–5,
+  AquaTheater 5–6, Dazzles 8–9) list every entrance deck. Directions and deck
+  lines use the entrance nearest to where the user is coming from (the cabin
+  deck, or the previous venue under the "From" rule; ties go to the lower deck).
+  With no reference deck, show the range (`Decks 3-5 · Fore`). **Exception:**
+  the Main Dining Room. Guests are assigned a floor and the schedule names each
+  floor as its own venue ("Main Dining Room 5"), so never redirect it to a nearer
+  floor. In the editor, the Deck card holds one stepper per entrance with an
+  "Add entrance" text button; the Deck grouping lists the venue under each of its
+  decks.
+
+- Design canvas (private to the owner):
+  https://claude.ai/artifact/7de76Akgfyt6zvpwTZr2R5
+- `docs/mockups/v1.1/*.dc.html`: the source of each screen. They are Claude Design
+  component files: plain HTML with every style inline, so exact sizes, colors
+  and copy can be read straight from them. They won't render on their own
+  (they need the canvas runtime). Open the canvas link to see them.
+- **All deck/position values in the mockups are placeholders.** The real
+  Harmony values get filled in and checked separately. Mockups assume the
+  cabin is on deck 6. No real stateroom number appears anywhere.
+
+Scope of this return:
+
+1. Venues editor on the phone settings page (v1.1 item 1).
+2. Venue wording on the watch (item 2), including shortened forms that fit.
+3. Ship directory on the watch (item 4), a rough version.
+4. **Added during design:** current ship time in every watch top bar.
+5. **Added during design:** marking a starred event as **Reserved**.
+
+---
+
+## 1. Phone: Venues editor
+
+### Where it lives
+
+The editor lives under **Cruise**. A new **Ship venues** card sits between the
+schedule card and the paste-in backup card.
+
+- **Why Cruise:** venues are ship data that arrive with the schedule. Me is for
+  personal things. The bottom nav stays at five destinations.
+- **Second entry point:** tapping a venue on an event (Events tab) opens the
+  same edit screen for that venue. The edit screen has a
+  "Show events at this venue" link going the other way.
+
+### Screens (mockups: `Cruise`, `Venues`, `VenueEdit`, `VenueStates`)
+
+**Cruise › Ship venues card**
+
+- **Header:** a 48 px round icon (map pin) on primary container, the title
+  "Ship venues", and the subtitle "Deck, fore/mid/aft and area for each venue".
+- **Three-up stat grid**, each tile 16 px radius:
+  - `N venues` on container high
+  - `N to check` as an outlined tile
+  - `N edited by you` on warning container
+- **Buttons:**
+  - filled pill `Review N`, which opens the edit screen in review mode on the
+    first venue to check
+  - text button `All venues`, which opens the list
+
+**Venues list** (full screen, bottom nav stays with Cruise selected)
+
+- **Top bar:** back arrow, the title "Ship venues", and the Save pill.
+- **Search:** a 48 px search field (container high, 24 px radius) that matches
+  venue names.
+- **Filter chips:** `All` · `To check · N` · `Edited · N`.
+  - "To check" means a flagged value **or** a venue that isn't in the table.
+  - Chips are 36 px tall with 10 px radius. Selected = secondary container;
+    unselected = 1 px outline.
+- **Group by:** a connected segmented button, `Area | Deck`. The selected half
+  is primary / on-primary.
+  - **Area:** the seven neighborhoods in Harmony order, then Ashore.
+  - **Deck:** ascending deck number, venues ordered Fore → Mid → Aft within each
+    deck, then Ashore.
+  - In both modes, venues that aren't in the table come first, in a
+    **"Needs details"** group.
+- **Group header:** the name in primary, 14 px, 600 weight, with the count on
+  the right.
+- **Group card:** container low, 20 px radius, rows split by 1 px container-high
+  dividers.
+- **Row** (min height 60 px):
+  - name, 16 px
+  - sub-line, 13 px on-surface-variant: `Deck 5 · Mid` in Area mode,
+    `Mid · Royal Promenade` in Deck mode
+  - a status badge, then a chevron
+- **Floating button:** extended FAB `✓ Review N` (primary container, 56 px tall,
+  18 px radius), bottom-right just above the nav, for one-handed use.
+- **Empty search result:** "No venues match. Venues that aren't in the table yet
+  show up under "To check" once an event uses them."
+
+**Row badges and states** (see `VenueStates`)
+
+| State | Sub-line | Badge |
+|---|---|---|
+| Built-in, confirmed | `Deck 4 · Mid` | none |
+| Flagged "check" | `Deck 4 · Mid` | outlined chip `? Check` (1 px outline, on-surface-variant) |
+| Edited by owner | `Deck 4 · Fore` | warning-container chip `✎ Edited` |
+| Not in table (blank) | `Not in the table yet` | container-high chip `+ Add` |
+| Ashore | `Ashore · no deck` | none |
+
+**Edit venue** (`VenueEdit`, interactive in the canvas)
+
+- **Top bar:** back arrow, then two lines of text — a small progress label
+  (`3 of 12 to check`) above the venue name at 22 px — and the Save pill.
+- **Three field cards**, each a container-low card with 28 px radius:
+  - **Deck:** a stepper — 48 px round `−` / `+` buttons on secondary container,
+    around a 56 px number field (12 px radius, range 1–18). Helper text:
+    "The deck you walk in on".
+  - **Position:** a three-part connected segmented button, `Fore | Mid | Aft`,
+    48 px tall.
+  - **Neighborhood:** wrapping chips, 40 px min height, for the seven areas plus
+    `Ashore`.
+- **Status line under each field** (one of three):
+  - **Built-in, not flagged:** muted text "Built-in value".
+  - **Flagged:** outlined chip "Check · not confirmed on deck plans", with a
+    **Looks right** text button.
+  - **Edited:** warning-container chip "Edited · built-in 6", with a **Reset**
+    text button. The field itself also turns warning container: the deck input
+    background, the selected segment, or the selected chip.
+- **Watch preview card:** dark (`#161D1D`) with the label
+  "ON YOUR PEBBLE TIME 2". It shows the watch lines live (`Deck 7 · Aft`, then
+  the relative line with its arrow). Choosing Ashore shows just `Ashore`.
+- **Link:** "Show events at this venue".
+- **Bottom bar** (replaces the nav on this screen, container color):
+  **Reset all to built-in** as a text button, and **Next ›** as a 56 px filled
+  pill. In review mode, Next goes to the next venue to check. Otherwise it goes
+  back to the list.
+
+### Tokens
+
+**No new tokens.** Existing roles are reused:
+
+- **Warning container** = edited or pending: edited venue values, and
+  "Reservation needed" (section 5).
+- **Primary container** = done / confirmed: the Reserved chip.
+- **Outline** = needs checking.
+
+---
+
+## 2. Watch: venue wording
+
+The mockups are 400×456 (2×). Roboto Condensed stands in for Gothic:
+
+| Mockup size | Pebble font |
+|---|---|
+| 48 px | Gothic 24 bold |
+| 34 px | Gothic 18 bold |
+| 26–30 px | Gothic 14 bold |
+
+"Muted" means `#555555` in light and `#AAAAAA` in dark.
+
+### Event details (`WatchEventLight`, `WatchEventDark`, `WatchEventAshore`)
+
+The lines, in order:
+
+```
+Title                          Gothic 24 bold, wraps
+Studio B                       Gothic 18 bold, muted
+Deck 4 · Mid                   Gothic 18 bold
+↓2 decks from cabin            Gothic 14 bold, muted
+1:00p - 2:00p · 1 h            Gothic 18 bold
+Reservation needed             Gothic 14 bold, port accent   (see §5 for starred)
+──────────
+★ Starred / Hold Select to star
+```
+
+- **Same deck as the cabin:** `On your cabin deck`.
+- **Ashore:** the deck line becomes `Ashore` (Gothic 18 bold, port accent) and
+  the relative line is left out.
+- **Venue not in the table:** leave out the deck and relative lines. Never show
+  "unknown".
+
+### Home NEXT card (`WatchHomeLight`, `WatchHomeDark`)
+
+```
+★ NEXT · IN 20 MIN             sea accent
+Title                          Gothic 24 bold
+12:00p · On Air                Gothic 18 bold, muted (long venue names wrap)
+Deck 4 Aft · ↓2                Gothic 14 bold, muted   ← short form
+──────────
+1:00p Adults Only Trivia       Gothic 18 bold
+Studio B · 4 Mid               Gothic 14 bold, muted   ← list-item short form
+```
+
+### Reminder alert (`WatchReminder`)
+
+```
+IN 10 MIN                      sea accent
+Title
+1:00p · Studio B               muted
+Deck 4 · Mid
+──────────
+From Royal Theater:            Gothic 14 bold, muted
+↓1 deck · Fore → Mid           Gothic 18 bold
+```
+
+The "From" part uses the previous starred event or personal entry when it ends
+less than 15 minutes before this one starts (see the decisions at the top).
+Otherwise leave it out.
+
+- **Previous event at the same venue:** replace the two "From" lines with
+  `Same venue`.
+- **Same neighborhood:** `Same area · Deck 5`.
+
+### Wording that was shortened to fit 200 px
+
+| Proposed | Final |
+|---|---|
+| `Studio B · Deck 4 · Mid` | split: venue on one line, `Deck 4 · Mid` below |
+| `2 decks down from you` | `↓2 decks from cabin` |
+| `From Royal Theater: 1 deck down, aft → mid` | `From Royal Theater:` / `↓1 deck · Fore → Mid` |
+| (Home) | `Deck 4 Aft · ↓2` |
+| (list items) | `Studio B · 4 Mid` |
+
+### Arrows must be drawn, not typed
+
+The Pebble system fonts can't be trusted to include ↑ ↓ →, and in the
+mockups the glyphs looked too small next to the bold digits. Draw them:
+
+- ↑ / ↓ are small bitmaps (or GPath) exactly the **digit cap height** of the
+  font they sit beside: about **10 px** next to Gothic 14 and **12 px** next to
+  Gothic 18. The bottom sits on the text baseline, the stroke matches the bold
+  digit stroke, and there is 1 px of space before the number.
+- → sits centered on the lowercase letters, with 2 px of space on each side.
+
+The mockups show the target proportions.
+
+---
+
+## 3. Watch: ship directory (item 4, rough)
+
+`WatchDirectory`, `WatchDeck`. It lives at the bottom of My info. The top bar is
+`#555555`.
+
+**Level 1**
+
+- The first row is `Browse by area`.
+- Then one two-line row per deck: `Deck 5` (Gothic 18 bold) over
+  `Royal Promenade · 6` (area + venue count, Gothic 14 bold, muted).
+- The cabin's deck is labelled `Deck 6 · your deck`.
+- The selected row uses the sea accent background with white text.
+
+**Level 2 (one deck)**
+
+- Top bar: `Deck 5` on the left; the relative label `↓1 deck` on the right.
+- Small-caps section headers `fore` / `mid` / `aft` (muted), then venue names in
+  Gothic 18 bold.
+- Ashore comes last on level 1.
+
+"Browse by area" uses the same pattern, with neighborhoods at level 1.
+
+---
+
+## 4. Watch: ship time in the top bar
+
+Every watch screen shows the **current ship time centered in the top bar**
+(Gothic 14 bold, white, e.g. `12:40p`). The screen label stays on the left and
+the small-caps `#AAFFFF` label on the right.
+
+Keep the side labels short. Where a label would run into the time, the right
+label is shortened: the deck screen went from `↓1 from cabin` to `↓1 deck`. When
+space is tight, the time wins and the right label is dropped. Update it once a
+minute.
+
+---
+
+## 5. New: mark a starred event "Reserved"
+
+For events whose schedule entry says a reservation is needed. Mockups:
+`EventsReserve` (interactive), `WatchResNeeded`, `WatchResReserved`,
+`WatchResHome`.
+
+### Phone (Events tab)
+
+- **Starred, reservation needed, not marked:**
+  - warning-container chip `Reservation needed`
+  - a secondary-container pill button `✓ Mark reserved` (40 px)
+- **Starred and reserved:**
+  - primary-container chip `✓ Reserved`
+  - a text button `Not reserved` to undo
+- **Not starred:** a muted note, `Reservation needed · star it to track`, with
+  no button. Reserved only applies to starred events.
+- **Unstarring** a reserved event hides the Reserved state but keeps the flag,
+  so starring it again restores it.
+- **New filter chip** after All / Starred: `To reserve · N`. N is the number of
+  starred events that need a reservation and aren't marked. When it's empty:
+  "Every starred event that needs a reservation is marked reserved."
+- **Event row layout:** time column (52 px, bold 14) · title / venue / status ·
+  a 48 px star button (filled primary when starred), on a container-low card
+  with 20 px radius.
+
+### Watch
+
+- **Event details, starred, not reserved:** the reservation line reads
+  `Not reserved yet` (Gothic 18 bold, port accent). Under ★ Starred there's a
+  hint, `Select: mark reserved` (Gothic 14 bold, muted).
+- **Event details, reserved:** the line becomes a drawn ✓ plus `Reserved`
+  (Gothic 18 bold, sea accent), and the hint becomes `Select: not reserved`.
+- **Home NEXT:** if the next event is starred, needs a reservation and isn't
+  reserved, add a line `Not reserved` (Gothic 14/18 bold, port accent) under the
+  deck line. List items that are reserved get a small drawn ✓ plus `Reserved`
+  in the sea accent after the venue.
+- **Reminder alert:** show the same `Not reserved` line when it applies (not
+  mocked; follow the Home pattern).
+- **Unstarred events** keep today's `Reservation needed` line.
+
+**Button assumption:** a short press of **Select** on event details toggles
+Reserved; Hold Select still stars. If short Select is already used on that
+screen, put "Mark reserved" in a small action menu instead, or make it
+phone-only. Check the current input handling before building.
+
+---
+
+## 6. Data shape changes
+
+Venue table, per venue:
+
+```
+name            string (key; the name as it appears in Royal's schedule)
+decks           int[]            (entrance decks, ascending; [] = blank, or Ashore)
+position        "Fore"|"Mid"|"Aft"|null   ← now optional (see below)
+neighborhood    one of 7 | "Ashore" | null
+flags           per field: { deck: bool, position: bool, neighborhood: bool }
+confirmed       per field: bool  ← NEW: owner tapped "Looks right"
+aliasOf         string | null    ← NEW (see below)
+```
+
+Owner overrides, stored separately and surviving re-downloads:
+
+```
+{ venueName: { decks?, position?, neighborhood?, confirmed?: {field: true} } }
+```
+
+The phone keeps them in its settings per ship code (`settings.venues.HM`). A
+field is only stored when it differs from the built-in value, so a stored field
+means edited. Venues that aren't in the table are keyed by their schedule name.
+
+- **A flag is per field, not per venue.**
+  - An edited field is never shown as flagged.
+  - Reset puts back the built-in value **and** its flag, unless that field is
+    confirmed.
+  - "Reset all to built-in" also clears confirmations for that venue.
+- **Confirmed is separate from edited.** "Looks right" clears the check without
+  changing the value, and doesn't count as Edited in the counts.
+- **Position is optional** for venues that run the length of the ship (e.g.
+  Royal Promenade). On the watch, leave out ` · Mid` when it's null.
+- **Aliases** for near-duplicate schedule names, so they're only entered once,
+  for example:
+  - `Perfect Day CocoCay` → `Perfect Day at CocoCay`
+  - `Casino Royale Non-Smoking` → `Casino Royale`
+  - `Adventure Ocean` → `Adventure Ocean Theater`
+
+  Harmony has 36 (all in `SHIPS.HM` in `src/pkjs/venues.js`, refreshed from
+  Royal's deck plans on 2026-09-24). An alias row shows "Same as …" in the list,
+  and editing it goes to the target.
+- **Blank venues:** any venue name in the downloaded schedule that isn't in the
+  table (and isn't an alias) shows up in "Needs details". Events with no venue
+  at all (7 in the sample) are ignored here.
+- **Cabin deck** for the relative lines comes from the existing Stateroom card
+  on Me. If it isn't set, leave out every relative line (`↓2 decks from cabin`,
+  `↓2`) and the "your deck" label.
+
+Events:
+
+```
+reserved   bool   ← NEW, owner state, keyed like stars; survives re-downloads
+```
+
+**Sync:** if the watch can toggle Reserved, the change must go back to the phone
+through the companion. The phone must not overwrite a watch-side toggle on the
+next sync. Use last-write-wins with a timestamp, or treat the watch as
+authoritative for this flag until it's acknowledged.
+
+---
+
+## 7. Check before or while building
+
+- Whether short Select is free on event details (§5).
+- Whether Gothic 14/18 bold fits the final strings at 200 px in both themes.
+  The mockups use a stand-in font, so check against the real one. The widest
+  lines are `↓2 decks from cabin`, `1:00p - 2:00p · 1 h` and
+  `↓1 deck · Fore → Mid`.
+- Top bar: that the time plus the widest left label (`Reminder`) plus the right
+  label fit. If not, drop the right label.
+- Arrow bitmaps: sized to digit cap height for each font used (§2).
+- Real Harmony deck/position values: a separate task. Everything shown here is
+  a placeholder.
+
+## 8. Phase 2 draft: daily view (items 5-8), for Claude Design
+
+**Status: draft, not approved.** Written 2026-09-24 as the brief for a Claude
+Design pass. Nothing here is built. Item 9 (reservation reminder) is already
+designed in §5. The layouts below are text sketches at watch size. Claude Design
+turns them into mockups; the owner then confirms the open decisions at the end.
+
+**Brief for Claude Design:**
+- Pebble Time 2 watch screens, 200×228 (mockups at 2×, 400×456, like §2).
+- Light and dark themes, the v1.1 thin top bar (§4), and the fonts and tokens in
+  §2 and `docs/DESIGN.md`. No new tokens unless needed.
+- Plus the settings page pieces for item 7.
+- Use placeholder dates, decks and names, and no real stateroom.
+- Wanted mockups: `WatchSummaryPort`, `WatchSummarySea`, `WatchSummaryTomorrow`,
+  `WatchCountdown` (far away and the last day), `WatchClashToast`,
+  `WatchClashDetails`, `EventsClash` (phone), `WatchLastChance` (a Today row and
+  event details).
+
+**What the watch knows today** (`docs/WATCH_PROTOCOL.md`):
+- The sail date, and today's type, location, status and all-aboard time.
+- Today's events with their star, featured and reservation flags and their
+  lengths.
+- It does **not** have arrive/depart times or anything about tomorrow. Items 5
+  and 8 need the phone to send more (see Data at the end). As with the venues,
+  the phone computes, and the watch only formats and stores.
+
+### 8.1 Morning summary (item 5)
+
+A one-screen card shown **instead of Home on the first open of the watch day**
+(after 04:00 ship time). Any button dismisses it to Home. Down and Up also go on to
+Today and My info as usual, so it never costs an extra press.
+
+- **Opens that don't count:** an alert or the planned silent 04:00-05:00 sync
+  wakeup (memory: silent morning sync) opening the app doesn't use up the summary.
+  Only an open by the user does.
+- **Getting it back:** a `Today's summary` row at the top of My info (proposal).
+- **Stored:** it works without the phone. Everything on it is saved with the day.
+
+Port day:
+
+```
+[St. Thomas     9:12a     DOCKED]      thin top bar
+DAY 4 · PORT DAY                        small caps, muted
+St. Thomas                              Gothic 24 bold
+Docked 7:30a - 5:30p                    Gothic 18 bold (ship time)
+All aboard 5:00p                        Gothic 18 bold, port accent
+──────────
+★ 4 starred today                       Gothic 18 bold
+First 10:00a Zumba                      Gothic 14 bold, muted
+1 clash                                 Gothic 14 bold, port accent (item 7; only if any)
+```
+
+- **Sea day:** `DAY 2 · SEA DAY`, then `At sea` (Gothic 24 bold), and no
+  docked or all-aboard lines. The space goes to the first two starred items.
+- **Embark day:** `DAY 1 · EMBARK`, the port, `Sails 4:00p`, `All aboard 3:30p`.
+- **Debark day:** `LAST DAY · DEBARK`, the port, and `Arrive 6:00a`. No
+  all-aboard. The phase 4 debark checklist can hang off this later.
+- **Nothing starred:** `Nothing starred yet` plus the number of featured events
+  when the featured switch is on (`6 featured today`).
+- **Port times in ship time:** port times are shown in ship time, like the
+  countdown. When the port's local time differs, add `Port time +1 h` (muted)
+  under the docked line (open decision).
+
+**Tomorrow version:**
+- Shown on the first open **after 20:00**. The same card with the label
+  `TOMORROW · DAY 5 · PORT DAY`, and the top bar left label `Tomorrow`.
+- Adds `Last chance: Hairspray` (item 8) when tomorrow holds a final
+  performance.
+- Once dismissed, it stays reachable from the same My info row until 04:00.
+
+### 8.2 Days-to-sail countdown (item 6)
+
+Home before the cruise (`day_kind` 2 with a future sail date). Today it shows
+only the status, `SAILS MAR 6`. The watch counts the days itself from the sail
+date, so it stays correct without the phone.
+
+```
+[Home           9:12a              ]
+SAILS IN                                small caps, muted
+78                                      large numerals (Leco 42 if available)
+days                                    Gothic 18 bold
+Sat Mar 6 · Port Canaveral              Gothic 18 bold, muted (placeholder date)
+Harmony of the Seas                     Gothic 14 bold, muted
+──────────
+★ 3 starred so far                      Gothic 14 bold (stars made on the settings page)
+```
+
+- **Last 3 days:**
+  - The card adds `Sync before you leave`, then `Works offline after a full sync`
+    (sync-before-departure rule), with the last sync date from My info.
+  - The day before, the number becomes `Tomorrow`.
+- **Sail day:** the normal day (embark) begins at 04:00, and the morning summary
+  takes over.
+- **After the cruise:** unchanged (`CRUISE ENDED`).
+
+### 8.3 Clash warning (item 7)
+
+**Clash:** two starred events or personal entries whose times overlap. An event
+with no length lasts 30 minutes (the Today drop-off rule). Back-to-back is not a
+clash. Only starred events and personal entries count, never unstarred ones.
+
+Watch:
+- **Starring something that clashes** (Hold Select):
+  - a double short vibration instead of the single one;
+  - a toast over the list for about 3 s: `Clashes with` / `1:00p Trivia`
+    (Gothic 14 / 18 bold, port accent bar).
+  - The star is still made; it's a warning, not a block.
+- **Event details** of a clashing starred event: a line
+  `Clashes with 1:00p Trivia` (Gothic 14 bold, port accent) under the time line.
+  `+1 more` when there are several.
+- **Today list:** a small drawn `!` in the port accent after the star, on both
+  rows. Keep it or drop it depending on how it fits the 200 px row.
+- **Home NEXT and the morning summary:** the count, `1 clash`.
+- **Where it's computed:** the watch computes clashes itself from today's
+  events, since stars can change with the phone away. Across the 04:00 boundary
+  it isn't checked (rare).
+
+Phone (settings page, Events tab):
+- A warning-container chip `Clashes with Trivia 1:00p` on the event row, on both
+  events.
+- A filter chip `Clashes · N` after `To reserve`, hidden when N is 0.
+
+### 8.4 Last-chance tag (item 8)
+
+- **Rule:** the final performance of a **featured** show in the cruise, matched
+  by title across all days, gets a `Last chance` tag.
+  - A show with a single performance gets `Only show` instead (open decision:
+    or no tag).
+  - Personal entries and unfeatured events never get a tag.
+- **Where it's worked out:** the phone works it out from the whole bundle and
+  sends it as an event flag, since the watch only has today.
+
+Where it shows:
+- **Today row:** the second line becomes `Royal Theater · Last chance`, with
+  `Last chance` in the port accent.
+- **Event details:** a `Last chance` line in the port accent under the
+  reservation line.
+- **Home:** the featured card and the NEXT card get the same tag.
+- **Tomorrow summary:** `Last chance: Hairspray` (8.1).
+- **Settings page:** an outlined `Last chance` chip on the event row.
+
+### 8.5 Data the phone would add (for the build PRs, not for Claude Design)
+
+- **BEGIN:** `arrive` and `depart` in cruise minutes (−1 none), and a tomorrow
+  block: `tmr_kind`, `tmr_location`, `tmr_arrive`, `tmr_depart`,
+  `tmr_all_aboard`, `tmr_starred`, `tmr_first` (a short title), `tmr_last`
+  (a last-chance title or empty). Plus the ship name for the countdown.
+- **Watch store:** these are saved in the stored header so the summary and
+  countdown work without the phone. That is a few dozen bytes, and it bumps the
+  storage version.
+- **Packed events:** `flags` bit 16 = last chance.
+- `docs/WATCH_PROTOCOL.md` changes with each build PR. The bundle format doesn't
+  change.
+
+### 8.6 Open decisions for the owner
+
+1. **Replace Home or overlay it:** does the summary replace Home on the first
+   open (proposed), or show as an overlay over Home?
+2. **My info row:** add a `Today's summary` row to My info, or no way back?
+3. **Port times:** ship time only, or add the `Port time +1 h` note?
+4. **Tomorrow:** does the tomorrow card show on the first open after 20:00
+   (proposed), or only from My info?
+5. **Single performances:** `Only show` tag for a single-performance featured
+   show, or no tag?
+6. **Clash `!` marker:** in the Today list, or only on details and the toast?
+7. **Countdown details:** show the ship name and the starred-so-far count?
+
+## Mockup index
+
+| File | Screen |
+|---|---|
+| `Cruise.dc.html` | Cruise tab with the Ship venues card |
+| `Venues.dc.html` | Venue list: search, filters, group by (interactive) |
+| `VenueEdit.dc.html` | Edit one venue, review mode (interactive) |
+| `VenueStates.dc.html` | Reference sheet of row/field states |
+| `EventsReserve.dc.html` | Events tab with Mark reserved (interactive) |
+| `WatchEventLight/Dark/Ashore.dc.html` | Event details |
+| `WatchHomeLight/Dark.dc.html` | Home NEXT (dark = long venue name) |
+| `WatchReminder.dc.html` | Reminder alert with route from the previous venue |
+| `WatchDirectory.dc.html`, `WatchDeck.dc.html` | Ship directory |
+| `WatchResNeeded/ResReserved/ResHome.dc.html` | Reserved states on the watch |

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Edit venue</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&amp;display=swap">
+<style>
+body{margin:0;background:#F4FBFA}
+a{color:#006A6A}a:hover{color:#004F4F}
+</style>
+</helmet>
+<div style="width: 360px; height: 800px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', Roboto, system-ui, sans-serif">
+<header style="flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 8px 16px 4px 4px">
+<a href="Venues.dc.html" aria-label="Back to venues" style="width: 48px; height: 48px; border-radius: 24px; display: flex; align-items: center; justify-content: center; color: #161D1D; flex-shrink: 0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg></a>
+<div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+<span style="font-size: 12px; color: #3F4948; font-weight: 600">3 of 12 to check</span>
+<h1 style="margin: 0; font-size: 22px; font-weight: 500">Rock Climbing Wall</h1>
+</div>
+<button style="height: 40px; padding: 0 24px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font-family: inherit; font-size: 14px; font-weight: 600; flex-shrink: 0">Save</button>
+</header>
+<main style="flex-grow: 1; overflow-y: auto; padding: 8px 12px 16px; display: flex; flex-direction: column; gap: 12px">
+
+<section style="background: #EFF5F4; border-radius: 28px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<label for="deck-input" style="font-size: 16px; font-weight: 600">Deck</label>
+<span style="font-size: 12px; color: #3F4948">The deck you walk in on</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px">
+<button onClick="{{deckDown}}" aria-label="Deck down" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: #CCE8E7; color: #051F1F; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<input id="deck-input" type="number" inputmode="numeric" min="1" max="18" value="{{deck}}" onChange="{{onDeck}}" style="{{deckFieldStyle}}">
+<button onClick="{{deckUp}}" aria-label="Deck up" style="width: 48px; height: 48px; border-radius: 24px; border: 0; background: #CCE8E7; color: #051F1F; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<sc-if value="{{deckEdited}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<span style="height: 28px; padding: 0 10px; border-radius: 14px; background: #FFDDB5; color: #2A1700; font-size: 12px; font-weight: 600; display: flex; align-items: center">Edited · built-in {{builtinDeck}}</span>
+<button onClick="{{resetDeck}}" style="height: 40px; padding: 0 12px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h11a5 5 0 010 10H9M4 9l4-4M4 9l4 4"></path></svg>Reset</button>
+</div>
+</sc-if>
+<sc-if value="{{deckFlag}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<span style="height: 28px; padding: 0 10px; border: 1px solid #6F7979; border-radius: 14px; color: #3F4948; font-size: 12px; font-weight: 600; display: flex; align-items: center">Check · not confirmed on deck plans</span>
+<button onClick="{{okDeck}}" style="height: 40px; padding: 0 12px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Looks right</button>
+</div>
+</sc-if>
+<sc-if value="{{deckPlain}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 12px; color: #3F4948">Built-in value</span>
+</sc-if>
+</section>
+
+<section style="background: #EFF5F4; border-radius: 28px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<span id="pos-label" style="font-size: 16px; font-weight: 600">Position</span>
+<div role="group" aria-labelledby="pos-label" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px">
+<sc-for list="{{posBtns}}" as="p" hint-placeholder-count="3">
+<button onClick="{{p.pick}}" aria-pressed="{{p.pressed}}" style="{{p.style}}">{{p.label}}</button>
+</sc-for>
+</div>
+<sc-if value="{{posEdited}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<span style="height: 28px; padding: 0 10px; border-radius: 14px; background: #FFDDB5; color: #2A1700; font-size: 12px; font-weight: 600; display: flex; align-items: center">Edited · built-in {{builtinPos}}</span>
+<button onClick="{{resetPos}}" style="height: 40px; padding: 0 12px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Reset</button>
+</div>
+</sc-if>
+<sc-if value="{{posFlag}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<span style="height: 28px; padding: 0 10px; border: 1px solid #6F7979; border-radius: 14px; color: #3F4948; font-size: 12px; font-weight: 600; display: flex; align-items: center">Check · not confirmed on deck plans</span>
+<button onClick="{{okPos}}" style="height: 40px; padding: 0 12px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Looks right</button>
+</div>
+</sc-if>
+<sc-if value="{{posPlain}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 12px; color: #3F4948">Built-in value</span>
+</sc-if>
+</section>
+
+<section style="background: #EFF5F4; border-radius: 28px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<span id="area-label" style="font-size: 16px; font-weight: 600">Neighborhood</span>
+<div role="group" aria-labelledby="area-label" style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{areaChips}}" as="a" hint-placeholder-count="8">
+<button onClick="{{a.pick}}" aria-pressed="{{a.pressed}}" style="{{a.style}}">{{a.label}}</button>
+</sc-for>
+</div>
+<sc-if value="{{areaEdited}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+<span style="height: 28px; padding: 0 10px; border-radius: 14px; background: #FFDDB5; color: #2A1700; font-size: 12px; font-weight: 600; display: flex; align-items: center">Edited · built-in {{builtinArea}}</span>
+<button onClick="{{resetArea}}" style="height: 40px; padding: 0 12px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Reset</button>
+</div>
+</sc-if>
+<sc-if value="{{areaPlain}}" hint-placeholder-val="{{ true }}">
+<span style="font-size: 12px; color: #3F4948">Built-in value</span>
+</sc-if>
+</section>
+
+<section aria-label="Watch preview" style="background: #161D1D; color: #FFFFFF; border-radius: 28px; padding: 16px 20px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; font-weight: 600; color: #9CF1F0; letter-spacing: 0.5px">ON YOUR PEBBLE TIME 2</span>
+<span style="font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; font-size: 18px; font-weight: 700">{{watchLoc}}</span>
+<span style="font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; font-size: 15px; font-weight: 700; color: #AAAAAA"><sc-if value="{{watchUp}}" hint-placeholder-val="{{ false }}"><svg width="6" height="11" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right: 2px"><path d="M6 18.5v-17M1.5 6.5L6 1.5l4.5 5"></path></svg></sc-if><sc-if value="{{watchDown}}" hint-placeholder-val="{{ false }}"><svg width="6" height="11" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right: 2px"><path d="M6 1.5v17M1.5 13.5L6 18.5l4.5-5"></path></svg></sc-if>{{watchRel}}</span>
+</section>
+<a href="#" style="align-self: flex-start; padding: 8px; font-size: 14px; font-weight: 600">Show events at this venue</a>
+</main>
+<div style="flex-shrink: 0; min-height: 80px; box-sizing: border-box; background: #E9EFEE; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px">
+<button onClick="{{resetAll}}" style="height: 48px; padding: 0 12px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Reset all to built-in</button>
+<a href="Venues.dc.html" style="height: 56px; padding: 0 22px; border-radius: 28px; background: #006A6A; color: #FFFFFF; text-decoration: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px">Next<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"cabinDeck":{"editor":"int","default":6,"min":2,"max":18},"$preview":{"width":360,"height":800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { deck: 7, pos: 'Aft', area: 'Boardwalk', okDeck: false, okPos: false };
+  }
+  renderVals() {
+    const B = { deck: 6, pos: 'Aft', area: 'Boardwalk', flagDeck: true, flagPos: true };
+    const s = this.state;
+    const cabin = this.props.cabinDeck ?? 6;
+    const deckEdited = s.deck !== B.deck;
+    const posEdited = s.pos !== B.pos;
+    const areaEdited = s.area !== B.area;
+    const deckFlag = !deckEdited && B.flagDeck && !s.okDeck;
+    const posFlag = !posEdited && B.flagPos && !s.okPos;
+    const clamp = (n) => Math.max(1, Math.min(18, n));
+
+    const deckFieldStyle = 'width: 0; flex-grow: 1; height: 56px; box-sizing: border-box; border-radius: 12px; text-align: center; font-family: inherit; font-size: 24px; font-weight: 600; ' +
+      (deckEdited ? 'background: #FFDDB5; color: #2A1700; border: 1px solid #FFDDB5;' : 'background: transparent; color: #161D1D; border: 1px solid #6F7979;');
+
+    const segStyle = (on, i) => 'height: 48px; border: 0; font-family: inherit; font-size: 15px; font-weight: 600; ' +
+      (i === 0 ? 'border-radius: 24px 8px 8px 24px;' : i === 2 ? 'border-radius: 8px 24px 24px 8px;' : 'border-radius: 8px;') +
+      (on ? (posEdited ? 'background: #FFDDB5; color: #2A1700;' : 'background: #006A6A; color: #FFFFFF;') : 'background: #E3E9E9; color: #3F4948;');
+    const posBtns = ['Fore', 'Mid', 'Aft'].map((p, i) => ({
+      label: p, pressed: String(s.pos === p), style: segStyle(s.pos === p, i),
+      pick: () => this.setState({ pos: p })
+    }));
+
+    const areas = ['Central Park', 'Boardwalk', 'Royal Promenade', 'Pool & Sports Zone', 'Vitality Spa & Fitness', 'Entertainment Place', 'Youth Zone', 'Ashore'];
+    const chipStyle = (on) => 'min-height: 40px; padding: 0 14px; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 600; ' +
+      (on ? (areaEdited ? 'background: #FFDDB5; color: #2A1700; border: 1px solid #FFDDB5;' : 'background: #CCE8E7; color: #051F1F; border: 1px solid #CCE8E7;') : 'background: transparent; color: #3F4948; border: 1px solid #6F7979;');
+    const areaChips = areas.map((a) => ({ label: a, pressed: String(s.area === a), style: chipStyle(s.area === a), pick: () => this.setState({ area: a }) }));
+
+    const ashore = s.area === 'Ashore';
+    const d = s.deck - cabin;
+    const watchLoc = ashore ? 'Ashore' : 'Deck ' + s.deck + ' · ' + s.pos;
+    const watchRel = ashore ? '' : d === 0 ? 'On your cabin deck' : Math.abs(d) + (Math.abs(d) === 1 ? ' deck' : ' decks') + ' from cabin';
+    const watchUp = !ashore && d > 0;
+    const watchDown = !ashore && d < 0;
+
+    return {
+      deck: s.deck, builtinDeck: B.deck, builtinPos: B.pos, builtinArea: B.area,
+      deckFieldStyle,
+      deckEdited, deckFlag, deckPlain: !deckEdited && !deckFlag,
+      posEdited, posFlag, posPlain: !posEdited && !posFlag,
+      areaEdited, areaPlain: !areaEdited,
+      posBtns, areaChips, watchLoc, watchRel, watchUp, watchDown,
+      deckDown: () => this.setState({ deck: clamp(s.deck - 1) }),
+      deckUp: () => this.setState({ deck: clamp(s.deck + 1) }),
+      onDeck: (e) => { const n = parseInt(e.target.value, 10); if (!isNaN(n)) this.setState({ deck: clamp(n) }); },
+      resetDeck: () => this.setState({ deck: B.deck }),
+      resetPos: () => this.setState({ pos: B.pos }),
+      resetArea: () => this.setState({ area: B.area }),
+      okDeck: () => this.setState({ okDeck: true }),
+      okPos: () => this.setState({ okPos: true }),
+      resetAll: () => this.setState({ deck: B.deck, pos: B.pos, area: B.area, okDeck: false, okPos: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

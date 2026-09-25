@@ -1,0 +1,17 @@
+# Cruise data bundles can include a stateroom number
+cruise-watch-*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Pebble build output
+build/
+.lock-waf*
+node_modules/
+
+# Editors / OS
+.vscode/
+.DS_Store
+Thumbs.db

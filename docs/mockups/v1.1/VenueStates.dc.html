@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Venue states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&amp;display=swap">
+<style>
+body{margin:0;background:#F4FBFA}
+</style>
+</helmet>
+<div style="width: 360px; height: 800px; box-sizing: border-box; padding: 20px 12px; display: flex; flex-direction: column; gap: 16px; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', Roboto, system-ui, sans-serif">
+<h1 style="margin: 0 8px; font-size: 22px; font-weight: 500">Venue states</h1>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0 8px; font-size: 14px; font-weight: 600; color: #006A6A">List rows</h2>
+<div style="background: #EFF5F4; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">Studio B</span><span style="font-size: 13px; color: #3F4948">Deck 4 · Mid</span></div>
+<span style="font-size: 12px; color: #3F4948">Built-in</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px; border-top: 1px solid #E3E9E9">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">Dazzles</span><span style="font-size: 13px; color: #3F4948">Deck 4 · Mid</span></div>
+<span style="height: 26px; padding: 0 10px; border: 1px solid #6F7979; border-radius: 13px; color: #3F4948; font-size: 12px; font-weight: 600; display: flex; align-items: center">Check</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px; border-top: 1px solid #E3E9E9">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">Royal Theater</span><span style="font-size: 13px; color: #3F4948">Deck 4 · Fore</span></div>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #FFDDB5; color: #2A1700; font-size: 12px; font-weight: 600; display: flex; align-items: center">Edited</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px; border-top: 1px solid #E3E9E9">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">Prince &amp; Greene</span><span style="font-size: 13px; color: #3F4948">Not in the table yet</span></div>
+<span style="height: 26px; padding: 0 10px; border-radius: 13px; background: #E3E9E9; color: #3F4948; font-size: 12px; font-weight: 600; display: flex; align-items: center">Add</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 16px; border-top: 1px solid #E3E9E9">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">Perfect Day at CocoCay</span><span style="font-size: 13px; color: #3F4948">Ashore · no deck</span></div>
+<span style="font-size: 12px; color: #3F4948">Built-in</span>
+</div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0 8px; font-size: 14px; font-weight: 600; color: #006A6A">Deck field</h2>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 72px; font-size: 12px; color: #3F4948">Built-in</span>
+<span style="flex-grow: 1; height: 44px; border: 1px solid #6F7979; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600">4</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 72px; font-size: 12px; color: #3F4948">Check</span>
+<span style="flex-grow: 1; height: 44px; border: 1px dashed #3F4948; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600">6</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 72px; font-size: 12px; color: #3F4948">Edited</span>
+<span style="flex-grow: 1; height: 44px; background: #FFDDB5; color: #2A1700; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600">7</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 72px; font-size: 12px; color: #3F4948">Blank</span>
+<span style="flex-grow: 1; height: 44px; border: 1px solid #6F7979; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #3F4948">Deck?</span>
+</div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h2 style="margin: 0 8px; font-size: 14px; font-weight: 600; color: #006A6A">Actions</h2>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px">
+<button style="height: 40px; padding: 0 14px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Looks right</button>
+<button style="height: 40px; padding: 0 14px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Reset</button>
+<button style="height: 40px; padding: 0 14px; border: 0; background: transparent; color: #006A6A; font-family: inherit; font-size: 14px; font-weight: 600">Reset all to built-in</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":360,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
