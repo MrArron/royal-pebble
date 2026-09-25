@@ -458,12 +458,13 @@ authoritative for this flag until it's acknowledged.
 - Real Harmony deck/position values: a separate task. Everything shown here is
   a placeholder.
 
-## 8. Phase 2 draft: daily view (items 5-8), for Claude Design
+## 8. Phase 2: daily view (items 5-8)
 
-**Status: draft, not approved.** Written 2026-09-24 as the brief for a Claude
-Design pass. Nothing here is built. Item 9 (reservation reminder) is already
-designed in §5. The layouts below are text sketches at watch size. Claude Design
-turns them into mockups; the owner then confirms the open decisions at the end.
+**Status: as returned, approved 2026-09-24.** Written as the brief for a Claude
+Design pass; the mockups came back and the owner answered the open decisions
+(8.6). Nothing here is built yet. Item 9 (reservation reminder) is designed in
+§5. The layouts below are the original text sketches at watch size; the mockups
+and their `NOTES.md` are the final word on text and layout.
 
 **Brief for Claude Design:**
 - Pebble Time 2 watch screens, 200×228 (mockups at 2×, 400×456, like §2).
@@ -475,9 +476,10 @@ turns them into mockups; the owner then confirms the open decisions at the end.
   `WatchCountdown` (far away and the last day), `WatchClashToast`,
   `WatchClashDetails`, `EventsClash` (phone), `WatchLastChance` (a Today row and
   event details).
-- **Draft mockups** (2026-09-24, not approved): `docs/mockups/phase2-draft/`.
-  Its `NOTES.md` lists shortened text, the new drawn `!` and a recommendation
-  for each open decision in 8.6; `preview.png` shows every screen.
+- **Mockups as returned** (2026-09-24, approved with the 8.6 answers):
+  `docs/mockups/phase2/`. Its `NOTES.md` lists shortened text, the new drawn
+  `!` and the smaller layout choices; `preview.png` shows every screen. Where
+  `NOTES.md` shortens or changes text from the sketches below, the mockups win.
 
 **What the watch knows today** (`docs/WATCH_PROTOCOL.md`):
 - The sail date, and today's type, location, status and all-aboard time.
@@ -522,7 +524,7 @@ First 10:00a Zumba                      Gothic 14 bold, muted
   when the featured switch is on (`6 featured today`).
 - **Port times in ship time:** port times are shown in ship time, like the
   countdown. When the port's local time differs, add `Port time +1 h` (muted)
-  under the docked line (open decision).
+  under the docked line (decided in 8.6: only when the offset isn't 0).
 
 **Tomorrow version:**
 - Shown on the first open **after 20:00**. The same card with the label
@@ -587,8 +589,8 @@ Phone (settings page, Events tab):
 
 - **Rule:** the final performance of a **featured** show in the cruise, matched
   by title across all days, gets a `Last chance` tag.
-  - A show with a single performance gets `Only show` instead (open decision:
-    or no tag).
+  - A show with a single performance gets `Only show` instead (decided in 8.6),
+    shown wherever `Last chance` shows, in the same style.
   - Personal entries and unfeatured events never get a tag.
 - **Where it's worked out:** the phone works it out from the whole bundle and
   sends it as an event flag, since the watch only has today.
@@ -611,22 +613,28 @@ Where it shows:
 - **Watch store:** these are saved in the stored header so the summary and
   countdown work without the phone. That is a few dozen bytes, and it bumps the
   storage version.
-- **Packed events:** `flags` bit 16 = last chance.
+- **Packed events:** `flags` bit 16 = last chance, bit 17 = only show.
 - `docs/WATCH_PROTOCOL.md` changes with each build PR. The bundle format doesn't
   change.
 
-### 8.6 Open decisions for the owner
+### 8.6 Decisions (owner, 2026-09-24)
 
-1. **Replace Home or overlay it:** does the summary replace Home on the first
-   open (proposed), or show as an overlay over Home?
-2. **My info row:** add a `Today's summary` row to My info, or no way back?
-3. **Port times:** ship time only, or add the `Port time +1 h` note?
-4. **Tomorrow:** does the tomorrow card show on the first open after 20:00
-   (proposed), or only from My info?
-5. **Single performances:** `Only show` tag for a single-performance featured
-   show, or no tag?
-6. **Clash `!` marker:** in the Today list, or only on details and the toast?
-7. **Countdown details:** show the ship name and the starred-so-far count?
+1. **Replace Home or overlay it:** the summary **replaces Home** on the first
+   user open after 04:00. Any button moves on to Home. Alert and silent-sync
+   wakeup launches don't count as that open.
+2. **My info row:** **add a `Today's summary` row** to My info. It reopens the
+   summary, or the tomorrow card after 20:00.
+3. **Port times:** show `Port time +1 h` **only when the offset isn't 0**.
+4. **Tomorrow:** the tomorrow card shows on the **first open after 20:00**, and
+   from the My info row.
+5. **Single performances:** **`Only show` tag** (not no tag). Same places and
+   style as `Last chance`; the phone sends it as flag bit 17 (8.5).
+6. **Clash `!` marker:** **in the Today list too**, as well as on details and
+   the toast. Only clashes between starred events (reserved ones included, since
+   Reserved only applies to starred events) and personal entries are marked
+   (8.3). Unstarred events never get one.
+7. **Countdown details:** **show both** the ship name and the starred-so-far
+   count.
 
 ## Mockup index
 
@@ -642,4 +650,4 @@ Where it shows:
 | `WatchReminder.dc.html` | Reminder alert with route from the previous venue |
 | `WatchDirectory.dc.html`, `WatchDeck.dc.html` | Ship directory |
 | `WatchResNeeded/ResReserved/ResHome.dc.html` | Reserved states on the watch |
-| `../phase2-draft/*.dc.html` | §8 daily view drafts, not approved (see its `NOTES.md`) |
+| `../phase2/*.dc.html` | §8 daily view (see its `NOTES.md`) |

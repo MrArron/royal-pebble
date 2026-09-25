@@ -75,8 +75,8 @@ tested on the watch before it's merged. The full plan is in the
 - **Next, Phase 2 (daily view):** a morning summary (and tomorrow's in the
   evening), a days-to-sail countdown, clash warnings for overlapping stars, a
   last-chance tag on a show's final performance, and a reservation reminder with
-  **Mark reserved**. The design is drafted in
-  [DESIGN_V1_1.md §8](docs/DESIGN_V1_1.md) and waiting on mockups.
+  **Mark reserved**. The design is done (mockups approved), in
+  [DESIGN_V1_1.md §8](docs/DESIGN_V1_1.md); building it is next.
 - **Then the Ship GPS:** walking distance from your cabin, the nearest restroom and
   a short step-by-step route on directory place pages, worked out on the phone from
   a map measured from Harmony's deck plans. The map data isn't in the repository yet.

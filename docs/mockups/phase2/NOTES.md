@@ -1,7 +1,9 @@
-# Phase 2 daily view: draft mockups (DESIGN_V1_1.md §8)
+# Phase 2 daily view: mockups (DESIGN_V1_1.md §8)
 
-**Status: draft, not approved.** Nothing here is decided. The owner confirms
-§8.6 first.
+**Status: approved 2026-09-24,** with the owner's §8.6 answers (recorded in
+§8.6). One change from these mockups: a featured show with a single performance
+gets an `Only show` tag, shown like `Last chance` (decision 5). No mockup shows
+it; it fits a Today row (133 px).
 
 Same format as `docs/mockups/v1.1`: Claude Design component files, 400×456 (2×),
 inline styles, Roboto Condensed standing in for Gothic. `preview.png` shows all
@@ -91,6 +93,8 @@ Widest lines that fit (check these in the emulator): `11:30a Adults Only Trivia`
   like the day chips, but that would hide Clashes off-screen.
 
 ## §8.6: recommendations (shown in the mockups; alternatives noted)
+
+The owner took every recommendation except 5 (`Only show` instead of no tag).
 
 1. **Replace Home** on the first open (as proposed). It costs no press, since any
    button goes on. Alternative: an overlay over Home.

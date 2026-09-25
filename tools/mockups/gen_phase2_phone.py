@@ -5,7 +5,7 @@ CHECK14 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="c
 STARP = 'M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.8L12 17.6 6 21l1.3-6.8-5-4.7 6.8-.8z'
 import os, re
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-OUT = os.path.join(REPO, "docs", "mockups", "phase2-draft")
+OUT = os.path.join(REPO, "docs", "mockups", "phase2")
 # The bottom nav is copied from the v1.1 Events mockup so the two stay identical.
 _src = open(os.path.join(REPO, "docs", "mockups", "v1.1", "EventsReserve.dc.html"), encoding="utf-8").read()
 NAV = re.search(r"<nav[\s\S]*?</nav>\r?\n", _src).group(0).replace("\r\n", "\n")
