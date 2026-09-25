@@ -73,6 +73,28 @@ test('events after midnight stay in the evening they belong to', function() {
   assert.strictEqual(s.events[1].start, 2 * 1440 + 30);
 });
 
+test('countdown: sail port and stars across the whole cruise', function() {
+  var b = makeBundle([
+    ['Hairspray', 0, 0, '2027-03-07', '19:00', 90, 1, 0],
+    ['Trivia', 1, 0, '2027-03-08', '13:00', 30, 0, 0],
+    ['Sale', 2, 1, '2027-03-08', '10:00', 60, 0, 0]  // Shop: hidden, but a star still counts
+  ]);
+  var stars = {};
+  stars[slice.starKey('Hairspray', '2027-03-07', '19:00', 'Studio B')] = true;
+  stars[slice.starKey('Sale', '2027-03-08', '10:00', 'Promenade')] = true;
+  stars[slice.starKey('Gone', '2027-03-08', '11:00', 'Studio B')] = true;  // no longer listed
+  var settings = {personal: [{title: 'Dinner', venue: 'Main Dining', date: '2027-03-07', time: '18:00', minutes: 90}]};
+  var s = slice.buildSlice(b, settings, stars, at('2026-12-18', 9, 0));
+  assert.strictEqual(s.day.kind, slice.DAY_NONE);
+  assert.strictEqual(s.day.status, 'SAILS MAR 6');
+  assert.strictEqual(s.sailPort, 'Port Canaveral');
+  assert.strictEqual(s.cruiseStarred, 3);
+
+  // An itinerary that doesn't start on the sail date: no port.
+  b.itinerary = b.itinerary.slice(1);
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2026-12-18', 9, 0)).sailPort, '');
+});
+
 test('stateroom: a guarantee booking shows as not assigned', function() {
   var b = makeBundle([]);
   var now = at('2027-03-08', 10, 0);

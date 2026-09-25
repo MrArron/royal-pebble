@@ -17,7 +17,7 @@
 // The first starred event or alert that doesn't fit is then the "cutoff": the
 // phone has to be back before then.
 
-#define STORE_VERSION 5  // 4: one packed blob, chosen by priority; 5: summary fields
+#define STORE_VERSION 6  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown
 #define STORE_MAX_KEYS 40
 #define STORE_MAX_BUDGET (STORE_MAX_KEYS * PERSIST_DATA_MAX_LENGTH)
 #define STORE_MIN_BUDGET (4 * PERSIST_DATA_MAX_LENGTH)
@@ -40,13 +40,13 @@ enum {
 // Header: int32 sail_days, uint8 bits (1 dark, 2 featured, 4 demo), uint8
 // reminder lead, uint16 slice id, int32 day index, uint8 day kind, int32
 // all-aboard, int16 local offset, int32 cutoff, uint8 alert count, uint8 event
-// count, a spare byte; then for the summary int32 arrive and depart, and
+// count, uint8 cruise starred count; then for the summary int32 arrive and depart, and
 // tomorrow's uint8 kind, int32 arrive, depart, all-aboard and first start,
 // uint8 starred, featured and last kind. Then the texts: the day's status and
-// location, My info's six, the ship name, and tomorrow's status, location,
-// first and last.
+// location, My info's six, the ship name, tomorrow's status, location, first
+// and last, and the sail port.
 #define HEADER_FIXED 54
-#define HEADER_TEXTS 13
+#define HEADER_TEXTS 14
 
 // On the heap, not static: the app's code, data and static buffers must stay
 // under 64 KB (the SDK stores that size in a uint16), and the heap has room.
@@ -89,7 +89,8 @@ static int info_size(const MyInfo *info, const Day *day) {
          codec_str_len(t->status, sizeof(t->status) - 1) +
          codec_str_len(t->location, sizeof(t->location) - 1) +
          codec_str_len(t->first, sizeof(t->first) - 1) +
-         codec_str_len(t->last, sizeof(t->last) - 1);
+         codec_str_len(t->last, sizeof(t->last) - 1) +
+         codec_str_len(meta->sail_port, sizeof(meta->sail_port) - 1);
 }
 
 static uint8_t *write_header(uint8_t *p, int alarms, int events) {
@@ -110,7 +111,7 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   codec_write_int32(p + 19, s_cutoff);
   p[23] = (uint8_t)alarms;
   p[24] = (uint8_t)events;
-  p[25] = 0;  // spare
+  p[25] = meta->cruise_starred;
   codec_write_int32(p + 26, day->arrive);
   codec_write_int32(p + 30, day->depart);
   p[34] = (uint8_t)t->kind;
@@ -134,7 +135,8 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   p = codec_write_str(p, t->status, sizeof(t->status) - 1);
   p = codec_write_str(p, t->location, sizeof(t->location) - 1);
   p = codec_write_str(p, t->first, sizeof(t->first) - 1);
-  return codec_write_str(p, t->last, sizeof(t->last) - 1);
+  p = codec_write_str(p, t->last, sizeof(t->last) - 1);
+  return codec_write_str(p, meta->sail_port, sizeof(meta->sail_port) - 1);
 }
 
 static void earlier(int32_t *cutoff, int32_t t) {
@@ -312,6 +314,7 @@ bool store_load(void) {
     .is_demo = (p[4] & 4) != 0,
     .from_storage = true,
     .reminder_lead = p[5],
+    .cruise_starred = p[25],
   };
   uint16_t slice_id = (uint16_t)(p[6] | (p[7] << 8));
   Day day = {
@@ -349,7 +352,8 @@ bool store_load(void) {
       !codec_read_str(&p, end, tomorrow.status, sizeof(tomorrow.status)) ||
       !codec_read_str(&p, end, tomorrow.location, sizeof(tomorrow.location)) ||
       !codec_read_str(&p, end, tomorrow.first, sizeof(tomorrow.first)) ||
-      !codec_read_str(&p, end, tomorrow.last, sizeof(tomorrow.last))) {
+      !codec_read_str(&p, end, tomorrow.last, sizeof(tomorrow.last)) ||
+      !codec_read_str(&p, end, meta.sail_port, sizeof(meta.sail_port))) {
     return false;
   }
   int a = 0;

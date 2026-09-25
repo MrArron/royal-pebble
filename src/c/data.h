@@ -182,7 +182,9 @@ typedef struct {
   bool is_demo;
   bool from_storage;       // loaded from the watch, not fresh from the phone
   uint8_t reminder_lead;   // minutes before starred events
+  uint8_t cruise_starred;  // starred events and personal entries in the whole cruise
   char ship_name[32];
+  char sail_port[32];      // "Galveston"; "" when not known
 } SliceMeta;
 
 bool data_ready(void);

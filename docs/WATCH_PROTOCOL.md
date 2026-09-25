@@ -40,7 +40,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 
 | `msg_type` | Name | Other keys |
 |---|---|---|
-| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `ship_name`, `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
+| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
 | 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_clock`, `info_sync` (display strings) |
 | 3 | EVENTS | `event_first` (index of the first event in this chunk), `events` (bytes, below) |
 | 5 | ALARMS | `alarm_first`, `alarms` (bytes, below) |
@@ -50,7 +50,11 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_rows`. No `slice_id`; see Ship directory. |
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
-e.g. `SAILS MAR 6` or `CRUISE ENDED`.
+e.g. `SAILS MAR 6` or `CRUISE ENDED`. Before the cruise, Home shows the
+days-to-sail countdown (`docs/DESIGN_V1_1.md` §8.2): the watch counts the days
+from `sail_date` itself, and shows `sail_port`, `ship_name` and
+`cruise_starred`. `cruise_starred` counts starred keys that still match the
+schedule, whatever the Filters, plus personal entries.
 
 `arrive` and `depart` are the itinerary's port-local times turned into ship time
 (minus the day's offset), for the morning summary; a departure after midnight
@@ -271,10 +275,10 @@ above, spread over 256-byte values (keys 40 on):
 
 1. Header (54 bytes: sail date, settings bits, reminder lead, slice id, day
    index and kind, all-aboard, local offset, cutoff, alert and event counts,
-   then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
+   the cruise's starred count, then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
    first start, starred and featured counts and last kind), then the day's
    status and location, My info's six texts, the ship name, and tomorrow's
-   status, location, first and last.
+   status, location, first and last, then the sail port. (Storage version 6.)
 2. Alerts, then events, each as packed above, in time order.
 
 The blob's budget follows `persist_get_max_size()`: the limit minus 1.5 kB kept

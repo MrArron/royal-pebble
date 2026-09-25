@@ -72,7 +72,9 @@
       "tmr_first",
       "tmr_first_start",
       "tmr_last",
-      "tmr_last_kind"
+      "tmr_last_kind",
+      "sail_port",
+      "cruise_starred"
     ],
     "resources": {
       "media": []

@@ -716,6 +716,19 @@ function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
   return t;
 }
 
+// The countdown before the cruise (docs/DESIGN_V1_1.md §8.2): starred events
+// across the whole cruise (keys that still match the schedule, whatever the
+// Filters) plus personal entries.
+function cruiseStarred(bundle, settings, stars) {
+  var n = ((settings && settings.personal) || []).length;
+  scheduleEvents(bundle).forEach(function(e) {
+    if (stars[e.key]) {
+      n++;
+    }
+  });
+  return n;
+}
+
 function formatSync(iso) {
   if (!iso) {
     return 'Never';
@@ -847,6 +860,7 @@ function buildSlice(bundle, settings, stars, now, testAt) {
   var dayIndex = cruiseDayIndex(cruiseMinutes(sailDays, now));
   var me = settings.me || {};
   var mine = bundle.mine || {};
+  var sailDay = buildDay(bundle, settings, 0, sailDays);
 
   return {
     sailDays: sailDays,
@@ -855,6 +869,8 @@ function buildSlice(bundle, settings, stars, now, testAt) {
     day: buildDay(bundle, settings, dayIndex, sailDays),
     tomorrow: buildTomorrow(bundle, settings, stars, dayIndex, sailDays),
     shipName: (bundle.ship && bundle.ship.name) || '',
+    sailPort: sailDay.kind === DAY_PORT ? sailDay.location : '',
+    cruiseStarred: cruiseStarred(bundle, settings, stars),
     events: buildEvents(bundle, settings, stars, dayIndex, sailDays),
     alarms: buildAlarms(bundle, settings, stars, now, testAt),
     reminderLead: [5, 15, 30].indexOf(settings.reminderLead) !== -1 ? settings.reminderLead : 15,

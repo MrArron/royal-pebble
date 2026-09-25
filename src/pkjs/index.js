@@ -151,6 +151,8 @@ function sendSlice() {
     arrive: sl.day.arrive,
     depart: sl.day.depart,
     ship_name: pack.cutText(sl.shipName, 31),
+    sail_port: pack.cutText(sl.sailPort, 31),
+    cruise_starred: Math.min(sl.cruiseStarred, 255),
     tmr_kind: sl.tomorrow.kind,
     tmr_status: pack.cutText(sl.tomorrow.status, 15),
     tmr_location: pack.cutText(sl.tomorrow.location, 31),

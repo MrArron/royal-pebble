@@ -463,7 +463,7 @@ authoritative for this flag until it's acknowledged.
 **Status: as returned, approved 2026-09-24.** Written as the brief for a Claude
 Design pass; the mockups came back and the owner answered the open decisions
 (8.6). Item 5 (the morning summary) is built, except its clash line, which comes
-with item 7; items 6-8 aren't yet. Item 9 (reservation reminder) is designed in
+with item 7. Item 6 (the countdown) is built; items 7 and 8 aren't yet. Item 9 (reservation reminder) is designed in
 §5. The layouts below are the original text sketches at watch size; the mockups
 and their `NOTES.md` are the final word on text and layout.
 
@@ -556,7 +556,9 @@ Harmony of the Seas                     Gothic 14 bold, muted
     (sync-before-departure rule), with the last sync date from My info.
   - The day before, the number becomes `Tomorrow`.
 - **Sail day:** the normal day (embark) begins at 04:00, and the morning summary
-  takes over.
+  takes over. Between midnight and 04:00 on the sail date the number reads
+  `Today`.
+- **No stars yet:** the last line reads `Nothing starred yet` (muted, no star).
 - **After the cruise:** unchanged (`CRUISE ENDED`).
 
 ### 8.3 Clash warning (item 7)
