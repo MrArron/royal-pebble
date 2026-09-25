@@ -199,7 +199,7 @@ var CSS = [
   '.fstat .textbtn{flex:none;white-space:nowrap;padding:0 4px}',
   '.schip{min-height:28px;padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;line-height:1.3}',
   '.schip.edited{background:var(--warning-container);color:var(--on-warning-container)}',
-  '.schip.check{box-shadow:inset 0 0 0 1px var(--outline);color:var(--on-surface-variant)}',
+  '.schip.check,.schip.final{box-shadow:inset 0 0 0 1px var(--outline);color:var(--on-surface-variant)}',
   '.wprev{background:#161D1D;color:#FFFFFF;border-radius:28px;padding:16px 20px;margin:0 0 12px}',
   '.wprev small{display:block;font-size:12px;font-weight:600;color:#9CF1F0;letter-spacing:.5px;margin-bottom:4px}',
   '.wprev b,.wprev span{display:block;font-family:"Roboto Condensed","Arial Narrow",sans-serif;font-weight:700}',
@@ -1104,6 +1104,7 @@ function pageMain(S, V) {
   // the phone, so stars set on the watch meanwhile aren't overwritten.
   var sched = S.schedule || null;
   var savedStars = S.stars || {};
+  var finals = S.finals || {};  // star key: 1 last chance, 2 only show
   var starChanges = {};  // key -> true/false
   var starTimes = {};    // key -> when it was changed (ms), so the latest change wins
   var personal = (S.personal || []).slice();
@@ -1234,9 +1235,20 @@ function pageMain(S, V) {
     }
   }
 
+  function clashChip(text) {
+    return text ? '<span class="schip clash">' + BANG_SVG + '<span>' + esc(text) + '</span></span>' : '';
+  }
+
   function clashTag(text) {
-    return text ? '<span class="tags"><span class="schip clash">' + BANG_SVG + '<span>' + esc(text) +
-      '</span></span></span>' : '';
+    return text ? '<span class="tags">' + clashChip(text) + '</span>' : '';
+  }
+
+  // Outlined "Last chance" / "Only show" chip (§8.4), then the clash chip.
+  function eventTags(e) {
+    var fin = finals[e.key];
+    var html = (fin ? '<span class="schip final">' + (fin === 2 ? 'Only show' : 'Last chance') + '</span>' : '') +
+      clashChip(clashes.byKey[e.key]);
+    return html ? '<span class="tags">' + html + '</span>' : '';
   }
 
   function hiddenOnWatch(e) {
@@ -1276,7 +1288,7 @@ function pageMain(S, V) {
         esc(shortClock(c.time)) : esc(c.venue)) + '</span>');
     }
     return '<div class="ev"><span class="tm">' + shortClock(e.time) + '</span><span class="t"><b>' + esc(e.title) +
-      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + clashTag(clashes.byKey[e.key]) + '</span>' +
+      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + eventTags(e) + '</span>' +
       '<button class="star" data-act="star" data-key="' + esc(e.key) + '" aria-pressed="' + on + '" aria-label="' +
       (on ? 'Unstar ' : 'Star ') + esc(e.title) + '">' + STAR_SVG + '</button></div>';
   }
@@ -1469,7 +1481,7 @@ function pageMain(S, V) {
       if (old) {
         t.removeChild(old);
       }
-      t.insertAdjacentHTML('beforeend', clashTag(clashes.byKey[sb.getAttribute('data-key')]));
+      t.insertAdjacentHTML('beforeend', eventTags({key: sb.getAttribute('data-key')}));
     });
   });
 

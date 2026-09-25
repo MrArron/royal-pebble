@@ -21,6 +21,8 @@ var FLAG_STARRED = 1;
 var FLAG_FEATURED = 2;
 var FLAG_RESERVATION = 4;
 var FLAG_PERSONAL = 8;
+var FLAG_LAST_CHANCE = 16;  // the last performance of a featured show (finalShows)
+var FLAG_ONLY_SHOW = 32;    // a featured show that is on only once
 
 var ALARM_ALL_ABOARD = 0;
 var ALARM_REMINDER = 1;
@@ -455,6 +457,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
   var events = [];
   var ship = (bundle.ship && bundle.ship.code) || '';
   var whereOf = venues.whereFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
+  var finals = finalShows(bundle);
 
   function add(title, venue, date, time, minutes, flags, cat) {
     var tod = minutesFromHhmm(time);
@@ -489,6 +492,8 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
   (sched.events || []).forEach(function(row) {
     var cat = (sched.cats || [])[row[f.cat]] || [];
     var flags = (row[f.featured] ? FLAG_FEATURED : 0) | (row[f.reservation] ? FLAG_RESERVATION : 0);
+    var fin = finals[starKey(row[f.title], row[f.date], row[f.time], (sched.venues || [])[row[f.venue]])];
+    flags |= fin === FINAL_LAST_CHANCE ? FLAG_LAST_CHANCE : fin === FINAL_ONLY_SHOW ? FLAG_ONLY_SHOW : 0;
     add(row[f.title], (sched.venues || [])[row[f.venue]], row[f.date], row[f.time], row[f.minutes], flags, cat);
   });
 
@@ -695,7 +700,6 @@ function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
   t.arrive = day.arrive;
   t.depart = day.depart;
   t.allAboard = day.allAboard;
-  var finals = finalShows(bundle);
   buildEvents(bundle, settings, stars, dayIndex + 1, sailDays).forEach(function(e) {
     if (e.flags & (FLAG_STARRED | FLAG_PERSONAL)) {
       t.starred++;
@@ -707,7 +711,7 @@ function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
     if (e.flags & FLAG_FEATURED) {
       t.featured++;
     }
-    var kind = finals[e.key];
+    var kind = e.flags & FLAG_LAST_CHANCE ? FINAL_LAST_CHANCE : e.flags & FLAG_ONLY_SHOW ? FINAL_ONLY_SHOW : 0;
     if (kind && (!t.lastKind || kind < t.lastKind)) {
       t.last = e.title;
       t.lastKind = kind;
@@ -898,6 +902,8 @@ module.exports = {
   FLAG_FEATURED: FLAG_FEATURED,
   FLAG_RESERVATION: FLAG_RESERVATION,
   FLAG_PERSONAL: FLAG_PERSONAL,
+  FLAG_LAST_CHANCE: FLAG_LAST_CHANCE,
+  FLAG_ONLY_SHOW: FLAG_ONLY_SHOW,
   ALARM_ALL_ABOARD: ALARM_ALL_ABOARD,
   ALARM_REMINDER: ALARM_REMINDER,
   NOTICE_MOVED: NOTICE_MOVED,

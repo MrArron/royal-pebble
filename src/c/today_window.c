@@ -128,18 +128,20 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
                      GRect(x, 1, w, 22), GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
 
+  // "ends 1:00p · Venue" while it's on, else "Last chance · Venue" (the tag in
+  // the port accent) or just the venue.
   char sub[VENUE_LEN + 20];
+  const char *tag = NULL;
   if (in_progress) {
     char end_buf[8];
     fmt_clock(end_buf, sizeof(end_buf), event_end(e));
     snprintf(sub, sizeof(sub), "ends %s \xc2\xb7 %s", end_buf, e->venue);
   } else {
     snprintf(sub, sizeof(sub), "%s", e->venue);
+    tag = event_final_tag(e);
   }
-  graphics_context_set_text_color(ctx, muted);
-  graphics_draw_text(ctx, sub, fonts_get_system_font(FONT_KEY_GOTHIC_14),
-                     GRect(x, 22, b.size.w - x - PAD, 18), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+  draw_tagged_line(ctx, tag, highlighted ? g_theme->cursor_text : g_theme->port_accent, sub, muted,
+                   fonts_get_system_font(FONT_KEY_GOTHIC_14), GRect(x, 22, b.size.w - x - PAD, 18));
 }
 
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {

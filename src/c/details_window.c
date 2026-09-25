@@ -3,7 +3,7 @@
 #include "ui.h"
 
 // Event details: title, venue, deck and position, time and duration,
-// reservation, star state (docs/DESIGN_V1_1.md §2).
+// reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §8.4).
 // Hold Select toggles the star.
 
 static Window *s_window;
@@ -78,6 +78,10 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   if (e->flags & EVENT_RESERVATION) {
     y = draw_line(ctx, "Reservation needed", FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent,
                   PAD, y, w, 18) + 2;
+  }
+  const char *tag = event_final_tag(e);
+  if (tag) {
+    y = draw_line(ctx, tag, FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent, PAD, y, w, 18) + 2;
   }
 
   draw_divider(ctx, y + 4, b.size.w);

@@ -177,7 +177,9 @@ test('filters, untimed entries, stars and personal entries', function() {
   assert.deepStrictEqual(s.events.map(function(e) { return e.title; }), ['Scavenger Hunt', 'Dinner', 'Ice Show']);
   assert.strictEqual(s.events[0].start, slice.NO_TIME);
   assert.strictEqual(s.events[1].flags, slice.FLAG_PERSONAL);
-  assert.strictEqual(s.events[2].flags, slice.FLAG_STARRED | slice.FLAG_FEATURED | slice.FLAG_RESERVATION);
+  // The featured Ice Show is on only once, so it's also an only show.
+  assert.strictEqual(s.events[2].flags,
+                     slice.FLAG_STARRED | slice.FLAG_FEATURED | slice.FLAG_RESERVATION | slice.FLAG_ONLY_SHOW);
 
   s = slice.buildSlice(b, {hiddenCats: []}, {}, at('2027-03-07', 9, 0));
   assert.strictEqual(s.events.length, 3);  // Shop shown when not hidden
@@ -997,6 +999,36 @@ test('final shows: last chance by title across days, only show, never unfeatured
     ['Late Comedy', 0, 0, '2027-03-07', '22:00', 60, 1, 0]
   ]);
   assert.deepStrictEqual(slice.finalShows(m), {'Late Comedy|2027-03-07|00:30|Studio B': slice.FINAL_LAST_CHANCE});
+});
+
+test('final shows: events carry last chance and only show flags', function() {
+  var b = makeBundle([
+    ['Hairspray', 0, 0, '2027-03-07', '19:00', 90, 1, 0],
+    ['Hairspray', 0, 0, '2027-03-08', '21:00', 90, 1, 0],
+    ['Ice Show', 0, 0, '2027-03-08', '14:00', 60, 1, 1],
+    ['Trivia', 1, 0, '2027-03-08', '15:00', 45, 0, 0]
+  ]);
+  var TAGS = slice.FLAG_LAST_CHANCE | slice.FLAG_ONLY_SHOW;
+  function tags(events) {
+    var out = {};
+    events.forEach(function(e) { out[e.title] = e.flags & TAGS; });
+    return out;
+  }
+  // Day 2: the first Hairspray isn't the last one.
+  assert.deepStrictEqual(tags(slice.buildSlice(b, {}, {}, at('2027-03-07', 12, 0)).events), {Hairspray: 0});
+  // Day 3: its last chance; the Ice Show (on once) keeps its other flags; Trivia isn't featured.
+  var events = slice.buildSlice(b, {}, {}, at('2027-03-08', 12, 0)).events;
+  assert.deepStrictEqual(tags(events),
+                         {Hairspray: slice.FLAG_LAST_CHANCE, 'Ice Show': slice.FLAG_ONLY_SHOW, Trivia: 0});
+  var ice = events.filter(function(e) { return e.title === 'Ice Show'; })[0];
+  assert.strictEqual(ice.flags, slice.FLAG_FEATURED | slice.FLAG_RESERVATION | slice.FLAG_ONLY_SHOW);
+  // Personal entries never get a tag, even with a featured show's title.
+  var settings = {personal: [{title: 'Hairspray', venue: 'Studio B', date: '2027-03-08', time: '21:00', minutes: 90}]};
+  var mine = slice.buildSlice(b, settings, {}, at('2027-03-08', 12, 0)).events.filter(function(e) {
+    return e.flags & slice.FLAG_PERSONAL;
+  });
+  assert.strictEqual(mine.length, 1);
+  assert.strictEqual(mine[0].flags & TAGS, 0);
 });
 
 test('tomorrow card: counts, first starred, last chance before only show', function() {

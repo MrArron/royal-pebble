@@ -462,8 +462,8 @@ authoritative for this flag until it's acknowledged.
 
 **Status: as returned, approved 2026-09-24.** Written as the brief for a Claude
 Design pass; the mockups came back and the owner answered the open decisions
-(8.6). Items 5 (the morning summary), 6 (the countdown) and 7 (the clash
-warning) are built; item 8 isn't yet. Item 9 (reservation reminder) is designed in
+(8.6). Items 5 (the morning summary), 6 (the countdown), 7 (the clash
+warning) and 8 (the last-chance tag) are built. Item 9 (reservation reminder) is designed in
 §5. The layouts below are the original text sketches at watch size; the mockups
 and their `NOTES.md` are the final word on text and layout.
 
@@ -617,6 +617,18 @@ Where it shows:
 - **Tomorrow summary:** `Last chance: Hairspray` (8.1).
 - **Settings page:** an outlined `Last chance` chip on the event row.
 
+As built (item 8):
+- The Today row reads `Last chance · Royal Theater` (tag first, per the
+  mockup NOTES); on a NOW row `ends …` replaces it. On the cursor the tag takes
+  the cursor text color.
+- Home: a `Last chance` line (Gothic 14 bold, port accent) at the foot of the
+  NEXT / FEATURED card, and the smaller items below it read
+  `Last chance · Venue · 4 Mid` like Today rows.
+- The settings page chip sits before the clash chip, and stays when a star tap
+  updates the clash chips in place.
+- The watch only reads the flags; the phone sets them in `slice.buildEvents`,
+  so personal entries and unfeatured events never have them.
+
 ### 8.5 Data the phone would add (for the build PRs, not for Claude Design)
 
 - **BEGIN:** `arrive` and `depart` in cruise minutes (−1 none), and a tomorrow
@@ -626,7 +638,8 @@ Where it shows:
 - **Watch store:** these are saved in the stored header so the summary and
   countdown work without the phone. That is a few dozen bytes, and it bumps the
   storage version.
-- **Packed events:** `flags` bit 16 = last chance, bit 17 = only show.
+- **Packed events:** `flags` bit 4 (16) = last chance, bit 5 (32) = only show.
+  (Planned as bits 16 and 17, but `flags` is one byte.)
 - `docs/WATCH_PROTOCOL.md` changes with each build PR. The bundle format doesn't
   change.
 
@@ -641,7 +654,7 @@ Where it shows:
 4. **Tomorrow:** the tomorrow card shows on the **first open after 20:00**, and
    from the My info row.
 5. **Single performances:** **`Only show` tag** (not no tag). Same places and
-   style as `Last chance`; the phone sends it as flag bit 17 (8.5).
+   style as `Last chance`; the phone sends it as a flag bit (8.5).
 6. **Clash `!` marker:** **in the Today list too**, as well as on details and
    the toast. Only clashes between starred events (reserved ones included, since
    Reserved only applies to starred events) and personal entries are marked

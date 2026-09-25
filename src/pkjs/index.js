@@ -318,6 +318,8 @@ function pageState(ships) {
     // For Settings > Events.
     schedule: bundle && bundle.schedule && bundle.schedule.events && bundle.schedule.events.length ?
       bundle.schedule : null,
+    // Last chance and only show tags by star key (slice.finalShows).
+    finals: bundle ? slice.finalShows(bundle) : {},
     stars: bundle ? load(STORE_STARS, {}) : {},
     starChanges: bundle ? load(STORE_STAR_CHANGES, null) : null,
     // Starred events or alerts the watch had no room to save: {date, time}.
