@@ -38,6 +38,7 @@ static uint16_t s_pending_id;
 static bool s_pending;
 static SliceMeta s_meta;
 static Day s_day;
+static Tomorrow s_tomorrow;
 static MyInfo s_info;
 static int s_event_count;
 static int s_events_received;
@@ -58,6 +59,12 @@ static int32_t tuple_int(const Tuple *t) {
 
 static int32_t find_int(DictionaryIterator *iter, uint32_t key) {
   return tuple_int(dict_find(iter, key));
+}
+
+// Like find_int, with `missing` when the key isn't there.
+static int32_t find_int_or(DictionaryIterator *iter, uint32_t key, int32_t missing) {
+  Tuple *t = dict_find(iter, key);
+  return t ? tuple_int(t) : missing;
 }
 
 static void find_str(DictionaryIterator *iter, uint32_t key, char *dst, size_t size) {
@@ -128,8 +135,25 @@ static void handle_begin(DictionaryIterator *iter, uint16_t slice_id) {
   s_day.kind = (DayKind)find_int(iter, MESSAGE_KEY_day_kind);
   s_day.all_aboard = find_int(iter, MESSAGE_KEY_all_aboard);
   s_day.local_offset = (int16_t)find_int(iter, MESSAGE_KEY_local_offset);
+  s_day.arrive = find_int_or(iter, MESSAGE_KEY_arrive, NO_TIME);
+  s_day.depart = find_int_or(iter, MESSAGE_KEY_depart, NO_TIME);
   find_str(iter, MESSAGE_KEY_day_status, s_day.status, sizeof(s_day.status));
   find_str(iter, MESSAGE_KEY_day_location, s_day.location, sizeof(s_day.location));
+  find_str(iter, MESSAGE_KEY_ship_name, s_meta.ship_name, sizeof(s_meta.ship_name));
+
+  // Tomorrow's card (an older phone sends none: DAY_NONE).
+  s_tomorrow.kind = (DayKind)find_int_or(iter, MESSAGE_KEY_tmr_kind, DAY_NONE);
+  find_str(iter, MESSAGE_KEY_tmr_status, s_tomorrow.status, sizeof(s_tomorrow.status));
+  find_str(iter, MESSAGE_KEY_tmr_location, s_tomorrow.location, sizeof(s_tomorrow.location));
+  s_tomorrow.arrive = find_int_or(iter, MESSAGE_KEY_tmr_arrive, NO_TIME);
+  s_tomorrow.depart = find_int_or(iter, MESSAGE_KEY_tmr_depart, NO_TIME);
+  s_tomorrow.all_aboard = find_int_or(iter, MESSAGE_KEY_tmr_all_aboard, NO_TIME);
+  s_tomorrow.starred = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_starred);
+  s_tomorrow.featured = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_featured);
+  find_str(iter, MESSAGE_KEY_tmr_first, s_tomorrow.first, sizeof(s_tomorrow.first));
+  s_tomorrow.first_start = find_int_or(iter, MESSAGE_KEY_tmr_first_start, NO_TIME);
+  find_str(iter, MESSAGE_KEY_tmr_last, s_tomorrow.last, sizeof(s_tomorrow.last));
+  s_tomorrow.last_kind = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_last_kind);
 
   s_event_count = find_int(iter, MESSAGE_KEY_event_count);
   s_alarm_count = find_int(iter, MESSAGE_KEY_alarm_count);
@@ -227,7 +251,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
         APP_LOG(APP_LOG_LEVEL_WARNING, "Slice %d: expected %d events, %d alerts; got %d, %d",
                 slice_id, s_event_count, s_alarm_count, s_events_received, s_alarms_received);
       }
-      data_commit(slice_id, &s_meta, &s_day, &s_info, count, alarms);
+      data_commit(slice_id, &s_meta, &s_day, &s_tomorrow, &s_info, count, alarms);
       s_pending = false;
       if (s_on_slice) {
         s_on_slice();

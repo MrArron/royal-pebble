@@ -928,6 +928,115 @@ test('cutoffWhen gives the ship-time date and clock of what the watch could not 
   assert.deepStrictEqual(slice.cutoffWhen('2027-03-06', 1440 + 1500, now), {date: '2027-03-08', time: '01:00'});
 });
 
+test('summary: arrive and depart in ship time, after midnight too', function() {
+  var b = makeBundle([]);
+  var settings = {days: {'2027-03-08': {offset: 60}}};
+  var d = slice.buildSlice(b, settings, {}, at('2027-03-08', 10, 0)).day;
+  // Port-local 08:00-17:00 with the port an hour ahead: 07:00-16:00 ship time.
+  assert.strictEqual(d.arrive, 2 * 1440 + 7 * 60);
+  assert.strictEqual(d.depart, 2 * 1440 + 16 * 60);
+  // Embark: sails only; debark: arrives only; sea: neither.
+  var embark = slice.buildSlice(b, {}, {}, at('2027-03-06', 12, 0)).day;
+  assert.deepStrictEqual([embark.arrive, embark.depart], [slice.NO_TIME, 16 * 60]);
+  var sea = slice.buildSlice(b, {}, {}, at('2027-03-07', 12, 0)).day;
+  assert.deepStrictEqual([sea.arrive, sea.depart], [slice.NO_TIME, slice.NO_TIME]);
+  var debark = slice.buildSlice(b, {}, {}, at('2027-03-09', 7, 0)).day;
+  assert.deepStrictEqual([debark.arrive, debark.depart], [3 * 1440 + 6 * 60, slice.NO_TIME]);
+  // A 01:30 departure is after midnight: 25:30 on the port day.
+  var late = makeBundle([], [
+    {day: 1, date: '2027-03-06', port: 'Galveston, TX', type: 'EMBARK', arrive: null, depart: '16:00'},
+    {day: 2, date: '2027-03-07', port: 'Cozumel, Mexico', type: 'DOCKED', arrive: '10:30', depart: '01:30'}
+  ]);
+  var l = slice.buildSlice(late, {}, {}, at('2027-03-07', 12, 0)).day;
+  assert.strictEqual(l.arrive, 1440 + 10 * 60 + 30);
+  assert.strictEqual(l.depart, 1440 + 25 * 60 + 30);
+  // Outside the cruise there are none.
+  var none = slice.buildSlice(b, {}, {}, at('2027-02-22', 12, 0)).day;
+  assert.deepStrictEqual([none.arrive, none.depart], [slice.NO_TIME, slice.NO_TIME]);
+});
+
+test('final shows: last chance by title across days, only show, never unfeatured', function() {
+  var b = makeBundle([
+    ['Hairspray', 0, 0, '2027-03-07', '19:00', 90, 1, 0],
+    ['hairspray ', 0, 0, '2027-03-08', '21:00', 90, 1, 0],
+    ['Hairspray', 0, 0, '2027-03-08', '18:00', 90, 1, 0],
+    ['Ice Show', 0, 0, '2027-03-07', '14:00', 60, 1, 0],
+    ['Trivia', 1, 0, '2027-03-07', '15:00', 45, 0, 0],
+    ['Trivia', 1, 0, '2027-03-08', '15:00', 45, 0, 0]
+  ]);
+  var f = slice.finalShows(b);
+  assert.deepStrictEqual(f, {
+    'hairspray |2027-03-08|21:00|Studio B': slice.FINAL_LAST_CHANCE,
+    'Ice Show|2027-03-07|14:00|Studio B': slice.FINAL_ONLY_SHOW
+  });
+  // A 00:30 show listed on the evening's date is after that midnight, so it's the last.
+  var m = makeBundle([
+    ['Late Comedy', 0, 0, '2027-03-07', '00:30', 60, 1, 0],
+    ['Late Comedy', 0, 0, '2027-03-07', '22:00', 60, 1, 0]
+  ]);
+  assert.deepStrictEqual(slice.finalShows(m), {'Late Comedy|2027-03-07|00:30|Studio B': slice.FINAL_LAST_CHANCE});
+});
+
+test('tomorrow card: counts, first starred, last chance before only show', function() {
+  var b = makeBundle([
+    ['Ice Show', 0, 0, '2027-03-07', '14:00', 60, 1, 0],
+    ['Ice Show', 0, 0, '2027-03-08', '20:00', 60, 1, 0],
+    ['Magic', 0, 0, '2027-03-08', '11:00', 60, 1, 0],
+    ['Pilates', 1, 0, '2027-03-08', '08:30', 45, 0, 0],
+    ['Sale', 2, 1, '2027-03-08', '09:00', 60, 1, 0],
+    ['Late Party', 1, 0, '2027-03-08', '01:00', 60, 0, 0]
+  ]);
+  var stars = {};
+  stars[slice.starKey('Pilates', '2027-03-08', '08:30', 'Boardwalk')] = true;
+  stars[slice.starKey('Late Party', '2027-03-08', '01:00', 'Boardwalk')] = true;
+  var settings = {personal: [{title: 'Spa', venue: '', date: '2027-03-08', time: null, minutes: 0}]};
+  // In the evening of day 2 (index 1), tomorrow is St. Thomas.
+  var t = slice.buildSlice(b, settings, stars, at('2027-03-07', 21, 0)).tomorrow;
+  assert.strictEqual(t.kind, slice.DAY_PORT);
+  assert.strictEqual(t.status, 'DOCKED');
+  assert.strictEqual(t.location, 'St. Thomas');
+  assert.deepStrictEqual([t.arrive, t.depart, t.allAboard], [2 * 1440 + 480, 2 * 1440 + 1020, 2 * 1440 + 990]);
+  // Pilates, the untimed Spa and the 01:00 party (after midnight, still tomorrow's day).
+  assert.strictEqual(t.starred, 3);
+  assert.deepStrictEqual([t.first, t.firstStart], ['Pilates', 2 * 1440 + 510]);
+  // Shop is hidden, so the featured Sale doesn't count.
+  assert.strictEqual(t.featured, 2);
+  // Magic is an only show at 11:00, but the Ice Show's last chance comes first.
+  assert.deepStrictEqual([t.last, t.lastKind], ['Ice Show', slice.FINAL_LAST_CHANCE]);
+  // Without the repeat, Magic (the earlier only show) is picked.
+  b.schedule.events.splice(0, 1);
+  t = slice.buildSlice(b, settings, stars, at('2027-03-07', 21, 0)).tomorrow;
+  assert.deepStrictEqual([t.last, t.lastKind], ['Magic', slice.FINAL_ONLY_SHOW]);
+  // At 00:30 it is still day 2's evening, so tomorrow is still St. Thomas.
+  assert.strictEqual(slice.buildSlice(b, settings, stars, at('2027-03-08', 0, 30)).tomorrow.location, 'St. Thomas');
+  // On the last day, tomorrow is outside the cruise.
+  t = slice.buildSlice(b, {}, {}, at('2027-03-09', 21, 0)).tomorrow;
+  assert.deepStrictEqual([t.kind, t.location, t.starred, t.firstStart, t.lastKind],
+                         [slice.DAY_NONE, '', 0, slice.NO_TIME, 0]);
+  // The ship name comes along for the countdown.
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-02-22', 12, 0)).shipName, 'Harmony of the Seas');
+});
+
+test('demo: tomorrow has a starred class and a last chance or only show', function() {
+  for (var v = 0; v < demo.VARIANTS; v++) {
+    var now = at('2026-09-23', 21, 0);
+    var d = demo.make(now, v);
+    var t = slice.buildSlice(d.bundle, d.settings, d.stars, now).tomorrow;
+    assert.strictEqual(t.location, 'Nassau');
+    assert.strictEqual(t.first, 'Sunrise Pilates');
+    assert.deepStrictEqual([t.last, t.lastKind],
+                           ['Mamma Mia!', v % 2 === 1 ? slice.FINAL_LAST_CHANCE : slice.FINAL_ONLY_SHOW]);
+  }
+});
+
+test('cutText keeps whole characters', function() {
+  assert.strictEqual(pack.cutText('Broadway Nights', 8), 'Broadway');
+  assert.strictEqual(pack.cutText('Café au lait', 4), 'Caf');
+  assert.strictEqual(pack.cutText('Café', 5), 'Café');
+  assert.strictEqual(pack.cutText('🎉 Party', 3), '');
+  assert.strictEqual(pack.cutText(null, 5), '');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {

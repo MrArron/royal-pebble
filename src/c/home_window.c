@@ -311,3 +311,5 @@ void home_window_push(void) {
 }
 
 void home_window_destroy(void) { window_destroy(s_window); }
+
+bool home_window_is_top(void) { return s_window && window_stack_get_top_window() == s_window; }

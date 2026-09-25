@@ -3,7 +3,8 @@
 static bool s_ready;
 static uint16_t s_slice_id;
 static SliceMeta s_meta = {.show_featured = true};
-static Day s_day = {.kind = DAY_NONE, .all_aboard = NO_TIME};
+static Day s_day = {.kind = DAY_NONE, .all_aboard = NO_TIME, .arrive = NO_TIME, .depart = NO_TIME};
+static Tomorrow s_tomorrow = {.kind = DAY_NONE};
 static MyInfo s_info;
 static Event s_events[MAX_EVENTS];
 static int s_event_count;
@@ -12,6 +13,7 @@ static int s_alarm_count;
 
 bool data_ready(void) { return s_ready; }
 const Day *data_day(void) { return &s_day; }
+const Tomorrow *data_tomorrow(void) { return &s_tomorrow; }
 const MyInfo *data_my_info(void) { return &s_info; }
 const SliceMeta *data_meta(void) { return &s_meta; }
 uint16_t data_slice_id(void) { return s_slice_id; }
@@ -20,11 +22,12 @@ Event *data_event(int index) { return &s_events[index]; }
 int data_alarm_count(void) { return s_alarm_count; }
 Alarm *data_alarm(int index) { return &s_alarms[index]; }
 
-void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const MyInfo *info,
-                 int event_count, int alarm_count) {
+void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const Tomorrow *tomorrow,
+                 const MyInfo *info, int event_count, int alarm_count) {
   s_slice_id = slice_id;
   s_meta = *meta;
   s_day = *day;
+  s_tomorrow = *tomorrow;
   s_info = *info;
   s_event_count = event_count < MAX_EVENTS ? event_count : MAX_EVENTS;
   s_alarm_count = alarm_count < MAX_ALARMS ? alarm_count : MAX_ALARMS;

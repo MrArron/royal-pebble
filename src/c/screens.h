@@ -8,6 +8,21 @@
 void home_window_push(void);
 void home_window_refresh(void);
 void home_window_destroy(void);
+// Home is the screen on top (nothing opened over it).
+bool home_window_is_top(void);
+
+// Morning summary (docs/DESIGN_V1_1.md §8.1). The launch sets whether the user
+// opened the app (alerts don't count); summary_check then shows today's card,
+// or tomorrow's from 20:00, over Home the first time each is due, once the
+// slice is today's.
+void summary_set_user_open(bool user_open);
+void summary_check(void);
+// For My info: whether there's a card for today, and whether it's tomorrow's.
+bool summary_available(void);
+bool summary_shows_tomorrow(void);
+// from_home: shown in place of Home, so Up and Down go on to My info and Today.
+void summary_window_push(bool tomorrow, bool from_home);
+void summary_window_refresh(void);
 
 void today_window_push(void);
 void today_window_refresh(void);
