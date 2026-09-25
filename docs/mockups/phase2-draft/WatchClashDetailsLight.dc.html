@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Watch – event details, clash, light</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 400px; height: 456px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #000000; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; display: flex; flex-direction: column">
+<div style="height: 44px; flex-shrink: 0; background: #000055; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; position: relative">
+<span style="position: absolute; left: 50%; transform: translateX(-50%); color: #FFFFFF; font-size: 28px; font-weight: 700">12:40p</span>
+<span style="color: #FFFFFF; font-size: 28px; font-weight: 700">Event</span>
+<span style="color: #AAFFFF; font-size: 26px; font-weight: 700; font-variant: small-caps">at sea</span>
+</div>
+<div style="padding: 6px 14px 0; display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 48px; font-weight: 700; line-height: 50px;">Ice Show</div>
+<div style="font-size: 34px; line-height: 38px; font-weight: 700; color: #555555; margin-top: 4px;">Studio B</div>
+<div style="font-size: 34px; line-height: 38px; font-weight: 700;">Deck 4 · Mid</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555"><svg width="12" height="20" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right: 2px"><path d="M6 1.5v17M1.5 13.5L6 18.5l4.5-5"></path></svg>2 decks from cabin</div>
+<div style="font-size: 34px; line-height: 38px; font-weight: 700;">1:30p - 2:30p · 1 h</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #AA5500;">Clashes with 1:00p Adults Only Trivia · +1 more</div>
+<div style="height: 2px; background: #AAAAAA; margin: 8px 0"></div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 28px; font-weight: 700; color: #0055AA"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0"><path d="M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6l-6.2 3.5 1.4-7L2 9.3l7-.8z" fill="#0055AA"></path></svg>Starred</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":456}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
