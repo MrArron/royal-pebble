@@ -215,6 +215,17 @@ bool event_is_past(const Event *e, int32_t now);
 bool event_is_finished(const Event *e, int32_t now);
 int32_t event_end(const Event *e);
 
+// Clashes (docs/DESIGN_V1_1.md §8.3): two timed starred events or personal
+// entries whose times overlap. One with no length lasts FINISHED_GRACE minutes;
+// back-to-back isn't a clash. Finished items are left out, and only today's
+// events are checked.
+bool event_can_clash(const Event *e);
+// How many items event `index` clashes with; *first (may be NULL) gets the
+// earliest of them, or -1.
+int data_clashes_with(int index, int32_t now, int *first);
+// Pairs of clashing items today.
+int data_clash_count(int32_t now);
+
 int32_t days_from_civil(int y, int m, int d);
 // Current time in cruise minutes (needs a slice for the sail date).
 int32_t now_cruise(void);

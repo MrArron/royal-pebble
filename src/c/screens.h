@@ -51,8 +51,10 @@ void notice_window_show(const Notice *notices, int count);
 void notice_window_show_pending(void);
 void notice_window_refresh(void);
 
-// Hold Select anywhere an event is shown: toggle its star with a short buzz.
-void toggle_star(int event_index);
+// Hold Select anywhere an event is shown: toggle its star with a short buzz,
+// or a double one when the new star clashes. Returns the earliest item it now
+// clashes with, or -1.
+int toggle_star(int event_index);
 
 // Demo data only: asks the phone for the next demo (port/sea, light/dark).
 void demo_next(void);

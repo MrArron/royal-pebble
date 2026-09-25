@@ -187,6 +187,27 @@ void draw_star(GContext *ctx, GPoint center, GColor color) {
   gpath_draw_filled(ctx, s_star_path);
 }
 
+void draw_bang(GContext *ctx, GPoint top_left, int h, GColor color) {
+  int stroke = h / 4;
+  int bar = h * 5 / 8;
+  graphics_context_set_fill_color(ctx, color);
+  graphics_fill_rect(ctx, GRect(top_left.x, top_left.y, stroke, bar), 1, GCornersAll);
+  graphics_fill_rect(ctx, GRect(top_left.x, top_left.y + h - stroke, stroke, stroke), 1, GCornersAll);
+}
+
+int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now) {
+  int n = data_clash_count(now);
+  if (n == 0) {
+    return 0;
+  }
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%d clash%s", n, n == 1 ? "" : "es");
+  graphics_context_set_text_color(ctx, g_theme->port_accent);
+  graphics_draw_text(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GRect(x, y, w, 18),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  return 16;
+}
+
 void draw_divider(GContext *ctx, int y, int width) {
   graphics_context_set_stroke_color(ctx, g_theme->divider);
   graphics_draw_line(ctx, GPoint(PAD, y), GPoint(width - PAD, y));

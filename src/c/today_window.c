@@ -8,10 +8,18 @@
 
 #define ROW_HEIGHT 44
 #define TIME_COL_W 50
+#define BANG_W 3
+// Clash toast (docs/DESIGN_V1_1.md §8.3): at the bottom, so the row just
+// starred stays in view.
+#define TOAST_HEIGHT 46
+#define TOAST_MS 3000
 
 static Window *s_window;
 static Layer *s_top_bar;
 static MenuLayer *s_menu;
+static Layer *s_toast;
+static AppTimer *s_toast_timer;
+static int s_toast_event;
 
 enum { GROUP_UNTIMED = -3, GROUP_NOW = -2 };
 
@@ -101,8 +109,16 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
 
   int x = PAD + TIME_COL_W;
   int w = b.size.w - x - PAD;
+  // Icons from the right: the clash "!", then the star before it.
+  int icons_right = b.size.w - PAD;
+  if (data_clashes_with(s_rows[index->row], now, NULL) > 0) {
+    draw_bang(ctx, GPoint(icons_right - BANG_W, 6), 12,
+              highlighted ? g_theme->cursor_text : g_theme->port_accent);
+    icons_right -= BANG_W + 4;
+    w -= BANG_W + 4;
+  }
   if (e->flags & EVENT_STARRED) {
-    draw_star(ctx, GPoint(b.size.w - PAD - 6, 12),
+    draw_star(ctx, GPoint(icons_right - 6, 12),
               highlighted ? g_theme->cursor_text : g_theme->sea_accent);
     w -= 16;
   }
@@ -132,9 +148,51 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   }
 }
 
+// "Clashes with" / "1:00p Adults Only Trivia" beside a large "!".
+static void toast_update_proc(Layer *layer, GContext *ctx) {
+  GRect b = layer_get_bounds(layer);
+  if (s_toast_event >= data_event_count()) {
+    return;  // a new slice arrived meanwhile
+  }
+  graphics_context_set_fill_color(ctx, g_theme->bg);
+  graphics_fill_rect(ctx, b, 0, GCornerNone);
+  graphics_context_set_fill_color(ctx, g_theme->port_accent);
+  graphics_fill_rect(ctx, GRect(0, 0, b.size.w, 4), 0, GCornerNone);
+  draw_bang(ctx, GPoint(PAD, 12), 24, g_theme->port_accent);
+
+  int x = PAD + 6 + 8;
+  int w = b.size.w - x - PAD;
+  graphics_context_set_text_color(ctx, g_theme->port_accent);
+  graphics_draw_text(ctx, "Clashes with", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                     GRect(x, 4, w, 18), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  Event *e = data_event(s_toast_event);
+  char time_buf[8], buf[TITLE_LEN + 8];
+  fmt_clock(time_buf, sizeof(time_buf), e->start);
+  snprintf(buf, sizeof(buf), "%s %s", time_buf, e->title);
+  graphics_context_set_text_color(ctx, g_theme->text);
+  graphics_draw_text(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(x, 18, w, 22), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+}
+
+static void hide_toast(void *context) {
+  s_toast_timer = NULL;
+  layer_set_hidden(s_toast, true);
+}
+
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
-  if (index->row < s_row_count) {
-    toggle_star(s_rows[index->row]);
+  if (index->row >= s_row_count) {
+    return;
+  }
+  int clash = toggle_star(s_rows[index->row]);
+  if (clash >= 0 && s_toast) {
+    s_toast_event = clash;
+    layer_set_hidden(s_toast, false);
+    layer_mark_dirty(s_toast);
+    if (s_toast_timer) {
+      app_timer_reschedule(s_toast_timer, TOAST_MS);
+    } else {
+      s_toast_timer = app_timer_register(TOAST_MS, hide_toast, NULL);
+    }
   }
 }
 
@@ -185,9 +243,20 @@ static void window_load(Window *window) {
   rebuild_rows();
   menu_layer_set_selected_index(s_menu, MenuIndex(0, first_current_row()), MenuRowAlignTop, false);
   layer_add_child(root, menu_layer_get_layer(s_menu));
+
+  s_toast = layer_create(GRect(0, b.size.h - TOAST_HEIGHT, b.size.w, TOAST_HEIGHT));
+  layer_set_update_proc(s_toast, toast_update_proc);
+  layer_set_hidden(s_toast, true);
+  layer_add_child(root, s_toast);
 }
 
 static void window_unload(Window *window) {
+  if (s_toast_timer) {
+    app_timer_cancel(s_toast_timer);
+    s_toast_timer = NULL;
+  }
+  layer_destroy(s_toast);
+  s_toast = NULL;
   menu_layer_destroy(s_menu);
   top_bar_destroy(s_top_bar);
   s_menu = NULL;

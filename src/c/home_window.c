@@ -369,6 +369,7 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
     skip = find_headline(now, &featured);
     y = draw_headline(ctx, y, b.size.w, now, skip, featured);
   }
+  y += draw_clash_count(ctx, PAD, y - 4, b.size.w - 2 * PAD, now);
 
   draw_divider(ctx, y, b.size.w);
   draw_next_items(ctx, y + 4, b.size.w, b.size.h, now, skip, countdown);

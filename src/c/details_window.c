@@ -61,6 +61,20 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   }
   y = draw_line(ctx, when, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD, y, w, 22) + 2;
 
+  // "Clashes with 1:00p Trivia · +1 more", on up to two lines.
+  int first;
+  int clashes = data_clashes_with(s_index, now_cruise(), &first);
+  if (clashes > 0) {
+    Event *o = data_event(first);
+    char start_buf[8], more[24] = "", line[TITLE_LEN + 48];
+    fmt_clock(start_buf, sizeof(start_buf), o->start);
+    if (clashes > 1) {
+      snprintf(more, sizeof(more), " \xc2\xb7 +%d more", clashes - 1);
+    }
+    snprintf(line, sizeof(line), "Clashes with %s %s%s", start_buf, o->title, more);
+    y = draw_line(ctx, line, FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent, PAD, y - 2, w, 32) + 2;
+  }
+
   if (e->flags & EVENT_RESERVATION) {
     y = draw_line(ctx, "Reservation needed", FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent,
                   PAD, y, w, 18) + 2;
