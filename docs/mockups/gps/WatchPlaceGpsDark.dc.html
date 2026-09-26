@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Watch – place page with GPS, dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 400px; height: 456px; box-sizing: border-box; overflow: hidden; background: #000000; color: #FFFFFF; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; display: flex; flex-direction: column">
+<div style="height: 44px; flex-shrink: 0; background: #555555; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; position: relative">
+<span style="position: absolute; left: 50%; transform: translateX(-50%); color: #FFFFFF; font-size: 28px; font-weight: 700">2:15p</span>
+<span style="color: #FFFFFF; font-size: 28px; font-weight: 700">Place</span>
+</div>
+<div style="padding: 6px 14px 0; display: flex; flex-direction: column">
+<div style="font-size: 48px; line-height: 50px; font-weight: 700">Royal Theater</div>
+<div style="font-size: 34px; line-height: 38px; font-weight: 700">Deck 5 · Fore</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #AAAAAA">Entertainment Place</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #AAAAAA">Closest restroom · ~30 m aft</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #00AAFF">Hold Select for its route</div>
+<div style="height: 2px; background: #555555; margin: 8px 0"></div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #AAAAAA; letter-spacing: 0.5px">FROM YOUR CABIN</div>
+<div style="display: flex; align-items: baseline; font-size: 34px; line-height: 38px; font-weight: 700"><svg width="14" height="24" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right: 2px; flex-shrink: 0"><path d="M6 1.5v17M1.5 13.5L6 18.5l4.5-5"></path></svg><span>1 deck · ~160 m fore</span></div>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 26px; line-height: 32px; font-weight: 700; color: #00AAFF">Select for route<svg width="10" height="18" viewBox="0 0 12 20" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l6 7-6 7"></path></svg></div>
+<div style="height: 2px; background: #555555; margin: 8px 0"></div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #AAAAAA; letter-spacing: 0.5px">LATER TODAY</div>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 34px; line-height: 38px; font-weight: 700">Evening Show · 7:00p<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0"><path d="M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6l-6.2 3.5 1.4-7L2 9.3l7-.8z" fill="#00AAFF"></path></svg></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":456}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

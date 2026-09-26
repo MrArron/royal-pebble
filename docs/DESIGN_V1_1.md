@@ -1,4 +1,4 @@
-# Royal Pebble — v1.1 design (venue table, wayfinding, reservations, daily view)
+# Royal Pebble — v1.1 design (venue table, wayfinding, reservations, daily view, Ship GPS)
 
 Returned from Claude Design on 2026-09-24 and approved by the owner. Build from
 this file; the mockups in `docs/mockups/v1.1/` are reference. `docs/DESIGN.md`
@@ -715,6 +715,246 @@ As built (item 8):
 7. **Countdown details:** **show both** the ship name and the starred-so-far
    count.
 
+---
+
+## 9. Ship GPS (items 19-21)
+
+**Status: designed and approved 2026-09-25.** Written from the Claude Design
+pass and the owner's answers (9.9). Nothing is built yet. The mockups and their
+`NOTES.md` in `docs/mockups/gps/` are the final word on text and layout; the
+sketches below are at watch size. Design canvas (private to the owner):
+https://claude.ai/artifact/Cq3jrWKZAZE6qHxbqNVy6n
+
+Fonts, drawn arrows, tokens and the thin top bar are as in §2-§4. All names,
+decks and distances in the mockups are placeholders (cabin on deck 6, no
+stateroom).
+
+**Changed from the brief during design:** restrooms are **not** directory
+places (9.3), and the route start follows a new rule (9.4).
+
+### 9.1 Place page (items 19, 20a)
+
+`WatchPlaceGpsLight`, `WatchPlaceGpsDark`, `WatchPlaceLongTop`,
+`WatchPlaceLongScrolled`. Directory level 3, top bar `Place`.
+
+```
+Royal Theater                  Gothic 24 bold, wraps
+Deck 5 · Fore                  Gothic 18 bold
+Entertainment Place            Gothic 14 bold, muted (area)
+Closest restroom · ~30 m aft   Gothic 14 bold, muted
+Hold Select for its route      Gothic 14 bold, sea accent
+──────────
+FROM YOUR CABIN                small caps, muted
+↓1 deck · ~160 m fore          Gothic 18 bold
+Select for route ›             Gothic 14 bold, sea accent
+──────────
+LATER TODAY                    small caps, muted
+Evening Show · 7:00p ★         events still to come there
+```
+
+- The FROM block replaces the old `↓1 deck from cabin` line: the deck change
+  and the walking distance on one line. On the cabin's deck: `Your deck ·
+  ~180 m fore`. The header names the route start (9.4).
+- `Closest restroom` is measured from the venue, not the cabin. When the
+  restroom is on another deck, the direction goes on its own line:
+  `Closest restroom` / `↑1 deck · ~20 m aft`.
+- Long pages scroll, with ScrollLayer's content indicator.
+- **Approximate spot** (the 19 venues with no spot on the plans): a muted
+  `Spot approximate` line under the distance (`WatchGpsApprox`).
+- **Ashore, or a venue not in the table:** no GPS lines at all, never "unknown"
+  (`WatchGpsAshore`).
+- **No cabin set on the Me tab:** no FROM block; a muted `Add your stateroom on
+  the phone for walking directions`. The closest restroom still shows
+  (`WatchGpsNoCabin`).
+- **Phone away:** as today, `Connect your phone`; Select tries again.
+- Distances use the unit set on the phone (9.7); always `~`, rounded.
+
+### 9.2 Route screen (item 21, option A)
+
+`WatchRouteLight`, `WatchRouteDark`, `WatchRouteFromVenue`, `WatchRouteCrossing`,
+`WatchRestroomRoute`, `WatchHomeRoute`. Its own screen, top bar `Route`.
+
+Opened by:
+- **Select** on a place page (route to that place);
+- **Hold Select** on a place page (route to its closest restroom; header
+  `CLOSEST TO ROYAL THEATER`, then the restroom's deck line and `Same deck as
+  Royal Theater` under the steps);
+- **Select on Home** (route to the NEXT event, 9.5);
+- voice, later (9.6).
+
+```
+Royal Theater                  Gothic 24 bold (destination)
+FROM YOUR CABIN                small caps, muted (the start, 9.4)
+──────────
+•  ~60 m fore                  Gothic 18 bold, one line per step
+⟋  Fore stairs to Deck 5
+•  ~40 m fore
+◎  Royal Theater
+──────────
+↓1 deck · ~100 m in all        Gothic 14 bold, muted
+```
+
+- **Step glyphs** (drawn, about 13 px, sea accent): dot = walk, double-headed
+  arrow = cross the ship, square with ▲▼ = elevator, stair line = stairs,
+  ring = arrive.
+- About 3-6 short steps: `~50 m aft`, `Aft elev to Deck 16`, `Fore stairs to
+  Deck 5`.
+- **Crossing step:** its own step whenever the route changes side:
+  `Cross the ship` until port/starboard is confirmed, then `Cross to port` /
+  `Cross to stbd`, and the arrive step may add `· port side`
+  (`WatchGpsSideConfirmed`). Before confirmation no side word appears anywhere.
+- **Same deck and area:** `Same area · your deck`, then one walk step and
+  arrive (`WatchGpsSameArea`).
+- **Loading:** `Finding route…`, muted and centered (`WatchGpsLoading`).
+- **Phone away:** `Connect your phone` / `Select tries again`
+  (`WatchGpsPhoneAway`).
+- **Route safety** (rules for the planner, from the design review):
+  - every step must be walkable as written: never a fore/aft run through cabin
+    corridors that don't connect;
+  - change sides only where the plans show a real link (stair or elevator
+    lobby, promenade, open deck), always as its own step;
+  - no crew-only doors, and no route that relies on a door or deck that may be
+    closed at night;
+  - when the planner isn't sure, show less (deck and fore/aft) rather than a
+    guessed route.
+- Option B (the steps inline on the place page, `WatchPlaceInlineTop`,
+  `WatchPlaceInlineScrolled`) was mocked and not chosen.
+
+### 9.3 Restrooms and elevator banks (item 20b)
+
+`WatchElevatorPlace`, `WatchDeckWithRestrooms`, `WatchAreasWithAmenities`.
+
+- **Restrooms are not listed in the directory** (26 of them would clutter every
+  deck page). They're reached through a place page's `Closest restroom` line
+  (Hold Select) and, later, by voice. `WatchRestroomPlace` is parked.
+- **Elevator banks are directory places.** On a deck page they sit in their
+  FORE / MID / AFT group as muted rows (`Fore elevators`). Browse by area gets
+  an `Elevators` row (`Fore · Aft`) just before Ashore.
+- **Elevator place page:** the name, `Aft · all decks but 1`, `STOPS AT` with a
+  grid of deck chips (7 per row; the cabin's deck filled with the sea accent),
+  then the FROM block and `Select for route`.
+
+### 9.4 Where routes start
+
+- **The cabin**, by default.
+- A spoken location (`I'm at the Solarium`, 9.6) becomes the start for
+  **1.5 hours**, or until a **starred event starts**, when that event's venue
+  becomes the start.
+- At the **04:00 day change** it goes back to the cabin.
+- The Route header and the place page's FROM block always name the start
+  (`FROM YOUR CABIN`, `FROM SOLARIUM`, `FROM ROYAL THEATER`).
+- The phone keeps the start and its timer (it already knows the starred events
+  and the day boundary); the watch only shows the header it's sent.
+- **To reconcile in the first build PR:** the existing "From" rule for event
+  details and reminders (previous starred event or entry ending < 15 min before,
+  top of this file) and this rule should become one rule. Ask the owner if they
+  disagree for a case.
+
+### 9.5 Home and button hints
+
+`WatchHomeSelect`, `WatchHomeTips`, `WatchHomeRoute`.
+
+- The NEXT card keeps its one brief line (`Deck 4 Aft · ↓2`); no GPS line is
+  added to it or to the reminder alert. A small sea-accent `Route ›` sits at the
+  right end of that line, beside the Select button.
+- **Select on Home** (unused today: Up = My info, Down = Today, hold Up = demo)
+  opens the Route screen for the NEXT event.
+- **Button hints:** labels beside each button over a grayed-out Home: Up
+  `My info`; Select `Route to next` / `Hold: Ask by voice` (once voice exists);
+  Down `Today`; Back `Exit`. They show for about 3 s on the **first 3 opens**,
+  and again after an update adds a button; any press dismisses them. The watch
+  counts opens in its own storage. The phone's Help section has an **Always show
+  button hints** toggle (off by default). No `Buttons` row in My info.
+
+### 9.6 Voice (concept, later)
+
+`WatchVoice*`. Still under "Later" in the brief: nothing here is scheduled until
+the airplane-mode dictation test in `docs/FUTURE_VOICE_QUERIES.md` passes on the
+owner's phone.
+
+- **Hold Select** on Home or on a Route screen starts dictation. (On place pages
+  Hold Select is the restroom route.) Check it doesn't clash with any firmware
+  long-press action. Top bar `Ask`.
+- **Commands** (keyword matching on the phone against the venue table and its
+  aliases):
+  - `I'm at <venue>` / `I'm in cabin <number>`: set where you are (9.4);
+  - `Closest restroom (from <venue>)`;
+  - `How do I get from <A> to <B>` / `<A> to <B>`;
+  - `How do I get to <B>` (from the current start);
+  - `my cabin` works as A or B.
+- **Only one-spot places can be a location:** landmark venues and cabins.
+  Restrooms, elevators and stairs are refused (`There are 26 restrooms` / `Say a
+  venue or a cabin number near you instead`); they're fine as destinations.
+- **Always show what was heard and what it matched** (`HEARD`, `FROM` / `TO` or
+  `YOU'RE AT`) before answering; Select confirms, Hold Select asks again.
+- Screens for no match (with a `TRY` example) and phone away (`Voice is heard
+  on the phone`).
+- A spoken cabin number is used for routing only: never stored beyond the
+  current start, and never in the usage log.
+
+### 9.7 Phone settings page (not mocked)
+
+All built into the local settings page, so they work offline.
+
+- **Distance units:** feet, metres or steps. The phone converts and rounds;
+  steps assume a stride (e.g. about 0.75 m, to check on board).
+- **Port/starboard flip (test cruise):** flip the whole ship, or single decks,
+  if the on-board check finds sides the wrong way round. It must reach every side
+  word (`port`, `stbd`, crossing steps) and the planner. Only for the owner's
+  test cruise: once the map is confirmed, fix the data and hide or remove it.
+- **Help section:** voice commands with example phrases (and what can't be a
+  location); the watch controls, every press and hold on every screen;
+  useful-to-know notes (where routes start and when it resets, `~` distances,
+  `Spot approximate`, no side until confirmed, voice needs the phone nearby,
+  the 04:00 day change); and the Always show button hints toggle. Keep it in
+  step with the app as controls change.
+
+### 9.8 Check before or while building
+
+In the ship map and planner:
+- The map gives each cabin and venue spot a port-starboard position (the
+  crossing step depends on it). Unverified.
+- The planner knows which cabin corridors connect and where the ship can be
+  crossed. Unverified.
+- The longest lines still fit in feet and steps (`~530 ft fore`, `~210 steps
+  fore`).
+
+On board (the owner's test cruise):
+- Confirm port/starboard against one known cabin; use the flip settings if it's
+  wrong on some or all decks.
+- Walk routes from the cabin to far venues on both sides; tune the elevator-wait
+  and stairs-per-deck costs.
+- Main Dining Room: the nearest spot never sends you to another floor.
+- Check a few approximate spots on foot.
+- Walk a known distance to check the stride used for steps.
+
+For the build PRs:
+- New phone → watch strings go in `docs/WATCH_PROTOCOL.md` with each PR; the
+  watch C code gets no ship knowledge.
+- Home gains Select (and, with voice, Hold Select); place pages gain Hold
+  Select. Update `docs/DESIGN.md`'s screen descriptions.
+
+### 9.9 Decisions (owner, 2026-09-25)
+
+1. **Route:** its own screen (option A), not inline.
+2. **Restrooms:** not listed in the directory. Each venue's place page shows
+   `Closest restroom`; Hold Select opens its route. Elevator banks stay listed.
+3. **Units:** set in the phone settings: feet, metres or steps.
+4. **Port/starboard:** test-cruise settings on the phone to flip the whole ship
+   or single decks; no side shown until confirmed.
+5. **Home:** keeps the current brief line; Select on Home opens the route to
+   the NEXT event. No GPS line on the reminder alert.
+6. **Crossing step:** added to routes (`Cross the ship`, then `Cross to port` /
+   `Cross to stbd`), so a route never asks for an impossible walk.
+7. **Route start:** a spoken location lasts 1.5 hours or until a starred event
+   starts (its venue becomes the start); back to the cabin at 04:00.
+8. **Button hints:** first 3 opens (and after an update adds a button), with an
+   Always show toggle in the phone's Help section.
+9. **Help section** in the phone settings (voice commands, controls, notes).
+10. **Voice:** designed as a concept; stays under "Later" until the dictation
+    test passes.
+
+
 ## Mockup index
 
 | File | Screen |
@@ -730,3 +970,4 @@ As built (item 8):
 | `WatchDirectory.dc.html`, `WatchDeck.dc.html` | Ship directory |
 | `WatchResNeeded/ResReserved/ResHome.dc.html` | Reserved states on the watch |
 | `../phase2/*.dc.html` | §8 daily view (see its `NOTES.md`) |
+| `../gps/*.dc.html` | §9 Ship GPS (see its `NOTES.md`; `preview.png` shows every screen) |

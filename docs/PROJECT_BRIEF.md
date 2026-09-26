@@ -178,11 +178,15 @@ The map data and planner live in the phone companion (`src/pkjs/shipmap.js`,
 
 19. **Walking distance** on directory place pages: from the cabin (by stateroom
     number on the Me tab), e.g. `~160 m aft`, next to the existing deck line.
-20. **Nearest restroom** on place pages, and restrooms and elevator banks as
-    directory places.
-21. **Step-by-step route** on place pages: short lines such as `~50 m aft` /
-    `Aft elev to Deck 16` / `~20 m aft`, from the cabin (or the previous event's
-    venue under the "From" rule).
+20. **Closest restroom** on place pages (Hold Select opens its route), and
+    elevator banks as directory places. Restrooms themselves are not listed in
+    the directory (owner, 2026-09-25).
+21. **Step-by-step route** on its own Route screen, opened with Select from a
+    place page or from Home's NEXT card: short lines such as `~50 m aft` /
+    `Aft elev to Deck 16` / `~20 m aft`, from the current start (cabin by
+    default; see `docs/DESIGN_V1_1.md` §9.4).
+
+Designed 2026-09-25: `docs/DESIGN_V1_1.md` §9, mockups in `docs/mockups/gps/`.
 
 Before showing any of it:
 - **Port/starboard:** confirm the side against one known cabin on board, and
