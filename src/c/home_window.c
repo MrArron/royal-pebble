@@ -156,7 +156,10 @@ static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
   return y + 26;
 }
 
-static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index, bool featured) {
+// `route`: Select opens the route to this event, so its brief line ends with
+// `Route ›` (§9.5).
+static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index, bool featured,
+                         bool route) {
   GFont label_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   if (index < 0) {
     graphics_context_set_text_color(ctx, g_theme->muted);
@@ -218,7 +221,8 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
   graphics_draw_text(ctx, detail, detail_font, detail_box, GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   y += detail_size.h + 2;
-  y += draw_where_short(ctx, false, g_theme->muted, PAD, y, width - 2 * PAD, &e->where);
+  int hint_w = route ? draw_hint_right(ctx, "Route", width - PAD, y) + 6 : 0;
+  y += draw_where_short(ctx, false, g_theme->muted, PAD, y, width - 2 * PAD - hint_w, &e->where);
   if (event_not_reserved(e->flags)) {
     graphics_context_set_text_color(ctx, g_theme->port_accent);
     graphics_draw_text(ctx, "Not reserved", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
@@ -350,6 +354,27 @@ static void draw_sail_countdown(GContext *ctx, int width) {
   }
 }
 
+// Is Home showing its sea-day layout (the NEXT card) rather than a message,
+// the days to sail or the all-aboard countdown?
+static bool shows_headline(int32_t now) {
+  const Day *day = data_day();
+  if (!data_ready() || sail_ahead() || cruise_day_index(now) > day->index || day->kind == DAY_NONE) {
+    return false;
+  }
+  return !(day->kind == DAY_PORT && day->all_aboard != NO_TIME && day->all_aboard > now);
+}
+
+// A venue on board, so the phone can route to it.
+static bool routable(const Event *e) { return e->where.deck > 0 && !(e->where.bits & WHERE_ASHORE); }
+
+// The event Select routes to (§9.5): the NEXT card's, when its venue is on
+// board; else -1.
+static int route_target(int32_t now) {
+  bool featured = false;
+  int index = shows_headline(now) ? find_headline(now, &featured) : -1;
+  return index >= 0 && routable(data_event(index)) ? index : -1;
+}
+
 // Big muted message with a smaller line under it.
 static void draw_message(GContext *ctx, int width, const char *title, const char *hint) {
   graphics_context_set_text_color(ctx, g_theme->text);
@@ -390,14 +415,14 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   int32_t now = now_cruise();
   int y = 4;
   int skip = -1;
-  bool countdown = day->kind == DAY_PORT && day->all_aboard != NO_TIME && day->all_aboard > now;
+  bool countdown = !shows_headline(now);
 
   if (countdown) {
     y = draw_countdown(ctx, y, b.size.w, now);
   } else {
     bool featured = false;
     skip = find_headline(now, &featured);
-    y = draw_headline(ctx, y, b.size.w, now, skip, featured);
+    y = draw_headline(ctx, y, b.size.w, now, skip, featured, skip >= 0 && routable(data_event(skip)));
   }
   y += draw_clash_count(ctx, PAD, y - 4, b.size.w - 2 * PAD, now);
 
@@ -421,9 +446,17 @@ static void up_click(ClickRecognizerRef recognizer, void *context) { info_window
 static void down_click(ClickRecognizerRef recognizer, void *context) { today_window_push(); }
 static void up_long_click(ClickRecognizerRef recognizer, void *context) { demo_next(); }
 
+static void select_click(ClickRecognizerRef recognizer, void *context) {
+  int index = route_target(now_cruise());
+  if (index >= 0) {
+    route_window_push_event(data_event(index));
+  }
+}
+
 static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_UP, up_click);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
   window_long_click_subscribe(BUTTON_ID_UP, 700, up_long_click, NULL);
 }
 

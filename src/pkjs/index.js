@@ -64,7 +64,7 @@ var s_sending = false;   // one send at a time: a slice or a star ack
 var s_resend = false;
 var s_ack = null;        // star ack to send: {seq, resend}
 var s_dirRef = null;     // ship directory page the watch asked for
-var s_route = null;      // route the watch asked for: {ref, rest}
+var s_route = null;      // route the watch asked for: {ref, rest} or {start, venue}
 
 function load(key, fallback) {
   try {
@@ -261,20 +261,21 @@ function sendDirPage() {
   });
 }
 
-// A Route screen (docs/WATCH_PROTOCOL.md, Route screen): to a place, or to its
-// closest restroom. Only the latest request is answered.
+// A Route screen (docs/WATCH_PROTOCOL.md, Route screen): to a place, to its
+// closest restroom, or to Home's NEXT event. Only the latest request is answered.
 function sendRoute() {
   var req = s_route;
   s_route = null;
   var data = currentData();
-  var page = directory.routePage(req.ref, req.rest, {bundle: data.bundle, settings: data.settings,
-                                                     stars: data.stars, now: new Date()});
+  var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
+  var page = req.venue !== undefined ? directory.eventRoutePage(req, ctx) : directory.routePage(req.ref, req.rest, ctx);
   var msg = directory.routeMsg(page);
   msg.msg_type = MSG_ROUTE_PAGE;
   s_sending = true;
   sendQueue([msg], function(ok) {
     s_sending = false;
-    console.log('Route ' + req.ref + (req.rest ? ' (restroom)' : '') + (ok ? ' sent: ' : ' failed: ') +
+    console.log('Route ' + (req.venue !== undefined ? 'to event at ' + req.start : req.ref) +
+                (req.rest ? ' (restroom)' : '') + (ok ? ' sent: ' : ' failed: ') +
                 page.steps.length + ' steps, ' + msg.route.length + ' bytes');
     sendNext();
   });
@@ -560,7 +561,8 @@ Pebble.addEventListener('appmessage', function(e) {
       }
       break;
     case MSG_ROUTE_REQUEST:
-      s_route = {ref: p.dir_ref | 0, rest: !!p.route_rest};
+      s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || '')}
+                                            : {ref: p.dir_ref | 0, rest: !!p.route_rest};
       if (!s_sending) {
         sendNext();
       }

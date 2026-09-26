@@ -49,7 +49,11 @@ small `SHIP TIME` label. Band color by context, same in both themes:
   upcoming starred events and personal entries first, topped up with the next
   events, shown in time order.
 - **Home, sea day:** star + `NEXT · IN 20 MIN` (sea accent) → event title large
-  (wraps to two lines) → `12:00p · On Air` (muted) → divider → next two items.
+  (wraps to two lines) → `12:00p · On Air` (muted) → `Deck 4 Aft · ↓2` (muted)
+  with `Route ›` (sea accent) at its right end → divider → next two items.
+  Select opens the route to that event (`DESIGN_V1_1.md` §9.5); the hint shows
+  only when the venue is on board. Up = My info, Down = Today, Hold Up = next
+  demo variant (demo data only).
 - **Today list:** rows of time column + title/venue. Same-start-time events are
   grouped: time only on the first row, dividers only between groups. In-progress
   event shows `NOW` and `ends 11:45`. Starred rows show ★. The cursor highlight is
@@ -77,8 +81,10 @@ small `SHIP TIME` label. Band color by context, same in both themes:
   sea-accent glyph (dot walk, double arrow cross the ship, elevator box, stairs,
   ring arrive) → divider → `↓1 deck · 100 m in all` (muted). The restroom route
   says `Restroom` / `CLOSEST TO ROYAL THEATER` and ends with its `Deck 5 · Fore`
-  and `Same deck as Royal Theater`. `Finding route…` while loading; `Connect your
-  phone` / `Select tries again` with the phone away. Long routes scroll.
+  and `Same deck as Royal Theater`. Opened from Home, it ends with the event
+  (`12:00p Name That Tune Trivia`, muted) instead of the summary. `Finding
+  route…` while loading; `Connect your phone` / `Select tries again` with the
+  phone away. Long routes scroll.
 
 ## Phone settings page
 

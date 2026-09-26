@@ -504,3 +504,23 @@ int draw_where_short(GContext *ctx, bool large, GColor color, int x, int y, int 
   snprintf(count, sizeof(count), "%d", n);
   return draw_arrow_line(ctx, large, color, x, y, w, before, where->rel, count);
 }
+
+void draw_chevron(GContext *ctx, GColor color, int x, int y) {
+  graphics_context_set_stroke_color(ctx, color);
+  graphics_context_set_stroke_width(ctx, 2);
+  graphics_draw_line(ctx, GPoint(x, y + 5), GPoint(x + 3, y + 8));
+  graphics_draw_line(ctx, GPoint(x + 3, y + 8), GPoint(x, y + 11));
+  graphics_context_set_stroke_width(ctx, 1);
+}
+
+int draw_hint_right(GContext *ctx, const char *text, int right, int y) {
+  GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  int text_w = text_size(text, font).w;
+  int w = text_w + 4 + 5;
+  int x = right - w;
+  graphics_context_set_text_color(ctx, g_theme->sea_accent);
+  graphics_draw_text(ctx, text, font, GRect(x, y, text_w + 2, 16), GTextOverflowModeFill,
+                     GTextAlignmentLeft, NULL);
+  draw_chevron(ctx, g_theme->sea_accent, x + text_w + 4, y);
+  return w;
+}

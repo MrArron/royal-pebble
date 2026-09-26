@@ -48,7 +48,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | 6 | NOTICE | `notice_count`, `notices` (bytes, below). No `slice_id`; sent after a slice. |
 | 7 | STAR_ACK | `star_ack`: the phone saved every star change up to this `seq`. No `slice_id`. |
 | 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_gps` (place pages with a Ship GPS block), `dir_rows`. No `slice_id`; see Ship directory. |
-| 17 | ROUTE_PAGE | A Route screen: `dir_ref` and `route_rest` (echoing the request), `route` (bytes). No `slice_id`; see Route screen. |
+| 17 | ROUTE_PAGE | A Route screen: `dir_ref` and `route_rest` (echoing the request), `route_start` (echoed, event routes only), `route` (bytes). No `slice_id`; see Route screen. |
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
 e.g. `SAILS MAR 6` or `CRUISE ENDED`. Before the cruise, Home shows the
@@ -95,7 +95,7 @@ buffers.
 | 13 | STAR_CHANGES | `star_count`, `star_changes` (bytes, below): stars changed on the watch and not yet acked |
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
-| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank); `route_rest`: 1 for the route to its closest restroom, else 0. |
+| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank); `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
 
 (11 was an index-based STAR message, replaced by STAR_CHANGES.)
 
@@ -434,6 +434,15 @@ says `Connect your phone`, and Select asks again.
   best deck).
 - The restroom route starts at that entrance (the one the place page's
   `Closest restroom` line is measured from), so it works with no stateroom too.
+
+From Home (§9.5), Select asks for the route to the NEXT card's event: the
+request carries `route_start` and `route_venue` instead of `dir_ref` and
+`route_rest`, and the phone answers with `dir_ref` 0, `route_rest` 0 and the
+same `route_start` (`directory.eventRoutePage`). The venue may be cut short on
+the watch, so the phone matches it against the day's events starting then. The
+route starts where you'll be before the event (§9.4, with the event as the
+target), and both lines under the steps are empty: the watch draws the event's
+time and title there itself (it formats the time for its 12/24h setting).
 
 `route` is packed little-endian:
 

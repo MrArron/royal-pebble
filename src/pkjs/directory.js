@@ -346,17 +346,19 @@ function stops(ctx, sailDays, today) {
   return out;
 }
 
-// The route from where routestart.js says you are now (§9.4) to the nearest of
-// the spots `to`: {start, header, from (the spot it leaves), route}, or {flags}
-// with GPS_NO_CABIN or GPS_NO_FROM when there's none.
-function bestRoute(to, ctx, cabin) {
+// The route from where routestart.js says you are now (§9.4), or with `target`
+// (an event {start}) where you'll be before it, to the nearest of the spots
+// `to`: {start, header, from (the spot it leaves), route}, or {flags} with
+// GPS_NO_CABIN or GPS_NO_FROM when there's none.
+function bestRoute(to, ctx, cabin, target) {
   var ship = ctx.shipCode;
   var settings = ctx.settings || {};
   var finder = venues.venueFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
   var room = stateroom(ctx);
   var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
   var now = slice.cruiseMinutes(sailDays, ctx.now);
-  var start = routestart.start({stops: stops(ctx, sailDays, slice.cruiseDayIndex(now)), now: now, cabin: room});
+  var start = routestart.start({stops: stops(ctx, sailDays, slice.cruiseDayIndex(now)), now: now, target: target,
+                                cabin: room});
   var from = start.venue ? spotsOf(ship, finder.entry(start.venue), cabin) : [];
   if (!from.length && room) {
     // At a stop that isn't on the map (ashore, say): from the cabin.
@@ -523,6 +525,54 @@ function routePage(ref, rest, ctx) {
   return page;
 }
 
+// The Route screen to an event (Home's NEXT, §9.5): `ev` is {start (cruise
+// minutes), venue (as the watch has it, maybe cut short)}. The route starts
+// where you'll be before the event (§9.4). As routePage, with `start` in place
+// of ref and rest, and no summary: the watch shows the event's time and title
+// under the steps.
+function eventRoutePage(ev, ctx) {
+  var s = setup(ctx);
+  var ship = s.c.shipCode;
+  var name = eventVenue(ev, s.c);
+  var target = null;
+  if (ctx.bundle && name && shipmap.data(ship)) {
+    var finder = venues.venueFinder(ship, (s.c.settings.venues || {})[ship], (s.c.settings.me || {}).deck);
+    var v = finder.entry(name);
+    target = {name: v.name, short: v.short || v.name, to: spotsOf(ship, v, s.cabin)};
+  }
+  var page;
+  if (!target || !target.to.length) {
+    page = routeMessage(name || 'Not found', 'No route found');
+  } else {
+    var best = bestRoute(target.to, s.c, s.cabin, {start: ev.start});
+    if (best.flags & GPS_NO_CABIN) {
+      page = routeMessage(target.name, 'Add your stateroom on the phone for walking directions');
+    } else if (best.flags) {
+      page = routeMessage(target.name, 'No route found');
+    } else {
+      page = placeRoute(target, best, {units: s.c.settings.units, banks: shipmap.banks(ship)});
+      page.small = {decks: 0, text: ''};
+    }
+  }
+  page.ref = 0;
+  page.rest = false;
+  page.start = ev.start;
+  return page;
+}
+
+// The event's full venue name: the watch's copy may be cut short, so match it
+// against the day's events that start then.
+function eventVenue(ev, c) {
+  var sent = String(ev.venue || '');
+  if (!c.bundle || !sent) {
+    return sent;
+  }
+  var sailDays = slice.daysFromIso(c.bundle.sailDate);
+  var found = slice.buildEvents(c.bundle, c.settings, c.stars, slice.cruiseDayIndex(ev.start), sailDays)
+    .filter(function(e) { return e.start === ev.start && e.venue && e.venue.indexOf(sent) === 0; })[0];
+  return found ? found.venue : sent;
+}
+
 // Only walking, on one deck, within one of Fore / Mid / Aft.
 function sameArea(r, from, banks) {
   var to = r.to;
@@ -582,9 +632,13 @@ function encodeRoute(p) {
   return out;
 }
 
-// The ROUTE_PAGE message (without msg_type).
+// The ROUTE_PAGE message (without msg_type). An event's route echoes its start.
 function routeMsg(page) {
-  return {dir_ref: page.ref, route_rest: page.rest ? 1 : 0, route: encodeRoute(page)};
+  var m = {dir_ref: page.ref, route_rest: page.rest ? 1 : 0, route: encodeRoute(page)};
+  if (page.start !== undefined) {
+    m.route_start = page.start;
+  }
+  return m;
 }
 
 // What every page needs: the context with defaults, the directory's places,
@@ -726,5 +780,5 @@ module.exports = {
   places: places, deckRanges: deckRanges, bankDecksText: bankDecksText, buildPage: buildPage,
   encodeRow: encodeRow, packRows: packRows, encodeGps: encodeGps, encodeBank: encodeBank, message: message,
   ROUTE_REDUCED: ROUTE_REDUCED, ROUTE_STEPS_MAX: ROUTE_STEPS_MAX,
-  routePage: routePage, encodeRoute: encodeRoute, routeMsg: routeMsg
+  routePage: routePage, eventRoutePage: eventRoutePage, encodeRoute: encodeRoute, routeMsg: routeMsg
 };

@@ -254,6 +254,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     if (s_on_route_page && route && route->type == TUPLE_BYTE_ARRAY) {
       RoutePageMsg page = {.ref = find_int(iter, MESSAGE_KEY_dir_ref),
                            .rest = find_int(iter, MESSAGE_KEY_route_rest) != 0,
+                           .start = find_int_or(iter, MESSAGE_KEY_route_start, NO_TIME),
                            .data = route->value->data, .length = route->length};
       s_on_route_page(&page);
     }
@@ -364,6 +365,18 @@ bool comm_request_route(int32_t ref, bool rest) {
   dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_ROUTE_REQUEST);
   dict_write_int32(iter, MESSAGE_KEY_dir_ref, ref);
   dict_write_int32(iter, MESSAGE_KEY_route_rest, rest ? 1 : 0);
+  s_outbox_msg = MSG_ROUTE_REQUEST;
+  return app_message_outbox_send() == APP_MSG_OK;
+}
+
+bool comm_request_event_route(int32_t start, const char *venue) {
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
+    return false;
+  }
+  dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_ROUTE_REQUEST);
+  dict_write_int32(iter, MESSAGE_KEY_route_start, start);
+  dict_write_cstring(iter, MESSAGE_KEY_route_venue, venue);
   s_outbox_msg = MSG_ROUTE_REQUEST;
   return app_message_outbox_send() == APP_MSG_OK;
 }
