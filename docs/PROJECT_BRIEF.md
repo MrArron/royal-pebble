@@ -211,11 +211,11 @@ Before showing any of it:
   places (a venue's deck or side, names, restrooms). Each is listed in
   `tools/shipmap/conflicts-HM.json`, as are conflicts from any later scrape;
   the data keeps its current value until the owner checks it on board.
-- **On-board logging (needed, not designed yet; owner, 2026-09-26):** a way for
-  the owner to log the true situation in person during the sailing, for each
-  open conflict (and anything else found wrong), so the data can be fixed
-  afterwards. To design and schedule before the sailing: it has to be on the
-  watch or phone before the freeze.
+- **On-board logging (designed with the owner, 2026-09-26; built after the usage
+  log, see "Map check" under it):** a way for the owner to log the true situation
+  in person during the sailing, for each open conflict (and anything else found
+  wrong), so the data can be fixed afterwards. It has to be on the watch and
+  phone before the freeze.
 
 ### Usage log (after Phase 2 and the Ship GPS; must be on the watch well before the freeze)
 
@@ -241,11 +241,48 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
   start and its lowest point, phone script errors, bundle problems, venue names
   with no match in the venue table, and which "From" lines were shown; (G) settings
   page opened or saved, bundle imported (counts only), re-sync changes.
-- **Titles are included; cabin details never are** (stateroom, muster station).
+- **Wider scope (owner, 2026-09-26):** log anything that could help improve the
+  app and its development. Only the owner and his fiancé use it and both consent.
+  On top of (A)–(G), that includes: (H) Ship GPS: place pages opened, distances
+  shown, routes asked (start and destination kind, length, steps, planner time,
+  no-route failures), route start changes, restroom routes; (I) performance:
+  message round trips, sizes and retries, phone-side slice and page build times;
+  (J) battery % and charging at every open and close, and hourly from the watch
+  while the app has a wakeup anyway (no extra wakeups just for logging); (K)
+  every settings change (old → new value) and hints shown. Each feature built
+  from now on adds its own log events.
+- **Log header** on export: app and bundle versions, watch firmware, phone
+  platform, ship code, a device label set on the Me tab (two people, two
+  watches: each phone keeps its own log).
+- **Titles are included; cabin details never are** (stateroom, muster station),
+  because the exported log is pasted into Claude sessions for evaluation.
   The log is personal cruise data: never commit or print it in full.
 - **Export:** a Usage log card on the settings page Me tab with Copy log (plain
   text), entry count and size, Clear log and an on/off switch. When full, the
   oldest entries drop first.
+- **Build order:** PR 1 phone log store, Usage log card and phone-side events;
+  PR 2 the watch → phone log message, the watch queue and watch-side events;
+  PR 3 Map check.
+
+#### Map check (on-board map corrections; designed 2026-09-26)
+
+- **Same store, separate list:** map notes live in the usage log's phone-side
+  store but in their own list. They never drop off when the store is full and
+  Clear log doesn't touch them (it has its own Clear, with a confirm).
+- **Map check card** on the Me tab, only for a mapped ship: one row per open
+  entry in `tools/shipmap/conflicts-HM.json` (bundled into the phone script at
+  build time), showing the `check` question and what each source says. Answer
+  with `website right` / `app right` / `neither` / `not checked`, an optional
+  where (deck, fore/mid/aft, port/stbd) and a short note. An **Add a problem**
+  row covers anything else found wrong (place, deck, note).
+- **Quick flag on the watch** (the watch can't take notes offline: dictation
+  needs the internet): one action on a place page or the Route screen records
+  the time, the place, the current start and the route step on screen. Flags
+  appear in the card as `Flagged on watch – add details`. Button to be chosen
+  against the existing place page and Route controls, and added to `HELP_KEYS`.
+- **Copy notes** exports the answers keyed by conflict id, so after the sailing
+  each entry gets `status: confirmed` and `truth`, and the data is fixed and
+  rebuilt (`tools/shipmap/README.md`, Conflicts).
 
 ### Phase 3: Port days and outdoors
 
