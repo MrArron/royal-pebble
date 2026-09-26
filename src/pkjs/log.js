@@ -11,8 +11,8 @@
 // with no cruise saved. Day index 0 (sail day) shows as D1, days before sailing
 // as D-1, D-2...
 //
-// Map notes (Map check, PR 3) live beside the log in their own list: they never
-// drop off and Clear log leaves them alone.
+// Map notes (Map check) live beside the log in their own list: they never drop
+// off and Clear log leaves them alone.
 
 var slice = require('./slice');
 
@@ -221,12 +221,157 @@ function makeLog(storage, opts) {
     };
   }
 
+  // ---- Map notes (docs/PROJECT_BRIEF.md, "Map check"). Each has an `id` and a
+  // `type`: 'answer' (to a conflict, id 'c:' + conflict id), 'flag' (from the
+  // watch), 'found' (a map problem the app ran into, id 'a:' + key, counted
+  // instead of repeated) or 'added' (Add a problem). Saved at once: they're
+  // few, and they matter more than the log.
+  function saveNotes(list) {
+    try {
+      storage.setItem(STORE_NOTES, JSON.stringify(list));
+    } catch (e) {
+      // Make room in the log, which gives way to everything else.
+      trim(Math.floor(state().chars / 2));
+      flush();
+      storage.setItem(STORE_NOTES, JSON.stringify(list));
+    }
+  }
+
+  // Adds a note (a watch flag, an added problem), stamped with the time and
+  // the cruise day and minute. Returns it.
   function addMapNote(note) {
     var list = read(STORE_NOTES, []);
     var n = {ms: nowMs()};
     Object.keys(note || {}).forEach(function(k) { n[k] = note[k]; });
+    var when = stamp(n.ms);
+    n.day = when[0];
+    n.min = when[1];
+    if (!n.id) {
+      var base = (n.type === 'flag' ? 'f' : 'u') + n.ms;
+      var ids = {};
+      list.forEach(function(o) { ids[o.id] = true; });
+      n.id = base;
+      for (var k = 2; ids[n.id]; k++) {
+        n.id = base + '-' + k;
+      }
+    }
     list.push(n);
-    storage.setItem(STORE_NOTES, JSON.stringify(list));
+    saveNotes(list);
+    return n;
+  }
+
+  // A map problem the app ran into by itself (a venue with no spot, no route
+  // found). One note per `key`, counting how often it happened. Returns true
+  // the first time.
+  function appFound(key, fields) {
+    var list = read(STORE_NOTES, []);
+    var id = 'a:' + key;
+    var ms = nowMs();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) {
+        list[i].count = (list[i].count || 1) + 1;
+        list[i].last = ms;
+        saveNotes(list);
+        return false;
+      }
+    }
+    var n = {id: id, type: 'found', count: 1, last: ms};
+    Object.keys(fields || {}).forEach(function(k) { n[k] = fields[k]; });
+    addMapNote(n);
+    return true;
+  }
+
+  // Settings page result (Me > Map check): {clear, ship, notes: {id: fields or
+  // null to remove}, added: [fields]}. Fields are answer, deck, pos, side, note
+  // (and place for an added problem). Returns what changed, as lines for the log.
+  function applyMapNotes(r) {
+    if (!r || typeof r !== 'object') {
+      return [];
+    }
+    var list = read(STORE_NOTES, []);
+    if (r.clear) {
+      saveNotes([]);
+      return list.length ? ['cleared (' + list.length + ' notes)'] : [];
+    }
+    var out = [];
+    var FIELDS = ['place', 'answer', 'deck', 'pos', 'side', 'note'];
+    function pick(src) {
+      var f = {};
+      FIELDS.forEach(function(k) {
+        if (src[k] !== undefined && src[k] !== null && src[k] !== '') {
+          f[k] = k === 'deck' ? src[k] | 0 : cleanText(src[k]).slice(0, 200);
+        }
+      });
+      return f;
+    }
+    function show(n) {
+      return FIELDS.filter(function(k) { return n[k] !== undefined; }).map(function(k) {
+        return k + ' ' + JSON.stringify(n[k]);
+      }).join(', ') || 'empty';
+    }
+    Object.keys(r.notes || {}).forEach(function(id) {
+      var src = r.notes[id];
+      var at = -1;
+      list.forEach(function(n, i) { if (n.id === id) { at = i; } });
+      if (src === null) {
+        if (at !== -1) {
+          list.splice(at, 1);
+          out.push(id + ' removed');
+        }
+        return;
+      }
+      if (typeof src !== 'object') {
+        return;
+      }
+      var f = pick(src);
+      if (at === -1) {
+        if (id.indexOf('c:') !== 0) {
+          return;  // flags and found problems are made by the app, not the page
+        }
+        var n = {id: id, type: 'answer', ship: r.ship || '', conflict: id.slice(2), ms: nowMs()};
+        Object.keys(f).forEach(function(k) { n[k] = f[k]; });
+        list.push(n);
+        out.push(id + ': ' + show(n));
+        return;
+      }
+      var old = list[at];
+      var before = show(old);
+      FIELDS.forEach(function(k) {
+        if (k === 'place' && old.type !== 'added') {
+          return;
+        }
+        if (f[k] === undefined) {
+          delete old[k];
+        } else {
+          old[k] = f[k];
+        }
+      });
+      if (show(old) !== before) {
+        old.edited = nowMs();
+        out.push(id + ': ' + show(old));
+      }
+    });
+    (Array.isArray(r.added) ? r.added : []).forEach(function(src) {
+      var f = src && typeof src === 'object' ? pick(src) : {};
+      if (!f.place && !f.note) {
+        return;
+      }
+      f.type = 'added';
+      f.ship = r.ship || '';
+      var ms = nowMs();
+      var n = {ms: ms};
+      Object.keys(f).forEach(function(k) { n[k] = f[k]; });
+      var when = stamp(ms);
+      n.day = when[0];
+      n.min = when[1];
+      n.id = 'u' + ms + '-' + (list.length + 1);
+      list.push(n);
+      out.push('added: ' + show(n));
+    });
+    if (out.length) {
+      saveNotes(list);
+    }
+    return out;
   }
 
   return {
@@ -240,7 +385,9 @@ function makeLog(storage, opts) {
     chars: function() { return state().chars; },
     mapNotes: function() { return read(STORE_NOTES, []); },
     addMapNote: addMapNote,
-    clearMapNotes: function() { storage.setItem(STORE_NOTES, '[]'); }
+    appFound: appFound,
+    applyMapNotes: applyMapNotes,
+    clearMapNotes: function() { saveNotes([]); }
   };
 }
 

@@ -21,6 +21,7 @@ var REF_AREA = 200;    // + index in AREA_KEYS
 var REF_ELEVATORS = 300;
 var REF_BANK = 301;    // + index in BANKS
 var REF_PLACE = 1000;  // + index in places()
+var REF_FLAG = 30000;  // + a place page's ref: Flag a map problem (Map check)
 
 // Row kinds.
 var ROW_HEADER = 0;  // small-caps header, the cursor skips it
@@ -457,6 +458,24 @@ function bankPage(b, ctx, cabin, all) {
           rows: [{kind: ROW_PLACE, ref: 0, line1: b.name, line2: ''}]};
 }
 
+// The last row of a place page on a mapped ship (docs/PROJECT_BRIEF.md, "Map
+// check"): Select saves a map note on the phone and opens a page that says so.
+function flagRow(ref) {
+  return item(REF_FLAG + ref, 'Flag a map problem', 'Note it for the Map check');
+}
+
+// A map problem the app ran into on its own, for the Map check: {key, place,
+// text}, or null. `v` is a venue entry, `to` its spots.
+function spotProblem(v, to) {
+  if (v.blank) {
+    return {key: 'unknown:' + v.name, place: v.name, text: 'not in the venue table, so not on the map'};
+  }
+  if (!to.length && v.decks.length && v.neighborhood !== venues.ASHORE) {
+    return {key: 'no-spot:' + v.name, place: v.name, text: 'no spot on the map on deck ' + v.decks.join(', ')};
+  }
+  return null;
+}
+
 // A place: its heading (name, area; where it is goes in dir_where), the Ship GPS
 // FROM block when there is one, and what's on there for the rest of today.
 function placePage(v, ctx, cabin) {
@@ -469,6 +488,7 @@ function placePage(v, ctx, cabin) {
   }
   var rows = [{kind: ROW_PLACE, ref: 0, line1: v.name, line2: area}];
   var events = eventsAt(v, ctx);
+  var problem = ctx.bundle && shipmap.data(ctx.shipCode) ? spotProblem(v, spotsOf(ctx.shipCode, v, cabin)) : null;
   rows.push(header(events.length ? 'Later today' : 'Today'));
   if (events.length) {
     events.forEach(function(e) {
@@ -478,7 +498,50 @@ function placePage(v, ctx, cabin) {
   } else {
     rows.push(item(0, 'Nothing more today'));
   }
-  return {title: 'Place', label: '', where: where, gps: gps, rows: rows};
+  var page = {title: 'Place', label: '', where: where, gps: gps, rows: rows};
+  if (problem) {
+    page.problem = problem;
+  }
+  return page;
+}
+
+// What a watch flag records about place page `ref` (the flag's ref less
+// REF_FLAG): {ship, place, decks, area, shown (the FROM and restroom lines on
+// the page), approx, start (why the route starts where it does)}, or null for
+// a stale ref.
+function flagInfo(ref, ctx) {
+  var s = setup(ctx);
+  var info = null;
+  if (ref >= REF_BANK && ref < REF_BANK + s.banks.length) {
+    var b = s.banks[ref - REF_BANK];
+    var bg = ctx.bundle ? fromBlock(b.spots, s.c, s.cabin) : null;
+    info = {place: b.name, decks: b.decks, area: b.pos, shown: bg && !bg.flags ? bg.header + ' ' + bg.text : ''};
+  } else if (ref >= REF_PLACE && ref - REF_PLACE < s.list.length) {
+    var v = s.list[ref - REF_PLACE];
+    var g = placeGps(v, s.c, s.cabin);
+    var shown = [];
+    if (g && !(g.flags & (GPS_NO_CABIN | GPS_NO_FROM))) {
+      shown.push(g.header + ' ' + g.text);
+    }
+    if (g && g.rest) {
+      shown.push('restroom ' + g.rest.text);
+    }
+    info = {place: v.name, decks: v.decks, area: v.neighborhood || '', shown: shown.join('; '),
+            approx: !!(g && g.flags & GPS_APPROX)};
+  }
+  if (info) {
+    info.ship = s.c.shipCode;
+    info.start = startReason(ctx);
+  }
+  return info;
+}
+
+// The page a flag opens: it says the note is saved (index.js saves it).
+function flagPage(info) {
+  return {title: 'Map check', label: '', rows: info ? [
+    {kind: ROW_PLACE, ref: 0, line1: 'Flagged', line2: info.place},
+    item(0, 'Saved on your phone', 'Add details: Me > Map check')
+  ] : [item(0, 'Not found', 'Go back and try again')]};
 }
 
 // ---- Route screen (docs/DESIGN_V1_1.md §9.2) --------------------------------
@@ -527,19 +590,30 @@ function routePage(ref, rest, ctx) {
     target = {name: v.name, short: finder.short(v.name) || v.name, to: spotsOf(ship, v, s.cabin)};
   }
   var page;
+  var problem = null;
   if (!ctx.bundle || !target || !target.to.length) {
     page = routeMessage('Not found', 'Go back and try again');
+    if (ctx.bundle && target && v) {
+      problem = spotProblem(v, target.to);
+    }
   } else {
     var best = bestRoute(target.to, s.c, s.cabin);
     if (rest) {
       page = restroomRoute(target, best.route ? best.route.to || target.to[0] : target.to[0], ship, opts);
+      if (!page.steps.length) {
+        problem = {key: 'no-restroom:' + target.name, place: target.name, text: 'no restroom found from it'};
+      }
     } else if (best.flags & GPS_NO_CABIN) {
       page = routeMessage(target.name, 'Add your stateroom on the phone for walking directions');
     } else if (best.flags) {
       page = routeMessage(target.name, 'No route found');
+      problem = {key: 'no-route:' + target.name, place: target.name, text: 'no route found to it'};
     } else {
       page = placeRoute(target, best, opts);
     }
+  }
+  if (problem) {
+    page.problem = problem;
   }
   page.ref = ref;
   page.rest = !!rest;
@@ -556,10 +630,12 @@ function eventRoutePage(ev, ctx) {
   var ship = s.c.shipCode;
   var name = eventVenue(ev, s.c);
   var target = null;
+  var problem = null;
   if (ctx.bundle && name && shipmap.data(ship)) {
     var finder = venues.venueFinder(ship, (s.c.settings.venues || {})[ship], (s.c.settings.me || {}).deck);
     var v = finder.entry(name);
     target = {name: v.name, short: v.short || v.name, to: spotsOf(ship, v, s.cabin)};
+    problem = spotProblem(v, target.to);
   }
   var page;
   if (!target || !target.to.length) {
@@ -570,10 +646,14 @@ function eventRoutePage(ev, ctx) {
       page = routeMessage(target.name, 'Add your stateroom on the phone for walking directions');
     } else if (best.flags) {
       page = routeMessage(target.name, 'No route found');
+      problem = {key: 'no-route:' + target.name, place: target.name, text: 'no route found to it'};
     } else {
       page = placeRoute(target, best, {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)});
       page.small = {decks: 0, text: ''};
     }
+  }
+  if (problem) {
+    page.problem = problem;
   }
   page.ref = 0;
   page.rest = false;
@@ -704,6 +784,8 @@ function buildPage(ref, ctx) {
     page = bankPage(banks[ref - REF_BANK], c, cabin, shipDecks(list, banks));
   } else if (ref >= REF_PLACE && ref - REF_PLACE < list.length) {
     page = placePage(list[ref - REF_PLACE], c, cabin);
+  } else if (ref >= REF_FLAG) {
+    page = flagPage(flagInfo(ref - REF_FLAG, ctx));
   } else if (ref === REF_DECKS) {
     page = decksPage(list, cabin);
   } else {
@@ -713,6 +795,11 @@ function buildPage(ref, ctx) {
   page.ref = ref;
   if (page.rel === undefined) {
     page.rel = null;
+  }
+  // Place pages (venues and elevator banks) on a mapped ship end with Flag a
+  // map problem.
+  if (c.bundle && shipmap.data(c.shipCode) && ref >= REF_BANK && ref < REF_FLAG && (page.where || page.bank)) {
+    page.rows.push(flagRow(ref));
   }
   return page;
 }
@@ -800,7 +887,7 @@ function encodeBank(b) {
 
 module.exports = {
   REF_DECKS: REF_DECKS, REF_AREAS: REF_AREAS, REF_DECK: REF_DECK, REF_AREA: REF_AREA, REF_PLACE: REF_PLACE,
-  REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK,
+  REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK, REF_FLAG: REF_FLAG,
   ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE, ROW_MUTED: ROW_MUTED,
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
   GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,
@@ -808,5 +895,5 @@ module.exports = {
   encodeRow: encodeRow, packRows: packRows, encodeGps: encodeGps, encodeBank: encodeBank, message: message,
   ROUTE_REDUCED: ROUTE_REDUCED, ROUTE_STEPS_MAX: ROUTE_STEPS_MAX,
   routePage: routePage, eventRoutePage: eventRoutePage, encodeRoute: encodeRoute, routeMsg: routeMsg,
-  startReason: startReason
+  startReason: startReason, flagInfo: flagInfo
 };

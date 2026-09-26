@@ -94,6 +94,13 @@ test('conflicts: well formed, every venue in the table, open until checked on bo
   });
 });
 
+test('conflicts: the phone script\'s copy is up to date (node tools/shipmap/build_conflicts.js)', function() {
+  var fs = require('fs');
+  var built = require('../../tools/shipmap/build_conflicts').build('HM');
+  var file = fs.readFileSync(require.resolve('../../src/pkjs/data/conflicts-HM'), 'utf8');
+  assert.strictEqual(file.replace(/\r\n/g, '\n'), built);
+});
+
 test('stairs: sorted deck lists on real decks', function() {
   P.stairs.forEach(function(s) {
     assert.ok(onShip(s[0], s[1]));

@@ -372,7 +372,13 @@ decks, 1 the areas, 100 + deck, 200 + area (the seven neighborhoods in Harmony
 order, then `Other places`, then Ashore), 300 the elevator banks, 301 + bank
 (0 fore, 1 aft; ships with a map only), 1000 + place (its index in the
 directory's list, sorted by name; a ref that no longer matches gets a `Not
-found` page).
+found` page), 30000 + a place page's ref for its last row, `Flag a map
+problem` (Map check; place and bank pages on a ship with a map, with a saved
+cruise). Asking for a flag ref makes the phone save a map note (what the place
+page showed and where the route starts) and answer with a `Map check` page
+saying `Flagged`. The watch needs nothing new for it: the row is an ordinary
+item whose ref opens a page, and a second request for the same flag within a
+minute (a retry) saves nothing more.
 
 - `dir_title`: the top bar's left side (`Ship`, `Deck 5`, `Area`, `Place`).
 - `dir_label`: the top bar's right side (`by deck`, `by area`), replacing the

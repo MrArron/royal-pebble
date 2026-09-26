@@ -157,6 +157,56 @@ test('map notes never drop when the log is full', function() {
   assert.strictEqual(l.mapNotes().length, 30);
 });
 
+test('map notes: flags get ids and the cruise day; problems found are counted, not repeated', function() {
+  var st = memStorage();
+  var l = makeTestLog(st, '2027-03-06');
+  var a = l.addMapNote({type: 'flag', place: 'Test Place'});
+  var b = l.addMapNote({type: 'flag', place: 'Test Place'});
+  assert.ok(a.id !== b.id && /^f[0-9]+/.test(a.id), a.id + ' ' + b.id);
+  assert.deepStrictEqual([a.day, a.min], [1, 14 * 60 + 3]);
+  assert.strictEqual(l.appFound('HM:no-route:Test Place', {place: 'Test Place', problem: 'no route'}), true);
+  l.clock.ms += 60000;
+  assert.strictEqual(l.appFound('HM:no-route:Test Place', {place: 'Test Place', problem: 'no route'}), false);
+  var found = l.mapNotes().filter(function(n) { return n.type === 'found'; });
+  assert.strictEqual(found.length, 1);
+  assert.deepStrictEqual([found[0].id, found[0].count, found[0].last - found[0].ms],
+                         ['a:HM:no-route:Test Place', 2, 60000]);
+  // Saved at once, not with the log.
+  assert.strictEqual(JSON.parse(st.getItem(log.STORE_NOTES)).length, 3);
+});
+
+test('map notes: the settings page answers, edits, removes, adds and clears', function() {
+  var l = makeTestLog(memStorage(), '2027-03-06');
+  var flag = l.addMapNote({type: 'flag', place: 'Test Place', shown: 'FROM YOUR CABIN 1 deck'});
+  var out = l.applyMapNotes({ship: 'HM', notes: {
+    'c:test-conflict': {answer: 'app right', deck: '5', pos: 'fore', note: '  on   deck 5 '},
+    'f-unknown': {note: 'ignored: the page cannot make flags'}
+  }, added: [{place: 'Test Stairs', side: 'port', note: 'Closed'}, {}]});
+  assert.strictEqual(out.length, 2, out.join(' | '));
+  var notes = l.mapNotes();
+  var ans = notes.filter(function(n) { return n.id === 'c:test-conflict'; })[0];
+  assert.deepStrictEqual([ans.type, ans.ship, ans.conflict, ans.answer, ans.deck, ans.pos, ans.note],
+                         ['answer', 'HM', 'test-conflict', 'app right', 5, 'fore', 'on deck 5']);
+  var added = notes.filter(function(n) { return n.type === 'added'; });
+  assert.deepStrictEqual([added.length, added[0].place, added[0].side, added[0].ship], [1, 'Test Stairs', 'port', 'HM']);
+  // An edit replaces the fields it sends; a flag keeps what the watch recorded.
+  out = l.applyMapNotes({ship: 'HM', notes: {'c:test-conflict': {answer: 'neither'}},
+                         added: []});
+  ans = l.mapNotes().filter(function(n) { return n.id === 'c:test-conflict'; })[0];
+  assert.deepStrictEqual([ans.answer, ans.deck, ans.note], ['neither', undefined, undefined]);
+  l.applyMapNotes({notes: {}});
+  l.applyMapNotes({ship: 'HM', notes: {}});
+  out = l.applyMapNotes({ship: 'HM', notes: {}});
+  assert.deepStrictEqual(out, [], 'nothing changed');
+  l.applyMapNotes({notes: (function() { var o = {}; o[flag.id] = {note: 'Sign says deck 4', place: 'x'}; return o; })()});
+  var f = l.mapNotes().filter(function(n) { return n.id === flag.id; })[0];
+  assert.deepStrictEqual([f.note, f.place, f.shown], ['Sign says deck 4', 'Test Place', 'FROM YOUR CABIN 1 deck']);
+  l.applyMapNotes({notes: (function() { var o = {}; o[flag.id] = null; return o; })()});
+  assert.strictEqual(l.mapNotes().length, 2);
+  assert.deepStrictEqual(l.applyMapNotes({clear: true, notes: {'c:x': {answer: 'app right'}}}), ['cleared (2 notes)']);
+  assert.strictEqual(l.mapNotes().length, 0);
+});
+
 test('full storage drops old entries instead of failing', function() {
   var st = memStorage(200 * 1024);
   st.setItem('bundle', new Array(100 * 1024).join('b'));

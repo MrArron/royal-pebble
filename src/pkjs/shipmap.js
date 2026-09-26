@@ -29,6 +29,11 @@ var PLACES = {
 var WALKWAYS = {
   HM: require('./data/walkways-HM')
 };
+// Open source conflicts, for the settings page's Map check card
+// (tools/shipmap/build_conflicts.js).
+var CONFLICTS = {
+  HM: require('./data/conflicts-HM')
+};
 // Names for the settings page's Help (keep in step with the README's "Ships with
 // Ship GPS").
 var NAMES = {
@@ -509,6 +514,7 @@ module.exports = {
   walkMetres: walkMetres,
   data: function(ship) { return PLACES[ship] || null; },
   walkways: function(ship) { return WALKWAYS[ship] || null; },
+  conflicts: function(ship) { return CONFLICTS[ship] ? CONFLICTS[ship].conflicts : []; },
   // The decks the map covers, lowest first ([] for a ship with no map).
   decks: function(ship) {
     return WALKWAYS[ship] ? Object.keys(WALKWAYS[ship].decks).map(Number).sort(function(a, b) { return a - b; }) : [];

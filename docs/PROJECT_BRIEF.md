@@ -314,13 +314,28 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
   where (deck, fore/mid/aft, port/stbd) and a short note. An **Add a problem**
   row covers anything else found wrong (place, deck, note).
 - **Quick flag on the watch** (the watch can't take notes offline: dictation
-  needs the internet): one action on a place page or the Route screen records
-  the time, the place, the current start and the route step on screen. Flags
-  appear in the card as `Flagged on watch – add details`. Button to be chosen
-  against the existing place page and Route controls, and added to `HELP_KEYS`.
+  needs the internet): place pages on a mapped ship end with a **Flag a map
+  problem** row (owner, 2026-09-26: on the directory's place pages only, not the
+  Route screen). Select on it saves the time, the place, what the page showed
+  (FROM and restroom lines) and where the route starts, and opens a page saying
+  `Flagged`. It's an ordinary directory row built by the phone, so the watch
+  code is unchanged (docs/WATCH_PROTOCOL.md, Ship directory). Flags appear in
+  the card as `Flagged on watch – add details`.
+- **Found by the app** (owner, 2026-09-26): when the phone runs into a map
+  problem by itself (a venue not in the venue table, a venue with no spot on its
+  deck, no route found, no restroom found), it saves a note once per problem and
+  counts repeats. Not with demo data. They appear in the card under `Found by
+  the app`, with the same where and note fields.
 - **Copy notes** exports the answers keyed by conflict id, so after the sailing
   each entry gets `status: confirmed` and `truth`, and the data is fixed and
-  rebuilt (`tools/shipmap/README.md`, Conflicts).
+  rebuilt (`tools/shipmap/README.md`, Conflicts). The export is JSON
+  (`"format": "royal-pebble-map-notes"`): `conflicts` by id (every open one,
+  `not checked` included), then `flags`, `found` and `added`. It can hold cabin
+  details (a route start), so a saved copy uses the git-ignored name
+  `royal-pebble-map-notes-*` and stays out of the repo.
+- **Built (2026-09-26):** the card, answers, flags, problems found, Copy notes
+  and Clear notes (applied on Save, like Clear log). The open conflicts are
+  bundled by `tools/shipmap/build_conflicts.js` into `src/pkjs/data/conflicts-HM.js`.
 
 ### Phase 3: Port days and outdoors
 
