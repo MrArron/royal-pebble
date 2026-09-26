@@ -37,6 +37,8 @@ static CommDirPageHandler s_on_dir_page;
 static CommDirFailedHandler s_on_dir_failed;
 static CommRoutePageHandler s_on_route_page;
 static CommDirFailedHandler s_on_route_failed;
+static CommPhoneUpHandler s_on_dir_up;
+static CommPhoneUpHandler s_on_route_up;
 static Notice s_notices[MAX_NOTICES];
 
 // The slice being received; committed to data.c on MSG_END.
@@ -239,6 +241,12 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
   }
   uint16_t slice_id = (uint16_t)find_int(iter, MESSAGE_KEY_slice_id);
   int32_t msg = tuple_int(type);
+  if (s_on_dir_up) {
+    s_on_dir_up();
+  }
+  if (s_on_route_up) {
+    s_on_route_up();
+  }
 
   if (msg == MSG_BEGIN) {
     handle_begin(iter, slice_id);
@@ -332,12 +340,13 @@ static void outbox_failed(DictionaryIterator *iter, AppMessageResult reason, voi
     return;
   }
   usage_add(USAGE_MSG_ERROR, USAGE_MSG_NOT_DELIVERED, (int16_t)reason, s_outbox_msg, 0);
+  bool script_down = reason == APP_MSG_NOT_CONNECTED || reason == APP_MSG_APP_NOT_RUNNING;
   if (s_outbox_msg == MSG_STAR_CHANGES) {
     stars_send_failed();
   } else if (s_outbox_msg == MSG_DIR_REQUEST && s_on_dir_failed) {
-    s_on_dir_failed();
+    s_on_dir_failed(script_down);
   } else if (s_outbox_msg == MSG_ROUTE_REQUEST && s_on_route_failed) {
-    s_on_route_failed();
+    s_on_route_failed(script_down);
   }
 }
 
@@ -376,9 +385,11 @@ static void send_simple(int32_t msg) {
   send_simple_now(NULL);
 }
 
-void comm_set_dir_handlers(CommDirPageHandler on_page, CommDirFailedHandler on_failed) {
+void comm_set_dir_handlers(CommDirPageHandler on_page, CommDirFailedHandler on_failed,
+                           CommPhoneUpHandler on_phone_up) {
   s_on_dir_page = on_page;
   s_on_dir_failed = on_failed;
+  s_on_dir_up = on_phone_up;
 }
 
 bool comm_request_dir(int32_t ref) {
@@ -392,9 +403,11 @@ bool comm_request_dir(int32_t ref) {
   return app_message_outbox_send() == APP_MSG_OK;
 }
 
-void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler on_failed) {
+void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler on_failed,
+                             CommPhoneUpHandler on_phone_up) {
   s_on_route_page = on_page;
   s_on_route_failed = on_failed;
+  s_on_route_up = on_phone_up;
 }
 
 bool comm_request_route(int32_t ref, bool rest) {

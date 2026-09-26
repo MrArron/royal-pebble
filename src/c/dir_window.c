@@ -16,6 +16,8 @@
 #define REPLY_TIMEOUT_MS 8000
 #define SEND_RETRY_MS 500
 #define SEND_TRIES 4
+// The phone script takes 10-16 s to start after the app opens (owner's logs).
+#define SCRIPT_WAIT_MS 25000
 
 #define HEADER_H 22
 #define ITEM_H 30
@@ -34,6 +36,8 @@ typedef struct {
   char title[24];  // shown until the page arrives
   State state;
   int tries;
+  bool waiting;  // loading, until the phone script is up
+  bool waited;   // this request has waited once already
   AppTimer *timer;
   bool has_where;
   Where where;
@@ -102,6 +106,7 @@ static void cancel_timer(View *v) {
 static void timed_out(void *context) {
   View *v = context;
   v->timer = NULL;
+  v->waiting = false;
   if (v->state == STATE_LOADING) {
     set_state(v, STATE_NO_PHONE);
   }
@@ -125,6 +130,7 @@ static void send_request(void *context) {
 static void request(View *v) {
   cancel_timer(v);
   v->tries = 0;
+  v->waiting = v->waited = false;
   set_state(v, STATE_LOADING);
   send_request(v);
 }
@@ -154,6 +160,7 @@ static void page_received(const DirPageMsg *page) {
     return;
   }
   cancel_timer(v);
+  v->waiting = false;
   // Count the whole rows, then keep exactly those.
   const uint8_t *end = page->rows ? page->rows + page->rows_length : NULL;
   const uint8_t *p = page->rows;
@@ -187,11 +194,30 @@ static void page_received(const DirPageMsg *page) {
   menu_layer_set_selected_index(v->menu, MenuIndex(0, first_selectable(v)), MenuRowAlignNone, false);
 }
 
-static void request_failed(void) {
+// A request sent before the phone script is up (right after the app opens)
+// waits for it, still loading, and goes again when the phone first speaks.
+static void request_failed(bool script_down) {
   View *v = top_view();
-  if (v && v->state == STATE_LOADING) {
-    cancel_timer(v);
+  if (!v || v->state != STATE_LOADING) {
+    return;
+  }
+  cancel_timer(v);
+  if (script_down && !v->waited) {
+    v->waiting = v->waited = true;
+    v->timer = app_timer_register(SCRIPT_WAIT_MS, timed_out, v);
+  } else {
+    v->waiting = false;
     set_state(v, STATE_NO_PHONE);
+  }
+}
+
+static void phone_up(void) {
+  View *v = top_view();
+  if (v && v->waiting && v->state == STATE_LOADING) {
+    cancel_timer(v);
+    v->waiting = false;
+    v->tries = 0;
+    v->timer = app_timer_register(SEND_RETRY_MS, send_request, v);
   }
 }
 
@@ -632,7 +658,7 @@ static void window_unload(Window *window) {
     }
   }
   if (s_depth == 0) {
-    comm_set_dir_handlers(NULL, NULL);
+    comm_set_dir_handlers(NULL, NULL, NULL);
   }
   window_destroy(window);
   free(v);
@@ -662,7 +688,7 @@ void dir_window_push(int32_t ref, const char *title) {
     .unload = window_unload,
   });
   s_views[s_depth++] = v;
-  comm_set_dir_handlers(page_received, request_failed);
+  comm_set_dir_handlers(page_received, request_failed, phone_up);
   window_stack_push(v->window, true);
 }
 

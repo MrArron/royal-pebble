@@ -366,6 +366,13 @@ screens that are open and stores nothing. With the phone away (not connected,
 the request fails, or no answer within 8 seconds) the screen says `Connect your
 phone`, and Select asks again.
 
+Right after the app opens, the phone script takes a while to start (10-16 s on
+the owner's phone), and a request sent then fails with `NOT_CONNECTED` (or
+`APP_NOT_RUNNING`). The directory and Route screens then keep loading, wait up
+to 25 seconds for any message from the phone (its `ready` slice) and send the
+request again; only after that do they say `Connect your phone`. Each request
+waits once.
+
 `dir_ref` is the phone's name for a page; the watch only echoes it back and
 ignores a DIR_PAGE whose ref isn't the one it is waiting for. Currently: 0 the
 decks, 1 the areas, 100 + deck, 200 + area (the seven neighborhoods in Harmony
@@ -442,7 +449,8 @@ only when the page has a FROM block (`dir_gps` without flags 2 and 4) and Hold
 Select only on a venue with a restroom line. As with directory pages, nothing is
 stored; the watch ignores a page that doesn't match its request, and with the
 phone away (not connected, the request fails, or no answer within 8 seconds) it
-says `Connect your phone`, and Select asks again.
+says `Connect your phone`, and Select asks again. A request sent before the
+phone script is up waits for it, as on directory pages.
 
 - The route to a place starts where the place page's FROM block does (§9.4) and
   goes to the entrance that route reaches (an elevator bank: its lobby on the
