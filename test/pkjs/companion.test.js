@@ -62,6 +62,18 @@ test('start-up and a watch sync are logged with the watch and the send', functio
             lines.join('\n'));
 });
 
+test('the watch storage report is logged only when it changes', function() {
+  var c = companion();
+  var report = {msg_type: 14, saved_cutoff: -1, saved_bytes: 193, saved_max: 1048576};
+  c.handlers.appmessage({payload: report});
+  c.handlers.appmessage({payload: report});
+  report.saved_bytes = 4314;
+  c.handlers.appmessage({payload: report});
+  var lines = c.log().filter(function(l) { return /^watch  storage/.test(l); });
+  assert.deepStrictEqual(lines, ['watch  storage: schedule uses 193 of 1048576 bytes',
+                                 'watch  storage: schedule uses 4314 of 1048576 bytes']);
+});
+
 test('settings page: opened, closed, setting changes and log settings', function() {
   var c = companion();
   c.handlers.showConfiguration();

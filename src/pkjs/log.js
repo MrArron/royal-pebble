@@ -265,6 +265,18 @@ function header(info) {
   ].join('\n');
 }
 
+// "Android 17, Pixel 11 Pro XL, WebView Chrome 153.0.8010.36" from the phone
+// script's user agent; anything else is kept, cut to 120 characters.
+function phoneFromUa(ua) {
+  ua = String(ua || '');
+  var dev = /\(Linux; (Android [^;)]+); ([^;)]+?)(?: Build\/[^;)]*)?[;)]/.exec(ua);
+  var chrome = /Chrome\/([\d.]+)/.exec(ua);
+  if (!dev) {
+    return ua ? ua.slice(0, 120) : 'unknown';
+  }
+  return dev[1] + ', ' + dev[2] + (chrome ? ', ' + (/; wv\)/.test(ua) ? 'WebView ' : '') + 'Chrome ' + chrome[1] : '');
+}
+
 // Settings that differ between two settings objects, as ["path: old -> new"],
 // following nested objects (me.stateroom, days.2027-03-07.offset...).
 function diffSettings(before, after) {
@@ -305,5 +317,6 @@ module.exports = {
   renderEntry: renderEntry,
   encodedLength: encodedLength,
   header: header,
+  phoneFromUa: phoneFromUa,
   diffSettings: diffSettings
 };

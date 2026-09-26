@@ -202,6 +202,16 @@ test('header names versions, watch, device and the clock', function() {
   assert.ok(/no cruise saved/.test(demo) && /firmware unknown/.test(demo) && /\(no label\)/.test(demo));
 });
 
+test('phone text is short: Android version, model and WebView', function() {
+  assert.strictEqual(log.phoneFromUa('Mozilla/5.0 (Linux; Android 15; Test Phone 9 Build/AB1C.123456.001; wv) ' +
+    'AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/150.0.1234.5 Mobile Safari/537.36'),
+    'Android 15, Test Phone 9, WebView Chrome 150.0.1234.5');
+  assert.strictEqual(log.phoneFromUa('Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 Chrome/150.0.0.0'),
+    'Android 14, K, Chrome 150.0.0.0');
+  assert.strictEqual(log.phoneFromUa('PebbleKitJS/1.0'), 'PebbleKitJS/1.0');
+  assert.strictEqual(log.phoneFromUa(undefined), 'unknown');
+});
+
 test('settings diff follows nested values', function() {
   var d = log.diffSettings(
     {theme: 'light', me: {stateroom: '1234'}, days: {'2027-03-07': {offset: 0}}, hiddenCats: ['a']},

@@ -84,6 +84,7 @@ function save(key, value) {
 // ---- Usage log (log.js). The saved cruise's sail date gives each entry its
 // cruise day; it's cached so a burst of entries doesn't re-read the bundle.
 var s_sailDate;  // undefined until read; null with no cruise saved
+var s_lastSaved = '';  // the watch's last storage report, as logged
 var usage = logLib.makeLog(localStorage, {
   sailDate: function() {
     if (s_sailDate === undefined) {
@@ -120,8 +121,7 @@ function watchInfo() {
 }
 
 function phoneText() {
-  var ua = typeof navigator !== 'undefined' && navigator.userAgent;
-  return ua ? String(ua).slice(0, 160) : 'unknown';
+  return logLib.phoneFromUa(typeof navigator !== 'undefined' && navigator.userAgent);
 }
 
 // Event handlers log what goes wrong in them before the error surfaces.
@@ -778,8 +778,13 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
         console.log('Watch storage full from cruise minute ' + p.saved_cutoff);
       }
       console.log('Watch saved ' + p.saved_bytes + ' of ' + p.saved_max + ' bytes');
-      usage.add('watch', 'storage: schedule uses ' + p.saved_bytes + ' of ' + p.saved_max + ' bytes' +
-                (p.saved_cutoff !== slice.NO_TIME ? ', FULL from cruise minute ' + p.saved_cutoff : ''));
+      // Reported after every slice; logged when it changes.
+      var report = 'storage: schedule uses ' + p.saved_bytes + ' of ' + p.saved_max + ' bytes' +
+        (p.saved_cutoff !== slice.NO_TIME ? ', FULL from cruise minute ' + p.saved_cutoff : '');
+      if (report !== s_lastSaved) {
+        s_lastSaved = report;
+        usage.add('watch', report);
+      }
       break;
     case MSG_DEMO_NEXT:
       if (!load(STORE_BUNDLE, null)) {
