@@ -35,7 +35,7 @@ void info_window_refresh(void);
 void dir_window_push(int32_t ref, const char *title);
 void dir_window_refresh(void);
 
-// Route screen (docs/DESIGN_V1_1.md ง9.2) for place page `ref`: to the place,
+// Route screen (docs/DESIGN_V1_1.md ยง9.2) for place page `ref`: to the place,
 // or with `rest` from it to its closest restroom. `title` and `header` show
 // until the phone's page arrives.
 void route_window_push(int32_t ref, bool rest, const char *title, const char *header);
