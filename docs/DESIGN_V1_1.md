@@ -992,6 +992,10 @@ For the build PRs:
     The mockups still show `~`; this supersedes them.
 13. **Elevator bank line (2026-09-26):** `Aft · Decks 3-17`, not the mockup's
     `Aft · all decks but 1`, which could be read as "except deck 1" (9.3).
+14. **Route screen wording (2026-09-26):** approved as built in PR 5: the
+    restroom route's `1 deck above` / `2 decks below Royal Theater`, `No route
+    found`, `No restroom found`, and `Same area` without `· your deck` when the
+    route starts at a venue (9.2).
 
 
 ## Mockup index
