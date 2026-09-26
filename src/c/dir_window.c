@@ -227,7 +227,7 @@ static void fmt_decks(char *buf, size_t size, int decks, const char *text) {
 #define REST_LABEL "Closest restroom"
 
 // A button hint in the sea accent (docs/mockups/gps/NOTES.md), in Gothic 14
-// bold at y, with a drawn `�` after it when `chevron`.
+// bold at y, with a drawn `›` after it when `chevron`.
 static void draw_hint(GContext *ctx, const char *text, bool chevron, int y, int w) {
   GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
   draw_line(ctx, text, font, g_theme->sea_accent, y - 2, w, 18);
@@ -235,11 +235,7 @@ static void draw_hint(GContext *ctx, const char *text, bool chevron, int y, int 
     int x = PAD + graphics_text_layout_get_content_size(text, font, GRect(0, 0, w, 18),
                                                         GTextOverflowModeTrailingEllipsis,
                                                         GTextAlignmentLeft).w + 4;
-    graphics_context_set_stroke_color(ctx, g_theme->sea_accent);
-    graphics_context_set_stroke_width(ctx, 2);
-    graphics_draw_line(ctx, GPoint(x, y + 3), GPoint(x + 3, y + 6));
-    graphics_draw_line(ctx, GPoint(x + 3, y + 6), GPoint(x, y + 9));
-    graphics_context_set_stroke_width(ctx, 1);
+    draw_chevron(ctx, g_theme->sea_accent, x, y - 2);
   }
 }
 

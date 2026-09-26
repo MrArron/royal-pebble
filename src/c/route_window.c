@@ -3,8 +3,9 @@
 #include "comm.h"
 #include "ui.h"
 
-// Route screen (docs/DESIGN_V1_1.md §9.2): the walking route to a place, or
-// from a place to its closest restroom, one line per step with a drawn glyph.
+// Route screen (docs/DESIGN_V1_1.md §9.2): the walking route to a place, from
+// a place to its closest restroom, or to Home's NEXT event (§9.5), one line
+// per step with a drawn glyph.
 // The phone works out every line (docs/WATCH_PROTOCOL.md, Route screen); the
 // watch only draws them and keeps nothing once the screen closes.
 
@@ -39,6 +40,8 @@ static Layer *s_more_below;
 
 static int32_t s_ref;
 static bool s_rest;
+static int32_t s_start;          // the event's start (Home's NEXT), else NO_TIME
+static char s_venue[VENUE_LEN];  // the event's venue, as the phone is asked
 static State s_state;
 static int s_tries;
 static AppTimer *s_timer;
@@ -50,6 +53,7 @@ static char s_header[GPS_LEN];   // "FROM YOUR CABIN", "CLOSEST TO ROYAL THEATER
 static char s_lead[LEAD_LEN];    // "Same area · your deck", or a message
 static char s_big[GPS_LEN];      // a restroom's "Deck 5 · Fore"
 static char s_small[TEXT_LEN];   // "100 m in all", "Same deck as Royal Theater"
+static char s_event[TITLE_LEN + 8];  // "12:00p Name That Tune Trivia" (event routes)
 static Step s_steps[STEPS_MAX];
 static int s_count;
 
@@ -191,7 +195,7 @@ static int layout(GContext *ctx, int w) {
     }
     y += h + 2;
   }
-  if (s_big[0] || s_small[0]) {
+  if (s_big[0] || s_small[0] || s_event[0]) {
     y += 2;
     if (ctx) {
       draw_divider(ctx, y, w);
@@ -210,6 +214,13 @@ static int layout(GContext *ctx, int w) {
         draw_arrow_line(ctx, false, g_theme->muted, PAD, y - 2, tw, "", s_small_decks, text);
       }
       y += 18;
+    }
+    if (s_event[0]) {
+      h = text_height(s_event, small, tw, 34);
+      if (ctx) {
+        draw_text(ctx, s_event, small, g_theme->muted, GRect(PAD, y - 2, tw, h + 2), GTextAlignmentLeft);
+      }
+      y += h;
     }
   }
   return y + 4;
@@ -258,7 +269,7 @@ static void send_request(void *context) {
   s_timer = NULL;
   if (!connection_service_peek_pebble_app_connection()) {
     set_state(STATE_NO_PHONE);
-  } else if (comm_request_route(s_ref, s_rest)) {
+  } else if (s_start != NO_TIME ? comm_request_event_route(s_start, s_venue) : comm_request_route(s_ref, s_rest)) {
     s_timer = app_timer_register(REPLY_TIMEOUT_MS, timed_out, NULL);
   } else if (++s_tries < SEND_TRIES) {
     s_timer = app_timer_register(SEND_RETRY_MS, send_request, NULL);
@@ -277,7 +288,8 @@ static void request(void) {
 // uint8 flags, int8 decks, five texts, uint8 count, then each step's uint8
 // glyph and text. Stops at the first step that isn't whole.
 static void page_received(const RoutePageMsg *page) {
-  if (!s_window || s_state == STATE_READY || page->ref != s_ref || page->rest != s_rest || page->length < 2) {
+  if (!s_window || s_state == STATE_READY || page->ref != s_ref || page->rest != s_rest ||
+      page->start != s_start || page->length < 2) {
     return;
   }
   const uint8_t *p = page->data;
@@ -381,10 +393,30 @@ static void window_unload(Window *window) {
   s_window = NULL;
 }
 
+static void push(int32_t ref, bool rest, const char *title, const char *header);
+
 void route_window_push(int32_t ref, bool rest, const char *title, const char *header) {
   if (s_window) {
     return;
   }
+  s_start = NO_TIME;
+  s_venue[0] = s_event[0] = '\0';
+  push(ref, rest, title, header);
+}
+
+void route_window_push_event(const Event *e) {
+  if (s_window) {
+    return;
+  }
+  s_start = e->start;
+  snprintf(s_venue, sizeof(s_venue), "%s", e->venue);
+  char time_buf[8];
+  fmt_clock(time_buf, sizeof(time_buf), e->start);
+  snprintf(s_event, sizeof(s_event), "%s %s", time_buf, e->title);
+  push(0, false, e->venue, "");
+}
+
+static void push(int32_t ref, bool rest, const char *title, const char *header) {
   s_ref = ref;
   s_rest = rest;
   s_count = 0;

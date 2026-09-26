@@ -722,8 +722,8 @@ As built (item 8):
 **Status: designed and approved 2026-09-25.** Written from the Claude Design
 pass and the owner's answers (9.9). Built so far: the planner (phone only),
 the place page's FROM block with the units setting (9.1, 9.7), and the
-restroom line and elevator banks (9.1, 9.3), and the route screen (9.2);
-Home Select, the button hints and Help follow. The mockups and their
+restroom line and elevator banks (9.1, 9.3), the route screen (9.2) and Home
+Select (9.5); the button hints and Help follow. The mockups and their
 `NOTES.md` in `docs/mockups/gps/` are the final word on text and layout; the
 sketches below are at watch size. Design canvas (private to the owner):
 https://claude.ai/artifact/Cq3jrWKZAZE6qHxbqNVy6n
@@ -895,6 +895,14 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
   and again after an update adds a button; any press dismisses them. The watch
   counts opens in its own storage. The phone's Help section has an **Always show
   button hints** toggle (off by default). No `Buttons` row in My info.
+- **As built (Select):** Select routes to the event on the NEXT card (or the
+  FEATURED one, or one on now), and `Route ›` shows only when its venue is on
+  board (a deck, not Ashore). On a port day before all-aboard, Home shows the
+  countdown and no card, so Select does nothing. The route starts where you'll
+  be before the event (9.4, with the event as the target), and the Route
+  screen ends with the event's time and title (`WatchHomeRoute`) instead of the
+  summary. Select is a single press, so it doesn't meet the firmware's
+  long-press shortcuts; check on the watch.
 
 ### 9.6 Voice (concept, later)
 

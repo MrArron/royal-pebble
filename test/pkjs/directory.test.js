@@ -425,6 +425,51 @@ test('route: ROUTE_PAGE packs flags, decks, texts and steps', function() {
   assert.ok(boleros.length <= directory.ROUTE_STEPS_MAX);
 });
 
+// Home's NEXT (§9.5): the route to an event, from where you'll be before it.
+function eventRoute(venue, start, settings) {
+  return directory.eventRoutePage({start: start, venue: venue},
+                                  {bundle: makeBundle(), settings: settings || CABIN, stars: {}, now: NOW});
+}
+var AT_3PM = 1440 + 15 * 60;  // cruise minutes, 2027-03-07 15:00
+
+test('event route: steps without the summary, and route_start echoed', function() {
+  var p = eventRoute('Royal Theater', AT_3PM);
+  assert.strictEqual(p.title, 'Royal Theater');
+  assert.strictEqual(p.header, 'FROM YOUR CABIN');
+  assert.deepStrictEqual(p.steps[p.steps.length - 1], {glyph: 4, text: 'Royal Theater'});
+  assert.deepStrictEqual(p.steps, route('Royal Theater').steps);
+  assert.deepStrictEqual([p.big, p.small.text], ['', '']);
+  var m = directory.routeMsg(p);
+  assert.deepStrictEqual([m.dir_ref, m.route_rest, m.route_start], [0, 0, AT_3PM]);
+  assert.strictEqual(directory.routeMsg(route('Royal Theater')).route_start, undefined);
+});
+
+test('event route: starts at a stop ending just before the event, not one on now', function() {
+  function stop(time, minutes) {
+    return {me: CABIN.me, personal: [{title: 'Show', venue: 'Studio B', date: '2027-03-07', time: time,
+                                      minutes: minutes}]};
+  }
+  // Ends 14:50, ten minutes before the 15:00 event.
+  assert.strictEqual(eventRoute('Royal Theater', AT_3PM, stop('14:00', 50)).header, 'FROM STUDIO B');
+  // On now (13:30-14:30), but it ends 90 minutes before a 16:00 event.
+  assert.strictEqual(eventRoute('Royal Theater', AT_3PM + 60, stop('13:30', 60)).header, 'FROM YOUR CABIN');
+  // After midnight: a 00:30 event is still the evening's (cruise minutes past 24:00).
+  var late = {me: CABIN.me, personal: [{title: 'Late', venue: 'Studio B', date: '2027-03-07', time: '23:30',
+                                        minutes: 50}]};
+  assert.strictEqual(eventRoute('Royal Theater', 2 * 1440 + 30, late).header, 'FROM STUDIO B');
+});
+
+test('event route: a venue cut short on the watch, and messages', function() {
+  var settings = {me: CABIN.me, personal: [{title: 'Party', venue: 'Royal Theater', date: '2027-03-07',
+                                            time: '15:00', minutes: 60}]};
+  assert.strictEqual(eventRoute('Royal Thea', AT_3PM, settings).title, 'Royal Theater');
+  var none = eventRoute('Royal Theater', AT_3PM, {me: {deck: 'Deck 9'}});
+  assert.strictEqual(none.steps.length, 0);
+  assert.ok(/stateroom/.test(none.lead));
+  assert.strictEqual(eventRoute('Nowhere Lounge', AT_3PM).lead, 'No route found');
+  assert.strictEqual(eventRoute('Perfect Day at CocoCay', AT_3PM).lead, 'No route found');
+});
+
 test('elevator banks: deck rows, the Elevators area and bank pages', function() {
   var d5 = page(directory.REF_DECK + 5, {settings: CABIN});
   var names = d5.rows.map(function(r) { return r.line1; });

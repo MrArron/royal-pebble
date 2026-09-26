@@ -39,6 +39,9 @@ void dir_window_refresh(void);
 // or with `rest` from it to its closest restroom. `title` and `header` show
 // until the phone's page arrives.
 void route_window_push(int32_t ref, bool rest, const char *title, const char *header);
+// The Route screen to event `e` (Home's NEXT, §9.5), with its time and title
+// under the steps.
+void route_window_push_event(const Event *e);
 void route_window_refresh(void);
 
 void details_window_push(int event_index);

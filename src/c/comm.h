@@ -49,11 +49,13 @@ void comm_set_dir_handlers(CommDirPageHandler on_page, CommDirFailedHandler on_f
 bool comm_request_dir(int32_t ref);
 
 // A Route screen from the phone (docs/WATCH_PROTOCOL.md, Route screen) for
-// place page `ref`, to its closest restroom when `rest`. `data` points into the
-// message and is only valid in the handler.
+// place page `ref`, to its closest restroom when `rest`, or to the event that
+// starts at `start` (NO_TIME for a place page). `data` points into the message
+// and is only valid in the handler.
 typedef struct {
   int32_t ref;
   bool rest;
+  int32_t start;
   const uint8_t *data;
   int length;
 } RoutePageMsg;
@@ -65,3 +67,6 @@ void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler 
 // Asks the phone for the route to place page `ref` (or to its closest restroom);
 // false if the outbox was busy.
 bool comm_request_route(int32_t ref, bool rest);
+// Asks the phone for the route to the event at `start` (cruise minutes) at
+// `venue` (Home's NEXT); false if the outbox was busy.
+bool comm_request_event_route(int32_t start, const char *venue);

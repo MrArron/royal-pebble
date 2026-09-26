@@ -79,7 +79,9 @@
       "cruise_starred",
       "tmr_to_reserve",
       "route_rest",
-      "route"
+      "route",
+      "route_start",
+      "route_venue"
     ],
     "resources": {
       "media": []
