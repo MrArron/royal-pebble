@@ -44,10 +44,16 @@ typedef struct {
 } DirPageMsg;
 
 typedef void (*CommDirPageHandler)(const DirPageMsg *page);
-typedef void (*CommDirFailedHandler)(void);
+// A request the phone didn't get. `script_down`: the phone is connected but its
+// script isn't running (yet: it takes a few seconds after the app opens).
+typedef void (*CommDirFailedHandler)(bool script_down);
+// Any message from the phone: its script is up.
+typedef void (*CommPhoneUpHandler)(void);
 
-// Handlers for directory pages and for a request the phone didn't get.
-void comm_set_dir_handlers(CommDirPageHandler on_page, CommDirFailedHandler on_failed);
+// Handlers for directory pages, a request the phone didn't get and any message
+// from the phone.
+void comm_set_dir_handlers(CommDirPageHandler on_page, CommDirFailedHandler on_failed,
+                           CommPhoneUpHandler on_phone_up);
 // Asks the phone for directory page `ref`; false if the outbox was busy.
 bool comm_request_dir(int32_t ref);
 
@@ -65,8 +71,10 @@ typedef struct {
 
 typedef void (*CommRoutePageHandler)(const RoutePageMsg *page);
 
-// Handlers for route pages and for a request the phone didn't get.
-void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler on_failed);
+// Handlers for route pages, a request the phone didn't get and any message
+// from the phone.
+void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler on_failed,
+                             CommPhoneUpHandler on_phone_up);
 // Asks the phone for the route to place page `ref` (or to its closest restroom);
 // false if the outbox was busy.
 bool comm_request_route(int32_t ref, bool rest);

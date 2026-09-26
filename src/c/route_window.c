@@ -13,6 +13,8 @@
 #define REPLY_TIMEOUT_MS 8000
 #define SEND_RETRY_MS 500
 #define SEND_TRIES 4
+// The phone script takes 10-16 s to start after the app opens (owner's logs).
+#define SCRIPT_WAIT_MS 25000
 
 #define STEPS_MAX 8
 #define TEXT_LEN 40
@@ -45,6 +47,8 @@ static int32_t s_start;          // the event's start (Home's NEXT), else NO_TIM
 static char s_venue[VENUE_LEN];  // the event's venue, as the phone is asked
 static State s_state;
 static int s_tries;
+static bool s_waiting;           // loading, until the phone script is up
+static bool s_waited;            // this request has waited once already
 static AppTimer *s_timer;
 
 static uint8_t s_flags;         // 1: shown less (not drawn differently yet)
@@ -275,6 +279,7 @@ static void cancel_timer(void) {
 
 static void timed_out(void *context) {
   s_timer = NULL;
+  s_waiting = false;
   if (s_state == STATE_LOADING) {
     set_state(STATE_NO_PHONE);
   }
@@ -297,6 +302,7 @@ static void send_request(void *context) {
 static void request(void) {
   cancel_timer();
   s_tries = 0;
+  s_waiting = s_waited = false;
   set_state(STATE_LOADING);
   send_request(NULL);
 }
@@ -331,13 +337,32 @@ static void page_received(const RoutePageMsg *page) {
     s_count++;
   }
   cancel_timer();
+  s_waiting = false;
   set_state(STATE_READY);
 }
 
-static void request_failed(void) {
-  if (s_state == STATE_LOADING) {
-    cancel_timer();
+// A request sent before the phone script is up (right after the app opens)
+// waits for it, still loading, and goes again when the phone first speaks.
+static void request_failed(bool script_down) {
+  if (s_state != STATE_LOADING) {
+    return;
+  }
+  cancel_timer();
+  if (script_down && !s_waited) {
+    s_waiting = s_waited = true;
+    s_timer = app_timer_register(SCRIPT_WAIT_MS, timed_out, NULL);
+  } else {
+    s_waiting = false;
     set_state(STATE_NO_PHONE);
+  }
+}
+
+static void phone_up(void) {
+  if (s_waiting && s_state == STATE_LOADING) {
+    cancel_timer();
+    s_waiting = false;
+    s_tries = 0;
+    s_timer = app_timer_register(SEND_RETRY_MS, send_request, NULL);
   }
 }
 
@@ -400,7 +425,7 @@ static void window_load(Window *window) {
 
 static void window_unload(Window *window) {
   cancel_timer();
-  comm_set_route_handlers(NULL, NULL);
+  comm_set_route_handlers(NULL, NULL, NULL);
   layer_destroy(s_more_above);
   layer_destroy(s_more_below);
   layer_destroy(s_content);
@@ -457,7 +482,7 @@ static void push(int32_t ref, bool rest, const char *title, const char *header) 
     .appear = window_appear,
     .unload = window_unload,
   });
-  comm_set_route_handlers(page_received, request_failed);
+  comm_set_route_handlers(page_received, request_failed, phone_up);
   window_stack_push(s_window, true);
 }
 
