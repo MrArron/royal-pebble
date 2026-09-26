@@ -121,7 +121,8 @@ function summary(r, from, opts) {
 function fromLine(r, from, opts) {
   opts = opts || {};
   var decks = from ? toDeck(r) - from.deck : 0;
-  var text = walkText(r.metres, overallToward(from, r.to || null), unitOf(opts));
+  // A reduced answer (shipmap's approxRoute) has no `to`, but knows its toward.
+  var text = walkText(r.metres, r.to ? overallToward(from, r.to) : r.toward, unitOf(opts));
   if (!decks) {
     text = (opts.fromCabin ? 'Your deck' : 'Same deck') + DOT + text;
   }

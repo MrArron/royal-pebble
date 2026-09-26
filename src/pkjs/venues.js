@@ -678,6 +678,9 @@ function venueFinder(shipCode, overrides, cabinText) {
   }
 
   return {
+    // The venue as the table and the owner's edits have it (lib.resolve), with
+    // `short` and `where`.
+    entry: venue,
     where: function(name) {
       return name ? venue(name).where : NOWHERE;
     },

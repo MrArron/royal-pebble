@@ -95,5 +95,5 @@ exact time, resulting times in
 both clocks, and "Change itinerary" for skipped/added ports and changed times),
 **Filters** (featured-events switch, category switches expanding to subcategory
 chips, Shop off by default), **Events** (search, day chips, My entries card with
-Add, star buttons), **Me** (stateroom, deck, stairs, muster station, theme, reminder
-lead time).
+Add, star buttons), **Me** (stateroom, deck, stairs, walking distance units,
+muster station, theme, reminder lead time).

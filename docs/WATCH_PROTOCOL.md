@@ -47,7 +47,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | 4 | END | — |
 | 6 | NOTICE | `notice_count`, `notices` (bytes, below). No `slice_id`; sent after a slice. |
 | 7 | STAR_ACK | `star_ack`: the phone saved every star change up to this `seq`. No `slice_id`. |
-| 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_rows`. No `slice_id`; see Ship directory. |
+| 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_gps` (place pages with a Ship GPS block), `dir_rows`. No `slice_id`; see Ship directory. |
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
 e.g. `SAILS MAR 6` or `CRUISE ENDED`. Before the cruise, Home shows the
@@ -366,7 +366,20 @@ found` page).
 - `dir_label`: the top bar's right side (`by deck`, `by area`), replacing the
   day's status. `dir_rel` (int, decks from the cabin, deck pages only) replaces
   it with a drawn `↓1 deck` or `your deck`.
-- `dir_where`: a place page's where, 4 bytes as in Packed events.
+- `dir_where`: a place page's where, 4 bytes as in Packed events. When the page
+  has `dir_gps`, its rel is left out: the FROM line replaces `↓1 deck from
+  cabin`.
+- `dir_gps` (place pages, `docs/DESIGN_V1_1.md` §9.1): the Ship GPS block,
+  worked out on the phone (`directory.js` with `shipmap.js`, `gpstext.js` and
+  `routestart.js`): int8 decks to go (+ = up; the watch draws the arrow and
+  `1 deck` / `N decks`), uint8 flags, then the FROM header (`FROM YOUR CABIN`,
+  `FROM STUDIO B`) and the line's text (`~160 m fore`, `Your deck · ~50 m aft`),
+  each as uint8 length and UTF-8 bytes, at most 31 bytes. Flags: 1 the spot is
+  approximate (`Spot approximate`), 2 no stateroom on the Me tab (no FROM
+  block; the watch shows `Add your stateroom on the phone for walking
+  directions`, and the header and text are empty). Left out for Ashore, venues
+  with no deck, ships with no map, and a stateroom the map doesn't know. Units
+  (feet, metres or steps) are the phone's setting; the watch never converts.
 
 `dir_rows` is rows back to back, little-endian, in one message (at most 40 rows
 and 1500 bytes; when a page has more, the phone ends it with `N more`):
@@ -380,6 +393,9 @@ and 1500 bytes; when a page has more, the phone ends it with `N more`):
 | 1 | `flags`: events, as in Packed events (the watch draws the star) |
 | 1 + n | line 1, ≤ 39 bytes: the name, title or header text |
 | 1 + m | line 2, ≤ 31 bytes: an item's sub-line, or a place heading's area |
+
+On a place page the heading takes the cursor first, drawn without the
+highlight, so the page opens at its top; long pages show scroll arrows.
 
 The watch formats event times (`2:00p - 3:00p`, `Now · until 3:00p`, `All
 day`) so they follow its 12/24h setting. A place page lists what's on there for

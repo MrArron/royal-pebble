@@ -278,7 +278,11 @@ var BODY = [
   '<div class="card"><h2>Stateroom</h2>',
   '<label for="stateroom">Stateroom number</label><input id="stateroom" maxlength="10" inputmode="numeric">',
   '<label for="deck">Deck</label><input id="deck" maxlength="14" placeholder="Deck 9">',
-  '<label for="stairs">Nearest stairs</label><input id="stairs" maxlength="22" placeholder="Forward stairs"></div>',
+  '<label for="stairs">Nearest stairs</label><input id="stairs" maxlength="22" placeholder="Forward stairs">',
+  '<label>Walking distances</label><div class="seg" id="units"><button data-v="ft">Feet</button>',
+  '<button data-v="m">Metres</button><button data-v="steps">Steps</button></div>',
+  '<p class="help">For walking directions in the watch\'s ship directory, from your stateroom. ',
+  'A step is about 0.75 m (2.5 ft).</p></div>',
   '<div class="card"><h2>Safety</h2>',
   '<label for="muster">Muster station</label><input id="muster" maxlength="30" placeholder="B4 - Royal Promenade"></div>',
   '<div class="card"><h2>Watch</h2>',
@@ -2113,6 +2117,7 @@ function pageMain(S, V) {
   var getTheme = segment('theme', S.theme || 'light');
   var getLead = segment('lead', S.reminderLead || 15);
   var getReserveAt = segment('reserveAt', S.reserveAlertAt || 1200);
+  var getUnits = segment('units', S.units || 'm');
 
   // ---- Save / Download
   function result(action) {
@@ -2121,6 +2126,7 @@ function pageMain(S, V) {
       theme: getTheme(),
       reminderLead: parseInt(getLead(), 10),
       reserveAlertAt: parseInt(getReserveAt(), 10),
+      units: getUnits(),
       me: {}
     };
     ['stateroom', 'deck', 'stairs', 'muster', 'clockNote'].forEach(function(id) {
@@ -2205,7 +2211,7 @@ function pad2(n) {
 }
 
 // state: {ships, cruise, status, itinerary, days, categories, hiddenCats, showFeatured, schedule, stars,
-//         personal, venues, me, theme, reminderLead, reserveAlertAt, api, appKey}
+//         personal, venues, me, theme, reminderLead, reserveAlertAt, units, api, appKey}
 function buildPage(state, now) {
   now = now || new Date();
   // List sailings from two weeks ago on, so a sailing in progress still shows.

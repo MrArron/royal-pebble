@@ -11,6 +11,7 @@ var royal = require('./royal');
 var config = require('./config');
 var venues = require('./venues');
 var directory = require('./directory');
+var gpstext = require('./gpstext');
 
 var MSG_BEGIN = 1;
 var MSG_INFO = 2;
@@ -342,6 +343,7 @@ function pageState(ships) {
     theme: settings.theme || 'light',
     reminderLead: settings.reminderLead || 15,
     reserveAlertAt: slice.reserveAlertAt(settings),
+    units: settings.units || 'm',
     api: royal.API,
     appKey: royal.APPKEY
   };
@@ -426,6 +428,10 @@ function settingsClosed(text) {
   settings.theme = r.theme === 'dark' ? 'dark' : 'light';
   settings.reminderLead = [5, 15, 30].indexOf(r.reminderLead) !== -1 ? r.reminderLead : 15;
   settings.reserveAlertAt = slice.reserveAlertAt(r);
+  // Walking distances on the watch's place pages (docs/DESIGN_V1_1.md §9.7).
+  if (gpstext.UNITS.indexOf(r.units) !== -1) {
+    settings.units = r.units;
+  }
   if (typeof r.showFeatured === 'boolean') {
     settings.showFeatured = r.showFeatured;
   }

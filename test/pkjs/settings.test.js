@@ -129,6 +129,20 @@ test('settings page builds, embeds state safely and its script parses', function
   console.log('    page ' + Math.round(html.length / 1024) + ' KB, data URL ' + Math.round(url.length / 1024) + ' KB');
 });
 
+test('settings page has the walking distance units, feet, metres or steps', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15, units: 'ft',
+    api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('id="units"') !== -1);
+  ['ft', 'm', 'steps'].forEach(function(u) {
+    assert.ok(html.indexOf('data-v="' + u + '"') !== -1, u);
+  });
+  assert.ok(html.indexOf("segment('units', S.units || 'm')") !== -1);
+  assert.ok(html.indexOf('units: getUnits()') !== -1, 'sent back with the rest');
+  assert.ok(html.indexOf('"units":"ft"') !== -1, 'saved choice embedded');
+});
+
 test('settings page with an itinerary includes the Days screen', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
     itinerary: [{date: '2027-03-08', type: 'DOCKED', port: '</script>St. Thomas', arrive: '08:00', depart: '17:00'}],

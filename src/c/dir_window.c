@@ -21,6 +21,7 @@
 #define ITEM2_H 44
 #define EVENT_H 44
 #define MESSAGE_H 84
+#define INDICATOR_H 12
 
 typedef enum { STATE_LOADING, STATE_READY, STATE_NO_PHONE } State;
 
@@ -35,6 +36,14 @@ typedef struct {
   AppTimer *timer;
   bool has_where;
   Where where;
+  bool has_gps;
+  int8_t gps_decks;
+  uint8_t gps_flags;
+  char gps_header[32];
+  char gps_text[32];
+  Layer *more_above;  // scroll indicators (place pages)
+  Layer *more_below;
+  bool indicators_on;
   DirRow *rows;
   int row_count;
 } View;
@@ -45,13 +54,16 @@ static int s_depth;
 
 static View *top_view(void) { return s_depth > 0 ? s_views[s_depth - 1] : NULL; }
 
-static bool selectable(const DirRow *r) {
-  return r->kind == DIR_ROW_ITEM || r->kind == DIR_ROW_EVENT;
+// A place page's heading takes the cursor (drawn without the highlight), so the
+// page opens at its top however tall the heading is; an area's heading doesn't.
+static bool selectable(const View *v, const DirRow *r) {
+  return r->kind == DIR_ROW_ITEM || r->kind == DIR_ROW_EVENT ||
+         (r->kind == DIR_ROW_PLACE && v->has_where);
 }
 
 static int first_selectable(const View *v) {
   for (int row = 0; row < v->row_count; row++) {
-    if (selectable(&v->rows[row])) {
+    if (selectable(v, &v->rows[row])) {
       return row;
     }
   }
@@ -104,6 +116,25 @@ static void request(View *v) {
   send_request(v);
 }
 
+// Muted triangles under the top bar and at the bottom while a place page has
+// more above or below (docs/mockups/gps/NOTES.md). The menu's scroll layer
+// keeps them up to date.
+static void set_indicators(View *v) {
+  ContentIndicator *ci = scroll_layer_get_content_indicator(menu_layer_get_scroll_layer(v->menu));
+  const ContentIndicatorDirection dirs[2] = {ContentIndicatorDirectionUp, ContentIndicatorDirectionDown};
+  Layer *layers[2] = {v->more_above, v->more_below};
+  for (int i = 0; i < 2; i++) {
+    const ContentIndicatorConfig config = {
+      .layer = layers[i],
+      .times_out = false,
+      .alignment = GAlignCenter,
+      .colors = {.foreground = g_theme->muted, .background = g_theme->bg},
+    };
+    content_indicator_configure_direction(ci, dirs[i], &config);
+  }
+  v->indicators_on = true;
+}
+
 static void page_received(const DirPageMsg *page) {
   View *v = top_view();
   if (!v || v->state == STATE_READY || page->ref != v->ref) {
@@ -130,6 +161,14 @@ static void page_received(const DirPageMsg *page) {
   v->row_count = count;
   v->has_where = page->has_where;
   v->where = page->where;
+  v->has_gps = page->has_gps;
+  v->gps_decks = page->gps_decks;
+  v->gps_flags = page->gps_flags;
+  memcpy(v->gps_header, page->gps_header, sizeof(v->gps_header));
+  memcpy(v->gps_text, page->gps_text, sizeof(v->gps_text));
+  if (v->has_where) {
+    set_indicators(v);
+  }
   top_bar_set(v->top_bar, BAND_INFO, BAND_LABEL, page->title);
   top_bar_set_right(v->top_bar, page->label, page->has_rel, page->rel);
   set_state(v, STATE_READY);
@@ -152,46 +191,95 @@ static int text_height(const char *text, GFont font, int w, int max_h) {
                                                GTextAlignmentLeft).h;
 }
 
-// A heading: the name (up to two lines); on a place page, where it is, how far
-// from the cabin and its area.
-static int place_height(const View *v, const DirRow *r, int w) {
-  int h = 2 + text_height(r->line1, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), w - 2 * PAD, 58) + 4;
-  if (v->has_where && where_known(&v->where)) {
-    h += 22;
-  }
-  if (v->has_where && where_has_rel(&v->where)) {
-    h += 18;
-  }
-  if (r->line2[0]) {
-    h += 18;
-  }
-  return h + 2;
+#define NO_CABIN_HINT "Add your stateroom on the phone for walking directions"
+
+static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int y, int w, int h) {
+  graphics_context_set_text_color(ctx, color);
+  graphics_draw_text(ctx, text, font, GRect(PAD, y, w, h), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentLeft, NULL);
 }
 
-static void draw_place(GContext *ctx, const View *v, const DirRow *r, int w) {
+// The Ship GPS block under a place's heading (docs/DESIGN_V1_1.md §9.1): a
+// divider, `FROM YOUR CABIN`, `↓1 deck · ~160 m fore` and `Spot approximate`;
+// with no stateroom, the hint instead. Draws when ctx isn't NULL; returns the
+// new y.
+static int layout_gps(GContext *ctx, const View *v, int y, int w) {
+  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  int tw = w - 2 * PAD;
+  if (v->gps_flags & DIR_GPS_NO_CABIN) {
+    int h = text_height(NO_CABIN_HINT, small, tw, 36);
+    if (ctx) {
+      draw_line(ctx, NO_CABIN_HINT, small, g_theme->muted, y - 2, tw, h + 4);
+    }
+    return y + h + 2;
+  }
+  y += 4;
+  if (ctx) {
+    draw_divider(ctx, y, w);
+    draw_line(ctx, v->gps_header, small, g_theme->muted, y + 3, tw, 18);
+  }
+  y += 5 + 16;
+  if (ctx) {
+    char text[48];
+    int n = v->gps_decks < 0 ? -v->gps_decks : v->gps_decks;
+    if (n) {
+      snprintf(text, sizeof(text), "%d %s \xc2\xb7 %s", n, n == 1 ? "deck" : "decks", v->gps_text);
+    } else {
+      snprintf(text, sizeof(text), "%s", v->gps_text);
+    }
+    draw_arrow_line(ctx, true, g_theme->text, PAD, y - 2, tw, "", v->gps_decks, text);
+  }
+  y += 22;
+  if (v->gps_flags & DIR_GPS_APPROX) {
+    if (ctx) {
+      draw_line(ctx, "Spot approximate", small, g_theme->muted, y - 2, tw, 18);
+    }
+    y += 18;
+  }
+  return y;
+}
+
+// A heading: the name (up to two lines); on a place page, where it is, how far
+// from the cabin (or the GPS block below) and its area. Draws when ctx isn't
+// NULL; returns the height.
+static int layout_place(GContext *ctx, const View *v, const DirRow *r, int w) {
   GFont name_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-  int name_h = text_height(r->line1, name_font, w - 2 * PAD, 58);
+  int tw = w - 2 * PAD;
+  int name_h = text_height(r->line1, name_font, tw, 58);
   int y = 2;
-  graphics_context_set_text_color(ctx, g_theme->text);
-  graphics_draw_text(ctx, r->line1, name_font, GRect(PAD, y - 4, w - 2 * PAD, name_h + 4),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  if (ctx) {
+    draw_line(ctx, r->line1, name_font, g_theme->text, y - 4, tw, name_h + 4);
+  }
   y += name_h + 4;
   if (v->has_where && where_known(&v->where)) {
-    char loc[24];
-    fmt_where(loc, sizeof(loc), &v->where);
-    graphics_context_set_text_color(ctx, where_ashore(&v->where) ? g_theme->port_accent : g_theme->text);
-    graphics_draw_text(ctx, loc, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                       GRect(PAD, y - 2, w - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+    if (ctx) {
+      char loc[24];
+      fmt_where(loc, sizeof(loc), &v->where);
+      draw_line(ctx, loc, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                where_ashore(&v->where) ? g_theme->port_accent : g_theme->text, y - 2, tw, 22);
+    }
     y += 22;
-    y += draw_rel_line(ctx, false, g_theme->muted, PAD, y - 2, w - 2 * PAD, &v->where) ? 18 : 0;
+    if (where_has_rel(&v->where)) {
+      if (ctx) {
+        draw_rel_line(ctx, false, g_theme->muted, PAD, y - 2, tw, &v->where);
+      }
+      y += 18;
+    }
   }
   if (r->line2[0]) {
-    graphics_context_set_text_color(ctx, g_theme->muted);
-    graphics_draw_text(ctx, r->line2, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
-                       GRect(PAD, y - 2, w - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+    if (ctx) {
+      draw_line(ctx, r->line2, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), g_theme->muted, y - 2, tw, 18);
+    }
+    y += 18;
   }
+  if (v->has_gps) {
+    y = layout_gps(ctx, v, y, w) + 4;
+    if (ctx) {
+      draw_divider(ctx, y, w);
+    }
+    y += 1;
+  }
+  return y + 2;
 }
 
 // "2:00p - 3:00p", "2:00p", "Now · until 3:00p" or "All day".
@@ -262,7 +350,7 @@ static int16_t get_cell_height(MenuLayer *menu, MenuIndex *index, void *context)
     case DIR_ROW_HEADER: return HEADER_H;
     case DIR_ROW_EVENT: return EVENT_H;
     case DIR_ROW_PLACE:
-      return place_height(v, r, layer_get_bounds(menu_layer_get_layer(menu)).size.w);
+      return layout_place(NULL, v, r, layer_get_bounds(menu_layer_get_layer(menu)).size.w);
     default: return r->line2[0] ? ITEM2_H : ITEM_H;
   }
 }
@@ -276,7 +364,7 @@ static int16_t get_separator_height(MenuLayer *menu, MenuIndex *index, void *con
 static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, void *context) {
   View *v = context;
   if (v->state == STATE_READY && index->row > 0 && index->row < v->row_count &&
-      selectable(&v->rows[index->row]) && selectable(&v->rows[index->row - 1])) {
+      selectable(v, &v->rows[index->row]) && selectable(v, &v->rows[index->row - 1])) {
     draw_divider(ctx, 0, layer_get_bounds(cell).size.w);
   }
 }
@@ -300,7 +388,10 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
                          GTextAlignmentLeft, NULL);
       break;
     case DIR_ROW_PLACE:
-      draw_place(ctx, v, r, w);
+      // Drawn over the cursor's highlight: the heading only keeps the page's top in view.
+      graphics_context_set_fill_color(ctx, g_theme->bg);
+      graphics_fill_rect(ctx, layer_get_bounds(cell), 0, GCornerNone);
+      layout_place(ctx, v, r, w);
       break;
     case DIR_ROW_EVENT: {
       int text_w = w - 2 * PAD;
@@ -336,7 +427,7 @@ static void selection_will_change(MenuLayer *menu, MenuIndex *new_index, MenuInd
   }
   int step = new_index->row >= old_index.row ? 1 : -1;
   for (int row = new_index->row; row >= 0 && row < v->row_count; row += step) {
-    if (selectable(&v->rows[row])) {
+    if (selectable(v, &v->rows[row])) {
       new_index->row = row;
       return;
     }
@@ -382,6 +473,10 @@ static void window_load(Window *window) {
   menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(v->menu, window);
   layer_add_child(root, menu_layer_get_layer(v->menu));
+  v->more_above = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, INDICATOR_H));
+  v->more_below = layer_create(GRect(0, b.size.h - INDICATOR_H, b.size.w, INDICATOR_H));
+  layer_add_child(root, v->more_above);
+  layer_add_child(root, v->more_below);
   request(v);
 }
 
@@ -389,6 +484,8 @@ static void window_unload(Window *window) {
   View *v = window_get_user_data(window);
   cancel_timer(v);
   menu_layer_destroy(v->menu);
+  layer_destroy(v->more_above);
+  layer_destroy(v->more_below);
   top_bar_destroy(v->top_bar);
   free(v->rows);
   for (int i = 0; i < s_depth; i++) {
@@ -437,6 +534,9 @@ void dir_window_refresh(void) {
       window_set_background_color(v->window, g_theme->bg);
       menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);
       menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
+      if (v->indicators_on) {
+        set_indicators(v);
+      }
       layer_mark_dirty(v->top_bar);
       layer_mark_dirty(menu_layer_get_layer(v->menu));
     }

@@ -720,7 +720,9 @@ As built (item 8):
 ## 9. Ship GPS (items 19-21)
 
 **Status: designed and approved 2026-09-25.** Written from the Claude Design
-pass and the owner's answers (9.9). Nothing is built yet. The mockups and their
+pass and the owner's answers (9.9). Built so far: the planner (phone only) and
+the place page's FROM block with the units setting (9.1, 9.7); the restroom
+line, route screen, Home Select, hints and Help follow. The mockups and their
 `NOTES.md` in `docs/mockups/gps/` are the final word on text and layout; the
 sketches below are at watch size. Design canvas (private to the owner):
 https://claude.ai/artifact/Cq3jrWKZAZE6qHxbqNVy6n

@@ -178,6 +178,10 @@ typedef enum {
   DIR_ROW_PLACE = 3,   // a heading: the name; for a place, its area in line2
 } DirRowKind;
 
+// Ship GPS FROM block on a place page (docs/WATCH_PROTOCOL.md, Ship directory).
+#define DIR_GPS_APPROX 1    // "Spot approximate"
+#define DIR_GPS_NO_CABIN 2  // no FROM block: "Add your stateroom..."
+
 typedef struct {
   int32_t start;     // events: cruise minutes, NO_TIME for untimed
   uint16_t ref;      // page to open on Select; 0 = none

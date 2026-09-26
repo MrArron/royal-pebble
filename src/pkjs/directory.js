@@ -6,6 +6,9 @@
 var venues = require('./venues');
 var pack = require('./pack');
 var slice = require('./slice');
+var shipmap = require('./shipmap');
+var gpstext = require('./gpstext');
+var routestart = require('./routestart');
 
 var L = venues.lib;
 var DOT = ' ' + String.fromCharCode(183) + ' ';
@@ -37,6 +40,11 @@ var SHORT_AREAS = {
 
 var LINE1_MAX = 39;  // the watch keeps 40 and 32 bytes with the NUL
 var LINE2_MAX = 31;
+var GPS_TEXT_MAX = 31;  // the FROM header and line: 32 bytes with the NUL
+
+// dir_gps flags.
+var GPS_APPROX = 1;    // the place's spot is approximate
+var GPS_NO_CABIN = 2;  // no stateroom on the Me tab: no FROM block, a hint instead
 var ROW_FIXED = 10;
 var TEXT_MAX = 23;   // title and label
 var MAX_ROWS = 40;
@@ -227,11 +235,95 @@ function eventsAt(v, ctx) {
   });
 }
 
-// A place: its heading (name, area; where it is goes in dir_where) and what's
-// on there for the rest of today.
+// ---- Ship GPS on place pages (docs/DESIGN_V1_1.md §9.1) ---------------------
+
+// Where a venue is on the map: the plans' spots on its decks, else a rough spot
+// from its deck and position (venues the plans don't label, or the owner moved
+// or added). [] when it's ashore or has no deck.
+function spotsOf(ship, v, cabin) {
+  if (v.neighborhood === venues.ASHORE || !v.decks.length) {
+    return [];
+  }
+  var pts = shipmap.venue(ship, v.name).filter(function(p) { return v.decks.indexOf(p.deck) !== -1; });
+  if (pts.length) {
+    return pts;
+  }
+  var a = shipmap.approx(ship, L.nearestDeck(v.decks, cabin) || v.decks[0], v.position);
+  return a ? [a] : [];
+}
+
+// The stateroom from the Me tab, else the booking's (a guarantee has none).
+function stateroom(ctx) {
+  var room = String(((ctx.settings || {}).me || {}).stateroom || ((ctx.bundle || {}).mine || {}).stateroom || '');
+  return /^[0-9]+$/.test(room) ? room : '';
+}
+
+// Timed starred events and personal entries from yesterday's watch day to
+// today's, in cruise minutes: the stops routestart.js looks at.
+function stops(ctx, sailDays, today) {
+  var out = [];
+  for (var d = today - 1; d <= today; d++) {
+    out = out.concat(slice.buildEvents(ctx.bundle, ctx.settings, ctx.stars, d, sailDays).filter(function(e) {
+      return e.start !== slice.NO_TIME && (e.flags & (slice.FLAG_STARRED | slice.FLAG_PERSONAL));
+    }));
+  }
+  return out;
+}
+
+// The FROM block for a place page: {header, decks, text, flags}, or null for no
+// GPS lines at all (ship not mapped, ashore, no deck, stateroom not on the map).
+// The route starts where routestart.js says for "now" (§9.4).
+function placeGps(v, ctx, cabin) {
+  var ship = ctx.shipCode;
+  if (!ctx.bundle || !shipmap.data(ship)) {
+    return null;
+  }
+  var to = spotsOf(ship, v, cabin);
+  if (!to.length) {
+    return null;
+  }
+  var flags = to[0].approx ? GPS_APPROX : 0;
+  var settings = ctx.settings || {};
+  var finder = venues.venueFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
+  var room = stateroom(ctx);
+  var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
+  var now = slice.cruiseMinutes(sailDays, ctx.now);
+  var start = routestart.start({stops: stops(ctx, sailDays, slice.cruiseDayIndex(now)), now: now, cabin: room});
+  var from = start.venue ? spotsOf(ship, finder.entry(start.venue), cabin) : [];
+  if (!from.length && room) {
+    // At a stop that isn't on the map (ashore, say): from the cabin.
+    start = {kind: 'cabin', cabin: room};
+    from = [shipmap.cabin(ship, room)].filter(Boolean);
+  }
+  if (!room && !from.length) {
+    return {header: '', decks: 0, text: '', flags: flags | GPS_NO_CABIN};
+  }
+  var best = null;
+  from.forEach(function(f) {
+    var r = shipmap.route(ship, f, to);
+    var cost = r ? (r.cost === undefined ? r.metres : r.cost) : Infinity;
+    if (r && (!best || cost < best.cost)) {
+      best = {from: f, route: r, cost: cost};
+    }
+  });
+  if (!best) {
+    return null;
+  }
+  var line = gpstext.fromLine(best.route, best.from, {units: settings.units, fromCabin: start.kind === 'cabin'});
+  return {header: gpstext.fromHeader(start, finder.short(start.venue)), decks: line.decks, text: line.text,
+          flags: flags};
+}
+
+// A place: its heading (name, area; where it is goes in dir_where), the Ship GPS
+// FROM block when there is one, and what's on there for the rest of today.
 function placePage(v, ctx, cabin) {
   var key = areaKey(v);
   var area = key === OTHER || key === venues.ASHORE ? '' : key;
+  var gps = placeGps(v, ctx, cabin);
+  var where = venues.watchWhere(v, cabin);
+  if (gps) {
+    where.rel = null;  // the FROM line replaces "↓1 deck from cabin"
+  }
   var rows = [{kind: ROW_PLACE, ref: 0, line1: v.name, line2: area}];
   var events = eventsAt(v, ctx);
   rows.push(header(events.length ? 'Later today' : 'Today'));
@@ -243,11 +335,11 @@ function placePage(v, ctx, cabin) {
   } else {
     rows.push(item(0, 'Nothing more today'));
   }
-  return {title: 'Place', label: '', where: venues.watchWhere(v, cabin), rows: rows};
+  return {title: 'Place', label: '', where: where, gps: gps, rows: rows};
 }
 
 // ctx: {bundle, settings, stars, now (Date)}. Returns {ref, title, label,
-// rel (decks from the cabin, or null), where (place pages), rows}.
+// rel (decks from the cabin, or null), where and gps (place pages), rows}.
 function buildPage(ref, ctx) {
   var bundle = ctx.bundle || {};
   var settings = ctx.settings || {};
@@ -326,13 +418,26 @@ function message(page) {
   if (page.where) {
     m.dir_where = pack.encodeWhere(page.where);
   }
+  if (page.gps) {
+    m.dir_gps = encodeGps(page.gps);
+  }
   return m;
+}
+
+// int8 decks (signed, + = up), uint8 flags, then the FROM header and the FROM
+// line text, each as uint8 length and UTF-8 bytes.
+function encodeGps(g) {
+  var header = pack.utf8(g.header || '', GPS_TEXT_MAX);
+  var text = pack.utf8(g.text || '', GPS_TEXT_MAX);
+  var decks = Math.max(-127, Math.min(127, g.decks | 0));
+  return [decks & 255, g.flags & 255, header.length].concat(header, [text.length], text);
 }
 
 module.exports = {
   REF_DECKS: REF_DECKS, REF_AREAS: REF_AREAS, REF_DECK: REF_DECK, REF_AREA: REF_AREA, REF_PLACE: REF_PLACE,
   ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE,
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
+  GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN,
   places: places, deckRanges: deckRanges, buildPage: buildPage, encodeRow: encodeRow,
-  packRows: packRows, message: message
+  packRows: packRows, encodeGps: encodeGps, message: message
 };
