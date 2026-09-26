@@ -23,7 +23,7 @@ text. One compact JSON object, ASCII only.
     "published": true,
     "cats": [["Entertainment", "Music & Dance"], ["Shop", "Retail"], ["Activities", "Sports & Recreation"]],
     "venues": ["Royal Promenade", "Sports Court", "Regalia Watches"],
-    "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation"],
+    "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation", "paid", "price"],
     "events": [
       ["Big Band Music With the Harmony of the Seas Orchestra", 0, 0, "2026-10-03", "17:45", 45, 0, 0]
     ]
@@ -47,6 +47,9 @@ text. One compact JSON object, ASCII only.
   - `cats`: `[category, subcategory]`; `venues`: names. Events refer to both by index.
   - `events[]`: arrays in `fields` order. `time` is `null` for untimed entries
     (Royal's 00:00). `minutes` may be 0. `featured` and `reservation` are 0/1.
+    `paid` (0/1) marks a paid class or experience; `price` is its adult "from"
+    price in dollars, or `null`. Both were added later without a version bump:
+    bundles without them are still valid, and every event then counts as free.
     Sorted by date, time, title; duplicates removed.
   - Which of Royal's products become events: the free activities
     (`NON_REVENUE_SCHEDULABLE`, never marked reservation-required), the shows you
@@ -54,7 +57,11 @@ text. One compact JSON object, ASCII only.
     classes and experiences (`ACTIVITIES`: escape room, FlowRider lessons,
     tastings). Spa, dining and shore excursions are left out: they are booking
     slots, not events. So are NextCruise sales appointments (by title), about 22
-    slots a day that would push busy days past the watch's 160 events. Checked on a live Harmony sailing, 2026-09-25.
+    slots a day that would push busy days past the watch's 160 events.
+  - Paid (`ACTIVITIES`) events come as many sessions each (27 of the escape
+    room on one sailing). Consumers show them only once the user picks a
+    session (the settings page's Booked activities, which stars it and marks
+    it reserved); the other sessions stay off the watch and out of the lists. Checked on a live Harmony sailing, 2026-09-25.
 - `mine` — only when fetched with login. Contains a stateroom number: private.
   `stateroom` is `null` until a cabin is assigned (Royal lists guarantee
   bookings as "GTY"); consumers also treat a value without digits as unassigned.

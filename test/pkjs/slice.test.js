@@ -1032,6 +1032,39 @@ test('Reserved: marks follow a rescheduled star, and their times are pruned like
   assert.deepStrictEqual(slice.pruneStarTimes(old, fresh, {}, {}), {});
 });
 
+test('paid sessions reach the watch only when booked, and never get show tags', function() {
+  var b = makeBundle([
+    ['Escape Room', 1, 0, '2027-03-07', '13:00', 60, 1, 1, 1, 40],
+    ['Escape Room', 1, 0, '2027-03-07', '14:30', 60, 1, 1, 1, 40],
+    ['Escape Room', 1, 0, '2027-03-07', '16:00', 60, 1, 1, 1, 40],
+    ['The Fine Line', 0, 0, '2027-03-07', '22:00', 50, 1, 1, 0, null]
+  ]);
+  b.schedule.fields = b.schedule.fields.concat(['paid', 'price']);
+  var now = at('2027-03-07', 9, 0);
+  function titles(st) {
+    return slice.buildSlice(b, {}, st, now).events.map(function(e) { return e.title + ' ' + e.start % 1440; });
+  }
+  // Nothing booked: only the show.
+  assert.deepStrictEqual(titles({}), ['The Fine Line 1320']);
+  // One session booked (starred and reserved): that one only, reserved.
+  var key = slice.starKey('Escape Room', '2027-03-07', '14:30', 'Boardwalk');
+  var st = {};
+  st[key] = true;
+  st[slice.reservedKey(key)] = true;
+  assert.deepStrictEqual(titles(st), ['Escape Room 870', 'The Fine Line 1320']);
+  var room = slice.buildSlice(b, {}, st, now).events[0];
+  assert.strictEqual(room.flags & slice.FLAG_RESERVED, slice.FLAG_RESERVED);
+  // Featured paid sessions don't get Last chance / Only show; the show does.
+  assert.strictEqual(room.flags & (slice.FLAG_LAST_CHANCE | slice.FLAG_ONLY_SHOW), 0);
+  var finals = slice.finalShows(b);
+  assert.deepStrictEqual(Object.keys(finals), [slice.starKey('The Fine Line', '2027-03-07', '22:00', 'Studio B')]);
+  // Unbooked sessions don't count in tomorrow's featured count either.
+  assert.strictEqual(slice.buildTomorrow(b, {}, {}, 0, slice.daysFromIso('2027-03-06')).featured, 1);
+  // Bundles from before the paid field still show everything.
+  var old = makeBundle([['Escape Room', 1, 0, '2027-03-07', '13:00', 60, 1, 1]]);
+  assert.strictEqual(slice.buildSlice(old, {}, {}, now).events.length, 1);
+});
+
 test('cutoffWhen gives the ship-time date and clock of what the watch could not save', function() {
   var now = at('2027-03-07', 10, 0);
   assert.strictEqual(slice.cutoffWhen('2027-03-06', slice.NO_TIME, now), null);

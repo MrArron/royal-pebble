@@ -62,7 +62,8 @@ test('schedule parsing matches the sync tool rules', function() {
      offering: [{offeringDate: '20270307', offeringTime: '2200', offeringDurationInMinutes: '50'}]},
     {productType: {productType: 'ACTIVITIES'}, productTitle: 'FlowRider Group Lesson',
      productCategory: [{categoryName: 'activities'}], productLocation: {locationTitle: 'FlowRider'},
-     isReservationRequired: true, offering: [{offeringDate: '20270307', offeringTime: '0900'}]},
+     isReservationRequired: true, startingFromPrice: {currency: 'USD', adultPrice: 74.0},
+     offering: [{offeringDate: '20270307', offeringTime: '0900'}]},
     {productType: {productType: 'ACTIVITIES'}, productTitle: 'NextCruise Consultation Appointment',
      isReservationRequired: true, offering: [{offeringDate: '20270307', offeringTime: '1100'}]},
     {productType: {productType: 'DINING'}, productTitle: 'Chops Grille', isReservationRequired: true,
@@ -79,12 +80,13 @@ test('schedule parsing matches the sync tool rules', function() {
   assert.deepStrictEqual(sched.cats, [['Entertainment', 'Shows'], ['Entertainment', ''], ['Activities', '']]);
   assert.deepStrictEqual(sched.venues, ['Studio B', 'AquaTheater', 'FlowRider']);
   assert.deepStrictEqual(sched.events, [
-    ['FlowRider Group Lesson', 2, 2, '2027-03-07', '09:00', 0, 0, 1],
-    ['Bingo', 0, 2, '2027-03-07', '10:00', 0, 0, 0],
-    ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 1, 1],
-    ['The Fine Line', 1, 1, '2027-03-07', '22:00', 50, 1, 1],
-    ['Ice Show', 0, 0, '2027-03-08', null, 30, 1, 1]
+    ['FlowRider Group Lesson', 2, 2, '2027-03-07', '09:00', 0, 0, 1, 1, 74],   // paid, with its price
+    ['Bingo', 0, 2, '2027-03-07', '10:00', 0, 0, 0, 0, null],
+    ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 1, 1, 0, null],
+    ['The Fine Line', 1, 1, '2027-03-07', '22:00', 50, 1, 1, 0, null],
+    ['Ice Show', 0, 0, '2027-03-08', null, 30, 1, 1, 0, null]
   ]);
+  assert.deepStrictEqual(sched.fields.slice(-2), ['paid', 'price']);
   assert.strictEqual(royal.finishSchedule({cats: [], venues: [], events: [], seen: {}}).published, false);
 });
 

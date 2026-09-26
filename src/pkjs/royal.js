@@ -92,6 +92,12 @@ var SCHEDULE_TYPES = ['NON_REVENUE_SCHEDULABLE', 'ENTERTAINMENT', 'ACTIVITIES'];
 // would push busy days past the watch's 160 events.
 var SKIP_TITLES = /nextcruise/i;
 
+// The adult "from" price in dollars (cents kept), or null when none is listed.
+function productPrice(p) {
+  var v = (p.startingFromPrice || {}).adultPrice;
+  return typeof v === 'number' && v > 0 ? Math.round(v * 100) / 100 : null;
+}
+
 // Adds one page of products to `acc` ({cats, venues, events, seen}).
 // Returns the number of products on the page.
 function addProducts(acc, json) {
@@ -126,6 +132,10 @@ function addProducts(acc, json) {
     var venue = index(acc.venues, clean((p.productLocation || {}).locationTitle));
     var title = clean(p.productTitle);
     var minutes = ((p.productDuration || {}).durationInMinutes) || 0;
+    // Paid classes and experiences (docs/DATA_FORMAT.md): only the sessions
+    // the owner picks on the settings page reach the watch.
+    var paid = (p.productType || {}).productType === 'ACTIVITIES' ? 1 : 0;
+    var price = productPrice(p);
     (p.offering || []).forEach(function(o) {
       var d = o.offeringDate;
       var t = o.offeringTime;
@@ -140,7 +150,7 @@ function addProducts(acc, json) {
       }
       acc.seen[key] = true;
       acc.events.push([title, venue, cat, date, time, parseInt(o.offeringDurationInMinutes || minutes, 10) || 0,
-                       (p.isFeatured || o.isFeatured) ? 1 : 0, p.isReservationRequired ? 1 : 0]);
+                       (p.isFeatured || o.isFeatured) ? 1 : 0, p.isReservationRequired ? 1 : 0, paid, price]);
     });
   });
   return products.length;
@@ -161,7 +171,7 @@ function finishSchedule(acc) {
     published: acc.events.length > 0,
     cats: acc.cats,
     venues: acc.venues,
-    fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation'],
+    fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation', 'paid', 'price'],
     events: acc.events
   };
 }
