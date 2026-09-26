@@ -1,0 +1,31 @@
+{
+  "_about": "Hand-checked fixes for Harmony (profile 2396) after reading tools/shipmap/out/review/*.png. Kept small on purpose: everything else is matched to the venue table automatically.",
+  "rename": [
+    {"text": "MAIN DINING ROOM", "venue": "Main Dining Room {deck}"},
+    {"text": "NEXT CRUISE", "venue": "NextCruise Office"},
+    {"text": "THEATER", "deck": 14, "venue": "Adventure Ocean Theater"},
+    {"text": "PADI", "venue": "PADI Shop"},
+    {"text": "THE ULTIMATE ABYSS SLIDE", "venue": "The Ultimate Abyss"},
+    {"text": "LAUNCH AREA", "venue": "The Perfect Storm Waterslides"},
+    {"text": "BAR", "deck": 17, "venue": "Suite Sun Deck"},
+    {"text": "LOUNGE", "deck": 17, "venue": "Suite Sun Deck"},
+    {"text": "CARTIER OMEGA", "venue": ["Cartier", "Omega"]}
+  ],
+  "kinds": {
+    "RETAIL": "shop",
+    "WHIRLPOOL": "whirlpool",
+    "BAR": "bar"
+  },
+  "split": [
+    {"deck": 5, "text": "PORT SHOPPING LOYALTY", "points": [
+      {"venue": "Port & Shopping Desk", "a": 227.5, "x": 2.5},
+      {"venue": "Loyalty Desk", "a": 230.9, "x": -3.4}]},
+    {"deck": 6, "text": "PLAYMAKERS SPORTSBAR JOHNNY & ARCADE ROCKETS", "points": [
+      {"venue": "Playmakers Sports Bar & Arcade", "a": 301.7, "x": -5.8},
+      {"venue": "Johnny Rockets", "a": 301.7, "x": 8.2}]}
+  ],
+  "add": [
+    {"venue": "Boardwalk", "deck": 6, "a": 295.0, "x": 0.0, "note": "not labeled on the plan; middle of the Boardwalk"},
+    {"venue": "Pool Deck", "deck": 15, "a": 180.0, "x": 0.0, "note": "not labeled on the plan; between the main pools"}
+  ]
+}

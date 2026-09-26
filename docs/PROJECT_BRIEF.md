@@ -168,13 +168,17 @@ phase are the first to slip; after them, the dining hint and tender warning.
 Moved from "Later" into v1.1 by the owner on 2026-09-24, as a follow-up to the
 ship directory (item 4). It builds on a prepared Harmony ship map, measured from
 Royal's deck plans:
-- about 2,855 cabins;
+- 2,855 cabins;
 - venue spots (89 of the table's 108, some with several spots);
-- both elevator banks with the decks they serve, 26 stairwells and 26 restrooms;
+- both elevator banks with the decks they serve, and 26 stairwells (7 of them
+  single-deck);
+- a walkway graph per deck: cabin corridors, public spaces, where port and
+  starboard really connect, and 23 restrooms (58 edges marked uncertain);
 - a route planner.
 
-The map data and planner live in the phone companion (`src/pkjs/shipmap.js`,
-`src/pkjs/data/`). The watch gets only short strings and stores no map data.
+The map data (`src/pkjs/data/`, built by `tools/shipmap/`) and the planner
+(`src/pkjs/shipmap.js`, next PR) live in the phone companion. The watch gets
+only short strings and stores no map data.
 
 19. **Walking distance** on directory place pages: from the cabin (by stateroom
     number on the Me tab), e.g. `~160 m aft`, next to the existing deck line.
