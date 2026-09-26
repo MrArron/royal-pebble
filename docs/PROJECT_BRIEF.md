@@ -71,8 +71,10 @@ Known facts about the data:
 - **No time zone.** Times appear to be port-local. Ships from Florida may keep
   Eastern time while St. Thomas is on Atlantic time (+1h in December), hence the
   per-day ship-time offset. Unconfirmed until onboard.
-- No pier coordinates, muster station, onboard spending or excursion times
-  (excursion times in order history are unverified).
+- The public data has no pier coordinates, muster station, onboard spending or
+  excursion times. A login (sync tool only) adds deck, muster station, booked
+  excursion times, gangway times and approximate port coordinates, some still
+  unverified: `docs/ROYAL_LOGIN_DATA.md`.
 - Plain HTTP clients have worked for these public endpoints so far; if Royal
   starts returning 403 to the phone, the backup tool uses browser impersonation.
 
@@ -418,16 +420,20 @@ publication.
 - Offline settings page approach works in the current Pebble phone app (iOS and
   Android).
 - Ship-time behavior at St. Thomas (onboard).
-- What the logged-in order history actually contains. First run (Sept 2026):
-  login works; a guarantee booking lists stateroom "GTY"; purchased packages
-  have no date or time fields. Run
-  `sync-with-login.bat` again after booking something timed (dining, a show, an
-  excursion) to see whether those orders carry usable times.
+- What the logged-in order history actually contains. Answered (Sept 2026, with
+  `tools/cruise-sync/explore_account.py`): a guarantee booking lists stateroom
+  "GTY"; packages have no date or time; a **booked shore excursion carries its
+  date, time, cruise day and port**, and its product page adds meeting and end
+  times. The sync tool now copies these into `mine` (`docs/DATA_FORMAT.md`);
+  showing them in the app is not scheduled yet. Details and candidate uses:
+  `docs/ROYAL_LOGIN_DATA.md`. Still to check: dining and show bookings, and
+  what `gangwayUp` means (compare with the Daily Planner on board).
 - Logging in from the phone app stays out of scope for now (decided Sept 2026).
   Revisit only if timed orders turn out to carry usable times: the password
   would pass through the Pebble app's settings-page return, and the phone can't
   mimic a browser if Royal blocks it. Until then the Windows tool is the login
-  path.
+  path. (Excursion orders do carry times, as of Sept 2026, so this is now the
+  owner's call; unchanged until decided.)
 
 ## Testing
 

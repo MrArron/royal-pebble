@@ -9,6 +9,8 @@ Read before making changes:
 - `docs/DESIGN.md` — watch and settings-page designs, color tokens
 - `docs/DESIGN_V1_1.md` — v1.1 designs (venues, wayfinding, Mark reserved)
 - `docs/DATA_FORMAT.md` — the cruise data bundle (v1)
+- `docs/ROYAL_LOGIN_DATA.md` — what a Royal login can see (sync tool only) and
+  ideas for using it
 - `docs/WATCH_PROTOCOL.md` — phone ↔ watch messages and the time model (cruise
   minutes, 04:00 day boundary)
 
@@ -40,7 +42,7 @@ Read before making changes:
   Output bundles (`cruise-watch-*.json`) can contain a stateroom number and are
   git-ignored. The usage log and map notes hold cabin details: never commit
   a log, an export or quotes from it (exports: `royal-pebble-log-*.txt`,
-  git-ignored), and use made-up cabin numbers in tests. The Royal `AppKey` and login client in `cruise_sync.py` are Royal's
+  git-ignored; the same goes for account explorer output), and use made-up cabin numbers in tests. The Royal `AppKey` and login client in `cruise_sync.py` are Royal's
   public web-app values (from an MIT project) and are fine to keep.
 - **Be gentle with Royal's servers.** Unofficial endpoints: keep requests minimal,
   no polling, no parallel hammering in tests.
@@ -56,7 +58,11 @@ Read before making changes:
 ## Commands
 
 - Sync tool: `py tools/cruise-sync/cruise_sync.py --ship HM` (pick a sailing within
-  ~2 weeks to get a schedule). Add `--no-clipboard` in automated runs.
+  ~2 weeks to get a schedule). Add `--no-clipboard` in automated runs. Its
+  offline tests: `python3 tools/cruise-sync/test_cruise_sync.py` (or `py` on
+  Windows). `tools/cruise-sync/explore_account.py` dumps everything a login can
+  see; run it outside the repo or keep its `royal-pebble-explore-*` output
+  (personal data, git-ignored) out of commits.
 - Pebble SDK runs in WSL: distro `Ubuntu`, user `pebble`, tool at
   `/home/pebble/.local/bin/pebble` (pebble-tool 5.0.40, SDK 4.33.1). From Git Bash,
   set `MSYS_NO_PATHCONV=1` and run a script file with

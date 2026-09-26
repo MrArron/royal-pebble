@@ -38,11 +38,39 @@ with no internet.
 Double-click **`sync-with-login.bat`** instead. After picking your sailing, it asks
 for your Royal Caribbean email and password. The password is typed at a hidden
 prompt, is used only for this run, and is never saved. The result then also
-includes your stateroom number and your purchased add-ons (packages, excursions,
-dining). Treat that file as private.
+includes:
+
+- your stateroom, deck and muster station (once Royal has assigned them), and
+  your terminal arrival time after online check-in;
+- your purchased add-ons (packages, excursions, dining), with the date, time,
+  meeting time and end time of timed bookings such as shore excursions;
+- gangway times and approximate locations for port days.
+
+Treat that file as private. Run it again after booking or changing anything. What
+each part is based on is in [docs/ROYAL_LOGIN_DATA.md](../../docs/ROYAL_LOGIN_DATA.md).
 
 To skip the password prompt, you can set the `RCCL_EMAIL` and `RCCL_PASSWORD`
 environment variables, but don't store your password in any file you share.
+
+### Explore what a login can see (test tool)
+
+Double-click **`explore-account.bat`** (or run `py explore_account.py --ship HM
+--date YYYY-MM-DD`). Copy this folder somewhere outside the git repository first,
+since the output holds personal data. It logs in the same way, then calls each
+known Royal Caribbean account endpoint once (profile, loyalty, bookings, sailing
+details, onboard credit, promotions, order history and each order's details, and
+the product page of each thing you bought) and saves a
+`royal-pebble-explore-<time>` folder:
+
+- `report.txt` lists each endpoint's status and the *shape* of its reply: field
+  names, types, list sizes and date/time formats with digits shown as `9`, plus a
+  summary of every date/time field found. It holds no names, numbers or IDs, so
+  it's safe to share when working on the app.
+- `raw\` holds the full replies. They include your name, booking, loyalty number
+  and more: keep them private and never commit them.
+
+It only reads (no bookings or changes), one request at a time with a short pause.
+`py explore_account.py --report-only <folder>` rebuilds `report.txt` from `raw\`.
 
 ### Command line
 
@@ -50,6 +78,7 @@ environment variables, but don't store your password in any file you share.
 py cruise_sync.py --ship harmony --date YYYY-MM-DD
 py cruise_sync.py --ship HM --date YYYY-MM-DD --login
 py cruise_sync.py --help
+py test_cruise_sync.py          (offline tests, no login needed)
 ```
 
 ## Troubleshooting

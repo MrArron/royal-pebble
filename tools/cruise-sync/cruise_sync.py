@@ -5,7 +5,9 @@ Royal Pebble sync tool (backup data path).
 Downloads a Royal Caribbean sailing's itinerary and activity schedule and
 writes them as one compact JSON bundle for the Royal Pebble phone settings
 page ("Backup: paste cruise data"). Optionally logs in to your Royal
-Caribbean account to add your stateroom and purchased add-ons.
+Caribbean account to add your stateroom, deck, muster station, purchased add-ons
+(with the booked times of excursions and other timed bookings) and per-port
+gangway times and locations.
 
 Usage:
     py cruise_sync.py                       (interactive: asks for ship and date)
@@ -53,6 +55,7 @@ FORMAT_NAME = "cruise-watch"
 FORMAT_VERSION = 1
 
 API = "https://aws-prd.api.rccl.com"
+COMMERCE = f"{API}/en/royal/web/commerce-api"
 APPKEY = "hyNNqIPHHzaLzVpcICPdAdbFV8yvTsAm"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
 LOGIN_URL = "https://www.royalcaribbean.com/auth/oauth2/access_token"
@@ -256,8 +259,97 @@ def _quote(value: str) -> str:
     return quote(value, safe="")
 
 
+def hhmm(text):
+    """Royal's many time spellings -> 'HH:MM' (24h), or None when it isn't one.
+    Handles '2027-03-09T07:00:00', '20270309T070000', '7:00 AM', '17:30' and '1730'."""
+    s = clean(text)
+    if not s:
+        return None
+    m = re.search(r"\d{4}-?\d{2}-?\d{2}[T ](\d{2}):?(\d{2})", s)
+    if not m:
+        m = re.fullmatch(r"(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp])\.?[Mm]\.?(\s.*)?", s)
+        if m:
+            h = int(m.group(1)) % 12 + (12 if m.group(3).lower() == "p" else 0)
+            return f"{h:02d}:{m.group(2)}" if int(m.group(2)) < 60 else None
+        m = re.fullmatch(r"(\d{1,2}):(\d{2})(?::\d{2})?(\s.*)?", s) or re.fullmatch(r"(\d{2})(\d{2})", s)
+    if not m:
+        return None
+    h, mi = int(m.group(1)), int(m.group(2))
+    return f"{h:02d}:{mi:02d}" if h < 24 and mi < 60 else None
+
+
+def iso_parts(text):
+    """'2027-03-09T07:00:00' -> ('2027-03-09', '07:00'); (None, None) when unreadable."""
+    m = re.match(r"(\d{4})-?(\d{2})-?(\d{2})[T ](\d{2}):?(\d{2})", str(text or ""))
+    if not m:
+        return None, None
+    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}", f"{m.group(4)}:{m.group(5)}"
+
+
+def or_none(value):
+    v = clean(value)
+    return v or None
+
+
+def fetch_voyage(sess, auth: dict, code: str, date8: str) -> dict:
+    """Logged-in extras for the sailing: gangway times and approximate coordinates
+    per port day, and the embarkation port's time zone. Formats of the gangway
+    times and the coordinates' exact spot are unverified (docs/ROYAL_LOGIN_DATA.md)."""
+    payload = get_json(sess, "GET", f"{API}/en/royal/web/v3/ships/voyages/{code}{date8}/enriched",
+                       headers=auth).get("payload") or {}
+    info = payload.get("sailingInfo")
+    info = info[0] if isinstance(info, list) and info else info or {}
+    ports = []
+    for p in ((info.get("itinerary") or {}).get("portInfo")) or []:
+        entry = {"day": p.get("day"), "code": p.get("portCode")}
+        for key in ("gangwayDown", "gangwayUp"):
+            raw = clean(p.get(key))
+            if raw:
+                # HH:MM when readable, otherwise Royal's text as-is (format not yet seen)
+                entry[key] = hhmm(raw) or raw
+        for poi in p.get("pointsOfInterest") or []:
+            lat, lon = poi.get("latitude"), poi.get("longitude")
+            if isinstance(lat, (int, float)) and isinstance(lon, (int, float)) and (lat or lon):
+                entry["lat"], entry["lon"] = round(float(lat), 4), round(float(lon), 4)
+                break
+        if len(entry) > 2:
+            ports.append(entry)
+    tz = (info.get("departurePortInformation") or {}).get("timeZoneName")
+    return {"ports": ports, "embarkTimeZone": or_none(tz)}
+
+
+def offering_times(sess, auth: dict, code: str, date8: str, booking: dict, summary: dict, offering: dict) -> dict:
+    """Meeting time, end time and length of a booked, timed product, from its catalog
+    page. Empty when the page has no offering matching the booked one."""
+    prefix = (summary.get("productTypeCategory") or {}).get("id")
+    opts = summary.get("baseOptions") or []
+    product = ((opts[0] if opts else {}).get("selected") or {}).get("code")
+    if not prefix or not product:
+        return {}
+    detail = get_json(sess, "GET", f"{COMMERCE}/catalog/v2/{code}/categories/{prefix}/products/{product}",
+                      params={"reservationId": booking.get("bookingId"), "passengerId": booking.get("passengerId"),
+                              "currencyIso": booking.get("bookingCurrency") or "USD",
+                              "startDate": f"{date8[0:4]}-{date8[4:6]}-{date8[6:8]}"},
+                      headers=auth).get("payload") or {}
+    offers = (detail.get("bookingOfferingData") or {}).get("offerings") or []
+    match = [o for o in offers if o.get("id") and o.get("id") == offering.get("id")] or \
+            [o for o in offers if o.get("dateTime") and o.get("dateTime") == offering.get("dateTime")]
+    out = {}
+    if match:
+        date = iso_parts(offering.get("dateTime"))[0]
+        for key, name in (("meetingTime", "meet"), ("endDateTime", "end")):
+            d, t = iso_parts(match[0].get(key))
+            if t and d == date:
+                out[name] = t
+    minutes = detail.get("durationInMins")
+    if isinstance(minutes, int) and not isinstance(minutes, bool) and minutes > 0:
+        out["minutes"] = minutes
+    return out
+
+
 def fetch_mine(sess, auth: dict, code: str, date8: str) -> dict:
-    """Stateroom and purchased add-ons for the matching booking (experimental)."""
+    """Stateroom, cabin details and purchased add-ons for the matching booking
+    (docs/DATA_FORMAT.md, mine). Parts that fail are skipped with a note."""
     res = get_json(sess, "GET", f"{API}/v1/profileBookings/enriched/{auth['account-id']}",
                    params={"brand": "R", "includeCheckin": "true"}, headers=auth)
     bookings = (res.get("payload") or {}).get("profileBookings") or []
@@ -267,10 +359,22 @@ def fetch_mine(sess, auth: dict, code: str, date8: str) -> dict:
     b = match[0]
     # Guarantee bookings list "GTY" until a cabin is assigned; a real one has digits.
     room = str(b.get("stateroomNumber") or "")
-    mine = {"stateroom": room if re.search(r"[0-9]", room) else None, "orders": []}
+    me = [p for p in b.get("passengers") or [] if str(p.get("passengerId")) == str(b.get("passengerId"))]
+    mine = {"stateroom": room if re.search(r"[0-9]", room) else None,
+            "deck": or_none(b.get("deckNumber")),
+            "muster": or_none(b.get("musterStation")),
+            # Terminal arrival appointment, empty until online check-in is done
+            "arrival": (hhmm(me[0].get("arrivalTime")) or or_none(me[0].get("arrivalTime"))) if me else None,
+            "orders": []}
+
+    try:
+        mine.update(fetch_voyage(sess, auth, code, date8))
+    except SyncError as e:
+        mine["voyageError"] = str(e)
+
     params = {"passengerId": b.get("passengerId"), "reservationId": b.get("bookingId"),
               "sailingId": code + date8, "includeMedia": "false"}
-    base = f"{API}/en/royal/web/commerce-api/calendar/v1/{code}/orderHistory"
+    base = f"{COMMERCE}/calendar/v1/{code}/orderHistory"
     try:
         history = get_json(sess, "GET", base, params=params, headers=auth).get("payload") or {}
     except SyncError as e:
@@ -278,7 +382,7 @@ def fetch_mine(sess, auth: dict, code: str, date8: str) -> dict:
         return mine
     for order in (history.get("myOrders") or []) + (history.get("ordersOthersHaveBookedForMe") or []):
         code_ = order.get("orderCode")
-        if not code_:
+        if not code_ or order.get("status") == "CANCELLED":
             continue
         try:
             detail = get_json(sess, "GET", f"{base}/{code_}", params=params, headers=auth).get("payload") or {}
@@ -287,18 +391,27 @@ def fetch_mine(sess, auth: dict, code: str, date8: str) -> dict:
         for item in detail.get("orderHistoryDetailItems") or []:
             summary = item.get("productSummary") or {}
             guests = [g for g in item.get("guests") or [] if g.get("orderStatus") != "CANCELLED"]
-            if not guests:
+            if not guests or item.get("status") == "CANCELLED":
                 continue
             entry = {"title": clean(summary.get("title")),
                      "category": (summary.get("productTypeCategory") or {}).get("id", ""),
                      "guests": len(guests)}
-            # Times for excursions/dining are not confirmed in this data; keep any date/time
-            # fields found so the app (and we) can see what is actually there.
-            when = {k: v for src in (item, summary) for k, v in src.items()
-                    if isinstance(v, str) and re.search(r"(date|time)", k, re.I)}
-            if when:
-                entry["when"] = when
+            # Timed bookings (shore excursions, and probably dining and shows) carry the
+            # booked session; packages and credits don't.
+            offering = item.get("offering") or {}
+            date, time_ = iso_parts(offering.get("dateTime"))
+            if date:
+                entry.update(date=date, time=time_)
+                if isinstance(offering.get("dayOfCruise"), int):
+                    entry["day"] = offering["dayOfCruise"]
+                if offering.get("portCode"):
+                    entry["port"] = offering["portCode"]
+                try:
+                    entry.update(offering_times(sess, auth, code, date8, b, summary, offering))
+                except SyncError:
+                    pass
             mine["orders"].append(entry)
+    mine["orders"].sort(key=lambda o: (o.get("date") or "9999", o.get("time") or "", o["title"]))
     return mine
 
 
@@ -347,7 +460,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Download cruise data for the Royal Pebble app.")
     ap.add_argument("--ship", help="ship name or code, e.g. harmony or HM")
     ap.add_argument("--date", help="sail date, YYYY-MM-DD")
-    ap.add_argument("--login", action="store_true", help="also fetch your stateroom and purchases (asks for password)")
+    ap.add_argument("--login", action="store_true", help="also fetch your booking details and purchases (asks for password)")
     ap.add_argument("--email", help="Royal Caribbean login email (or set RCCL_EMAIL)")
     ap.add_argument("--out-dir", default=".", help="folder for the output file (default: current folder)")
     ap.add_argument("--no-clipboard", action="store_true", help="don't copy the result to the clipboard")
@@ -382,9 +495,15 @@ def main(argv=None) -> int:
         password = None
         mine = fetch_mine(sess, auth, ship["shipCode"], date8)
         bundle["mine"] = mine
-        print(f"  Your booking: stateroom {mine.get('stateroom') or 'not assigned yet'}, {len(mine['orders'])} purchased items")
-        if mine.get("ordersError"):
-            print(f"  Purchases skipped: {mine['ordersError']}")
+        timed = sum(1 for o in mine["orders"] if o.get("time"))
+        print(f"  Your booking: stateroom {mine.get('stateroom') or 'not assigned yet'}"
+              f", deck {mine.get('deck') or '-'}, muster station {mine.get('muster') or 'not listed'}")
+        print(f"  Purchased items: {len(mine['orders'])} ({timed} with a booked time)")
+        if mine.get("ports"):
+            print(f"  Port details (gangway times, locations): {len(mine['ports'])} days")
+        for key, what in (("voyageError", "Port details"), ("ordersError", "Purchases")):
+            if mine.get(key):
+                print(f"  {what} skipped: {mine[key]}")
 
     out = Path(args.out_dir) / f"cruise-watch-{ship['shipCode']}-{date8}.json"
     text = json.dumps(bundle, separators=(",", ":"), ensure_ascii=True)
