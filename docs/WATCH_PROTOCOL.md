@@ -358,7 +358,8 @@ phone`, and Select asks again.
 `dir_ref` is the phone's name for a page; the watch only echoes it back and
 ignores a DIR_PAGE whose ref isn't the one it is waiting for. Currently: 0 the
 decks, 1 the areas, 100 + deck, 200 + area (the seven neighborhoods in Harmony
-order, then `Other places`, then Ashore), 1000 + place (its index in the
+order, then `Other places`, then Ashore), 300 the elevator banks, 301 + bank
+(0 fore, 1 aft; ships with a map only), 1000 + place (its index in the
 directory's list, sorted by name; a ref that no longer matches gets a `Not
 found` page).
 
@@ -377,9 +378,20 @@ found` page).
   each as uint8 length and UTF-8 bytes, at most 31 bytes. Flags: 1 the spot is
   approximate (`Spot approximate`), 2 no stateroom on the Me tab (no FROM
   block; the watch shows `Add your stateroom on the phone for walking
-  directions`, and the header and text are empty). Left out for Ashore, venues
-  with no deck, ships with no map, and a stateroom the map doesn't know. Units
-  (feet, metres or steps) are the phone's setting; the watch never converts.
+  directions`, and the header and text are empty), 4 no route from the start
+  (a stateroom the map doesn't know, say: no FROM block, header and text
+  empty). Then, when there's a closest restroom, its int8 decks and text
+  (`30 m aft`) the same way; the watch reads it only if bytes are left. It is
+  measured from the venue (the entrance the FROM route reaches), and shows
+  with flags 2 and 4 too. Left out for Ashore, venues with no deck, ships with
+  no map, and flag 4 with no restroom. Units (feet, metres or steps) are the
+  phone's setting; the watch never converts.
+- `dir_bank` (elevator bank pages, `docs/DESIGN_V1_1.md` §9.3): uint8 the
+  cabin's deck (0 unknown), uint8 count and the decks the bank stops at (at
+  most 24), then the line under the name (`Aft · Decks 3-17`) as uint8 length
+  and UTF-8 bytes. The watch draws `STOPS AT` and the deck chips. The page has
+  no `dir_where`; its `dir_gps` is the FROM block to the bank's lobby, with no
+  restroom.
 
 `dir_rows` is rows back to back, little-endian, in one message (at most 40 rows
 and 1500 bytes; when a page has more, the phone ends it with `N more`):
@@ -390,7 +402,7 @@ and 1500 bytes; when a page has more, the phone ends it with `N more`):
 | 2 | `ref`: uint16, the page Select opens (items; 0 = none, drawn muted) |
 | 4 | `start`: int32 cruise minutes (events), −1 otherwise |
 | 2 | `minutes`: uint16 duration (events) |
-| 1 | `flags`: events, as in Packed events (the watch draws the star) |
+| 1 | `flags`: events, as in Packed events (the watch draws the star); items, 1 = drawn muted though Select opens it (elevator banks) |
 | 1 + n | line 1, ≤ 39 bytes: the name, title or header text |
 | 1 + m | line 2, ≤ 31 bytes: an item's sub-line, or a place heading's area |
 

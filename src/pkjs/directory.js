@@ -18,6 +18,8 @@ var REF_DECKS = 0;
 var REF_AREAS = 1;
 var REF_DECK = 100;    // + deck number
 var REF_AREA = 200;    // + index in AREA_KEYS
+var REF_ELEVATORS = 300;
+var REF_BANK = 301;    // + index in BANKS
 var REF_PLACE = 1000;  // + index in places()
 
 // Row kinds.
@@ -25,6 +27,13 @@ var ROW_HEADER = 0;  // small-caps header, the cursor skips it
 var ROW_ITEM = 1;    // name and optional sub-line; opens `ref` when not 0
 var ROW_EVENT = 2;   // an event at the place: title, the watch formats the time
 var ROW_PLACE = 3;   // a heading: the name, and for a place its area (where is dir_where)
+
+// Row flags on items: a place the cursor can open, drawn muted (elevator banks).
+var ROW_MUTED = 1;
+
+// The elevator banks, directory places on a ship with a map (§9.3).
+var BANKS = [{key: 'fwd', name: 'Fore elevators', pos: 'Fore'},
+             {key: 'aft', name: 'Aft elevators', pos: 'Aft'}];
 
 var OTHER = 'Other places';
 // The seven neighborhoods, venues with none, then Ashore.
@@ -45,6 +54,7 @@ var GPS_TEXT_MAX = 31;  // the FROM header and line: 32 bytes with the NUL
 // dir_gps flags.
 var GPS_APPROX = 1;    // the place's spot is approximate
 var GPS_NO_CABIN = 2;  // no stateroom on the Me tab: no FROM block, a hint instead
+var GPS_NO_FROM = 4;   // no route from the start: no FROM block, only the restroom line
 var ROW_FIXED = 10;
 var TEXT_MAX = 23;   // title and label
 var MAX_ROWS = 40;
@@ -109,8 +119,54 @@ function count(n, alone) {
   return alone ? n + (n === 1 ? ' place' : ' places') : String(n);
 }
 
-function item(ref, line1, line2) {
-  return {kind: ROW_ITEM, ref: ref, line1: line1, line2: line2 || ''};
+function item(ref, line1, line2, flags) {
+  return {kind: ROW_ITEM, ref: ref, line1: line1, line2: line2 || '', flags: flags || 0};
+}
+
+// The ship's banks with their decks and spots; [] for a ship with no map.
+function banksOf(ship) {
+  return BANKS.map(function(b, i) {
+    var m = shipmap.bank(ship, b.key);
+    return m ? {ref: REF_BANK + i, name: b.name, pos: b.pos, decks: m.decks, spots: m.spots} : null;
+  }).filter(Boolean);
+}
+
+// Every deck the directory knows: venues' decks and the banks' stops.
+function shipDecks(list, banks) {
+  var decks = [];
+  function add(d) {
+    if (decks.indexOf(d) === -1) {
+      decks.push(d);
+    }
+  }
+  list.forEach(function(v) {
+    if (v.neighborhood !== venues.ASHORE) {
+      v.decks.forEach(add);
+    }
+  });
+  banks.forEach(function(b) { b.decks.forEach(add); });
+  return decks.sort(function(a, b) { return a - b; });
+}
+
+// "all decks", or "Decks 3-16": runs over the ship's decks (`all`), so a deck
+// the ship doesn't have (13) doesn't split a run.
+function bankDecksText(decks, all) {
+  var idx = decks.map(function(d) { return all.indexOf(d); }).filter(function(i) { return i !== -1; });
+  if (idx.length === all.length) {
+    return 'all decks';
+  }
+  idx.sort(function(a, b) { return a - b; });
+  var runs = [];
+  idx.forEach(function(i, n) {
+    if (n && i === idx[n - 1] + 1) {
+      runs[runs.length - 1][1] = i;
+    } else {
+      runs.push([i, i]);
+    }
+  });
+  return (idx.length > 1 ? 'Decks ' : 'Deck ') + runs.map(function(r) {
+    return r[0] === r[1] ? String(all[r[0]]) : all[r[0]] + '-' + all[r[1]];
+  }).join(', ');
 }
 
 function header(text) {
@@ -144,10 +200,17 @@ function decksPage(list, cabin) {
   return {title: 'Ship', label: 'by deck', rows: rows};
 }
 
-// Page 1: each area with its decks and how many places it has.
-function areasPage(list) {
+// Page 1: each area with its decks and how many places it has, and the
+// Elevators row just before Ashore.
+function areasPage(list, banks) {
   var rows = [];
+  var lifts = banks.length ? item(REF_ELEVATORS, 'Elevators', banks.map(function(b) { return b.pos; }).join(DOT))
+                           : null;
   AREA_KEYS.forEach(function(key, i) {
+    if (key === venues.ASHORE && lifts) {
+      rows.push(lifts);
+      lifts = null;
+    }
     var inArea = list.filter(function(v) { return areaKey(v) === key; });
     if (!inArea.length) {
       return;
@@ -163,24 +226,37 @@ function areasPage(list) {
     var where = decks.length ? (decks.length > 1 ? 'Decks ' : 'Deck ') + deckRanges(decks) : '';
     rows.push(item(REF_AREA + i, key, [where, count(inArea.length, !where)].filter(Boolean).join(DOT)));
   });
+  if (rows.length === 1 && rows[0].ref === REF_ELEVATORS) {
+    rows = [];  // no venues: say so rather than show the elevators alone
+  }
   if (!rows.length) {
     rows.push(item(0, 'No venues for this ship', 'Add them on your phone'));
   }
   return {title: 'Ship', label: 'by area', rows: rows};
 }
 
+// The Elevators row: each bank and the decks it stops at.
+function elevatorsPage(banks, all) {
+  var rows = [{kind: ROW_PLACE, ref: 0, line1: 'Elevators', line2: ''}];
+  banks.forEach(function(b) { rows.push(item(b.ref, b.name, bankDecksText(b.decks, all))); });
+  return {title: 'Area', label: '', rows: rows};
+}
+
 // One deck: its places under Fore / Mid / Aft (and "full length" for ones with
-// no position). Venues with several entrances show on each of their decks.
-function deckPage(list, deck, cabin, placeRef) {
+// no position), each group ending with its elevator bank, muted, when the bank
+// stops here. Venues with several entrances show on each of their decks.
+function deckPage(list, deck, cabin, placeRef, banks) {
   var on = list.filter(function(v) {
     return v.neighborhood !== venues.ASHORE && v.decks.indexOf(deck) !== -1;
   });
   var rows = [];
   POS_ORDER.forEach(function(pos) {
     var here = on.filter(function(v) { return (v.position || null) === pos; }).sort(byName);
-    if (here.length) {
+    var lifts = banks.filter(function(b) { return b.pos === pos && b.decks.indexOf(deck) !== -1; });
+    if (here.length || lifts.length) {
       rows.push(header(pos || 'full length'));
       here.forEach(function(v) { rows.push(item(placeRef(v), v.name)); });
+      lifts.forEach(function(b) { rows.push(item(b.ref, b.name, '', ROW_MUTED)); });
     }
   });
   if (!rows.length) {
@@ -270,19 +346,11 @@ function stops(ctx, sailDays, today) {
   return out;
 }
 
-// The FROM block for a place page: {header, decks, text, flags}, or null for no
-// GPS lines at all (ship not mapped, ashore, no deck, stateroom not on the map).
-// The route starts where routestart.js says for "now" (§9.4).
-function placeGps(v, ctx, cabin) {
+// The FROM block to the nearest of the spots `to`: {header, decks, text, flags,
+// to (the spot the route reaches)}, with GPS_NO_CABIN or GPS_NO_FROM when there's
+// no block to show. The route starts where routestart.js says for "now" (§9.4).
+function fromBlock(to, ctx, cabin) {
   var ship = ctx.shipCode;
-  if (!ctx.bundle || !shipmap.data(ship)) {
-    return null;
-  }
-  var to = spotsOf(ship, v, cabin);
-  if (!to.length) {
-    return null;
-  }
-  var flags = to[0].approx ? GPS_APPROX : 0;
   var settings = ctx.settings || {};
   var finder = venues.venueFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
   var room = stateroom(ctx);
@@ -296,7 +364,7 @@ function placeGps(v, ctx, cabin) {
     from = [shipmap.cabin(ship, room)].filter(Boolean);
   }
   if (!room && !from.length) {
-    return {header: '', decks: 0, text: '', flags: flags | GPS_NO_CABIN};
+    return {header: '', decks: 0, text: '', flags: GPS_NO_CABIN};
   }
   var best = null;
   from.forEach(function(f) {
@@ -307,11 +375,51 @@ function placeGps(v, ctx, cabin) {
     }
   });
   if (!best) {
-    return null;
+    // A stateroom the map doesn't know, say.
+    return {header: '', decks: 0, text: '', flags: GPS_NO_FROM};
   }
   var line = gpstext.fromLine(best.route, best.from, {units: settings.units, fromCabin: start.kind === 'cabin'});
   return {header: gpstext.fromHeader(start, finder.short(start.venue)), decks: line.decks, text: line.text,
-          flags: flags};
+          flags: 0, to: best.route.to};
+}
+
+// A place page's Ship GPS lines (§9.1): {header, decks, text, flags, rest}, or
+// null for none at all (ship not mapped, ashore, no deck, nothing to show).
+// `rest` is the closest restroom from the venue ({decks, text}) or null.
+function placeGps(v, ctx, cabin) {
+  var ship = ctx.shipCode;
+  if (!ctx.bundle || !shipmap.data(ship)) {
+    return null;
+  }
+  var to = spotsOf(ship, v, cabin);
+  if (!to.length) {
+    return null;
+  }
+  var gps = fromBlock(to, ctx, cabin);
+  if (to[0].approx) {
+    gps.flags |= GPS_APPROX;
+  }
+  // From the entrance the route reaches, else the one on the deck nearest the cabin.
+  var at = gps.to || to[0];
+  delete gps.to;
+  var rest = shipmap.restroom(ship, at);
+  gps.rest = rest ? gpstext.restroomLine(rest, at, {units: (ctx.settings || {}).units}) : null;
+  return (gps.flags & GPS_NO_FROM) && !gps.rest ? null : gps;
+}
+
+// An elevator bank (§9.3): its name, `Aft · Decks 3-17`, the STOPS AT chips
+// (dir_bank) and the FROM block to its lobby on the best deck.
+function bankPage(b, ctx, cabin, all) {
+  var gps = ctx.bundle ? fromBlock(b.spots, ctx, cabin) : null;
+  if (gps) {
+    delete gps.to;
+    if (gps.flags & GPS_NO_FROM) {
+      gps = null;
+    }
+  }
+  return {title: 'Place', label: '', gps: gps,
+          bank: {text: b.pos + DOT + bankDecksText(b.decks, all), decks: b.decks, cabin: cabin},
+          rows: [{kind: ROW_PLACE, ref: 0, line1: b.name, line2: ''}]};
 }
 
 // A place: its heading (name, area; where it is goes in dir_where), the Ship GPS
@@ -347,17 +455,22 @@ function buildPage(ref, ctx) {
   var c = {bundle: ctx.bundle, settings: settings, stars: ctx.stars || {}, now: ctx.now || new Date(),
            shipCode: shipCode};
   var list = places(shipCode, (settings.venues || {})[shipCode]);
+  var banks = banksOf(shipCode);
   var cabin = L.cabinDeck((settings.me || {}).deck);
   function placeRef(v) {
     return REF_PLACE + list.indexOf(v);
   }
   var page;
   if (ref === REF_AREAS) {
-    page = areasPage(list);
+    page = areasPage(list, banks);
   } else if (ref > REF_DECK && ref < REF_AREA) {
-    page = deckPage(list, ref - REF_DECK, cabin, placeRef);
+    page = deckPage(list, ref - REF_DECK, cabin, placeRef, banks);
   } else if (ref >= REF_AREA && ref < REF_AREA + AREA_KEYS.length) {
     page = areaPage(list, AREA_KEYS[ref - REF_AREA], cabin, placeRef);
+  } else if (ref === REF_ELEVATORS && banks.length) {
+    page = elevatorsPage(banks, shipDecks(list, banks));
+  } else if (ref >= REF_BANK && ref < REF_BANK + banks.length) {
+    page = bankPage(banks[ref - REF_BANK], c, cabin, shipDecks(list, banks));
   } else if (ref >= REF_PLACE && ref - REF_PLACE < list.length) {
     page = placePage(list[ref - REF_PLACE], c, cabin);
   } else if (ref === REF_DECKS) {
@@ -421,23 +534,45 @@ function message(page) {
   if (page.gps) {
     m.dir_gps = encodeGps(page.gps);
   }
+  if (page.bank) {
+    m.dir_bank = encodeBank(page.bank);
+  }
   return m;
 }
 
+function int8(n) {
+  return Math.max(-127, Math.min(127, n | 0)) & 255;
+}
+
 // int8 decks (signed, + = up), uint8 flags, then the FROM header and the FROM
-// line text, each as uint8 length and UTF-8 bytes.
+// line text, each as uint8 length and UTF-8 bytes; then, with a closest
+// restroom, its int8 decks and text the same way.
 function encodeGps(g) {
   var header = pack.utf8(g.header || '', GPS_TEXT_MAX);
   var text = pack.utf8(g.text || '', GPS_TEXT_MAX);
-  var decks = Math.max(-127, Math.min(127, g.decks | 0));
-  return [decks & 255, g.flags & 255, header.length].concat(header, [text.length], text);
+  var out = [int8(g.decks), g.flags & 255, header.length].concat(header, [text.length], text);
+  if (g.rest) {
+    var rest = pack.utf8(g.rest.text || '', GPS_TEXT_MAX);
+    out = out.concat([int8(g.rest.decks), rest.length], rest);
+  }
+  return out;
+}
+
+// uint8 cabin deck (0 none), uint8 count and the decks the bank stops at, then
+// the line under the name as uint8 length and UTF-8 bytes.
+var BANK_DECKS_MAX = 24;  // the watch keeps 24
+function encodeBank(b) {
+  var text = pack.utf8(b.text || '', GPS_TEXT_MAX);
+  var decks = b.decks.slice(0, BANK_DECKS_MAX);
+  return [(b.cabin | 0) & 255, decks.length].concat(decks, [text.length], text);
 }
 
 module.exports = {
   REF_DECKS: REF_DECKS, REF_AREAS: REF_AREAS, REF_DECK: REF_DECK, REF_AREA: REF_AREA, REF_PLACE: REF_PLACE,
-  ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE,
+  REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK,
+  ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE, ROW_MUTED: ROW_MUTED,
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
-  GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN,
-  places: places, deckRanges: deckRanges, buildPage: buildPage, encodeRow: encodeRow,
-  packRows: packRows, encodeGps: encodeGps, message: message
+  GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,
+  places: places, deckRanges: deckRanges, bankDecksText: bankDecksText, buildPage: buildPage,
+  encodeRow: encodeRow, packRows: packRows, encodeGps: encodeGps, encodeBank: encodeBank, message: message
 };
