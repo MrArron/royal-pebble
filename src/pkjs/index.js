@@ -368,8 +368,9 @@ function sendRoute() {
     usage.add('route', (req.venue !== undefined ? 'to event at ' + req.venue + ' (start ' + req.start + ')' :
                         (req.rest ? 'restroom from place ' : 'to place ') + req.ref) +
               ': "' + page.title + '", ' + (page.header ? page.header + ', ' : '') +
-              (page.steps.length ? page.steps.length + ' steps, ' + [page.big, page.small && page.small.text]
-                .filter(function(t) { return t; }).join(' / ') : 'no route: ' + page.lead) +
+              (page.steps.length ? [page.steps.length + ' steps', [page.big, page.small && page.small.text]
+                .filter(function(t) { return t; }).join(' / ')].filter(function(t) { return t; }).join(', ') :
+                'no route: ' + page.lead) +
               // A restroom route starts at the venue, whatever the start setting.
               (req.rest ? '' : ', start: ' + directory.startReason(ctx, req.venue !== undefined ? {start: req.start} : undefined)) +
               ', planned in ' + built + ' ms, ' + sendText(ok, info));
