@@ -73,6 +73,7 @@ the watch only has today's events, so the phone works it out):
 | `tmr_featured` | featured events (≤ 255) |
 | `tmr_first`, `tmr_first_start` | the first timed one of them: title (≤ 39 bytes) and start (−1 none) |
 | `tmr_last`, `tmr_last_kind` | a show to catch: title (≤ 39 bytes) and 1 last chance, 2 only show, 0 none |
+| `tmr_to_reserve` | starred events that need a reservation and aren't marked reserved (≤ 255) |
 
 Counts follow the Filters like the day's events (hidden categories left out
 unless starred). **Last chance** is the last performance of a featured show in
@@ -141,19 +142,27 @@ The phone sends an alert plan with every slice: all-aboard warnings 60, 30 and 1
 minutes before all-aboard, and a reminder `reminder_lead` minutes (5/15/30,
 default 15) before each starred event and personal entry. It covers today's and
 tomorrow's watch days, so tomorrow's alerts still fire if the phone is away at the
-04:00 rollover. Only future alerts are sent, sorted by time, at most 24.
-Settings > Me > **Test alerts** adds a test reminder 2 minutes and a test
-all-aboard warning 3 minutes after the tap (anchored to the tap, kept for an
-hour), to check alerts on the watch with any data, before the cruise too.
+04:00 rollover.
+
+Each of those evenings also gets **to-reserve** alerts (`docs/DESIGN_V1_1.md`
+§5): at the Me tab's time (18:00 to 22:00 ship time, default 20:00), one per
+starred event of the next watch day that needs a reservation and isn't marked
+reserved, at most 5, all in the same minute. The watch shows them on one screen.
+
+Only future alerts are sent, sorted by time, then kind, then `ref`, at most 24.
+Settings > Me > **Test alerts** adds a test reminder 2 minutes, a test
+all-aboard warning 3 minutes and a test to-reserve alert (two events) 4 minutes
+after the tap (anchored to the tap, kept for an hour), to check alerts on the
+watch with any data, before the cruise too.
 
 `ALARMS.alarms` is packed like events, little-endian:
 
 | Bytes | Field |
 |---|---|
 | 4 | `at`: int32 cruise minutes, when to buzz |
-| 4 | `ref`: int32 cruise minutes, the all-aboard time or event start |
-| 2 | `extra`: int16, local offset (all-aboard) or duration (reminder) |
-| 1 | `kind`: 0 all-aboard, 1 reminder |
+| 4 | `ref`: int32 cruise minutes, the all-aboard time or event start (−1 for an untimed event to reserve) |
+| 2 | `extra`: int16, local offset (all-aboard), duration (reminder) or how many events there are to reserve in all (to reserve) |
+| 1 | `kind`: 0 all-aboard, 1 reminder, 2 to reserve |
 | 1 | `from`: "From" directions (reminders; 0 otherwise), below; plus 16 when the event is starred, needs a reservation and isn't marked reserved (the alert shows `Not reserved`) |
 | 4 | `where`: as in events (reminders; zeros for all-aboard), but relative to the previous venue when `from` is a route |
 | 1 + n | title (location or event title), ≤ 31 bytes |
@@ -280,12 +289,13 @@ The watch saves what it needs without the phone after every slice and star chang
 (`src/c/store.c`), and loads it at launch. It is one blob in the packed layouts
 above, spread over 256-byte values (keys 40 on):
 
-1. Header (54 bytes: sail date, settings bits, reminder lead, slice id, day
+1. Header (55 bytes: sail date, settings bits, reminder lead, slice id, day
    index and kind, all-aboard, local offset, cutoff, alert and event counts,
    the cruise's starred count, then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
-   first start, starred and featured counts and last kind), then the day's
-   status and location, My info's six texts, the ship name, and tomorrow's
-   status, location, first and last, then the sail port. (Storage version 6.)
+   first start, starred and featured counts, last kind and to-reserve count),
+   then the day's status and location, My info's six texts, the ship name, and
+   tomorrow's status, location, first and last, then the sail port. (Storage
+   version 7.)
 2. Alerts, then events, each as packed above, in time order.
 
 The blob's budget follows `persist_get_max_size()`: the limit minus 1.5 kB kept
