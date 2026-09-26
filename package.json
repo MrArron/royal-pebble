@@ -58,6 +58,7 @@
       "dir_rel",
       "dir_where",
       "dir_rows",
+      "dir_gps",
       "arrive",
       "depart",
       "ship_name",

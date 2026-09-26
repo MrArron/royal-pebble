@@ -122,7 +122,9 @@ test('place page: where it is and the rest of today there, aliases included', fu
   var ref = find(d4.rows, 'Studio B').ref;
   var p = page(ref, {bundle: bundle, stars: {}});
   assert.strictEqual(p.title, 'Place');
-  assert.deepStrictEqual(p.where, {deck: 4, deckTo: 0, pos: 2, ashore: false, rel: -2});
+  // No stateroom: the GPS hint replaces the old "↓2 decks from cabin" line.
+  assert.deepStrictEqual(p.where, {deck: 4, deckTo: 0, pos: 2, ashore: false, rel: null});
+  assert.strictEqual(p.gps.flags, directory.GPS_NO_CABIN);
   assert.strictEqual(p.rows[0].kind, directory.ROW_PLACE);
   assert.strictEqual(p.rows[0].line1, 'Studio B');
   assert.strictEqual(p.rows[0].line2, 'Entertainment Place');
@@ -217,6 +219,100 @@ test('message carries rel and where only when known', function() {
   assert.ok(!('dir_rel' in pm));
   assert.deepStrictEqual(pm.dir_where, pack.encodeWhere(p.where));
   assert.ok(!('dir_rel' in directory.message(page(directory.REF_DECKS))));
+});
+
+// ---- Ship GPS on place pages (docs/DESIGN_V1_1.md §9.1) ----------------------
+
+var CABIN = {me: {deck: 'Deck 9', stateroom: '9254'}};  // deck 9, aft, port
+
+function placeRef(name, settings) {
+  var list = directory.places('HM', ((settings || {}).venues || {}).HM);
+  var v = list.filter(function(x) { return x.name === name; })[0];
+  assert.ok(v, name);
+  return directory.REF_PLACE + list.indexOf(v);
+}
+
+function gpsPage(name, opts) {
+  opts = opts || {};
+  return page(placeRef(name, opts.settings || CABIN), {settings: opts.settings || CABIN, bundle: opts.bundle});
+}
+
+test('GPS: FROM YOUR CABIN with the deck change and walking distance', function() {
+  var p = gpsPage('Royal Theater');
+  assert.strictEqual(p.gps.header, 'FROM YOUR CABIN');
+  assert.strictEqual(p.gps.flags, 0);
+  assert.ok(p.gps.decks < 0, 'theater is below deck 9');
+  assert.ok(/^~[0-9]+ m fore$/.test(p.gps.text), p.gps.text);
+  assert.strictEqual(p.where.rel, null);
+  assert.ok(/^~[0-9]+ ft fore$/.test(gpsPage('Royal Theater', {settings: {
+    me: CABIN.me, units: 'ft'}}).gps.text));
+  assert.ok(/^~[0-9]+ steps fore$/.test(gpsPage('Royal Theater', {settings: {
+    me: CABIN.me, units: 'steps'}}).gps.text));
+});
+
+test('GPS: a place on the cabin deck says "Your deck"', function() {
+  var d9 = page(directory.REF_DECK + 9, {settings: CABIN});
+  var item = d9.rows.filter(function(r) { return r.kind === directory.ROW_ITEM; })[0];
+  var p = page(item.ref, {settings: CABIN});
+  assert.strictEqual(p.gps.decks, 0);
+  assert.ok(new RegExp('^Your deck' + DOT + '~').test(p.gps.text), p.gps.text);
+});
+
+test('GPS: approximate spots, owner-added venues, no GPS ashore or off the map', function() {
+  assert.strictEqual(gpsPage('Royal Shops').gps.flags, directory.GPS_APPROX);
+  var settings = {me: CABIN.me, venues: {HM: {'Secret Bar': {decks: [14], position: 'Fore',
+                                                                neighborhood: 'Central Park'}}}};
+  var own = gpsPage('Secret Bar', {settings: settings});
+  assert.strictEqual(own.gps.flags, directory.GPS_APPROX);
+  assert.ok(own.gps.decks > 0);
+  // An edited deck the plans don't show for it: approximate too.
+  var moved = gpsPage('Studio B', {settings: {me: CABIN.me, venues: {HM: {'Studio B': {decks: [7]}}}}});
+  assert.strictEqual(moved.gps.flags, directory.GPS_APPROX);
+  assert.strictEqual(moved.gps.decks, -2);
+  assert.strictEqual(gpsPage('Perfect Day at CocoCay').gps, null);
+  assert.ok(!('dir_gps' in directory.message(gpsPage('Perfect Day at CocoCay'))));
+  var other = makeBundle();
+  other.ship.code = 'XX';
+  assert.strictEqual(directory.buildPage(directory.REF_PLACE, {bundle: other, settings: CABIN, now: NOW}).gps,
+                     undefined);
+  // A stateroom the map doesn't know: no GPS lines rather than a wrong hint.
+  assert.strictEqual(gpsPage('Studio B', {settings: {me: {stateroom: '99999'}}}).gps, null);
+});
+
+test('GPS: no stateroom gives the hint flag; the booking stateroom counts', function() {
+  var p = gpsPage('Studio B', {settings: {me: {deck: 'Deck 9'}}});
+  assert.deepStrictEqual(p.gps, {header: '', decks: 0, text: '', flags: directory.GPS_NO_CABIN});
+  var bundle = makeBundle();
+  bundle.mine = {stateroom: '9254'};
+  assert.strictEqual(gpsPage('Studio B', {settings: {}, bundle: bundle}).gps.header, 'FROM YOUR CABIN');
+  bundle.mine = {stateroom: 'GTY'};
+  assert.strictEqual(gpsPage('Studio B', {settings: {}, bundle: bundle}).gps.flags, directory.GPS_NO_CABIN);
+});
+
+test('GPS: a stop on now (or just ended) is the start (§9.4)', function() {
+  function at(time, minutes) {
+    return {me: CABIN.me, personal: [{title: 'Show', venue: 'Studio B', date: '2027-03-07', time: time,
+                                      minutes: minutes}]};
+  }
+  assert.strictEqual(gpsPage('Royal Theater', {settings: at('13:30', 60)}).gps.header, 'FROM STUDIO B');
+  assert.strictEqual(gpsPage('Royal Theater', {settings: at('12:50', 60)}).gps.header, 'FROM STUDIO B');
+  assert.strictEqual(gpsPage('Royal Theater', {settings: at('12:00', 60)}).gps.header, 'FROM YOUR CABIN');
+  assert.strictEqual(gpsPage('Royal Theater', {settings: at('15:00', 60)}).gps.header, 'FROM YOUR CABIN');
+  // A stop there works without a stateroom too.
+  var noRoom = at('13:30', 60);
+  noRoom.me = {};
+  assert.strictEqual(gpsPage('Royal Theater', {settings: noRoom}).gps.header, 'FROM STUDIO B');
+});
+
+test('GPS: dir_gps packs decks, flags, header and text', function() {
+  var g = {header: 'FROM YOUR CABIN', decks: -2, text: '~160 m fore', flags: directory.GPS_APPROX};
+  var b = directory.encodeGps(g);
+  assert.deepStrictEqual(b.slice(0, 3), [254, 1, 15]);
+  assert.strictEqual(String.fromCharCode.apply(null, b.slice(3, 18)), 'FROM YOUR CABIN');
+  assert.strictEqual(b[18], 11);
+  assert.strictEqual(b.length, 30);
+  assert.deepStrictEqual(directory.message(gpsPage('Royal Theater')).dir_gps,
+                         directory.encodeGps(gpsPage('Royal Theater').gps));
 });
 
 var failed = 0;

@@ -186,6 +186,17 @@ static void handle_dir_page(DictionaryIterator *iter) {
     page.has_where = true;
     codec_read_where(where->value->data, &page.where);
   }
+  // int8 decks, uint8 flags, header, text (docs/WATCH_PROTOCOL.md, Ship directory).
+  Tuple *gps = dict_find(iter, MESSAGE_KEY_dir_gps);
+  if (gps && gps->type == TUPLE_BYTE_ARRAY && gps->length >= 4) {
+    const uint8_t *p = gps->value->data;
+    const uint8_t *end = p + gps->length;
+    page.gps_decks = (int8_t)p[0];
+    page.gps_flags = p[1];
+    p += 2;
+    page.has_gps = codec_read_str(&p, end, page.gps_header, sizeof(page.gps_header)) &&
+                   codec_read_str(&p, end, page.gps_text, sizeof(page.gps_text));
+  }
   Tuple *rows = dict_find(iter, MESSAGE_KEY_dir_rows);
   if (rows && rows->type == TUPLE_BYTE_ARRAY) {
     page.rows = rows->value->data;
