@@ -399,6 +399,18 @@ As built (item 9, part 1):
   marked on it stay until another chip is picked, so a mark can be undone. My
   entries is hidden on it.
 
+**Real data** (checked 2026-09-25): Royal marks no free activity as
+reservation-required. The shows you reserve come as `ENTERTAINMENT` products and
+paid classes as `ACTIVITIES`, which the sync used to drop; both are kept now
+(`docs/DATA_FORMAT.md`). Owner's choices: shows stay in the lists like any
+event (free; the data still flags them as needing a reservation). Paid classes
+get a **Booked activities** card on the Events tab, under My entries (day and
+★ Starred views): one row per product with its price and venue, a dropdown per
+booked session (change or × to remove) and `Another session…`. Booking stars
+the session and marks it reserved; only booked sessions reach the watch or the
+event lists. Booked products are listed first; the rest fold behind `Show all
+N`. Paid classes never get Last chance / Only show tags.
+
 **Reservation reminder** (item 9, part 2; owner's choices, 2026-09-25):
 - A buzzing alert the evening before, listing tomorrow's starred events that
   need a reservation and aren't marked reserved, plus a `To reserve` line on

@@ -60,6 +60,14 @@ LOGIN_CLIENT = ("Basic ZzlTMDIzdDc0NDczWlVrOTA5Rk42OEYwYjRONjdQU09oOTJvMDR2TDBCU
                 "NjY4NDZrUFF2MTc1MDk3NW9vZEg1TTh6QzZUYTdtMzBrSDJRNzhsMldtVTUwRkNncXBQMTN3NzczNzdrN0lC")
 TIMEOUT = 30
 PAGE = 200
+# Product types kept for the schedule (docs/DATA_FORMAT.md): the free activities,
+# plus the shows you reserve (ENTERTAINMENT) and the paid classes and experiences
+# (ACTIVITIES), which come through with "reservation" set. Spa, dining and shore
+# excursions are booking slots, not events. Keep in step with src/pkjs/royal.js.
+SCHEDULE_TYPES = ("NON_REVENUE_SCHEDULABLE", "ENTERTAINMENT", "ACTIVITIES")
+# Left out by title: NextCruise sales appointments (about 22 slots a day) would
+# push busy days past the watch's 160 events.
+SKIP_TITLES = re.compile(r"nextcruise", re.I)
 
 
 class SyncError(Exception):
@@ -162,6 +170,15 @@ def fetch_itinerary(sess, code: str, date8: str) -> list[dict]:
     return days
 
 
+def product_price(p: dict):
+    """The adult "from" price in dollars (cents kept), or None when none is listed."""
+    v = (p.get("startingFromPrice") or {}).get("adultPrice")
+    if not isinstance(v, (int, float)) or isinstance(v, bool) or v <= 0:
+        return None
+    v = round(float(v), 2)
+    return int(v) if v == int(v) else v
+
+
 def fetch_schedule(sess, code: str, date8: str) -> dict:
     cats, venues, events, seen = [], [], [], set()
 
@@ -175,7 +192,7 @@ def fetch_schedule(sess, code: str, date8: str) -> dict:
                            params={"sailingID": code + date8, "limit": str(PAGE), "offset": str(offset)}).get("payload") or {}
         products = payload.get("products") or []
         for p in products:
-            if ((p.get("productType") or {}).get("productType")) != "NON_REVENUE_SCHEDULABLE":
+            if ((p.get("productType") or {}).get("productType")) not in SCHEDULE_TYPES                     or SKIP_TITLES.search(p.get("productTitle") or ""):
                 continue
             parent, child = "Other", ""
             pcs = p.get("productCategory") or []
@@ -190,6 +207,10 @@ def fetch_schedule(sess, code: str, date8: str) -> dict:
             venue = index(venues, clean((p.get("productLocation") or {}).get("locationTitle")))
             title = clean(p.get("productTitle"))
             minutes = (p.get("productDuration") or {}).get("durationInMinutes") or 0
+            # Paid classes and experiences: only the sessions the owner picks on the
+            # settings page reach the watch (docs/DATA_FORMAT.md).
+            paid = 1 if (p.get("productType") or {}).get("productType") == "ACTIVITIES" else 0
+            price = product_price(p)
             for o in p.get("offering") or []:
                 d, t = o.get("offeringDate"), o.get("offeringTime")
                 if not d or len(d) != 8:
@@ -202,12 +223,13 @@ def fetch_schedule(sess, code: str, date8: str) -> dict:
                 seen.add(key)
                 events.append([title, venue, cat, date, time_, int(o.get("offeringDurationInMinutes") or minutes),
                                1 if (p.get("isFeatured") or o.get("isFeatured")) else 0,
-                               1 if p.get("isReservationRequired") else 0])
+                               1 if p.get("isReservationRequired") else 0, paid, price])
         if len(products) < PAGE:
             break
     events.sort(key=lambda e: (e[3], e[4] or "", e[0]))
     return {"published": bool(events), "cats": cats, "venues": venues,
-            "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation"],
+            "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation", "paid",
+                       "price"],
             "events": events}
 
 

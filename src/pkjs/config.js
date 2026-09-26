@@ -139,6 +139,14 @@ var CSS = [
   '.schip.done svg,.resbtn svg{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;',
   'stroke-linejoin:round;flex:none}.resbtn svg{width:16px;height:16px}.schip.done svg{width:14px;height:14px}',
   '.res .textbtn{min-height:40px;padding:0 12px;font-size:14px}.res .note{font-size:12px}',
+  '.booked{background:var(--surface-low);border-radius:28px;padding:12px 20px 8px;margin:0 0 12px}',
+  '.booked .mine-head small{color:var(--on-surface-variant)}',
+  '.bk{padding:10px 0;border-top:1px solid var(--surface-high)}.bk:first-of-type{border-top:0}',
+  '.bk b{display:block;font-weight:600}.bk .sess{display:flex;gap:8px;align-items:center;margin-top:6px}',
+  '.bk select{flex:1;min-width:0;min-height:40px;margin:0}',
+  '.bk .rm{width:40px;height:40px;flex:none;border-radius:20px;background:transparent;color:var(--on-surface-variant);',
+  'font-size:20px;line-height:1}',
+  '.booked .textbtn{min-height:40px;font-size:14px}',
   '.mine .ev{width:100%;padding:8px 0;background:none;color:inherit;text-align:left;min-height:48px}',
   '.mine .ev .tm{color:inherit;font-weight:700}',
   '.star{width:48px;height:48px;flex:none;border-radius:24px;background:transparent;',
@@ -264,7 +272,7 @@ var BODY = [
   '<label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/>',
   '<path d="M20 20l-4.5-4.5"/></svg><input type="search" id="evSearch" placeholder="Search events or venues" ',
   'aria-label="Search events or venues" autocomplete="off"></label>',
-  '<div class="daychips" id="evDays"></div><div id="evMine"></div><div id="evList"></div>',
+  '<div class="daychips" id="evDays"></div><div id="evMine"></div><div id="evBooked"></div><div id="evList"></div>',
   '</section>',
   '<section class="screen" id="me">',
   '<div class="card"><h2>Stateroom</h2>',
@@ -1159,7 +1167,8 @@ function pageMain(S, V) {
       var e = {
         title: row[fi.title], venue: (sched.venues || [])[row[fi.venue]] || '',
         cat: (sched.cats || [])[row[fi.cat]] || [], date: row[fi.date], time: row[fi.time],
-        minutes: row[fi.minutes] || 0, featured: !!row[fi.featured], reservation: !!row[fi.reservation]
+        minutes: row[fi.minutes] || 0, featured: !!row[fi.featured], reservation: !!row[fi.reservation],
+        paid: fi.paid !== undefined && !!row[fi.paid], price: fi.price !== undefined ? row[fi.price] : null
       };
       e.key = starKey(e.title, e.date, e.time, e.venue);
       e.search = (e.title + ' ' + e.venue).toLowerCase();
@@ -1429,6 +1438,113 @@ function pageMain(S, V) {
     $('evMine').innerHTML = html + '</div>';
   }
 
+  // ---- Booked activities: paid classes and experiences (escape room,
+  // FlowRider lessons, tastings) come as many sessions each. Only the ones
+  // picked here are starred and marked reserved, and only those reach the
+  // watch (slice.js buildEvents) or show in the lists above.
+  var showAllPaid = false;
+
+  function paidProducts() {
+    var byName = {};
+    var list = [];
+    allEvents.forEach(function(e) {
+      if (!e.paid || (isFinished(e.date, e.time, e.minutes) && !isStarred(e.key))) {
+        return;
+      }
+      var id = e.title + '|' + e.venue;
+      if (!byName[id]) {
+        byName[id] = {title: e.title, venue: e.venue, price: e.price, sessions: []};
+        list.push(byName[id]);
+      }
+      byName[id].sessions.push(e);
+    });
+    return list.sort(function(a, b) { return a.title < b.title ? -1 : a.title > b.title ? 1 : 0; });
+  }
+
+  function sessionLabel(e) {
+    return dayLabel(e.date) + ' \u00b7 ' + shortClock(e.time);
+  }
+
+  function sessionSelect(p, current) {
+    var picked = p.sessions.filter(function(e) { return isStarred(e.key); });
+    return '<select data-act="bkPick" data-from="' + esc(current ? current.key : '') + '" aria-label="' +
+      (current ? 'Session of ' : 'Pick a session of ') + esc(p.title) + '">' +
+      (current ? '' : '<option value="">' + (picked.length ? 'Another session\u2026' : 'Pick a session\u2026') +
+        '</option>') +
+      p.sessions.filter(function(e) {
+        return e === current || (!isStarred(e.key) && !isFinished(e.date, e.time, e.minutes));
+      }).map(function(e) {
+        return '<option value="' + esc(e.key) + '"' + (e === current ? ' selected' : '') + '>' +
+          esc(sessionLabel(e)) + '</option>';
+      }).join('') + '</select>';
+  }
+
+  function renderBooked() {
+    var products = evDates.length && (evDay === 'starred' || evDates.indexOf(evDay) !== -1) ? paidProducts() : [];
+    if (!products.length) {
+      $('evBooked').innerHTML = '';
+      return;
+    }
+    var booked = products.filter(function(p) { return p.sessions.some(function(e) { return isStarred(e.key); }); });
+    var rest = products.filter(function(p) { return booked.indexOf(p) === -1; });
+    var shown = booked.concat(showAllPaid ? rest : []);
+    var html = '<div class="booked"><div class="mine-head"><small>BOOKED ACTIVITIES' +
+      (booked.length ? ' &middot; ' + booked.length : '') + '</small></div>';
+    if (!booked.length) {
+      html += '<p class="muted">Paid classes and experiences you booked. Pick your session and it shows on the ' +
+        'watch with a reminder; the other sessions stay off it.</p>';
+    }
+    html += shown.map(function(p) {
+      var picked = p.sessions.filter(function(e) { return isStarred(e.key); });
+      var open = p.sessions.some(function(e) { return !isStarred(e.key) && !isFinished(e.date, e.time, e.minutes); });
+      var sub = [typeof p.price === 'number' ? '$' + p.price : '', p.venue].filter(Boolean).map(esc).join(' &middot; ');
+      return '<div class="bk"><b>' + esc(p.title) + '</b><span class="muted">' + sub + '</span>' +
+        picked.map(function(e) {
+          return '<div class="sess">' + sessionSelect(p, e) + '<button class="rm" data-act="bkRemove" data-key="' +
+            esc(e.key) + '" aria-label="Not booked: ' + esc(p.title) + ' ' + esc(sessionLabel(e)) + '">&times;</button></div>';
+        }).join('') + (open ? '<div class="sess">' + sessionSelect(p, null) + '</div>' : '') + '</div>';
+    }).join('');
+    if (rest.length) {
+      html += '<button class="textbtn" data-act="bkMore">' + (showAllPaid ? 'Show booked only' :
+        (booked.length ? 'Show ' + rest.length + ' more' : 'Show all ' + rest.length)) + '</button>';
+    }
+    $('evBooked').innerHTML = html + '</div>';
+  }
+
+  // Booking a session stars it and marks it reserved; unbooking clears both.
+  function setBooked(key, on) {
+    setMark(key, on);
+    setMark(resKey(key), on);
+  }
+
+  $('evBooked').addEventListener('change', function(ev) {
+    var s = ev.target.closest('[data-act=bkPick]');
+    if (!s || !s.value) {
+      return;
+    }
+    var from = s.getAttribute('data-from');
+    if (from) {
+      setBooked(from, false);
+    }
+    setBooked(s.value, true);
+    renderEvents();
+  });
+
+  $('evBooked').addEventListener('click', function(ev) {
+    var b = ev.target.closest('[data-act]');
+    if (!b) {
+      return;
+    }
+    if (b.getAttribute('data-act') === 'bkRemove') {
+      setBooked(b.getAttribute('data-key'), false);
+    } else if (b.getAttribute('data-act') === 'bkMore') {
+      showAllPaid = !showAllPaid;
+    } else {
+      return;
+    }
+    renderEvents();
+  });
+
   function renderEvList() {
     var q = $('evSearch').value.trim().toLowerCase();
     var html = '';
@@ -1451,7 +1567,8 @@ function pageMain(S, V) {
         if (e.finished && e.date === evDay && !q) {
           finishedCount++;
         }
-        return !e.finished;
+        // Paid sessions only once booked (Booked activities).
+        return !e.finished && (!e.paid || isStarred(e.key));
       });
       if (q) {
         // A venue's name also finds events listed under its other names.
@@ -1513,6 +1630,7 @@ function pageMain(S, V) {
     updateClashes();
     renderEvDays();
     renderMine();
+    renderBooked();
     renderEvList();
   }
 
@@ -1554,6 +1672,7 @@ function pageMain(S, V) {
     updateClashes();
     renderEvDays();
     renderMine();
+    renderBooked();
     Array.prototype.forEach.call($('evList').querySelectorAll('[data-act=star]'), function(sb) {
       var t = sb.closest('.ev').querySelector('.t');
       Array.prototype.forEach.call(t.querySelectorAll('.tags,.res'), function(old) { t.removeChild(old); });

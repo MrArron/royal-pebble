@@ -479,7 +479,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
   var whereOf = venues.whereFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
   var finals = finalShows(bundle);
 
-  function add(title, venue, date, time, minutes, flags, cat) {
+  function add(title, venue, date, time, minutes, flags, cat, paid) {
     var tod = minutesFromHhmm(time);
     // Royal lists after-midnight events under the evening's date (a 01:00 curfew
     // is dated the night before), so times before 04:00 are after that midnight.
@@ -493,8 +493,10 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
     var key = starKey(title, date, time, venue);
     if (stars[key]) {
       flags |= FLAG_STARRED;
-    } else if (cat && isHidden(hidden, cat)) {
-      return;  // filtered out, unless starred
+    } else if (paid || (cat && isHidden(hidden, cat))) {
+      // Filtered out unless starred. A paid session is starred when the owner
+      // picks it under Booked activities, so the others never reach the watch.
+      return;
     }
     if ((flags & FLAG_RESERVATION) && stars[reservedKey(key)]) {
       flags |= FLAG_RESERVED;
@@ -518,7 +520,8 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
     var flags = (row[f.featured] ? FLAG_FEATURED : 0) | (row[f.reservation] ? FLAG_RESERVATION : 0);
     var fin = finals[starKey(row[f.title], row[f.date], row[f.time], (sched.venues || [])[row[f.venue]])];
     flags |= fin === FINAL_LAST_CHANCE ? FLAG_LAST_CHANCE : fin === FINAL_ONLY_SHOW ? FLAG_ONLY_SHOW : 0;
-    add(row[f.title], (sched.venues || [])[row[f.venue]], row[f.date], row[f.time], row[f.minutes], flags, cat);
+    add(row[f.title], (sched.venues || [])[row[f.venue]], row[f.date], row[f.time], row[f.minutes], flags, cat,
+        f.paid !== undefined && !!row[f.paid]);
   });
 
   (settings.personal || []).forEach(function(p) {
@@ -542,7 +545,8 @@ function scheduleEvents(bundle) {
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
   return (sched.events || []).map(function(row) {
     var e = {title: row[f.title], venue: (sched.venues || [])[row[f.venue]] || '', date: row[f.date],
-             time: row[f.time] || null, minutes: row[f.minutes] || 0, featured: !!row[f.featured]};
+             time: row[f.time] || null, minutes: row[f.minutes] || 0, featured: !!row[f.featured],
+             paid: f.paid !== undefined && !!row[f.paid]};
     e.key = starKey(e.title, e.date, e.time, e.venue);
     return e;
   });
@@ -694,8 +698,8 @@ function finalShows(bundle) {
   var sailDays = daysFromIso(bundle.sailDate);
   var byTitle = {};
   scheduleEvents(bundle).forEach(function(e) {
-    if (!e.featured) {
-      return;
+    if (!e.featured || e.paid) {
+      return;  // paid classes are booked, not caught before they end
     }
     var t = (e.title || '').trim().toLowerCase();
     var shows = byTitle[t] = byTitle[t] || {};
