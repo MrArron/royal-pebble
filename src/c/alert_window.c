@@ -121,6 +121,13 @@ static void update_proc(Layer *layer, GContext *ctx) {
       }
     }
   }
+  if (!all_aboard && (a->from & ALARM_NOT_RESERVED)) {
+    graphics_context_set_text_color(ctx, g_theme->port_accent);
+    graphics_draw_text(ctx, "Not reserved", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 20;
+  }
   y += 4;
 
   if (count > 1) {

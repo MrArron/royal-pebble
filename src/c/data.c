@@ -93,7 +93,7 @@ void data_set_reminder(const Event *e, bool on) {
     .ref = e->start,
     .extra = (int16_t)e->minutes,
     .kind = ALARM_REMINDER,
-    .from = FROM_NONE << 2,
+    .from = (FROM_NONE << 2) | (event_not_reserved(e->flags) ? ALARM_NOT_RESERVED : 0),
     .where = e->where,
   };
   copy_text(a.title, sizeof(a.title), title);
@@ -105,6 +105,20 @@ void data_set_reminder(const Event *e, bool on) {
   }
   s_alarms[pos] = a;
   s_alarm_count++;
+}
+
+void data_update_reminder(const Event *e) {
+  if (!event_is_timed(e)) {
+    return;
+  }
+  char title[ALARM_TITLE_LEN];
+  copy_text(title, sizeof(title), e->title);
+  for (int i = 0; i < s_alarm_count; i++) {
+    Alarm *a = &s_alarms[i];
+    if (a->kind == ALARM_REMINDER && a->ref == e->start && same_text(a->title, title, ALARM_TITLE_LEN)) {
+      a->from = (a->from & ~ALARM_NOT_RESERVED) | (event_not_reserved(e->flags) ? ALARM_NOT_RESERVED : 0);
+    }
+  }
 }
 
 bool event_is_timed(const Event *e) { return e->start != NO_TIME; }

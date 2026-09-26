@@ -71,6 +71,10 @@ text. One compact JSON object, ASCII only.
     tell the user to check the times;
   - none: cancelled; drop the star.
 
+  A **Reserved** mark (`docs/DESIGN_V1_1.md` §5) is user data kept with the
+  stars, under the same key with `R|` in front; it moves or is dropped with its
+  star.
+
   Tell the user about every moved or dropped star. Skip the check for a
   different sailing (ship or sail date) and when the new schedule is empty (not
   published, or a failed fetch), so stars are never dropped for that. Per-day settings are keyed by date; an itinerary edit

@@ -3,8 +3,9 @@
 #include "ui.h"
 
 // Event details: title, venue, deck and position, time and duration,
-// reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §8.4).
-// Hold Select toggles the star.
+// reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §5, §8.4).
+// Hold Select toggles the star; Select toggles Reserved on a starred event
+// that needs a reservation.
 
 static Window *s_window;
 static Layer *s_top_bar;
@@ -75,7 +76,14 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
     y = draw_line(ctx, line, FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent, PAD, y - 2, w, 32) + 2;
   }
 
-  if (e->flags & EVENT_RESERVATION) {
+  // Starred: "Not reserved yet" or "✓ Reserved"; unstarred: the plain note.
+  bool track = (e->flags & EVENT_STARRED) && (e->flags & EVENT_RESERVATION);
+  if (track && (e->flags & EVENT_RESERVED)) {
+    draw_reserved(ctx, true, PAD, y, g_theme->sea_accent);
+    y += 22;
+  } else if (track) {
+    y = draw_line(ctx, "Not reserved yet", FONT_KEY_GOTHIC_18_BOLD, g_theme->port_accent, PAD, y, w, 22) + 2;
+  } else if (e->flags & EVENT_RESERVATION) {
     y = draw_line(ctx, "Reservation needed", FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent,
                   PAD, y, w, 18) + 2;
   }
@@ -90,9 +98,17 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
     draw_star(ctx, GPoint(PAD + 6, y + 12), g_theme->sea_accent);
     draw_line(ctx, "Starred", FONT_KEY_GOTHIC_18_BOLD, g_theme->sea_accent, PAD + 16, y,
               w - 16, 22);
+    if (track) {
+      draw_line(ctx, (e->flags & EVENT_RESERVED) ? "Select: not reserved" : "Select: mark reserved",
+                FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y + 22, w, 18);
+    }
   } else {
     draw_line(ctx, "Hold Select to star", FONT_KEY_GOTHIC_18, g_theme->muted, PAD, y, w, 22);
   }
+}
+
+static void select_click(ClickRecognizerRef recognizer, void *context) {
+  toggle_reserved(s_index);
 }
 
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
@@ -100,6 +116,7 @@ static void select_long_click(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void click_config(void *context) {
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
   window_long_click_subscribe(BUTTON_ID_SELECT, 500, select_long_click, NULL);
 }
 

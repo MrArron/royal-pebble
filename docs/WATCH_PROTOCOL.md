@@ -106,7 +106,7 @@ The phone also sends a slice by itself whenever the app starts (`ready`).
 |---|---|
 | 4 | `start`: int32 cruise minutes, −1 for untimed |
 | 2 | `minutes`: uint16 duration, 0 if unknown |
-| 1 | `flags`: 1 starred, 2 featured, 4 reservation needed, 8 personal entry, 16 last chance, 32 only show |
+| 1 | `flags`: 1 starred, 2 featured, 4 reservation needed, 8 personal entry, 16 last chance, 32 only show, 64 reserved (only with 4; kept when unstarred, shown only while starred) |
 | 4 | `where`: where the venue is (below) |
 | 1 | title length `n` (≤ 63) |
 | n | title, UTF-8 |
@@ -154,7 +154,7 @@ hour), to check alerts on the watch with any data, before the cruise too.
 | 4 | `ref`: int32 cruise minutes, the all-aboard time or event start |
 | 2 | `extra`: int16, local offset (all-aboard) or duration (reminder) |
 | 1 | `kind`: 0 all-aboard, 1 reminder |
-| 1 | `from`: "From" directions (reminders; 0 otherwise), below |
+| 1 | `from`: "From" directions (reminders; 0 otherwise), below; plus 16 when the event is starred, needs a reservation and isn't marked reserved (the alert shows `Not reserved`) |
 | 4 | `where`: as in events (reminders; zeros for all-aboard), but relative to the previous venue when `from` is a route |
 | 1 + n | title (location or event title), ≤ 31 bytes |
 | 1 + m | venue (its short name), ≤ 17 bytes |
@@ -228,7 +228,13 @@ in a slice:
 
 - The queue keeps one entry per event (start, title and venue, cut to 39 and 23
   bytes like notices, plus the watch day for untimed entries and the sail date);
-  a later change to the same event replaces it. At most 8; a ninth event drops
+  a later change to the same event replaces it.
+- **Reserved** (`docs/DESIGN_V1_1.md` §5) goes the same way: a short Select on
+  the details of a starred event that needs a reservation toggles flag 64 and
+  queues a change with bit 1 of `on` set. Star and Reserved changes of one event
+  are separate entries. The phone keeps the mark with the stars under
+  `R|` + the star key, so it has its own change time and the latest change wins
+  as for stars. At most 8; a ninth event drops
   the oldest. Saved in persistent keys 30-33.
 - The watch sends the whole queue after every star change, after every slice it
   receives, and when the phone connects again. A failed send is retried 3 times,
@@ -262,7 +268,7 @@ in a slice:
 | 4 | `sail`: int32 days since 1970 of the sail date the change belongs to |
 | 4 | `start`: int32 cruise minutes, −1 for untimed |
 | 2 | `day`: int16 watch day of the slice it was made on (matches untimed entries) |
-| 1 | `on`: 1 starred, 0 unstarred |
+| 1 | `on`: bit 0 the new state (starred, or reserved); bit 1 set when the change is to Reserved rather than the star |
 | 1 + n | title, ≤ 39 bytes (may end mid-character) |
 | 1 + m | venue, ≤ 23 bytes |
 

@@ -939,6 +939,99 @@ test('the latest star change wins between the watch and the settings page', func
   assert.strictEqual(times[key], 7000 * 1000);
 });
 
+test('Reserved: flag, alert mark, watch changes and the latest change wins', function() {
+  var ice = ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 1, 1];   // needs a reservation
+  var comedy = ['Comedy', 0, 0, '2027-03-07', '21:30', 45, 0, 0];  // doesn't
+  var b = makeBundle([ice, comedy]);
+  var iceKey = keyOf(ice);
+  var comedyKey = keyOf(comedy);
+  var now = at('2027-03-07', 12, 0);
+  var stars = {};
+  stars[iceKey] = true;
+  stars[comedyKey] = true;
+
+  function flagsOf(st, title) {
+    return slice.buildSlice(b, {}, st, now).events.filter(function(e) { return e.title === title; })[0].flags;
+  }
+  function reminder(st, title) {
+    return slice.buildAlarms(b, {}, st, now).filter(function(a) { return a.title === title; })[0];
+  }
+
+  // Starred, not reserved: no flag, and its reminder says so.
+  assert.strictEqual(flagsOf(stars, 'Ice Show') & slice.FLAG_RESERVED, 0);
+  assert.strictEqual(reminder(stars, 'Ice Show').notReserved, true);
+  assert.strictEqual(reminder(stars, 'Comedy').notReserved, false);
+  assert.strictEqual(pack.encodeAlarm(reminder(stars, 'Ice Show'))[11] & 16, 16);
+  assert.strictEqual(pack.encodeAlarm(reminder(stars, 'Comedy'))[11] & 16, 0);
+
+  // Reserved: the flag, and no alert mark.
+  stars[slice.reservedKey(iceKey)] = true;
+  assert.strictEqual(flagsOf(stars, 'Ice Show') & slice.FLAG_RESERVED, slice.FLAG_RESERVED);
+  assert.strictEqual(reminder(stars, 'Ice Show').notReserved, false);
+  // Unstarred, the mark is kept (and sent) but the star is gone.
+  delete stars[iceKey];
+  var flags = flagsOf(stars, 'Ice Show');
+  assert.deepStrictEqual([flags & slice.FLAG_STARRED, flags & slice.FLAG_RESERVED], [0, slice.FLAG_RESERVED]);
+  // Only events that need a reservation get the flag.
+  stars[slice.reservedKey(comedyKey)] = true;
+  assert.strictEqual(flagsOf(stars, 'Comedy') & slice.FLAG_RESERVED, 0);
+  // Reserved keys don't count as stars.
+  assert.strictEqual(slice.buildSlice(b, {}, stars, now).cruiseStarred, 1);
+
+  // From the watch: a Reserved change round-trips and lands on the reserved key.
+  var e = sliceEvent(b, {}, now, 'Ice Show');
+  var bytes = pack.encodeStarChange({seq: 5, at: 1000, sail: 20883, start: e.start, day: 0, on: true, reserved: true,
+                                     title: 'Ice Show', venue: 'Studio B'});
+  assert.strictEqual(bytes[18], 3);
+  var c = pack.decodeStarChanges(bytes)[0];
+  assert.deepStrictEqual([c.on, c.reserved], [true, true]);
+  var st = {};
+  st[iceKey] = true;
+  var times = {};
+  var r = slice.applyWatchStarChanges(b, {}, st, times, [c]);
+  assert.deepStrictEqual(r.applied, [{key: slice.reservedKey(iceKey), on: true, reserved: true}]);
+  assert.deepStrictEqual([st[iceKey], st[slice.reservedKey(iceKey)]], [true, true]);
+  assert.strictEqual(times[slice.reservedKey(iceKey)], 1000 * 1000);
+  assert.strictEqual(times[iceKey], undefined, 'the star keeps its own time');
+  // An older Reserved change from the watch loses to a newer one from the page.
+  times[slice.reservedKey(iceKey)] = 2000 * 1000;
+  c.on = false;
+  r = slice.applyWatchStarChanges(b, {}, st, times, [c]);
+  assert.deepStrictEqual([r.ignored.length, st[slice.reservedKey(iceKey)]], [1, true]);
+  // The page's changes use the same keys.
+  var changes = {};
+  changes[slice.reservedKey(iceKey)] = false;
+  slice.applyStarChanges(st, changes, times, null, 3000 * 1000);
+  assert.strictEqual(st[slice.reservedKey(iceKey)], undefined);
+});
+
+test('Reserved: marks follow a rescheduled star, and their times are pruned like stars', function() {
+  var ice = ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 1, 1];
+  var iceLate = ['Ice Show', 0, 0, '2027-03-07', '21:30', 60, 1, 1];
+  var gone = ['Gone Show', 0, 0, '2027-03-07', '18:00', 60, 1, 1];
+  var stars = {};
+  stars[keyOf(ice)] = true;
+  stars[slice.reservedKey(keyOf(ice))] = true;
+  stars[keyOf(gone)] = true;
+  stars[slice.reservedKey(keyOf(gone))] = true;
+  var times = {};
+  times[slice.reservedKey(keyOf(ice))] = 1000;
+  var fresh = makeBundle([iceLate]);
+  var r = slice.reconcileStars(makeBundle([ice, gone]), fresh, stars, {}, at('2027-03-07', 12, 0), times);
+  assert.deepStrictEqual(r.changes.map(function(x) { return x.kind; }), ['cancelled', 'moved']);
+  var want = {};
+  want[keyOf(iceLate)] = true;
+  want[slice.reservedKey(keyOf(iceLate))] = true;
+  assert.deepStrictEqual(r.stars, want);
+  assert.strictEqual(r.times[slice.reservedKey(keyOf(iceLate))], 1000);
+
+  var pruned = slice.pruneStarTimes(r.times, fresh, {}, {});
+  assert.deepStrictEqual(Object.keys(pruned), [slice.reservedKey(keyOf(iceLate))]);
+  var old = {};
+  old[slice.reservedKey(keyOf(gone))] = 5;
+  assert.deepStrictEqual(slice.pruneStarTimes(old, fresh, {}, {}), {});
+});
+
 test('cutoffWhen gives the ship-time date and clock of what the watch could not save', function() {
   var now = at('2027-03-07', 10, 0);
   assert.strictEqual(slice.cutoffWhen('2027-03-06', slice.NO_TIME, now), null);

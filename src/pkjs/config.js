@@ -129,6 +129,16 @@ var CSS = [
   '.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}',
   '.schip.clash{display:inline-flex;align-items:center;gap:6px;background:var(--warning-container);',
   'color:var(--on-warning-container)}.schip.clash svg{width:6px;height:14px;flex:none}',
+  '.res{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}',
+  '.schip.need{display:inline-flex;align-items:center;background:var(--warning-container);',
+  'color:var(--on-warning-container)}',
+  '.schip.done{display:inline-flex;align-items:center;gap:4px;background:var(--primary-container);',
+  'color:var(--on-primary-container)}',
+  '.resbtn{min-height:40px;padding:0 16px;border-radius:20px;background:var(--secondary-container);',
+  'color:var(--on-secondary-container);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px}',
+  '.schip.done svg,.resbtn svg{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;',
+  'stroke-linejoin:round;flex:none}.resbtn svg{width:16px;height:16px}.schip.done svg{width:14px;height:14px}',
+  '.res .textbtn{min-height:40px;padding:0 12px;font-size:14px}.res .note{font-size:12px}',
   '.mine .ev{width:100%;padding:8px 0;background:none;color:inherit;text-align:left;min-height:48px}',
   '.mine .ev .tm{color:inherit;font-weight:700}',
   '.star{width:48px;height:48px;flex:none;border-radius:24px;background:transparent;',
@@ -1111,7 +1121,9 @@ function pageMain(S, V) {
   var editing = null;    // index in personal, -1 for a new entry, null when closed
   var allEvents = [];
   var evDates = [];
-  var evDay = null;      // a date, 'starred' or 'clashes'
+  var evDay = null;      // a date, 'starred', 'reserve' or 'clashes'
+  var CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+  var evByKey = {};
   var STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 ' +
     '1-6.1-4.4-4.3 6.1-.9z"/></svg>';
 
@@ -1151,6 +1163,7 @@ function pageMain(S, V) {
       };
       e.key = starKey(e.title, e.date, e.time, e.venue);
       e.search = (e.title + ' ' + e.venue).toLowerCase();
+      evByKey[e.key] = e;
       return e;
     }).sort(function(a, b) {
       return a.date < b.date ? -1 : a.date > b.date ? 1 : dayMinutes(a.time) - dayMinutes(b.time) ||
@@ -1184,6 +1197,61 @@ function pageMain(S, V) {
 
   function isStarred(key) {
     return starChanges.hasOwnProperty(key) ? starChanges[key] : !!savedStars[key];
+  }
+
+  // Reserved marks (docs/DESIGN_V1_1.md §5) travel with the stars under
+  // slice.js reservedKey ('R|' + star key), so they go back the same way and
+  // the latest change wins against the watch. Unstarring keeps the mark.
+  function resKey(key) {
+    return 'R|' + key;
+  }
+
+  function isReserved(key) {
+    return isStarred(resKey(key));
+  }
+
+  function setMark(key, on) {
+    if (on === !!savedStars[key]) {
+      delete starChanges[key];
+      delete starTimes[key];
+    } else {
+      starChanges[key] = on;
+      starTimes[key] = Date.now();
+    }
+  }
+
+  // Upcoming starred events that need a reservation and aren't marked.
+  function needsReserving(e) {
+    return e.reservation && isStarred(e.key) && !isReserved(e.key) && !isFinished(e.date, e.time, e.minutes);
+  }
+
+  var toReserve = 0;
+
+  function countToReserve() {
+    toReserve = allEvents.filter(needsReserving).length;
+  }
+
+  // The reservation line under an event (§5): a chip and a button while
+  // starred, a plain note when not.
+  function resBlock(e) {
+    if (!e || !e.reservation) {
+      return '';
+    }
+    var name = esc(e.title);
+    if (!isStarred(e.key)) {
+      return '<div class="res"><span class="muted note">Reservation needed &middot; star it to track</span></div>';
+    }
+    if (isReserved(e.key)) {
+      return '<div class="res"><span class="schip done">' + CHECK_SVG + 'Reserved</span><button class="textbtn" ' +
+        'data-act="res" data-key="' + esc(e.key) + '" aria-label="Not reserved: ' + name + '">Not reserved</button></div>';
+    }
+    return '<div class="res"><span class="schip need">Reservation needed</span><button class="resbtn" data-act="res" ' +
+      'data-key="' + esc(e.key) + '" aria-label="Mark reserved: ' + name + '">' + CHECK_SVG + 'Mark reserved</button></div>';
+  }
+
+  // Everything under an event row's title that changes with its star.
+  function eventExtras(e) {
+    return e ? resBlock(e) + eventTags(e) : '';
   }
 
   // Clash chips (docs/DESIGN_V1_1.md §8.3) by event key and by personal entry
@@ -1279,22 +1347,22 @@ function pageMain(S, V) {
     if (lengthText(e)) {
       bits.push(lengthText(e));
     }
-    if (e.reservation) {
-      bits.push('Reservation');
-    }
     if (movedTo[e.key]) {
       var c = movedTo[e.key];
       bits.push('<span class="moved">Moved, was ' + (c.to.time !== c.time || c.to.date !== c.date ?
         esc(shortClock(c.time)) : esc(c.venue)) + '</span>');
     }
     return '<div class="ev"><span class="tm">' + shortClock(e.time) + '</span><span class="t"><b>' + esc(e.title) +
-      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + eventTags(e) + '</span>' +
+      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + eventExtras(e) + '</span>' +
       '<button class="star" data-act="star" data-key="' + esc(e.key) + '" aria-pressed="' + on + '" aria-label="' +
       (on ? 'Unstar ' : 'Star ') + esc(e.title) + '">' + STAR_SVG + '</button></div>';
   }
 
   function renderEvDays() {
     var lead = evDates.length ? [['starred', '&starf; Starred']] : [];
+    if (toReserve || evDay === 'reserve') {
+      lead.push(['reserve', 'To reserve &middot; ' + toReserve]);
+    }
     if (clashes.count) {
       lead.push(['clashes', 'Clashes &middot; ' + clashes.count]);
     }
@@ -1333,7 +1401,8 @@ function pageMain(S, V) {
   }
 
   function renderMine() {
-    if (!evDates.length) {
+    // Personal entries never need reserving, so the To reserve list leaves them out.
+    if (!evDates.length || evDay === 'reserve') {
       $('evMine').innerHTML = '';
       return;
     }
@@ -1392,6 +1461,10 @@ function pageMain(S, V) {
         });
       } else if (evDay === 'starred') {
         list = upcoming.filter(function(e) { return isStarred(e.key); });
+      } else if (evDay === 'reserve') {
+        // Marked rows stay until the next visit, so a mark can be undone.
+        list = upcoming.filter(function(e) { return needsReserving(e) || shownToReserve[e.key]; });
+        list.forEach(function(e) { shownToReserve[e.key] = true; });
       } else if (evDay === 'clashes') {
         list = upcoming.filter(function(e) { return !!clashes.byKey[e.key]; });
       } else {
@@ -1410,7 +1483,8 @@ function pageMain(S, V) {
       html = shown.length ? '<div class="ev-list">' + shown.map(function(e) {
         return eventRow(e, !!q || evDates.indexOf(evDay) === -1);
       }).join('') + '</div>' : '<div class="card"><p class="muted">' + (q ? 'No events match.' :
-        evDay === 'clashes' ? 'No clashes left.' : evDay === 'starred' ? 'Nothing starred coming up. Tap the star next to an event, here or on the watch ' +
+        evDay === 'clashes' ? 'No clashes left.' :
+        evDay === 'reserve' ? 'Every starred event that needs a reservation is marked reserved.' : evDay === 'starred' ? 'Nothing starred coming up. Tap the star next to an event, here or on the watch ' +
           '(hold Select).' : 'No events this day.') + '</p></div>';
       if (list.length > shown.length) {
         html += '<p class="help">Showing the first ' + shown.length + ' of ' + list.length + '. Search to narrow it down.</p>';
@@ -1432,7 +1506,10 @@ function pageMain(S, V) {
     $('evList').innerHTML = html;
   }
 
+  var shownToReserve = {};  // rows on the To reserve list, kept while it is open
+
   function renderEvents() {
+    countToReserve();
     updateClashes();
     renderEvDays();
     renderMine();
@@ -1445,6 +1522,7 @@ function pageMain(S, V) {
     var b = ev.target.closest('[data-day]');
     if (b) {
       evDay = b.getAttribute('data-day');
+      shownToReserve = {};
       $('evSearch').value = '';
       renderEvents();
     }
@@ -1456,32 +1534,30 @@ function pageMain(S, V) {
       openVenue(vCanon[vb.getAttribute('data-venue')] || vb.getAttribute('data-venue'), 'events', null);
       return;
     }
-    var b = ev.target.closest('[data-act=star]');
+    var rb = ev.target.closest('[data-act=res]');
+    var b = rb || ev.target.closest('[data-act=star]');
     if (!b) {
       return;
     }
     var key = b.getAttribute('data-key');
-    var on = !isStarred(key);
-    if (on === !!savedStars[key]) {
-      delete starChanges[key];
-      delete starTimes[key];
+    if (rb) {
+      setMark(resKey(key), !isReserved(key));
     } else {
-      starChanges[key] = on;
-      starTimes[key] = Date.now();
+      var on = !isStarred(key);
+      setMark(key, on);
+      b.setAttribute('aria-pressed', String(on));
+      b.setAttribute('aria-label', (on ? 'Unstar ' : 'Star ') + b.closest('.ev').querySelector('b').textContent);
     }
-    b.setAttribute('aria-pressed', String(on));
-    b.setAttribute('aria-label', (on ? 'Unstar ' : 'Star ') + b.closest('.ev').querySelector('b').textContent);
-    // Clash chips change with the star; rows stay put so a star can be undone.
+    // Clash chips and the reservation line change with the star; rows stay put
+    // so a change can be undone.
+    countToReserve();
     updateClashes();
     renderEvDays();
     renderMine();
     Array.prototype.forEach.call($('evList').querySelectorAll('[data-act=star]'), function(sb) {
       var t = sb.closest('.ev').querySelector('.t');
-      var old = t.querySelector('.tags');
-      if (old) {
-        t.removeChild(old);
-      }
-      t.insertAdjacentHTML('beforeend', eventTags({key: sb.getAttribute('data-key')}));
+      Array.prototype.forEach.call(t.querySelectorAll('.tags,.res'), function(old) { t.removeChild(old); });
+      t.insertAdjacentHTML('beforeend', eventExtras(evByKey[sb.getAttribute('data-key')]));
     });
   });
 

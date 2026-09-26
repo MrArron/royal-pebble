@@ -19,7 +19,8 @@ var CATS = [
   ['Entertainment', 'Music & Dance']
 ];
 
-// [title, venue, cat, offset from the base time (null = untimed), minutes, featured, reservation, starred]
+// [title, venue, cat, offset from the base time (null = untimed), minutes, featured, reservation, starred,
+//  reserved]
 var PORT_EVENTS = [
   ['Scavenger Hunt Sheets', 'Guest Services', 1, null, 0, 0, 0, 0],
   ['Sunrise Stretch', 'Solarium', 3, -150, 30, 0, 0, 0],
@@ -40,12 +41,14 @@ var SEA_EVENTS = [
   ['Morning Walk-a-thon', 'Running Track', 3, -120, 45, 0, 0, 0],
   ['Art Auction Preview', 'Art Gallery', 1, -30, 90, 0, 0, 0],
   ['Pool Games', 'Pool Deck', 1, -15, 45, 0, 0, 0],
-  ['Sail Away Karaoke Party', 'On Air', 4, 20, 45, 0, 0, 1],
-  ['Ice Show: 1887', 'Studio B', 0, 60, 60, 1, 1, 0],
+  ['Sail Away Karaoke Party', 'On Air', 4, 20, 45, 0, 0, 0],
+  // Starred shows needing a reservation: one not marked reserved yet (Home's
+  // NEXT card), one reserved (a Home item).
+  ['Ice Show: 1887', 'Studio B', 0, 60, 60, 1, 1, 1],
   ['Towel Folding Demo', 'Royal Promenade', 1, 60, 30, 0, 0, 0],
   ['Jewelry Blowout', 'Royal Promenade', 2, 90, 120, 0, 0, 0],
   ['Name That Tune', 'Music Hall', 1, 120, 45, 0, 0, 0],
-  ['Mamma Mia!', 'Royal Theater', 0, 240, 120, 1, 1, 0],
+  ['Mamma Mia!', 'Royal Theater', 0, 240, 120, 1, 1, 1, 1],
   ['Silent Disco', 'Boardwalk', 4, 330, 90, 0, 0, 0]
 ];
 
@@ -114,6 +117,9 @@ function make(now, variant) {
     }
     if (e[7]) {
       stars[slice.starKey(e[0], date, time, e[1])] = true;
+    }
+    if (e[8]) {
+      stars[slice.reservedKey(slice.starKey(e[0], date, time, e[1]))] = true;
     }
     return [e[0], venues.indexOf(e[1]), e[2], date, time, e[4], e[5], e[6]];
   });

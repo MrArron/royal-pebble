@@ -81,21 +81,23 @@ static bool change_matches(const StarChange *c, const Event *e, int32_t day) {
          same_text(c->venue, e->venue, SHORT_VENUE_LEN - 1);
 }
 
+// Same event and the same kind of change (star or Reserved).
 static bool same_event(const StarChange *a, const StarChange *b) {
   return a->sail_days == b->sail_days && a->start == b->start &&
+         (a->on & STAR_CHANGE_RESERVED) == (b->on & STAR_CHANGE_RESERVED) &&
          (a->start != NO_TIME || a->day == b->day) &&
          same_text(a->title, b->title, SHORT_TITLE_LEN) &&
          same_text(a->venue, b->venue, SHORT_VENUE_LEN);
 }
 
-void stars_record(const Event *e, bool on) {
+void stars_record(const Event *e, bool reserved, bool on) {
   StarChange c = {
     .seq = s_meta.next_seq++,
     .at = (int32_t)time(NULL),
     .sail_days = data_meta()->sail_days,
     .start = e->start,
     .day = (int16_t)data_day()->index,
-    .on = on ? 1 : 0,
+    .on = (on ? STAR_CHANGE_ON : 0) | (reserved ? STAR_CHANGE_RESERVED : 0),
   };
   strncpy(c.title, e->title, sizeof(c.title) - 1);
   strncpy(c.venue, e->venue, sizeof(c.venue) - 1);
@@ -135,13 +137,21 @@ void stars_apply(void) {
       if (!change_matches(c, e, day)) {
         continue;
       }
+      bool on = (c->on & STAR_CHANGE_ON) != 0;
+      if (c->on & STAR_CHANGE_RESERVED) {
+        if (((e->flags & EVENT_RESERVED) != 0) != on) {
+          e->flags ^= EVENT_RESERVED;
+          data_update_reminder(e);
+        }
+        continue;
+      }
       bool was = (e->flags & EVENT_STARRED) != 0;
-      if (was == (c->on != 0)) {
+      if (was == on) {
         continue;
       }
       e->flags ^= EVENT_STARRED;
       if (!(e->flags & EVENT_PERSONAL)) {
-        data_set_reminder(e, c->on != 0);
+        data_set_reminder(e, on);
       }
     }
   }

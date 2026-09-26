@@ -53,7 +53,7 @@ int toggle_star(int event_index) {
     data_set_reminder(e, on);
   }
   // Queued until the phone confirms it, so it survives the phone being away.
-  stars_record(e, on);
+  stars_record(e, false, on);
   stars_send();
   store_save();
   alarms_schedule();
@@ -65,6 +65,23 @@ int toggle_star(int event_index) {
   refresh_all();
   after_save();
   return clash;
+}
+
+bool toggle_reserved(int event_index) {
+  Event *e = data_event(event_index);
+  // Reserved only applies to starred events that need a reservation (§5).
+  if (!(e->flags & EVENT_STARRED) || !(e->flags & EVENT_RESERVATION)) {
+    return false;
+  }
+  e->flags ^= EVENT_RESERVED;
+  data_update_reminder(e);
+  stars_record(e, true, (e->flags & EVENT_RESERVED) != 0);
+  stars_send();
+  store_save();
+  vibes_short_pulse();
+  refresh_all();
+  after_save();
+  return true;
 }
 
 void demo_next(void) {
