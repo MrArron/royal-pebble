@@ -264,6 +264,36 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
 - **Export:** a Usage log card on the settings page Me tab with Copy log (plain
   text), entry count and size, Clear log and an on/off switch. When full, the
   oldest entries drop first.
+- **Export design (settled 2026-09-26 from a probe app on the owner's Android
+  phone):** the settings page opens as a `data:` URL in the Pebble app's Android
+  WebView (Chrome 153), which blocks every way of saving or sharing a file
+  (`<a download>` with data: or blob: URLs does nothing; no `navigator.share` or
+  `navigator.clipboard`; `intent:` and `mailto:` links error). Copying a textarea
+  with `document.execCommand('copy')` works up to 512 KB (1 MB fails). So:
+  - **Copy in parts:** each part at most 384 KB, buttons "Copy part 1 of N", each
+    part starting with the log header and its part number. A tip on the card says
+    to paste with long-press > Paste: the keyboard's clipboard suggestion cut a
+    paste to 20,000 characters.
+  - **Cap 768 KB of log text** (two parts). The phone script's `localStorage` holds
+    about 5 M characters for all keys together (one key saved 4 M; keys adding up
+    stopped at 4.6 M), so the log fits beside the cruise bundle; saving a full log
+    takes about 12 ms and loading it 1 ms. If storage fills anyway, the log drops
+    its oldest entries until it saves.
+  - **Page-size guard:** a `data:` URL of about 2 MB or more never loads (1,850 KB
+    did), and text grows about 1.6x in the URL. The phone measures the page URL
+    before opening it; past 1.8 MB the page gets the newest entries that fit and
+    says so. Nothing is deleted. A page that comes back with no result while over
+    1 MB halves that limit for the next open, until a page returns a result (a
+    page that doesn't load stays broken across reinstalls, since reinstalling
+    keeps `localStorage`).
+  - **Entries** are stored as `[ms, cruise day, minute of that day, kind, detail]`
+    and rendered when copied, as `2026-09-26 14:03:12  D3 14:03  setting  theme:
+    "light" -> "dark"` (D1 is sail day; before sailing D-1, D-2...). On by default;
+    the device label is empty until set.
+  - **Later, optional:** automatic upload to the owner's Google Drive when online
+    is possible (the page and phone script can reach the internet), but it would
+    be the app's first internet use beyond Royal's servers, so it needs the owner's
+    OK first.
 - **Build order:** PR 1 phone log store, Usage log card and phone-side events;
   PR 2 the watch → phone log message, the watch queue and watch-side events;
   PR 3 Map check.
@@ -358,6 +388,13 @@ simple question such as "how do I get to my cabin from the Windjammer". Uses the
 Dictation API with the Pebble app's on-phone speech recognition, keyword-matched
 against the venue table and directory. Needs an airplane-mode test on Android and
 iOS first. See `docs/FUTURE_VOICE_QUERIES.md`.
+
+**Native Android companion app** (asked 2026-09-26; decided to stay on PebbleKit
+JS until after the sailing): voice dictation goes through the Pebble app either
+way, copy-in-parts covers the usage log export, and it would be a large rebuild
+with unconfirmed support for third-party PebbleKit Android apps in the new Pebble
+app. Revisit for v2 after two cheap probes: dictation in airplane mode, and
+whether the Pebble app accepts a PebbleKit Android companion.
 
 ### Out of scope
 
