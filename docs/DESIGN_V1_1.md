@@ -917,9 +917,9 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
 
 ### 9.6 Voice (concept, later)
 
-`WatchVoice*`. Still under "Later" in the brief: nothing here is scheduled until
-the airplane-mode dictation test in `docs/FUTURE_VOICE_QUERIES.md` passes on the
-owner's phone.
+`WatchVoice*`. Now Phase 4 in the brief (2026-09-26): nothing here is built
+until that phase's scope session, which includes the airplane-mode dictation
+test in `docs/FUTURE_VOICE_QUERIES.md` on the owner's phone.
 
 - **Hold Select** on Home or on a Route screen starts dictation. (On place pages
   Hold Select is the restroom route.) Check it doesn't clash with any firmware
@@ -1017,8 +1017,9 @@ For the build PRs:
 8. **Button hints:** first 3 opens (and after an update adds a button), with an
    Always show toggle in the phone's Help section.
 9. **Help section** in the phone settings (voice commands, controls, notes).
-10. **Voice:** designed as a concept; stays under "Later" until the dictation
-    test passes.
+10. **Voice:** designed as a concept; Phase 4 in the brief since 2026-09-26,
+    starting with a scope session (companion app or current setup) that
+    includes the dictation test.
 11. **Route start (2026-09-26):** the 15-minute rule, not "the last starred
     venue until 04:00" (9.4).
 12. **No `~` on distances (2026-09-26):** every figure is approximate in an

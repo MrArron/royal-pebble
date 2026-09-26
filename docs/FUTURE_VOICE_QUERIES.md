@@ -1,7 +1,9 @@
-# Future idea: offline voice questions (v2+, not scheduled)
+# Offline voice questions (v1.1 Phase 4)
 
-Status: idea only, not in v1.1. Researched 2026-09-24. Belongs under
-"Later (v2+), not in v1.1" in `docs/PROJECT_BRIEF.md` (suggested line at the bottom).
+Status: researched 2026-09-24; scheduled as v1.1 Phase 4 on 2026-09-26
+(`docs/PROJECT_BRIEF.md`). The phase starts with a scope session that decides
+between a native Android companion app and the current setup, using the tests
+below.
 
 ## The idea
 
@@ -55,13 +57,6 @@ Tiny test app that starts a dictation session and shows the returned text.
 Pass = text returns in airplane mode on the target phone. Then the feature can be
 scoped; the directions logic from v1.1 item 3 (Directions from the previous event)
 and the ship directory (item 4) are reused for the answers.
-
-## Suggested line for "Later (v2+)" in PROJECT_BRIEF.md
-
-> Offline voice questions (e.g. "how do I get to my cabin from the Windjammer"):
-> Dictation API with the Pebble app's on-phone speech recognition, keyword-matched
-> against the venue table and directory. Needs an airplane-mode test on Android and
-> iOS first. See `docs/FUTURE_VOICE_QUERIES.md`.
 
 ## Sources
 

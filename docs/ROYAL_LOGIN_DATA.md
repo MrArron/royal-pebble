@@ -90,10 +90,11 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
   countdowns.
 - `portInfo[].pointsOfInterest[]` sometimes has `latitude`/`longitude` (3 of
   16 points). **In the bundle** as `lat`/`lon` of the first point with
-  coordinates: approximate, but good enough for the Phase 3 sunrise/sunset
-  formula in place of the built-in port table.
+  coordinates: approximate, but good enough for the sunrise/sunset formula
+  (sun reminders, now a future concept in the brief) in place of the built-in
+  port table.
 - `portInfo[].bazaarDayType` (`ANCHOR` / `DESTINATION`) might mark tender ports
-  (Phase 3, tender-day warning). Not copied; check against a known tender port
+  (Phase 3 item 23, tender-day warning). Not copied; check against a known tender port
   first.
 - `departurePortInformation.timeZoneName` gives the embark port's time zone.
   **In the bundle** as `embarkTimeZone`. Might help the ship-time default; port
@@ -111,9 +112,11 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
 - `smartShipCapabilities`, check-in and health questionnaire windows: not
   needed at sea.
 
-## Ideas for the app (not scheduled)
+## Ideas for the app
 
-Nothing here is in the brief's phases yet; ask the owner before building.
+Scheduled on 2026-09-26: ideas 1 and 6 are Phase 3 item 22, ideas 2 and 4 are
+item 23 and idea 3 is item 24 (`docs/PROJECT_BRIEF.md`). Idea 5 went with sun
+reminders to Future concepts.
 
 1. **Booked excursions (and other timed orders) as events.** Show `mine.orders`
    with a `time` on Today and in the day lists like a reserved, starred event,
@@ -124,7 +127,7 @@ Nothing here is in the brief's phases yet; ask the owner before building.
 3. **Prefill My info** (deck, muster station) from `mine` when the owner hasn't
    typed them.
 4. **Gangway times** as a suggested all-aboard (after checking on board what
-   `gangwayUp` means) and for the Phase 3 time-ashore bar.
+   `gangwayUp` means) and for the time-ashore bar.
 5. **Port coordinates** from `mine.ports` for sun reminders, falling back to the
    built-in table.
 6. **Embark day:** terminal arrival appointment (`mine.arrival`) on the embark

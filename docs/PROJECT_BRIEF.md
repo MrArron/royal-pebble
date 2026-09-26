@@ -122,7 +122,7 @@ Chosen in a brainstorm on 2026-09-24. The owner's biggest pain on past cruises w
 pulling out the phone to find **where** events are and when their picks start; the
 watch already covers the time and "when", so wayfinding comes first. Each numbered
 item is its own branch and PR, tested on the watch before merging. Items in the last
-phase are the first to slip; after them, the dining hint and tender warning.
+phase (Planning) are the first to slip; after them, the tender warning.
 
 ### Phase 1: Wayfinding (done)
 
@@ -337,39 +337,63 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
   and Clear notes (applied on Save, like Clear log). The open conflicts are
   bundled by `tools/shipmap/build_conflicts.js` into `src/pkjs/data/conflicts-HM.js`.
 
-### Phase 3: Port days and outdoors
+### Phase 3: Port days, booking details and settings
 
-10. **Time-ashore bar** on the port countdown, from arrival to all-aboard.
-11. **"Leave now" alert** at all-aboard minus a walking time the owner sets.
-12. **Tender-day warning** with a larger suggested buffer, if Royal's itinerary
-    marks tender ports (check the data first).
-13. **Sun reminders.** A toggle and interval (default 80 min: 60/80/120), on or
-    off per day with defaults by day type, only between sunrise and sunset.
-    (Hydration reminders moved to Future concepts, owner 2026-09-26.) The
-    **phone** computes sunrise and sunset with a simple solar formula (approximate is fine) from port coordinates
-    on port days and, on sea days, a point interpolated between the previous and
-    next port at (day − departure day) ÷ (arrival day − departure day), e.g. 1/3
-    and 2/3 on the two sea days from Port Canaveral to St. Thomas. It sends
-    absolute times, so no time zone is needed. Port coordinates come from a small
-    built-in table (this itinerary plus common Caribbean and Bahamas ports), with a
-    lat/long field or a default 7:00–18:00 window for unknown ports. The watch keeps
-    only the next reminder scheduled so star reminders keep their wakeup slots.
-22. **Silent morning sync** (owner's idea, 2026-09-24; added 2026-09-26): a
-    wakeup every night between 04:00 and 05:00 ship time (about 04:30, not
-    exactly on the day boundary) that opens the app with no vibration, gets the
-    new day's slice from the phone and closes again once it arrives, or after a
-    short timeout if the phone doesn't answer. The watch is most likely near the
-    phone then (in the stateroom overnight), so each morning starts with that
-    day's schedule already on the watch. It takes one of the app's wakeup slots
+Replanned with the owner on 2026-09-26. Items are in build order. Sun and
+hydration reminders moved to Future concepts and the "Leave now" alert to the
+back-to-the-ship idea under Later.
+
+22. **Booked excursions and embark day.** Booked shore excursions (and other
+    orders with a time) show on Today and in the day lists like a reserved,
+    starred event, with the usual reminder at the meeting time when there is
+    one; embark day's Home shows the terminal arrival appointment. The data is
+    already in the bundle (`mine.orders`, `mine.arrival`,
+    `docs/DATA_FORMAT.md`), but only in bundles from `cruise_sync.py --login`;
+    without it, nothing changes. Check that a later download on the phone
+    doesn't lose it.
+23. **Port day card.** On the port countdown: a time-ashore bar from arrival to
+    all-aboard; a booked excursion's end time next to all-aboard; Royal's
+    gangway time as the suggested all-aboard (`mine.ports`; shown only as a
+    suggestion until what `gangwayUp` means is checked on board); and a
+    tender-day warning with a larger suggested buffer (tender ports already get
+    a 60-minute all-aboard buffer on the settings page; the watch warning is
+    new). The tender warning is the first part to slip.
+24. **Settings page upgrades.**
+    - Stateroom: the number box takes digits only. A number in the ship's
+      cabin table (Harmony: 2,855 cabins) fills in Deck and Nearest stairs
+      (the closest stairwell on the ship map); a field the owner changes by
+      hand keeps the change. Deck becomes a drop-down: the ship's decks from
+      the venue table, or 1-18 for a ship without one.
+    - Deck and muster station prefilled from the booking (`mine`) when empty.
+    - A **Ready to sail** check: every cruise day downloaded, stateroom set,
+      everything fits on the watch, then "you're ready to go offline" (users
+      must sync before departure).
+    - **Search events.**
+25. **Silent morning sync** (owner's idea, 2026-09-24): a wakeup every night
+    between 04:00 and 05:00 ship time (about 04:30, not exactly on the day
+    boundary) that opens the app with no vibration, gets the new day's slice
+    from the phone and closes again once it arrives, or after a short timeout
+    if the phone doesn't answer. The watch is most likely near the phone then
+    (in the stateroom overnight), so each morning starts with that day's
+    schedule already on the watch. It takes one of the app's wakeup slots
     (shared with reminder alerts), must keep clear of an early reminder, and is
     scheduled again every time it fires and after each sync so the chain never
     breaks. The usage log records each outcome (synced, phone unreachable, timed
     out). Check the Wakeup API limits against the current SDK docs first.
-
-### Phase 4: Planning
-
-14. **Search events** on the settings page.
-15. **Share my plan.** Share plan on the settings page produces text to send to a
+26. **Confirm before removing a star.** Hold Select in lists still stars an
+    event at once, but on a starred event it opens a "Remove star?" screen:
+    holding a different button (for example Down) confirms and Back cancels,
+    so a stray press can't drop a star. Check every screen where hold Select
+    already does something else (place pages, Home, Route).
+27. **Casino filter.** Casino events get their own entry under Filters so they
+    can be hidden in one step (some users would rather not see gambling at
+    all). Royal's categories don't separate them, so the phone matches them:
+    events at Casino Royale and titles about casino games (slots, blackjack,
+    poker, roulette, craps, casino tournaments). Bingo and raffles are not
+    casino events and keep their own categories. Hiding them only affects the
+    event lists and Today: Casino Royale stays in the ship directory and routes
+    as a landmark.
+28. **Share my plan.** Share plan on the settings page produces text to send to a
     travel companion; Import plan on their phone merges it. It carries stars,
     personal entries (including meet-ups and checklists), per-day all-aboard and
     ship-time settings, itinerary edits and venue-table fixes. Cabin details
@@ -381,6 +405,29 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
     values where they differ, but never unstars or deletes anything of the
     receiver's. Nothing is saved until Apply or Accept all. Also works as a backup
     of the owner's own choices. Needs a new section in `docs/DATA_FORMAT.md`.
+    Meet-ups and checklists come along once Phase 5 builds them.
+
+### Phase 4: Voice
+
+29. **Scope session first.** Before any voice work, decide whether voice is
+    better built with a native Android companion app or within the current
+    setup (PebbleKit JS and the Pebble app's dictation). Two cheap probes feed
+    the decision: does dictation work in airplane mode, and does the new Pebble
+    app accept a third-party PebbleKit Android companion. Record the outcome
+    and the scope here.
+30. **Native Android companion app**, only if the scope session chooses it: it
+    moves from Later to the front of this phase and is built before the voice
+    features (reversing the earlier "stay on PebbleKit JS until after the
+    sailing").
+31. **Offline voice questions** (moved from Later): ask the watch a simple
+    question such as "how do I get to my cabin from the Windjammer", using the
+    Dictation API with the Pebble app's on-phone speech recognition,
+    keyword-matched against the venue table and directory. See
+    `docs/FUTURE_VOICE_QUERIES.md` and `docs/DESIGN_V1_1.md` section 9.6; the
+    exact list of voice features comes out of the scope session.
+
+### Phase 5: Planning
+
 16. **Meet-up points.** A personal entry that points at a directory place, with a
     reminder.
 17. **Checklists** written on the settings page and ticked off on the watch;
@@ -401,8 +448,10 @@ Re-sync with the sailing's published schedule, full test on the watch, bug fixes
 
 ### Later (v2+), not in v1.1
 
-Back-to-the-ship distance/direction (phone GPS pin dropped when going ashore), a
-quick "remind me in N minutes" timer, lap counter, spending log, currency
+Back-to-the-ship distance/direction (phone GPS pin dropped when going ashore),
+with a **"Leave now" alert** at all-aboard minus the walk back (moved from Phase 3
+on 2026-09-26: better with a real distance than a walking time the owner sets),
+a quick "remind me in N minutes" timer, lap counter, spending log, currency
 conversion (not needed for this itinerary), Celebrity support.
 
 **Ship GPS** (idea from the owner, 2026-09-24; the routes on directory place pages
@@ -412,28 +461,31 @@ and elevators (which bank to use, walking down being easier than up). It would
 build on the venue table's decks, fore/mid/aft and entrance lists, plus a map of
 the stair and elevator banks per ship.
 
-**Offline voice questions** (idea, researched 2026-09-24): ask the watch a
-simple question such as "how do I get to my cabin from the Windjammer". Uses the
-Dictation API with the Pebble app's on-phone speech recognition, keyword-matched
-against the venue table and directory. Needs an airplane-mode test on Android and
-iOS first. See `docs/FUTURE_VOICE_QUERIES.md`.
-
 **Native Android companion app** (asked 2026-09-26; decided to stay on PebbleKit
-JS until after the sailing): voice dictation goes through the Pebble app either
-way, copy-in-parts covers the usage log export, and it would be a large rebuild
-with unconfirmed support for third-party PebbleKit Android apps in the new Pebble
-app. Revisit for v2 after two cheap probes: dictation in airplane mode, and
-whether the Pebble app accepts a PebbleKit Android companion.
+JS until after the sailing, unless the Phase 4 scope session chooses it): voice
+dictation goes through the Pebble app either way, copy-in-parts covers the usage
+log export, and it would be a large rebuild with unconfirmed support for
+third-party PebbleKit Android apps in the new Pebble app. The two cheap probes
+(dictation in airplane mode, and whether the Pebble app accepts a PebbleKit
+Android companion) are now part of the Phase 4 scope session.
 
 ### Future concepts (no timeline)
 
 Ideas kept for later with no version or date attached.
 
-**Hydration reminders** (in v1.1 Phase 3 with sun reminders until the owner
-moved them here on 2026-09-26): a toggle and interval (default 60 min:
-45/60/90), on or off per day with defaults by day type, within waking hours
-(default 8:00–22:00). They could share the sun reminders' scheduling (only the
-next reminder kept as a wakeup).
+**Sun and hydration reminders** (in v1.1 Phase 3 until the owner moved them
+here on 2026-09-26; sun reminders are only worth building together with
+hydration reminders). Separate toggles and intervals (sun default 80 min:
+60/80/120; hydration default 60 min: 45/60/90), on or off per day with defaults
+by day type. Sun reminders only between sunrise and sunset; hydration within
+waking hours (default 8:00–22:00). The **phone** computes sunrise and sunset
+with a simple solar formula (approximate is fine) from port coordinates on port
+days (`mine.ports` coordinates when the bundle has them, else a small built-in
+table of Caribbean and Bahamas ports) and, on sea days, a point interpolated
+between the previous and next port at (day − departure day) ÷ (arrival day −
+departure day). Unknown ports get a lat/long field or a default 7:00–18:00
+window. It sends absolute times, so no time zone is needed. The watch keeps
+only the next reminder scheduled so star reminders keep their wakeup slots.
 
 ### Out of scope
 
