@@ -240,7 +240,8 @@ static void draw_today_plan(GContext *ctx, int y, int w, int bottom, bool sea) {
   }
 }
 
-// Tomorrow: the count, the first starred item and a show to catch.
+// Tomorrow: the count, the first starred item, how many are still to reserve
+// (§5) and a show to catch.
 static void draw_tomorrow_plan(GContext *ctx, int y, int w) {
   const Tomorrow *t = data_tomorrow();
   y = draw_count(ctx, t->starred, t->featured, "tomorrow", y, w);
@@ -250,6 +251,10 @@ static void draw_tomorrow_plan(GContext *ctx, int y, int w) {
     fmt_clock(time_buf, sizeof(time_buf), t->first_start);
     snprintf(buf, sizeof(buf), "First %s %s", time_buf, t->first);
     y = line(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 16);
+  }
+  if (t->to_reserve > 0) {
+    snprintf(buf, sizeof(buf), "%d to reserve", t->to_reserve);
+    y = line(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent, PAD, y, w, 16);
   }
   if (t->last_kind != FINAL_NONE && t->last[0]) {
     snprintf(buf, sizeof(buf), "%s: %s", t->last_kind == FINAL_ONLY_SHOW ? "Only show" : "Last chance",

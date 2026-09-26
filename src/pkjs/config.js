@@ -4,7 +4,7 @@
 //
 // The page returns its result through `return_to` (the emulator tooling adds
 // it) or the phone app's pebblejs://close# URL:
-//   {action: 'save' | 'download' | 'test', me, theme, reminderLead,
+//   {action: 'save' | 'download' | 'test', me, theme, reminderLead, reserveAlertAt,
 //    days: {date: {offset, buffer, allAboard, edit} | null}, showFeatured, hiddenCats,
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
 //    each was made), personal: [{title, venue, date, time, minutes}],
@@ -286,13 +286,17 @@ var BODY = [
   '<button data-v="dark">Dark</button></div>',
   '<label>Remind me before starred events</label><div class="seg" id="lead"><button data-v="5">5 min</button>',
   '<button data-v="15">15 min</button><button data-v="30">30 min</button></div>',
-  '<p class="help">Reminders arrive in a later update; this sets how early they come.</p>',
+  '<label>Evening reminder to reserve</label><div class="seg" id="reserveAt"><button data-v="1080">6 pm</button>',
+  '<button data-v="1140">7 pm</button><button data-v="1200">8 pm</button><button data-v="1260">9 pm</button>',
+  '<button data-v="1320">10 pm</button></div>',
+  '<p class="help">The evening before, your watch lists starred events that need a reservation and ',
+  'are not marked reserved yet. Ship time.</p>',
   '<label for="clockNote">Ship clock note</label><input id="clockNote" maxlength="38" ',
   'placeholder="Ship stays on Eastern time">',
   '<p class="help">Shown on the watch\'s My info screen.</p>',
   '<label>Alerts</label><button class="pill tonal wide" id="testAlerts" style="margin-top:4px">Test alerts</button>',
   '<p class="help">Saves and closes this page. About 2 minutes later your watch shows a test reminder, ',
-  'then a test all-aboard alert a minute after that. Close the app on the watch first to check that ',
+  'then a test all-aboard alert a minute after that, then a test reminder to reserve. Close the app on the watch first to check that ',
   'alerts open it by themselves.</p><p class="help" id="watchStorage"></p></div>',
   '</section>',
   '<section class="screen" id="venues"><div class="vtools">',
@@ -2108,6 +2112,7 @@ function pageMain(S, V) {
   }
   var getTheme = segment('theme', S.theme || 'light');
   var getLead = segment('lead', S.reminderLead || 15);
+  var getReserveAt = segment('reserveAt', S.reserveAlertAt || 1200);
 
   // ---- Save / Download
   function result(action) {
@@ -2115,6 +2120,7 @@ function pageMain(S, V) {
       action: action,
       theme: getTheme(),
       reminderLead: parseInt(getLead(), 10),
+      reserveAlertAt: parseInt(getReserveAt(), 10),
       me: {}
     };
     ['stateroom', 'deck', 'stairs', 'muster', 'clockNote'].forEach(function(id) {
@@ -2199,7 +2205,7 @@ function pad2(n) {
 }
 
 // state: {ships, cruise, status, itinerary, days, categories, hiddenCats, showFeatured, schedule, stars,
-//         personal, venues, me, theme, reminderLead, api, appKey}
+//         personal, venues, me, theme, reminderLead, reserveAlertAt, api, appKey}
 function buildPage(state, now) {
   now = now || new Date();
   // List sailings from two weeks ago on, so a sailing in progress still shows.

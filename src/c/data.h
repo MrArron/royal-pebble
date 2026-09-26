@@ -97,6 +97,7 @@ typedef struct {
   uint8_t starred;           // starred events and personal entries
   uint8_t featured;
   uint8_t last_kind;         // FinalKind
+  uint8_t to_reserve;        // starred events that need a reservation and aren't marked reserved
   char first[SHORT_TITLE_LEN];
   char last[SHORT_TITLE_LEN];  // a show to catch (last_kind)
 } Tomorrow;
@@ -113,6 +114,7 @@ typedef struct {
 typedef enum {
   ALARM_ALL_ABOARD = 0,
   ALARM_REMINDER = 1,
+  ALARM_TO_RESERVE = 2,  // the evening before: one per event of tomorrow's still to reserve
 } AlarmKind;
 
 // "From" directions on a reminder, decided by the phone (docs/WATCH_PROTOCOL.md,
@@ -129,12 +131,13 @@ typedef enum {
 typedef struct {
   int32_t at;     // cruise minutes: when to buzz
   int32_t ref;    // cruise minutes: all-aboard time or event start
-  int16_t extra;  // all-aboard: local offset; reminder: duration in minutes
+  int16_t extra;  // all-aboard: local offset; reminder: duration in minutes;
+                  // to reserve: how many events tomorrow are still to reserve
   uint8_t kind;   // AlarmKind
   uint8_t from;   // reminder: "From" directions (FromKind << 2 | previous position),
                   // plus ALARM_NOT_RESERVED
   Where where;    // reminder: where the event is
-  char title[ALARM_TITLE_LEN];  // all-aboard: location; reminder: event title
+  char title[ALARM_TITLE_LEN];  // all-aboard: location; reminder, to reserve: event title
   char venue[ALARM_VENUE_LEN];  // the venue's short name
   char from_venue[ALARM_VENUE_LEN];  // FROM_ROUTE: the previous venue's short name
 } Alarm;

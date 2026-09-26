@@ -121,6 +121,8 @@ test('settings page builds, embeds state safely and its script parses', function
   assert.strictEqual((html.match(/<\/script>/g) || []).length, 1);
   new Function(pageScript(html));  // throws on a syntax error
   assert.ok(html.indexOf('id="testAlerts"') !== -1, 'Test alerts button');
+  assert.ok(html.indexOf('id="reserveAt"') !== -1, 'reserve reminder time');
+  assert.ok(html.indexOf("segment('reserveAt'") !== -1);
   assert.ok(html.indexOf('"oldestSailDate":"2026-09-10"') !== -1);
   var url = config.pageUrl(state);
   assert.ok(/^data:text\/html;charset=utf-8,%3C!DOCTYPE/.test(url));

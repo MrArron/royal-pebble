@@ -156,6 +156,7 @@ static void handle_begin(DictionaryIterator *iter, uint16_t slice_id) {
   s_tomorrow.first_start = find_int_or(iter, MESSAGE_KEY_tmr_first_start, NO_TIME);
   find_str(iter, MESSAGE_KEY_tmr_last, s_tomorrow.last, sizeof(s_tomorrow.last));
   s_tomorrow.last_kind = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_last_kind);
+  s_tomorrow.to_reserve = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_to_reserve);
 
   s_event_count = find_int(iter, MESSAGE_KEY_event_count);
   s_alarm_count = find_int(iter, MESSAGE_KEY_alarm_count);
