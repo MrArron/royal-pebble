@@ -7,6 +7,7 @@
 
 var pack = require('./pack');
 var venues = require('./venues');
+var routestart = require('./routestart');
 
 var DAY_START = 4 * 60;
 var MINUTES_PER_DAY = 24 * 60;
@@ -801,23 +802,10 @@ function formatSync(iso) {
     pad2(d.getMinutes()) + (h < 12 ? 'a' : 'p');
 }
 
-// "From" directions start at the previous starred event or personal entry when
-// it ends less than this many minutes before the next one starts, or overlaps
-// it (docs/DESIGN_V1_1.md, decisions). No length counts as FINISHED_GRACE.
-var FROM_GAP = 15;
-
-// The stop just before `e` among `stops` (timed starred events and personal
-// entries, sorted by start): the latest to start before it that ends less than
-// FROM_GAP minutes before it starts. Null when there is none.
-function previousStop(stops, e) {
-  var prev = null;
-  stops.forEach(function(p) {
-    if (p.start < e.start && p.start + (p.minutes || FINISHED_GRACE) > e.start - FROM_GAP) {
-      prev = p;
-    }
-  });
-  return prev;
-}
+// "From" directions start where routestart.js says (docs/DESIGN_V1_1.md §9.4):
+// the previous starred event or personal entry when it ends less than 15 minutes
+// before the next one starts, or overlaps it.
+var previousStop = routestart.previousStop;
 
 // Starred, needs a reservation and isn't marked reserved (§5).
 function notReserved(e) {
