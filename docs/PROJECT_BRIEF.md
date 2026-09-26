@@ -177,8 +177,14 @@ Royal's deck plans:
 - a route planner.
 
 The map data (`src/pkjs/data/`, built by `tools/shipmap/`) and the planner
-(`src/pkjs/shipmap.js`, next PR) live in the phone companion. The watch gets
-only short strings and stores no map data.
+(`src/pkjs/shipmap.js`) live in the phone companion. The watch gets only short
+strings and stores no map data.
+
+**Which ships have GPS** (owner, 2026-09-26): users must be told. Keep one list
+of the mapped ships in the README, the settings page's Help section and the
+store listing (when there is one), and update all of them whenever a ship's map
+is added (`tools/shipmap/README.md`, Mapped ships). The README invites people to
+map another Royal ship with `tools/shipmap/` and open a pull request.
 
 19. **Walking distance** on directory place pages: from the cabin (by stateroom
     number on the Me tab), e.g. `160 m aft`, next to the existing deck line.

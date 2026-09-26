@@ -35,6 +35,12 @@ On the watch (open it with a Quick Launch button hold):
   (Royal Promenade, Central Park, Boardwalk...). Each place shows its deck, position
   and what's on there for the rest of today. The directory is loaded from the phone
   one deck or area at a time, so it needs the phone nearby.
+- **Ship GPS** (ships with a map only, see below): each place page shows the
+  walking distance from your cabin (`↓1 deck · 160 m fore`) and the closest
+  restroom. Select opens a short step-by-step route (`25 m aft` / `Aft elev to
+  Deck 4` / `130 m fore`), and Hold Select the route to that restroom. On Home,
+  Select opens the route to your next event. Routes start from your cabin, or
+  from a starred event that ends just before. Every distance is approximate.
 - **Alerts:** the watch buzzes 60, 30 and 15 minutes before all-aboard, and before
   each starred event or personal entry (5, 15 or 30 minutes, your choice). Alerts
   open the app by themselves and keep working with your phone out of range.
@@ -63,6 +69,24 @@ On the phone, in the Pebble app's settings page for the watch app (works offline
   and a test all-aboard alert a couple of minutes later, so you can check alerts
   before you sail.
 
+## Ships with Ship GPS
+
+The Ship GPS needs a map of the ship, measured from Royal's deck plans. Ships
+mapped so far:
+
+| Ship | Mapped from | Notes |
+|---|---|---|
+| Harmony of the Seas | deck plans for sailings from May 21, 2026 | Port and starboard not yet checked on board |
+
+On any other ship, everything else works (the schedule, alerts, the directory
+with deck and position), but there are no walking distances or routes.
+
+**Map a ship.** Want the Ship GPS on your Royal Caribbean ship? The tools that
+built Harmony's map are in [`tools/shipmap/`](tools/shipmap/README.md): they
+download the ship's deck plans and turn them into cabins, venue spots and
+walkways. Pick a ship, map it, and open a pull request; the README there
+explains each step and what to check.
+
 ## Status
 
 Version 1 is done and in use on a real Pebble Time 2. Version 1.1 is being built
@@ -70,18 +94,14 @@ for the owner's first sailing, one feature at a time, each
 tested on the watch before it's merged. The full plan is in the
 [project brief](docs/PROJECT_BRIEF.md).
 
-- **Done:** v1, and v1.1 Phase 1 (wayfinding): the venue table, deck and position
-  on the watch, "From" directions and the ship directory.
-- **Next, Phase 2 (daily view):** a morning summary (and tomorrow's in the
-  evening), a days-to-sail countdown, clash warnings for overlapping stars, a
-  last-chance tag on a show's final performance, and a reservation reminder with
-  **Mark reserved**. The design is done (mockups approved), in
-  [DESIGN_V1_1.md §8](docs/DESIGN_V1_1.md); building it is next.
-- **Then the Ship GPS:** walking distance from your cabin, the nearest restroom and
-  a short step-by-step route on directory place pages, worked out on the phone from
-  a map measured from Harmony's deck plans. The map data isn't in the repository yet.
-- **Then a usage log** to review after the sailing, followed by port-day and
-  planning features if time allows.
+- **Done:** v1; v1.1 Phase 1 (wayfinding: the venue table, deck and position on
+  the watch, "From" directions and the ship directory); Phase 2 (daily view: the
+  morning summary, days-to-sail countdown, clash warnings, last-chance tags and
+  the reservation reminder with **Mark reserved**); and most of the Ship GPS
+  (walking distances, closest restrooms, elevator banks and routes).
+- **Next:** the rest of the Ship GPS (button hints and a Help section on the
+  settings page), then a usage log to review after the sailing, followed by
+  port-day and planning features if time allows.
 
 ## Getting it on your watch
 
@@ -123,6 +143,8 @@ in to your Royal Caribbean account to add your stateroom. See
   what gets sent to the watch.
 - `tools/cruise-sync/`: Windows backup tool (Python), the reference implementation
   of every Royal Caribbean request.
+- `tools/shipmap/`: builds the Ship GPS map data (`src/pkjs/data/`) from Royal's
+  deck plans. New ships welcome (see Ships with Ship GPS above).
 - `docs/`: [project brief](docs/PROJECT_BRIEF.md), [design](docs/DESIGN.md),
   [data format](docs/DATA_FORMAT.md), [phone ↔ watch protocol](docs/WATCH_PROTOCOL.md),
   [v1.1 design](docs/DESIGN_V1_1.md) (mockups in `docs/mockups/`).
