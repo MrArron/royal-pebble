@@ -23,6 +23,7 @@ var FLAG_RESERVATION = 4;
 var FLAG_PERSONAL = 8;
 var FLAG_LAST_CHANCE = 16;  // the last performance of a featured show (finalShows)
 var FLAG_ONLY_SHOW = 32;    // a featured show that is on only once
+var FLAG_RESERVED = 64;     // the owner marked it reserved (docs/DESIGN_V1_1.md §5)
 
 var ALARM_ALL_ABOARD = 0;
 var ALARM_REMINDER = 1;
@@ -107,6 +108,20 @@ function dayStatus(type) {
 
 function starKey(title, date, time, venue) {
   return [title, date, time || '', venue || ''].join('|');
+}
+
+// Reserved marks (docs/DESIGN_V1_1.md §5) are kept with the stars, under the
+// event's star key with this prefix, so they share the stars' storage, change
+// times (the latest change wins) and the watch's change queue. The flag stays
+// when the event is unstarred, so starring it again brings it back.
+var RESERVED_PREFIX = 'R|';
+
+function reservedKey(key) {
+  return RESERVED_PREFIX + key;
+}
+
+function isReservedKey(key) {
+  return key.slice(0, RESERVED_PREFIX.length) === RESERVED_PREFIX;
 }
 
 function eventSort(a, b) {
@@ -369,8 +384,10 @@ function sameWatchText(text, sent, packedMax, keptMax) {
 // entries the same way the watch built them (buildEvents: a time before 04:00
 // is after midnight on its listed date). With `times`, the latest change wins,
 // as in applyStarChanges.
+// A change with `reserved` set is about the event's reserved mark (saved under
+// reservedKey) instead of its star.
 // Returns {applied, ignored (older than a saved change), unmatched}, each a
-// list of {key or title, on}.
+// list of {key or title, on, reserved}.
 function applyWatchStarChanges(bundle, settings, stars, times, changes) {
   var sailDays = daysFromIso(bundle.sailDate);
   var candidates = scheduleEvents(bundle).concat(((settings && settings.personal) || []).map(function(p) {
@@ -394,13 +411,15 @@ function applyWatchStarChanges(bundle, settings, stars, times, changes) {
     }
     var list = Object.keys(keys);
     if (!list.length) {
-      r.unmatched.push({title: String.fromCharCode.apply(null, c.title), on: c.on});
+      r.unmatched.push({title: String.fromCharCode.apply(null, c.title), on: c.on, reserved: !!c.reserved});
       return;
     }
     var at = c.at * 1000;
     list.forEach(function(key) {
+      // A Reserved change is about the event's reserved mark, not its star.
+      key = c.reserved ? reservedKey(key) : key;
       if (times && times[key] > at) {
-        r.ignored.push({key: key, on: c.on});
+        r.ignored.push({key: key, on: c.on, reserved: !!c.reserved});
         return;
       }
       if (times) {
@@ -411,15 +430,15 @@ function applyWatchStarChanges(bundle, settings, stars, times, changes) {
       } else {
         delete stars[key];
       }
-      r.applied.push({key: key, on: c.on});
+      r.applied.push({key: key, on: c.on, reserved: !!c.reserved});
     });
   });
   return r;
 }
 
 // Drops star change times ({key: ms}) that can't matter any more: keeps those
-// of events in the bundle's schedule, personal entries and starred keys.
-// Returns a new object.
+// of events in the bundle's schedule, personal entries and starred keys, and
+// the same for reserved marks. Returns a new object.
 function pruneStarTimes(times, bundle, settings, stars) {
   var keep = {};
   scheduleEvents(bundle).forEach(function(e) { keep[e.key] = true; });
@@ -428,7 +447,8 @@ function pruneStarTimes(times, bundle, settings, stars) {
   });
   var out = {};
   Object.keys(times || {}).forEach(function(k) {
-    if (keep[k] || (stars && stars[k])) {
+    var eventKey = isReservedKey(k) ? k.slice(RESERVED_PREFIX.length) : k;
+    if (keep[eventKey] || (stars && stars[k])) {
       out[k] = times[k];
     }
   });
@@ -470,10 +490,14 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
     if (start === NO_TIME ? date !== today : (start < from || start >= to)) {
       return;
     }
-    if (stars[starKey(title, date, time, venue)]) {
+    var key = starKey(title, date, time, venue);
+    if (stars[key]) {
       flags |= FLAG_STARRED;
     } else if (cat && isHidden(hidden, cat)) {
       return;  // filtered out, unless starred
+    }
+    if ((flags & FLAG_RESERVATION) && stars[reservedKey(key)]) {
+      flags |= FLAG_RESERVED;
     }
     events.push({
       title: title,
@@ -482,7 +506,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
       minutes: minutes || 0,
       flags: flags,
       where: whereOf(venue),
-      key: starKey(title, date, time, venue)
+      key: key
     });
   }
 
@@ -595,19 +619,28 @@ function reconcileStars(oldBundle, newBundle, stars, settings, now, times) {
   Object.keys(out).sort().forEach(function(key) {
     var old = oldByKey[key];
     if (!out[key] || newKeys[key] || personalKeys[key] || !old || eventFinished(sailDays, old, nowMin)) {
-      return;
+      return;  // reserved marks too: they aren't event keys, and follow their star below
     }
     var day = eventWatchDay(sailDays, old);
     var candidates = newEvents.filter(function(e) {
       return !oldByKey[e.key] && sameTitle(e.title, old.title) && eventWatchDay(sailDays, e) === day;
     });
     var change = {title: old.title, date: old.date, time: old.time, venue: old.venue, minutes: old.minutes};
+    var reserved = !!out[reservedKey(key)];
     delete out[key];
+    delete out[reservedKey(key)];
     if (candidates.length === 1) {
       var to = candidates[0];
       out[to.key] = true;
       if (outTimes[key]) {
         outTimes[to.key] = outTimes[key];
+      }
+      // A reserved mark moves with its star.
+      if (reserved) {
+        out[reservedKey(to.key)] = true;
+        if (outTimes[reservedKey(key)]) {
+          outTimes[reservedKey(to.key)] = outTimes[reservedKey(key)];
+        }
       }
       change.kind = 'moved';
       change.to = {date: to.date, time: to.time, venue: to.venue};
@@ -766,6 +799,12 @@ function previousStop(stops, e) {
   return prev;
 }
 
+// Starred, needs a reservation and isn't marked reserved (§5).
+function notReserved(e) {
+  var f = e.flags;
+  return !!((f & FLAG_STARRED) && (f & FLAG_RESERVATION) && !(f & FLAG_RESERVED));
+}
+
 // Alerts for the watch to fire on its own (docs/WATCH_PROTOCOL.md): all-aboard
 // warnings and reminders before starred events and personal entries, for today
 // and tomorrow's watch days, so tomorrow still works if the phone is away at the
@@ -774,7 +813,8 @@ function previousStop(stops, e) {
 // local offset for all-aboard, the duration for reminders. Reminders also have
 // `where`, the venue's short name as `venue` and "From" directions: `from`
 // (venues.FROM_*), `fromPos` and `fromVenue` (the previous venue's short name,
-// for a route).
+// for a route). `notReserved` is set on a reminder for a starred event that
+// needs a reservation and isn't marked reserved.
 function buildAlarms(bundle, settings, stars, now, testAt) {
   settings = settings || {};
   stars = stars || {};
@@ -811,7 +851,8 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
       alarms.push({at: e.start - lead, ref: e.start, kind: ALARM_REMINDER, extra: e.minutes,
                    title: e.title, venue: finder.short(e.venue), where: route ? route.where : e.where,
                    from: route ? route.kind : venues.FROM_NONE, fromPos: route ? route.fromPos : 0,
-                   fromVenue: route && route.kind === venues.FROM_ROUTE ? finder.short(prev.venue) : ''});
+                   fromVenue: route && route.kind === venues.FROM_ROUTE ? finder.short(prev.venue) : '',
+                   notReserved: notReserved(e)});
     });
   }
 
@@ -904,6 +945,7 @@ module.exports = {
   FLAG_PERSONAL: FLAG_PERSONAL,
   FLAG_LAST_CHANCE: FLAG_LAST_CHANCE,
   FLAG_ONLY_SHOW: FLAG_ONLY_SHOW,
+  FLAG_RESERVED: FLAG_RESERVED,
   ALARM_ALL_ABOARD: ALARM_ALL_ABOARD,
   ALARM_REMINDER: ALARM_REMINDER,
   NOTICE_MOVED: NOTICE_MOVED,
@@ -934,6 +976,9 @@ module.exports = {
   cruiseDayIndex: cruiseDayIndex,
   shortPort: shortPort,
   starKey: starKey,
+  reservedKey: reservedKey,
+  isReservedKey: isReservedKey,
+  notReserved: notReserved,
   formatSync: formatSync,
   cutoffWhen: cutoffWhen,
   buildSlice: buildSlice

@@ -53,6 +53,13 @@ void draw_divider(GContext *ctx, int y, int width);
 // Drawn "!" clash marker (docs/mockups/phase2/NOTES.md): a bar and a dot, `h`
 // tall (12 beside Gothic 18, 24 on the toast).
 void draw_bang(GContext *ctx, GPoint top_left, int h, GColor color);
+// Drawn check mark (text fonts have no ✓), `size` wide and tall.
+void draw_check(GContext *ctx, GPoint top_left, int size, GColor color);
+// "✓ Reserved" (docs/DESIGN_V1_1.md §5) in Gothic 18 bold (`large`) or 14 bold,
+// on a text line starting at y. Returns its width.
+int draw_reserved(GContext *ctx, bool large, int x, int y, GColor color);
+// The width draw_reserved would take.
+int reserved_width(bool large);
 // "1 clash" in Gothic 14 bold, port accent. Draws nothing and returns 0 when
 // there are none; otherwise returns the line height.
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);
@@ -61,8 +68,9 @@ int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);
 const char *event_final_tag(const Event *e);
 // One line: `tag` in `tag_color`, then " · rest" in `rest_color` (just `rest`
 // when `tag` is NULL). The tag is never cut; the rest gets the ellipsis.
-void draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const char *rest,
-                      GColor rest_color, GFont font, GRect box);
+// Returns the x where the text ends.
+int draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const char *rest,
+                     GColor rest_color, GFont font, GRect box);
 
 // ---- Where a venue is (docs/DESIGN_V1_1.md §2) ------------------------------
 

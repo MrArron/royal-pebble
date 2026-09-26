@@ -195,6 +195,39 @@ void draw_bang(GContext *ctx, GPoint top_left, int h, GColor color) {
   graphics_fill_rect(ctx, GRect(top_left.x, top_left.y + h - stroke, stroke, stroke), 1, GCornersAll);
 }
 
+void draw_check(GContext *ctx, GPoint o, int size, GColor color) {
+  graphics_context_set_stroke_color(ctx, color);
+  graphics_context_set_stroke_width(ctx, 2);
+  GPoint low = GPoint(o.x + size * 3 / 8, o.y + size - 1);
+  graphics_draw_line(ctx, GPoint(o.x, o.y + size / 2), low);
+  graphics_draw_line(ctx, low, GPoint(o.x + size - 1, o.y + 1));
+  graphics_context_set_stroke_width(ctx, 1);
+}
+
+#define CHECK_GAP 4
+
+static int check_size(bool large) { return large ? 11 : 9; }
+
+static GFont reserved_font(bool large) {
+  return fonts_get_system_font(large ? FONT_KEY_GOTHIC_18_BOLD : FONT_KEY_GOTHIC_14_BOLD);
+}
+
+int reserved_width(bool large) {
+  return check_size(large) + CHECK_GAP + text_size("Reserved", reserved_font(large)).w;
+}
+
+int draw_reserved(GContext *ctx, bool large, int x, int y, GColor color) {
+  int size = check_size(large);
+  // On the capitals of the text beside it.
+  draw_check(ctx, GPoint(x, y + (large ? 7 : 5)), size, color);
+  int text_x = x + size + CHECK_GAP;
+  int w = text_size("Reserved", reserved_font(large)).w;
+  graphics_context_set_text_color(ctx, color);
+  graphics_draw_text(ctx, "Reserved", reserved_font(large), GRect(text_x, y, w + 2, large ? 22 : 18),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  return text_x + w - x;
+}
+
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now) {
   int n = data_clash_count(now);
   if (n == 0) {
@@ -213,8 +246,8 @@ const char *event_final_tag(const Event *e) {
          : (e->flags & EVENT_ONLY_SHOW) ? "Only show" : NULL;
 }
 
-void draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const char *rest,
-                      GColor rest_color, GFont font, GRect box) {
+int draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const char *rest,
+                     GColor rest_color, GFont font, GRect box) {
   int x = box.origin.x;
   if (tag) {
     int tag_w = graphics_text_layout_get_content_size(tag, font, box, GTextOverflowModeTrailingEllipsis,
@@ -223,15 +256,17 @@ void draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const ch
     graphics_draw_text(ctx, tag, font, GRect(x, box.origin.y, tag_w + 2, box.size.h),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
     if (!rest[0]) {
-      return;
+      return x + tag_w;
     }
     x += tag_w;
   }
   char buf[64];
   snprintf(buf, sizeof(buf), "%s%s", tag ? " \xc2\xb7 " : "", rest);
+  GRect rest_box = GRect(x, box.origin.y, box.origin.x + box.size.w - x, box.size.h);
   graphics_context_set_text_color(ctx, rest_color);
-  graphics_draw_text(ctx, buf, font, GRect(x, box.origin.y, box.origin.x + box.size.w - x, box.size.h),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, buf, font, rest_box, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  return x + graphics_text_layout_get_content_size(buf, font, rest_box, GTextOverflowModeTrailingEllipsis,
+                                                   GTextAlignmentLeft).w;
 }
 
 void draw_divider(GContext *ctx, int y, int width) {

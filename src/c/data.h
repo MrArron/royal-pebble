@@ -34,7 +34,13 @@ enum {
   EVENT_PERSONAL = 1 << 3,
   EVENT_LAST_CHANCE = 1 << 4,  // the last performance of a featured show (§8.4)
   EVENT_ONLY_SHOW = 1 << 5,    // a featured show that is on only once
+  EVENT_RESERVED = 1 << 6,     // marked reserved (§5); only shown while starred
 };
+
+// Starred, needs a reservation and isn't marked reserved yet (§5).
+static inline bool event_not_reserved(uint8_t flags) {
+  return (flags & EVENT_STARRED) && (flags & EVENT_RESERVATION) && !(flags & EVENT_RESERVED);
+}
 
 // Where a venue is, worked out by the phone (docs/WATCH_PROTOCOL.md, Packed
 // events). The watch only formats it.
@@ -125,7 +131,8 @@ typedef struct {
   int32_t ref;    // cruise minutes: all-aboard time or event start
   int16_t extra;  // all-aboard: local offset; reminder: duration in minutes
   uint8_t kind;   // AlarmKind
-  uint8_t from;   // reminder: "From" directions (FromKind << 2 | previous position)
+  uint8_t from;   // reminder: "From" directions (FromKind << 2 | previous position),
+                  // plus ALARM_NOT_RESERVED
   Where where;    // reminder: where the event is
   char title[ALARM_TITLE_LEN];  // all-aboard: location; reminder: event title
   char venue[ALARM_VENUE_LEN];  // the venue's short name
@@ -134,6 +141,8 @@ typedef struct {
 
 static inline FromKind alarm_from_kind(const Alarm *a) { return (FromKind)((a->from >> 2) & 3); }
 static inline int alarm_from_pos(const Alarm *a) { return a->from & 3; }
+// In Alarm.from: the reminder's event still needs its reservation.
+#define ALARM_NOT_RESERVED (1 << 4)
 
 typedef enum {
   NOTICE_MOVED = 0,      // a starred event moved; its star moved with it
@@ -207,6 +216,8 @@ void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const
 
 // Adds or removes the reminder for a starred event (kept sorted by time).
 void data_set_reminder(const Event *e, bool on);
+// Updates the "Not reserved" mark on the event's reminder, if it has one.
+void data_update_reminder(const Event *e);
 
 bool event_is_timed(const Event *e);
 bool event_in_progress(const Event *e, int32_t now);

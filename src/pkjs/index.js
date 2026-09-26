@@ -268,7 +268,10 @@ function starChangesReceived(bytes) {
     save(STORE_STARS, data.stars);
     save(STORE_STAR_TIMES, times);
   }
-  r.applied.forEach(function(c) { console.log((c.on ? 'Starred on the watch: ' : 'Unstarred on the watch: ') + c.key); });
+  r.applied.forEach(function(c) {
+    var what = c.reserved ? (c.on ? 'Marked reserved' : 'Marked not reserved') : (c.on ? 'Starred' : 'Unstarred');
+    console.log(what + ' on the watch: ' + c.key);
+  });
   r.ignored.forEach(function(c) { console.log('Older than a change on the phone, ignored: ' + c.key); });
   r.unmatched.forEach(function(c) { console.log('No such event, ignored: ' + c.title); });
   var seq = changes.reduce(function(max, c) { return Math.max(max, c.seq); }, 0);

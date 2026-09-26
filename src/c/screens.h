@@ -56,5 +56,10 @@ void notice_window_refresh(void);
 // clashes with, or -1.
 int toggle_star(int event_index);
 
+// Select on event details: toggle Reserved on a starred event that needs a
+// reservation (docs/DESIGN_V1_1.md §5), with a short buzz. Returns false (and
+// does nothing) for other events.
+bool toggle_reserved(int event_index);
+
 // Demo data only: asks the phone for the next demo (port/sea, light/dark).
 void demo_next(void);

@@ -92,14 +92,16 @@ function int32(n) {
 
 // Per alarm, little-endian: int32 at, int32 ref, int16 extra, uint8 kind,
 // uint8 from (bits 0-1 the previous venue's position, 2-3 the kind of "From"
-// directions), 4 bytes where (as events), then title, venue and the previous
+// directions, 4 set when the event still needs its reservation), 4 bytes where (as events), then title, venue and the previous
 // venue's name, each as uint8 length and bytes.
+var ALARM_NOT_RESERVED = 16;  // bit 4 of `from`
+
 function encodeAlarm(a) {
   var title = utf8(a.title || '', ALARM_TITLE_MAX);
   var venue = utf8(a.venue || '', ALARM_VENUE_MAX);
   var fromVenue = utf8(a.fromVenue || '', ALARM_VENUE_MAX);
   var extra = a.extra | 0;
-  var from = ((a.fromPos | 0) & 3) | (((a.from | 0) & 3) << 2);
+  var from = ((a.fromPos | 0) & 3) | (((a.from | 0) & 3) << 2) | (a.notReserved ? ALARM_NOT_RESERVED : 0);
   return int32(a.at).concat(int32(a.ref), [extra & 255, (extra >> 8) & 255, a.kind & 255, from],
                             encodeWhere(a.where), [title.length], title, [venue.length], venue,
                             [fromVenue.length], fromVenue);
@@ -148,7 +150,8 @@ function packAlarms(alarms, maxBytes) {
 
 // Star changes made on the watch (STAR_CHANGES), little-endian: int32 seq,
 // int32 at (seconds since 1970 UTC), int32 sail (days since 1970), int32 start
-// (cruise minutes, -1 untimed), int16 day (watch day), uint8 on, then title and
+// (cruise minutes, -1 untimed), int16 day (watch day), uint8 on (bit 0 the new
+// state, bit 1 set when the change is to Reserved rather than the star), then title and
 // venue as uint8 length and UTF-8 bytes, cut to 39 and 23 bytes (maybe mid-character).
 // Title and venue stay byte arrays, for comparing with the watch's copy.
 var STAR_CHANGE_TITLE_MAX = SHORT_TITLE_MAX;
@@ -168,7 +171,8 @@ function decodeStarChanges(bytes) {
       sail: readInt32(bytes, i + 8),
       start: readInt32(bytes, i + 12),
       day: ((bytes[i + 16] | (bytes[i + 17] << 8)) << 16) >> 16,
-      on: bytes[i + 18] !== 0
+      on: (bytes[i + 18] & 1) !== 0,
+      reserved: (bytes[i + 18] & 2) !== 0
     };
     i += 19;
     var n = bytes[i++];
@@ -194,7 +198,7 @@ function encodeStarChange(c) {
   var title = utf8(c.title || '', TITLE_MAX).slice(0, STAR_CHANGE_TITLE_MAX);
   var venue = utf8(c.venue || '', VENUE_MAX).slice(0, STAR_CHANGE_VENUE_MAX);
   return int32(c.seq).concat(int32(c.at), int32(c.sail), int32(c.start),
-                             [day & 255, (day >> 8) & 255, c.on ? 1 : 0, title.length], title,
+                             [day & 255, (day >> 8) & 255, (c.on ? 1 : 0) | (c.reserved ? 2 : 0), title.length], title,
                              [venue.length], venue);
 }
 

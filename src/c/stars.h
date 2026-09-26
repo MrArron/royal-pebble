@@ -11,13 +11,18 @@
 // Packed size of one change at most (docs/WATCH_PROTOCOL.md).
 #define STAR_CHANGE_MAX_BYTES (19 + 1 + (SHORT_TITLE_LEN - 1) + 1 + (SHORT_VENUE_LEN - 1))
 
+// StarChange.on: bit 0 the new state; bit 1 set when the change is to the
+// event's Reserved mark (§5) rather than its star. Both share the queue.
+#define STAR_CHANGE_ON 1
+#define STAR_CHANGE_RESERVED 2
+
 typedef struct {
   int32_t seq;        // increases with every change; the phone acks up to one
   int32_t at;         // when it was made: time(NULL), seconds since 1970 UTC
   int32_t sail_days;  // the cruise it belongs to (SliceMeta.sail_days)
   int32_t start;      // cruise minutes; NO_TIME for untimed entries
   int16_t day;        // watch day of the slice it was made on (for untimed)
-  uint8_t on;
+  uint8_t on;         // STAR_CHANGE_ bits
   char title[SHORT_TITLE_LEN];
   char venue[SHORT_VENUE_LEN];
 } StarChange;
@@ -25,8 +30,9 @@ typedef struct {
 // Loads the queue saved on the watch.
 void stars_init(void);
 
-// Queues a star change for the event (one entry per event; the latest wins).
-void stars_record(const Event *e, bool on);
+// Queues a change to the event's star, or with `reserved` to its Reserved mark
+// (one entry per event and kind; the latest wins).
+void stars_record(const Event *e, bool reserved, bool on);
 
 // Applies queued changes to the current slice (flags and reminders), so a slice
 // from the phone that doesn't know about them yet doesn't undo them.
