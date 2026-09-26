@@ -28,7 +28,18 @@ text. One compact JSON object, ASCII only.
       ["Big Band Music With the Harmony of the Seas Orchestra", 0, 0, "2026-10-03", "17:45", 45, 0, 0]
     ]
   },
-  "mine": {"stateroom": "[ROOM #]", "orders": [{"title": "...", "category": "...", "guests": 2}]}
+  "mine": {
+    "stateroom": "[ROOM #]", "deck": "9", "muster": "B4", "arrival": null,
+    "embarkTimeZone": "America/New_York",
+    "ports": [{"day": 3, "code": "NAS", "gangwayDown": "07:00", "gangwayUp": "17:00",
+               "lat": 25.0781, "lon": -77.3412}],
+    "orders": [
+      {"title": "Beach Day at Perfect Day CocoCay", "category": "pt_shoreX", "guests": 2,
+       "date": "2026-10-09", "time": "09:00", "day": 7, "port": "PCC",
+       "meet": "08:45", "end": "11:30", "minutes": 150},
+      {"title": "Deluxe Beverage Package", "category": "pt_beverage", "guests": 2}
+    ]
+  }
 }
 ```
 
@@ -62,11 +73,35 @@ text. One compact JSON object, ASCII only.
     room on one sailing). Consumers show them only once the user picks a
     session (the settings page's Booked activities, which stars it and marks
     it reserved); the other sessions stay off the watch and out of the lists. Checked on a live Harmony sailing, 2026-09-25.
-- `mine` — only when fetched with login. Contains a stateroom number: private.
-  `stateroom` is `null` until a cabin is assigned (Royal lists guarantee
-  bookings as "GTY"); consumers also treat a value without digits as unassigned.
-  `orders` is **experimental**; any date/time fields Royal returned are kept under
-  `when` until we know which ones are real.
+- `mine` — only when fetched with login, so only `cruise_sync.py --login`
+  produces it (the phone companion never logs in). Private: it holds the
+  stateroom and cabin details. Every field may be missing or `null`; consumers
+  must not require any of them. What each field is based on, and what is still
+  unverified, is in `docs/ROYAL_LOGIN_DATA.md`.
+  - `stateroom` is `null` until a cabin is assigned (Royal lists guarantee
+    bookings as "GTY"); consumers also treat a value without digits as unassigned.
+  - `deck`, `muster`: the booking's deck number and muster station as Royal
+    lists them, or `null`.
+  - `arrival`: terminal arrival appointment on embark day (`HH:MM`, or Royal's
+    text when it isn't a readable time), `null` until online check-in.
+  - `embarkTimeZone`: the embarkation port's time zone name, e.g.
+    `America/New_York`.
+  - `ports[]`: port days with extra details, by itinerary `day`. `gangwayDown`,
+    `gangwayUp`: `HH:MM`, or Royal's text when it isn't a readable time (the
+    meaning of both is unverified; not a replacement for `depart` yet). `lat`,
+    `lon`: approximate port coordinates (a point of interest near the port).
+    Each field is present only when Royal lists it; days without any are left out.
+  - `orders[]`: purchased add-ons, not cancelled, sorted by `date` and `time`
+    (untimed last). `category` is Royal's product type id (`pt_shoreX`,
+    `pt_beverage`, `pt_arcades`, ...). `guests` counts everyone on the order,
+    which can include guests from other staterooms. Timed bookings (shore
+    excursions; probably dining and shows) add `date` (`YYYY-MM-DD`), `time`
+    (`HH:MM`, ship/port-local like the schedule), `day` (cruise day, 1 = embark),
+    `port` (port code) and, when the product page lists them, `meet` and `end`
+    (`HH:MM`, same date) and `minutes`. Packages and credits have none of these.
+  - `voyageError`, `ordersError`: a message when that part couldn't be fetched.
+  - Changes to `mine` are additive and don't bump `v`. Before September 2026,
+    `orders` entries could hold a `when` object instead of `date`/`time`; ignore it.
 
 ## Rules for consumers
 
