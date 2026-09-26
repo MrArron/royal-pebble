@@ -59,6 +59,7 @@
       "dir_where",
       "dir_rows",
       "dir_gps",
+      "dir_bank",
       "arrive",
       "depart",
       "ship_name",

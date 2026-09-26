@@ -32,11 +32,10 @@ typedef struct {
   int8_t rel;         // decks from the cabin, for the top bar
   bool has_where;
   Where where;        // place pages: where the place is
-  bool has_gps;       // place pages: the Ship GPS FROM block (DIR_GPS_ flags)
-  int8_t gps_decks;   // decks to go, + = up
-  uint8_t gps_flags;
-  char gps_header[32];  // "FROM YOUR CABIN"
-  char gps_text[32];    // "160 m fore", "Your deck · 50 m aft"
+  bool has_gps;       // place pages: the Ship GPS lines
+  DirGps gps;
+  bool has_bank;      // elevator bank pages
+  DirBank bank;
   const uint8_t *rows;
   int rows_length;
 } DirPageMsg;

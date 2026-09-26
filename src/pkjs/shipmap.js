@@ -89,6 +89,17 @@ function approx(ship, deck, position) {
   return pt(deck, a, 0, {approx: true});
 }
 
+// An elevator bank ('fwd' or 'aft'): {decks, spots}, one spot per deck it stops
+// at, in the lobby between its two sides. null for a ship with no map.
+function bank(ship, key) {
+  var b = PLACES[ship] && PLACES[ship].banks[key];
+  if (!b) {
+    return null;
+  }
+  var x = (b.port + b.starboard) / 2;
+  return {decks: b.decks.slice(), spots: b.decks.map(function(d) { return pt(d, b.a, X(ship, d, x)); })};
+}
+
 function cabin(ship, number) {
   var c = cabins.find(ship, number);
   return c ? pt(c.deck, c.a, X(ship, c.deck, c.x), {cabin: String(number)}) : null;
@@ -481,6 +492,7 @@ function restroom(ship, from, opts) {
 module.exports = {
   venue: venue,
   approx: approx,
+  bank: bank,
   cabin: cabin,
   restroom: restroom,
   route: route,

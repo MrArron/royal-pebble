@@ -186,16 +186,36 @@ static void handle_dir_page(DictionaryIterator *iter) {
     page.has_where = true;
     codec_read_where(where->value->data, &page.where);
   }
-  // int8 decks, uint8 flags, header, text (docs/WATCH_PROTOCOL.md, Ship directory).
+  // int8 decks, uint8 flags, header, text, then optionally the restroom's int8
+  // decks and text (docs/WATCH_PROTOCOL.md, Ship directory).
   Tuple *gps = dict_find(iter, MESSAGE_KEY_dir_gps);
   if (gps && gps->type == TUPLE_BYTE_ARRAY && gps->length >= 4) {
     const uint8_t *p = gps->value->data;
     const uint8_t *end = p + gps->length;
-    page.gps_decks = (int8_t)p[0];
-    page.gps_flags = p[1];
+    page.gps.decks = (int8_t)p[0];
+    page.gps.flags = p[1];
     p += 2;
-    page.has_gps = codec_read_str(&p, end, page.gps_header, sizeof(page.gps_header)) &&
-                   codec_read_str(&p, end, page.gps_text, sizeof(page.gps_text));
+    page.has_gps = codec_read_str(&p, end, page.gps.header, sizeof(page.gps.header)) &&
+                   codec_read_str(&p, end, page.gps.text, sizeof(page.gps.text));
+    if (page.has_gps && p + 2 <= end) {
+      page.gps.rest_decks = (int8_t)p[0];
+      p++;
+      page.gps.has_rest = codec_read_str(&p, end, page.gps.rest_text, sizeof(page.gps.rest_text));
+    }
+  }
+  // uint8 cabin deck, uint8 count, the decks, text.
+  Tuple *bank = dict_find(iter, MESSAGE_KEY_dir_bank);
+  if (bank && bank->type == TUPLE_BYTE_ARRAY && bank->length >= 3) {
+    const uint8_t *p = bank->value->data;
+    const uint8_t *end = p + bank->length;
+    int count = p[1];
+    if (count <= DIR_BANK_DECKS && p + 2 + count < end) {
+      page.bank.cabin = p[0];
+      page.bank.count = count;
+      memcpy(page.bank.decks, p + 2, count);
+      p += 2 + count;
+      page.has_bank = codec_read_str(&p, end, page.bank.text, sizeof(page.bank.text));
+    }
   }
   Tuple *rows = dict_find(iter, MESSAGE_KEY_dir_rows);
   if (rows && rows->type == TUPLE_BYTE_ARRAY) {

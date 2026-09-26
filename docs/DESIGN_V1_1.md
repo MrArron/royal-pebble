@@ -720,9 +720,10 @@ As built (item 8):
 ## 9. Ship GPS (items 19-21)
 
 **Status: designed and approved 2026-09-25.** Written from the Claude Design
-pass and the owner's answers (9.9). Built so far: the planner (phone only) and
-the place page's FROM block with the units setting (9.1, 9.7); the restroom
-line, route screen, Home Select, hints and Help follow. The mockups and their
+pass and the owner's answers (9.9). Built so far: the planner (phone only),
+the place page's FROM block with the units setting (9.1, 9.7), and the
+restroom line and elevator banks (9.1, 9.3); the route screen, Home Select,
+hints and Help follow. The mockups and their
 `NOTES.md` in `docs/mockups/gps/` are the final word on text and layout; the
 sketches below are at watch size. Design canvas (private to the owner):
 https://claude.ai/artifact/Cq3jrWKZAZE6qHxbqNVy6n
@@ -759,7 +760,10 @@ Evening Show · 7:00p ★         events still to come there
   180 m fore`. The header names the route start (9.4).
 - `Closest restroom` is measured from the venue, not the cabin. When the
   restroom is on another deck, the direction goes on its own line:
-  `Closest restroom` / `↑1 deck · 20 m aft`.
+  `Closest restroom` / `↑1 deck · 20 m aft`. As built: from the entrance the
+  FROM route reaches (a venue with several gets the nearest one's restroom);
+  the distance also moves to its own line when the one-line form is too wide
+  (`150 steps fore`); and it shows with no stateroom or no route too.
 - Long pages scroll, with ScrollLayer's content indicator.
 - **Approximate spot** (the 19 venues with no spot on the plans): a muted
   `Spot approximate` line under the distance (`WatchGpsApprox`).
@@ -843,6 +847,11 @@ FROM YOUR CABIN                small caps, muted (the start, 9.4)
 - **Elevator place page:** the name, `Aft · all decks but 1`, `STOPS AT` with a
   grid of deck chips (7 per row; the cabin's deck filled with the sea accent),
   then the FROM block and `Select for route`.
+- **As built:** the line under the name reads `Aft · Decks 3-17` (`all decks`
+  when the bank stops everywhere), counted over the ship's decks so the missing
+  deck 13 doesn't split the run; the Elevators area lists each bank with its
+  decks. The FROM block goes to the bank's lobby on the best deck. The owner
+  approved this wording (9.9, decision 13).
 
 ### 9.4 Where routes start
 
@@ -973,6 +982,8 @@ For the build PRs:
     unofficial app, so the `~` on each one added nothing. Distances show as
     `160 m fore`; the Help section says once that they are approximate (9.7).
     The mockups still show `~`; this supersedes them.
+13. **Elevator bank line (2026-09-26):** `Aft · Decks 3-17`, not the mockup's
+    `Aft · all decks but 1`, which could be read as "except deck 1" (9.3).
 
 
 ## Mockup index

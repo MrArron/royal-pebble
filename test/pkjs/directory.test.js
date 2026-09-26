@@ -46,7 +46,8 @@ test('first page lists decks with areas and counts, then Ashore', function() {
   assert.strictEqual(p.title, 'Ship');
   assert.strictEqual(p.label, 'by deck');
   assert.strictEqual(p.rel, null);
-  assert.deepStrictEqual(p.rows[0], {kind: directory.ROW_ITEM, ref: directory.REF_AREAS, line1: 'Browse by area', line2: ''});
+  assert.deepStrictEqual(p.rows[0], {kind: directory.ROW_ITEM, ref: directory.REF_AREAS, line1: 'Browse by area', line2: '',
+                                     flags: 0});
   var decks = p.rows.slice(1, -1).map(function(r) { return +r.line1.split(' ')[1]; });
   assert.deepStrictEqual(decks, decks.slice().sort(function(a, b) { return a - b; }));
   var d5 = find(p.rows, 'Deck 5');
@@ -275,13 +276,17 @@ test('GPS: approximate spots, owner-added venues, no GPS ashore or off the map',
   other.ship.code = 'XX';
   assert.strictEqual(directory.buildPage(directory.REF_PLACE, {bundle: other, settings: CABIN, now: NOW}).gps,
                      undefined);
-  // A stateroom the map doesn't know: no GPS lines rather than a wrong hint.
-  assert.strictEqual(gpsPage('Studio B', {settings: {me: {stateroom: '99999'}}}).gps, null);
+  // A stateroom the map doesn't know: no FROM block rather than a wrong hint,
+  // but the closest restroom (from the venue) still shows.
+  var lost = gpsPage('Studio B', {settings: {me: {stateroom: '99999'}}}).gps;
+  assert.strictEqual(lost.flags, directory.GPS_NO_FROM);
+  assert.ok(lost.rest && lost.rest.text, JSON.stringify(lost));
 });
 
 test('GPS: no stateroom gives the hint flag; the booking stateroom counts', function() {
   var p = gpsPage('Studio B', {settings: {me: {deck: 'Deck 9'}}});
-  assert.deepStrictEqual(p.gps, {header: '', decks: 0, text: '', flags: directory.GPS_NO_CABIN});
+  assert.deepStrictEqual([p.gps.header, p.gps.decks, p.gps.text, p.gps.flags], ['', 0, '', directory.GPS_NO_CABIN]);
+  assert.ok(p.gps.rest, 'the closest restroom shows without a cabin');
   var bundle = makeBundle();
   bundle.mine = {stateroom: '9254'};
   assert.strictEqual(gpsPage('Studio B', {settings: {}, bundle: bundle}).gps.header, 'FROM YOUR CABIN');
@@ -313,6 +318,69 @@ test('GPS: dir_gps packs decks, flags, header and text', function() {
   assert.strictEqual(b.length, 29);
   assert.deepStrictEqual(directory.message(gpsPage('Royal Theater')).dir_gps,
                          directory.encodeGps(gpsPage('Royal Theater').gps));
+  // The restroom follows: int8 decks, then its text.
+  g.rest = {decks: 1, text: '20 m aft'};
+  var r = directory.encodeGps(g);
+  assert.deepStrictEqual(r.slice(0, 29), b);
+  assert.deepStrictEqual(r.slice(29, 31), [1, 8]);
+  assert.strictEqual(String.fromCharCode.apply(null, r.slice(31)), '20 m aft');
+});
+
+test('GPS: closest restroom from the venue, in the owner units', function() {
+  var p = gpsPage('Royal Theater');
+  assert.strictEqual(typeof p.gps.rest.decks, 'number');
+  assert.ok(/^[0-9]+ m( fore| aft)?$/.test(p.gps.rest.text), p.gps.rest.text);
+  var steps = gpsPage('Royal Theater', {settings: {me: CABIN.me, units: 'steps'}});
+  assert.ok(/^[0-9]+ steps/.test(steps.gps.rest.text), steps.gps.rest.text);
+  // None ashore.
+  assert.strictEqual(gpsPage('Perfect Day at CocoCay').gps, null);
+});
+
+test('elevator banks: deck rows, the Elevators area and bank pages', function() {
+  var d5 = page(directory.REF_DECK + 5, {settings: CABIN});
+  var names = d5.rows.map(function(r) { return r.line1; });
+  var fore = find(d5.rows, 'Fore elevators');
+  assert.deepStrictEqual([fore.ref, fore.flags], [directory.REF_BANK, directory.ROW_MUTED]);
+  // Last in its group: FORE ... Fore elevators, MID.
+  assert.strictEqual(names[names.indexOf('Fore elevators') + 1], 'MID');
+  assert.strictEqual(names[names.indexOf('Aft elevators') + 1], 'FULL LENGTH');
+  // Deck 17: only the aft bank stops there.
+  var d17 = page(directory.REF_DECK + 17, {settings: CABIN});
+  assert.ok(find(d17.rows, 'Aft elevators'));
+  assert.ok(!find(d17.rows, 'Fore elevators'));
+
+  var areas = page(directory.REF_AREAS);
+  var n = areas.rows.length;
+  assert.deepStrictEqual([areas.rows[n - 2].line1, areas.rows[n - 2].line2, areas.rows[n - 1].line1],
+                         ['Elevators', 'Fore' + DOT + 'Aft', 'Ashore']);
+  var lifts = page(directory.REF_ELEVATORS);
+  assert.deepStrictEqual(lifts.rows.map(function(r) { return [r.line1, r.line2]; }),
+                         [['Elevators', ''], ['Fore elevators', 'Decks 3-16'], ['Aft elevators', 'Decks 3-17']]);
+
+  var aft = page(directory.REF_BANK + 1, {settings: CABIN});
+  assert.strictEqual(aft.title, 'Place');
+  assert.deepStrictEqual(aft.rows, [{kind: directory.ROW_PLACE, ref: 0, line1: 'Aft elevators', line2: ''}]);
+  assert.strictEqual(aft.bank.text, 'Aft' + DOT + 'Decks 3-17');
+  assert.deepStrictEqual(aft.bank.decks, [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17]);
+  assert.strictEqual(aft.bank.cabin, 9);
+  // The cabin (9254, aft) is on a deck the bank stops at: the lobby on this deck.
+  assert.strictEqual(aft.gps.header, 'FROM YOUR CABIN');
+  assert.ok(new RegExp('^Your deck' + DOT + '[0-9]+ m').test(aft.gps.text), aft.gps.text);
+  assert.ok(!aft.gps.rest);
+  var m = directory.message(aft);
+  assert.deepStrictEqual(m.dir_bank.slice(0, 16), [9, 14, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17]);
+  assert.strictEqual(m.dir_bank[16], m.dir_bank.length - 17);
+  assert.ok(!('dir_where' in m));
+
+  // No banks on a ship with no map.
+  assert.strictEqual(directory.bankDecksText([3, 4, 5], [3, 4, 5]), 'all decks');
+  assert.strictEqual(directory.bankDecksText([3, 5, 6], [2, 3, 4, 5, 6]), 'Decks 3, 5-6');
+  var other = makeBundle();
+  other.ship.code = 'XX';
+  var none = directory.buildPage(directory.REF_AREAS, {bundle: other, settings: {}, now: NOW});
+  assert.ok(!find(none.rows, 'Elevators'));
+  assert.strictEqual(directory.buildPage(directory.REF_BANK, {bundle: other, settings: {}, now: NOW}).rows[0].line1,
+                     'Not found');
 });
 
 var failed = 0;
