@@ -260,7 +260,7 @@ test('GPS: a place on the cabin deck says "Your deck"', function() {
 });
 
 test('GPS: approximate spots, owner-added venues, no GPS ashore or off the map', function() {
-  assert.strictEqual(gpsPage('Royal Shops').gps.flags, directory.GPS_APPROX);
+  assert.strictEqual(gpsPage('Medical Center').gps.flags, directory.GPS_APPROX);
   var settings = {me: CABIN.me, venues: {HM: {'Secret Bar': {decks: [14], position: 'Fore',
                                                                 neighborhood: 'Central Park'}}}};
   var own = gpsPage('Secret Bar', {settings: settings});
@@ -363,7 +363,7 @@ test('route: steps with glyphs, the arrival last, and the summary', function() {
 });
 
 test('route: shown less for an approximate spot, same area on the cabin deck', function() {
-  var shops = route('Royal Shops');
+  var shops = route('Medical Center');
   assert.strictEqual(shops.flags, directory.ROUTE_REDUCED);
   assert.ok(!/in all/.test(shops.small.text), shops.small.text);
   var near = route(directory.REF_BANK + 1);  // the aft bank, near cabin 9254

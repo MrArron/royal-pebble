@@ -1,5 +1,6 @@
 {
   "_about": "Hand-checked fixes for Harmony (profile 2396) after reading tools/shipmap/out/review/*.png. Kept small on purpose: everything else is matched to the venue table automatically.",
+  "_about_app": "'add' entries noted 'from the Royal app plan' were read from screenshots of Royal's Android app (2026-09-26), bow up, scaled onto the SVG frame by the venues both show: about 5 m, up to ~15 m on decks 6 and 14. The SVGs don't label these rooms.",
   "rename": [
     {"text": "MAIN DINING ROOM", "venue": "Main Dining Room {deck}"},
     {"text": "NEXT CRUISE", "venue": "NextCruise Office"},
@@ -26,6 +27,24 @@
   ],
   "add": [
     {"venue": "Boardwalk", "deck": 6, "a": 295.0, "x": 0.0, "note": "not labeled on the plan; middle of the Boardwalk"},
-    {"venue": "Pool Deck", "deck": 15, "a": 180.0, "x": 0.0, "note": "not labeled on the plan; between the main pools"}
+    {"venue": "Pool Deck", "deck": 15, "a": 180.0, "x": 0.0, "note": "not labeled on the plan; between the main pools"},
+    {"venue": "Solera", "deck": 5, "a": 150.2, "x": -14.0, "note": "from the Royal app plan"},
+    {"venue": "Prince & Greene", "deck": 5, "a": 152.5, "x": 14.2, "note": "from the Royal app plan"},
+    {"venue": "Port Merchants", "deck": 5, "a": 155.6, "x": -8.1, "note": "from the Royal app plan"},
+    {"venue": "Kids Shop", "deck": 5, "a": 161.7, "x": -14.3, "note": "from the Royal app plan"},
+    {"venue": "Pandora", "deck": 5, "a": 184.5, "x": -6.1, "note": "from the Royal app plan"},
+    {"venue": "Regalia Watches", "deck": 5, "a": 202.5, "x": 14.1, "note": "app: Regalia Luxury Watches; from the Royal app plan"},
+    {"venue": "Regalia Fine Jewelry", "deck": 5, "a": 222.1, "x": -13.8, "note": "from the Royal app plan"},
+    {"venue": "Royal Shops", "deck": 5, "a": 144.2, "x": -1.5, "note": "the app shows only 'Promenade Shops' here; same spot; from the Royal app plan"},
+    {"venue": "Picture This", "deck": 6, "a": 189.0, "x": 1.9, "note": "app: Picture This Studio; from the Royal app plan"},
+    {"venue": "Giovanni's Wine Bar", "deck": 8, "a": 135.2, "x": 12.2, "note": "the plan's VINTAGES label; the app names this room Giovanni's Wine Bar; from the Royal app plan"},
+    {"venue": "Breitling", "deck": 8, "a": 130.9, "x": -13.8, "note": "from the Royal app plan"},
+    {"venue": "Messika Boutique", "deck": 8, "a": 126.0, "x": -15.8, "note": "from the Royal app plan"},
+    {"venue": "Roberto Coin Boutique", "deck": 8, "a": 123.7, "x": -11.3, "note": "app: Roberto; from the Royal app plan"},
+    {"venue": "AO Workshop", "deck": 14, "a": 72.9, "x": 3.0, "note": "app: Workshop; from the Royal app plan"},
+    {"venue": "Arena & Hangouts (Ages 6-12)", "deck": 14, "a": 72.2, "x": -7.9, "note": "app: Arena; from the Royal app plan"},
+    {"venue": "Arena & Hangouts (Ages 6-12)", "deck": 14, "a": 83.7, "x": -11.0, "note": "app: Hangout; from the Royal app plan"},
+    {"venue": "Social100 (Ages 13-17)", "deck": 15, "a": 272.7, "x": -21.5, "note": "app: Social 100; from the Royal app plan"},
+    {"venue": "Teen Center", "deck": 15, "a": 272.7, "x": -21.5, "note": "not on the app plan; the teen area is Social 100; from the Royal app plan"}
   ]
 }

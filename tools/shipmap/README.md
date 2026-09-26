@@ -57,7 +57,8 @@ Run from the repo root. The downloads and working files (`tools/shipmap/decks/`,
 4. `node tools/shipmap/build_places.js tools/shipmap/out/labels.json tools/shipmap/places-HM.overrides.json src/pkjs/data/places-HM.js`
    matches the labels to the venue table (names and aliases). It prints any
    label it couldn't match and any venue with no spot; Harmony has 0 unmatched and
-   19 without a spot (shown as `Spot approximate`). `places-HM.overrides.json`
+   18 without a spot; the overrides' `add` list places those from Royal's app
+   plan (see below), leaving 2 (shown as `Spot approximate`). `places-HM.overrides.json`
    holds the hand-checked fixes.
 5. `sh tools/shipmap/build.sh` builds the walkway graph from
    `walkways-HM.paths.json` (hand-drawn walkable paths, read from the plans).
@@ -90,7 +91,34 @@ Then run `node test/pkjs/shipmap-data.test.js` and `node test/pkjs/cabins.test.j
   aft) and counts pairs twice.
 - **Single-deck stairs** (theatre and pod stairs) are listed as the plans draw
   them; they don't connect decks.
+- **Royal app plan (2026-09-26).** Screenshots of the deck plans in Royal's
+  Android app (decks 2, 5, 6, 8, 14, 15; bow at the top) name rooms the SVGs
+  leave blank. They are schematic, so their spots were scaled onto the SVG frame
+  by the venues both show: about 5 m out, up to ~15 m on decks 6 and 14. They
+  agree with the data's orientation: bow at a = 0, port (1xx-3xx cabins) at
+  negative x, as a top view. Still to check on board.
+  - Medical Center (deck 2, about a = 216.5, x = -10.5, port side just forward
+    of the aft elevators) stays approximate: deck 2 has no walkways yet.
+  - Where the app differs from the SVGs, and the guesses made to place
+    rooms, are listed in `conflicts-HM.json` (see Conflicts below).
 - **Refits** change the plans: rebuild from the new profile.
+
+## Conflicts
+
+`conflicts-HM.json` lists every place where the sources disagree (the SVG
+scrape, the Royal app screenshots, any later scrape), plus guesses made to fill
+gaps. Each entry says what each source shows, which value the data uses now, and
+the question to answer on board.
+
+- **Every new scrape** (a new SVG profile, more app screenshots, another ship
+  source) is compared with the data. Each difference becomes an entry here;
+  the data isn't changed to match the new source until it's confirmed.
+- **Settled only in person.** The owner checks the open entries during the
+  sailing. On-board logging for this is still to be added (brief, Ship GPS).
+  When an entry is confirmed, set `status` to `confirmed` with `truth`, fix the
+  overrides or the venue table, and rebuild.
+- `node test/pkjs/shipmap-data.test.js` checks the file: ids, statuses, and
+  that every venue named is in the venue table.
 - **Other ships:** fetch that ship's SVGs, check `BANK_GAP` in
   `extract_cabins.py` (it expects Oasis-class spacing), add overrides, and draw
   a new paths file.

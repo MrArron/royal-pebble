@@ -203,10 +203,19 @@ Before showing any of it:
   don't show a side until then.
 - **Main Dining Room:** check that choosing the nearest venue spot never sends
   you to a different floor of it.
-- **Approximate spots:** treat the 19 venues with no spot on the plans as
-  approximate.
+- **Approximate spots:** treat the venues with no spot on the plans (now just
+  the Medical Center, on deck 2) as approximate.
 - **Route costs:** the elevator wait and stairs-per-deck costs are guesses, to
   tune after walking the ship.
+- **Source conflicts:** the SVG scrape and the Royal app's plans disagree in
+  places (a venue's deck or side, names, restrooms). Each is listed in
+  `tools/shipmap/conflicts-HM.json`, as are conflicts from any later scrape;
+  the data keeps its current value until the owner checks it on board.
+- **On-board logging (needed, not designed yet; owner, 2026-09-26):** a way for
+  the owner to log the true situation in person during the sailing, for each
+  open conflict (and anything else found wrong), so the data can be fixed
+  afterwards. To design and schedule before the sailing: it has to be on the
+  watch or phone before the freeze.
 
 ### Usage log (after Phase 2 and the Ship GPS; must be on the watch well before the freeze)
 

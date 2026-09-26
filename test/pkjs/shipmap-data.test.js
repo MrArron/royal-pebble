@@ -70,15 +70,28 @@ test('venue spots: every name is in the venue table, on a real deck', function()
   });
 });
 
-test('venue spots: the 19 without one are the known approximate list', function() {
+test('venue spots: only the known approximate ones have none', function() {
+  // Medical Center is on deck 2, which has no walkways; CocoCay is ashore.
   var missing = Object.keys(TABLE.venues).filter(function(n) { return !P.venues[n]; }).sort();
-  assert.deepStrictEqual(missing, [
-    'AO Workshop', 'Arena & Hangouts (Ages 6-12)', 'Breitling', "Giovanni's Wine Bar",
-    'Kids Shop', 'Medical Center', 'Messika Boutique', 'Pandora', 'Perfect Day at CocoCay',
-    'Picture This', 'Port Merchants', 'Prince & Greene', 'Regalia Fine Jewelry',
-    'Regalia Watches', 'Roberto Coin Boutique', 'Royal Shops', 'Social100 (Ages 13-17)',
-    'Solera', 'Teen Center'
-  ].sort());
+  assert.deepStrictEqual(missing, ['Medical Center', 'Perfect Day at CocoCay']);
+});
+
+// Source conflicts (tools/shipmap/conflicts-HM.json): settled only on board.
+test('conflicts: well formed, every venue in the table, open until checked on board', function() {
+  var cf = require('../../tools/shipmap/conflicts-HM.json');
+  var ids = {};
+  assert.ok(cf.conflicts.length > 0);
+  cf.conflicts.forEach(function(c) {
+    assert.ok(/^[a-z0-9-]+$/.test(c.id) && !ids[c.id], 'id ' + c.id);
+    ids[c.id] = true;
+    assert.ok(cf.statuses.indexOf(c.status) !== -1, c.id + ' status');
+    ['kind', 'svg', 'app', 'using', 'check'].forEach(function(k) {
+      assert.ok(typeof c[k] === 'string' && c[k], c.id + ' ' + k);
+    });
+    assert.ok(c.venues || c.deck, c.id + ' names venues or a deck');
+    (c.venues || []).forEach(function(v) { assert.ok(TABLE.venues[v], c.id + ': ' + v + ' not in the venue table'); });
+    if (c.status === 'confirmed') { assert.ok(c.truth, c.id + ' confirmed without the truth'); }
+  });
 });
 
 test('stairs: sorted deck lists on real decks', function() {

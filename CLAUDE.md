@@ -42,6 +42,10 @@ Read before making changes:
   public web-app values (from an MIT project) and are fine to keep.
 - **Be gentle with Royal's servers.** Unofficial endpoints: keep requests minimal,
   no polling, no parallel hammering in tests.
+- **Ship map conflicts.** When any scrape (Royal's SVGs, the Royal app, a later
+  source) disagrees with the ship map data, add an entry to
+  `tools/shipmap/conflicts-HM.json` instead of silently changing the data; it's
+  settled in person on board.
 - **Data format changes** must update `docs/DATA_FORMAT.md` and both producers
   (phone companion and `cruise_sync.py`) together; bump `v` if breaking.
 - **Verify Pebble details** (platform names, API limits, build commands) against
