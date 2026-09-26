@@ -373,7 +373,7 @@ found` page).
   worked out on the phone (`directory.js` with `shipmap.js`, `gpstext.js` and
   `routestart.js`): int8 decks to go (+ = up; the watch draws the arrow and
   `1 deck` / `N decks`), uint8 flags, then the FROM header (`FROM YOUR CABIN`,
-  `FROM STUDIO B`) and the line's text (`~160 m fore`, `Your deck · ~50 m aft`),
+  `FROM STUDIO B`) and the line's text (`160 m fore`, `Your deck · 50 m aft`),
   each as uint8 length and UTF-8 bytes, at most 31 bytes. Flags: 1 the spot is
   approximate (`Spot approximate`), 2 no stateroom on the Me tab (no FROM
   block; the watch shows `Add your stateroom on the phone for walking

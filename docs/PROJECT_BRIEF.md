@@ -181,13 +181,13 @@ The map data (`src/pkjs/data/`, built by `tools/shipmap/`) and the planner
 only short strings and stores no map data.
 
 19. **Walking distance** on directory place pages: from the cabin (by stateroom
-    number on the Me tab), e.g. `~160 m aft`, next to the existing deck line.
+    number on the Me tab), e.g. `160 m aft`, next to the existing deck line.
 20. **Closest restroom** on place pages (Hold Select opens its route), and
     elevator banks as directory places. Restrooms themselves are not listed in
     the directory (owner, 2026-09-25).
 21. **Step-by-step route** on its own Route screen, opened with Select from a
-    place page or from Home's NEXT card: short lines such as `~50 m aft` /
-    `Aft elev to Deck 16` / `~20 m aft`, from the current start (cabin by
+    place page or from Home's NEXT card: short lines such as `50 m aft` /
+    `Aft elev to Deck 16` / `20 m aft`, from the current start (cabin by
     default; see `docs/DESIGN_V1_1.md` §9.4).
 
 Designed 2026-09-25: `docs/DESIGN_V1_1.md` §9, mockups in `docs/mockups/gps/`.

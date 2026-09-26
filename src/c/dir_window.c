@@ -200,7 +200,7 @@ static void draw_line(GContext *ctx, const char *text, GFont font, GColor color,
 }
 
 // The Ship GPS block under a place's heading (docs/DESIGN_V1_1.md §9.1): a
-// divider, `FROM YOUR CABIN`, `↓1 deck · ~160 m fore` and `Spot approximate`;
+// divider, `FROM YOUR CABIN`, `↓1 deck · 160 m fore` and `Spot approximate`;
 // with no stateroom, the hint instead. Draws when ctx isn't NULL; returns the
 // new y.
 static int layout_gps(GContext *ctx, const View *v, int y, int w) {

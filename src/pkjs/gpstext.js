@@ -23,11 +23,11 @@ function unitOf(opts) {
   return UNITS.indexOf(opts && opts.units) !== -1 ? opts.units : 'm';
 }
 
-// "~50 m", "~160 ft", "~210 steps": rounded to 5 under 50, else to 10.
+// "50 m", "160 ft", "210 steps": rounded to 5 under 50, else to 10.
 function distance(metres, units) {
   var n = units === 'ft' ? metres * FEET_PER_METRE : units === 'steps' ? metres / STRIDE : metres;
   n = n < 50 ? Math.max(5, Math.round(n / 5) * 5) : Math.round(n / 10) * 10;
-  return '~' + n + ' ' + (units === 'ft' ? 'ft' : units === 'steps' ? 'steps' : 'm');
+  return n + ' ' + (units === 'ft' ? 'ft' : units === 'steps' ? 'steps' : 'm');
 }
 
 function towardWord(toward) {
@@ -109,7 +109,7 @@ function steps(r, from, opts) {
   return out;
 }
 
-// The line under the steps: {decks (signed, + = up), text: "~100 m in all"}.
+// The line under the steps: {decks (signed, + = up), text: "100 m in all"}.
 function summary(r, from, opts) {
   var decks = from ? toDeck(r) - from.deck : 0;
   return {decks: decks, text: distance(r.metres, unitOf(opts)) + (reduced(r) ? '' : ' in all')};
@@ -137,7 +137,7 @@ function plain(line) {
   return (line.decks > 0 ? UP : DOWN) + deckText(line.decks) + DOT + line.text;
 }
 
-// "Closest restroom · ~30 m aft", or with a deck change the second line alone:
+// "Closest restroom · 30 m aft", or with a deck change the second line alone:
 // {decks, text}. From shipmap.restroom() (the route from the venue).
 function restroomLine(rest, from, opts) {
   var decks = from ? rest.deck - from.deck : 0;

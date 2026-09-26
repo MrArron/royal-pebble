@@ -4,6 +4,10 @@
 are the final word on text and layout where they differ from the sketches in
 §9.
 
+**Superseded (2026-09-26): the `~` before distances.** The mockups show
+`~160 m fore`; the app shows `160 m fore`, and the Help section says once that
+distances are approximate (DESIGN_V1_1.md §9.9, decision 12).
+
 Same format as `docs/mockups/v1.1` and `docs/mockups/phase2`: Claude Design
 component files, 400×456 (2×), inline styles, Roboto Condensed standing in for
 Gothic. They need the canvas runtime to render; `preview.png` shows all of them.
@@ -80,14 +84,14 @@ wider than the screen. The flags that did come up are expected:
 - `BELOW` on the deck page's last row: that list scrolls.
 
 Check the widest lines in the emulator with the real fonts, in all three units:
-`Closest restroom · ~30 m aft`, `↓1 deck · ~160 m fore`, `Fore stairs to
+`Closest restroom · 30 m aft`, `↓1 deck · 160 m fore`, `Fore stairs to
 Deck 5`, `CLOSEST TO ROYAL THEATER`.
 
 ## Wording added in the design pass
 
-Approved with the designs, but easy to change: `Your deck · ~50 m aft`, `Spot
+Approved with the designs, but easy to change: `Your deck · 50 m aft`, `Spot
 approximate`, `Near Aft elevators` (parked page), `Add your stateroom on the
-phone for walking directions`, the route summary (`↓1 deck · ~100 m in all`),
+phone for walking directions`, the route summary (`↓1 deck · 100 m in all`),
 `Cross the ship` / `Cross to port`, `Finding route…`, `Hold Select for its
 route`, `CLOSEST TO <VENUE>`, `Same area · your deck`, the button hint labels,
 and the voice screens (`HEARD`, `YOU'RE AT`, `Select: routes start here`,
