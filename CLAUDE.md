@@ -16,6 +16,9 @@ Read before making changes:
 
 - `tools/cruise-sync/` — Windows backup sync tool (Python). Reference
   implementation of every Royal Caribbean request.
+- `tools/shipmap/` — builds the Ship GPS map data (`src/pkjs/data/*-HM.js`:
+  cabins, places, walkways) from Royal's deck-plan SVGs. See its README; the
+  data files are generated, never edited by hand.
 - `docs/` — brief, design, data format.
 - Watch app: `package.json` + `wscript` at the root, `src/c/` watch code,
   `src/pkjs/` phone companion (and later the settings page). Targets the Pebble
@@ -56,7 +59,8 @@ Read before making changes:
   `pebble install --emulator emery`,
   `pebble screenshot --no-open --emulator emery <file.png>`,
   `pebble emu-button click <up|down|select|back> --emulator emery`.
-- Phone companion unit tests (Node, in WSL): `node test/pkjs/slice.test.js`. Keep
+- Phone companion unit tests (Node, in WSL): `node test/pkjs/slice.test.js`
+  (every `test/pkjs/*.test.js`, including `shipmap-data.test.js` for the map data). Keep
   tests out of `src/pkjs/`; the build bundles everything there.
 - The emulator's phone (pypkjs) ignores daylight saving time, so its JS clock can
   be an hour behind the watch. Export `TZ=Etc/GMT+4` (fixed offset) before

@@ -1,6 +1,11 @@
 # Cruise data bundles can include a stateroom number
 cruise-watch-*.json
 
+# Ship map downloads and working files (tools/shipmap/README.md)
+tools/shipmap/decks/
+tools/shipmap/out/
+*.check.json
+
 # Python
 __pycache__/
 *.pyc
