@@ -30,6 +30,7 @@ var MSG_SAVED = 14;
 var MSG_DIR_REQUEST = 15;
 var MSG_ROUTE_REQUEST = 16;
 var MSG_ROUTE_PAGE = 17;
+var MSG_LOG = 18;
 
 // Keep each events chunk well under the watch's 2048-byte inbox.
 var CHUNK_BYTES = 1500;
@@ -367,9 +368,11 @@ function sendRoute() {
     usage.add('route', (req.venue !== undefined ? 'to event at ' + req.venue + ' (start ' + req.start + ')' :
                         (req.rest ? 'restroom from place ' : 'to place ') + req.ref) +
               ': "' + page.title + '", ' + (page.header ? page.header + ', ' : '') +
-              (page.steps.length ? page.steps.length + ' steps, ' + [page.big, page.small && page.small.text]
-                .filter(function(t) { return t; }).join(' / ') : 'no route: ' + page.lead) +
-              ', start: ' + directory.startReason(ctx, req.venue !== undefined ? {start: req.start} : undefined) +
+              (page.steps.length ? [page.steps.length + ' steps', [page.big, page.small && page.small.text]
+                .filter(function(t) { return t; }).join(' / ')].filter(function(t) { return t; }).join(', ') :
+                'no route: ' + page.lead) +
+              // A restroom route starts at the venue, whatever the start setting.
+              (req.rest ? '' : ', start: ' + directory.startReason(ctx, req.venue !== undefined ? {start: req.start} : undefined)) +
               ', planned in ' + built + ' ms, ' + sendText(ok, info));
     console.log('Route ' + (req.venue !== undefined ? 'to event at ' + req.start : req.ref) +
                 (req.rest ? ' (restroom)' : '') + (ok ? ' sent: ' : ' failed: ') +
@@ -411,6 +414,21 @@ function starChangesReceived(bytes) {
   s_ack = s_ack ? {seq: Math.max(s_ack.seq, seq), resend: s_ack.resend || resend} : {seq: seq, resend: resend};
   if (!s_sending) {
     sendNext();
+  }
+}
+
+// Usage log entries from the watch (docs/WATCH_PROTOCOL.md, Usage log), added
+// at the watch's own time. Its cruise minutes count from the slice's sail date.
+function watchLogReceived(bytes, dropped) {
+  var sailIso = currentData().bundle.sailDate;
+  var entries = pack.decodeLogEntries(bytes || []);
+  console.log('Watch log: ' + entries.length + ' entries' + (dropped ? ', ' + dropped + ' lost' : ''));
+  entries.forEach(function(e) {
+    var r = logLib.watchEntry(e, sailIso);
+    usage.add(r.kind, r.detail, e.at * 1000);
+  });
+  if (dropped > 0) {
+    usage.add('error', 'watch log queue was full: ' + dropped + ' oldest entries lost');
   }
 }
 
@@ -759,6 +777,9 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
       break;
     case MSG_STAR_CHANGES:
       starChangesReceived(p.star_changes);
+      break;
+    case MSG_LOG:
+      watchLogReceived(p.log_entries, p.log_dropped | 0);
       break;
     case MSG_DIR_REQUEST:
       s_dirRef = p.dir_ref | 0;

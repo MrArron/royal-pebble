@@ -3,6 +3,7 @@
 #include "comm.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // Ship directory (docs/DESIGN_V1_1.md §3): decks (or areas), then one deck's
 // or area's places, then one place with what's on there for the rest of today.
@@ -525,9 +526,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
 }
 
 // The cursor skips headers and a place's heading.
-static void selection_will_change(MenuLayer *menu, MenuIndex *new_index, MenuIndex old_index,
-                                  void *context) {
-  View *v = context;
+static void skip_unselectable(View *v, MenuIndex *new_index, MenuIndex old_index) {
   if (v->state != STATE_READY) {
     return;
   }
@@ -541,25 +540,42 @@ static void selection_will_change(MenuLayer *menu, MenuIndex *new_index, MenuInd
   *new_index = old_index;
 }
 
+static void selection_will_change(MenuLayer *menu, MenuIndex *new_index, MenuIndex old_index,
+                                  void *context) {
+  skip_unselectable(context, new_index, old_index);
+  usage_move(old_index.row, new_index->row);
+}
+
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   View *v = context;
+  uint8_t nothing = USAGE_NOTHING;
   if (v->state == STATE_NO_PHONE) {
+    nothing = 0;
     request(v);
   } else if (v->state == STATE_READY && index->row < v->row_count) {
     const DirRow *r = &v->rows[index->row];
     if (r->kind == DIR_ROW_ITEM && r->ref != 0) {
+      nothing = 0;
+      usage_press(BUTTON_ID_SELECT, 0, index->row);
       dir_window_push(r->ref, r->line1);
+      return;
     } else if (r->kind == DIR_ROW_PLACE && has_route(v)) {
+      nothing = 0;
+      usage_press(BUTTON_ID_SELECT, 0, index->row);
       route_window_push(v->ref, false, r->line1, v->gps.header);
+      return;
     }
   }
+  usage_press(BUTTON_ID_SELECT, nothing, index->row);
 }
 
 // On a place page's heading: the route to its closest restroom.
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
   View *v = context;
-  if (v->state == STATE_READY && index->row < v->row_count && v->rows[index->row].kind == DIR_ROW_PLACE &&
-      has_rest_route(v)) {
+  bool rest = v->state == STATE_READY && index->row < v->row_count &&
+              v->rows[index->row].kind == DIR_ROW_PLACE && has_rest_route(v);
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (rest ? 0 : USAGE_NOTHING), index->row);
+  if (rest) {
     route_window_push(v->ref, true, "Restroom", "");
   }
 }
@@ -622,6 +638,11 @@ static void window_unload(Window *window) {
   free(v);
 }
 
+static void window_appear(Window *window) {
+  View *v = window_get_user_data(window);
+  usage_screen(SCREEN_DIR, v->ref);
+}
+
 void dir_window_push(int32_t ref, const char *title) {
   if (s_depth >= MAX_DEPTH) {
     return;
@@ -637,6 +658,7 @@ void dir_window_push(int32_t ref, const char *title) {
   window_set_user_data(v->window, v);
   window_set_window_handlers(v->window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   s_views[s_depth++] = v;

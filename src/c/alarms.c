@@ -1,7 +1,13 @@
 #include "alarms.h"
 #include "data.h"
+#include "usage.h"
 
 #define MAX_WAKEUPS 8
+
+// What the usage log last heard about, so it logs only changes.
+static int s_logged_count = -1;
+static int32_t s_logged_first;
+static int32_t s_logged_last;
 
 void alarms_schedule(void) {
   wakeup_cancel_all();
@@ -17,6 +23,8 @@ void alarms_schedule(void) {
 
   int scheduled = 0;
   int32_t last = INT32_MIN;
+  int32_t first_at = NO_TIME;
+  int32_t last_at = NO_TIME;
   for (int i = 0; i < data_alarm_count() && scheduled < MAX_WAKEUPS; i++) {
     Alarm *a = data_alarm(i);
     // Alerts are sorted; several in the same minute share one wakeup.
@@ -32,11 +40,22 @@ void alarms_schedule(void) {
     }
     if (id < 0) {
       APP_LOG(APP_LOG_LEVEL_WARNING, "Wakeup at %d not scheduled: %d", (int)a->at, (int)id);
+      usage_add(USAGE_WAKEUP_ERROR, 0, (int16_t)id, a->at, 0);
       continue;
     }
+    if (scheduled == 0) {
+      first_at = a->at;
+    }
+    last_at = a->at;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "Wakeup %d in %d min (cruise minute %d)", (int)id,
             (int)(a->at - now), (int)a->at);
     scheduled++;
   }
   APP_LOG(APP_LOG_LEVEL_INFO, "Scheduled %d wakeups from %d alerts", scheduled, data_alarm_count());
+  if (scheduled != s_logged_count || first_at != s_logged_first || last_at != s_logged_last) {
+    s_logged_count = scheduled;
+    s_logged_first = first_at;
+    s_logged_last = last_at;
+    usage_add(USAGE_ALERTS_SCHEDULED, (uint8_t)scheduled, (int16_t)data_alarm_count(), first_at, last_at);
+  }
 }

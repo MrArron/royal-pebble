@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // Shown when an alert fires: the top bar says "Reminder" or "All aboard",
 // then "IN 15 MIN", what it's about and, for reminders, where it is
@@ -211,7 +212,16 @@ static void update_proc(Layer *layer, GContext *ctx) {
   }
 }
 
+static time_t s_shown_at;
+
+static void log_closed(ButtonId button) {
+  usage_press(button, 0, -1);
+  usage_add(USAGE_ALERT_CLOSED, button == BUTTON_ID_SELECT ? 1 : 0,
+            (int16_t)(time(NULL) - s_shown_at), s_alarm.at, 0);
+}
+
 static void back_click(ClickRecognizerRef recognizer, void *context) {
+  log_closed(BUTTON_ID_BACK);
   if (s_from_wakeup) {
     window_stack_pop_all(true);  // back to whatever the user was doing
   } else {
@@ -220,6 +230,7 @@ static void back_click(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
+  log_closed(BUTTON_ID_SELECT);
   window_stack_pop(true);  // Home is underneath
 }
 
@@ -227,6 +238,8 @@ static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_BACK, back_click);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
 }
+
+static void window_appear(Window *window) { usage_screen(SCREEN_ALERT, s_alarm.at); }
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
@@ -306,10 +319,12 @@ void alert_window_push(int32_t at, bool from_wakeup) {
     return;
   }
   s_from_wakeup = from_wakeup;
+  s_shown_at = time(NULL);
   s_window = window_create();
   window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   window_stack_push(s_window, true);

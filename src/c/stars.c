@@ -1,5 +1,6 @@
 #include "stars.h"
 #include "comm.h"
+#include "usage.h"
 
 // Persistent keys (store.c uses 1-3, 10-13 and 20-27).
 #define KEY_STARS_META 30
@@ -36,6 +37,7 @@ static void save(void) {
     int written = persist_write_data(KEY_STARS + k, &s_changes[first], n * sizeof(StarChange));
     if (written < 0) {
       APP_LOG(APP_LOG_LEVEL_ERROR, "Saving star changes failed: %d", written);
+      usage_add(USAGE_STORAGE_ERROR, USAGE_STORE_STARS, (int16_t)written, KEY_STARS + k, 0);
     }
   }
 }

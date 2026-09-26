@@ -136,15 +136,21 @@ function makeLog(storage, opts) {
   }
 
   // Adds an entry when logging is on. `kind` is one word; `detail` free text.
-  function add(kind, detail) {
+  // `ms` (optional) is when it happened, for the watch's entries: they can
+  // arrive late and go in time order.
+  function add(kind, detail, ms) {
     var st = state();
     if (!st.on) {
       return;
     }
-    var ms = nowMs();
+    ms = typeof ms === 'number' ? ms : nowMs();
     var when = stamp(ms);
     var e = [ms, when[0], when[1], cleanText(kind) || 'note', cleanText(detail)];
-    st.entries.push(e);
+    var i = st.entries.length;
+    while (i > 0 && st.entries[i - 1][0] > ms) {
+      i--;
+    }
+    st.entries.splice(i, 0, e);
     st.chars += renderEntry(e).length + 1;
     trim(CAP_CHARS);
     queueSave();
@@ -244,6 +250,126 @@ function encodedLength(text) {
   return encodeURIComponent(JSON.stringify(text)).length - 6;  // less the quotes (%22 each)
 }
 
+// ---- The watch's entries (docs/WATCH_PROTOCOL.md, Usage log) -------------
+
+var SCREENS = ['', 'Home', 'Summary card', 'Today', 'Event details', 'My info', 'Ship directory',
+               'Route to place', 'Route to restroom', 'Route to next event', 'Alert', 'Notice'];
+var HOME_CARDS = ['loading or no phone', 'days to sail', 'connect your phone', 'no cruise today',
+                  'all-aboard countdown', 'NEXT', 'FEATURED', 'NOW', 'nothing starred today'];
+var BUTTONS = ['Back', 'Up', 'Select', 'Down'];
+var LAUNCH = ['by the system', 'by you', 'by the phone', 'by an alert', 'by the worker', 'by quick launch',
+              'from a timeline pin', 'by a smartstrap'];
+var ALERT_KINDS = ['all-aboard warning', 'reminder', 'to-reserve alert'];
+var STORES = ['schedule', 'star queue', 'usage log', 'other'];
+var MSG_TYPES = {10: 'REQUEST', 12: 'DEMO_NEXT', 13: 'STAR_CHANGES', 14: 'SAVED', 15: 'DIR_REQUEST',
+                 16: 'ROUTE_REQUEST', 18: 'LOG'};
+var APP_MSG = {2: 'SEND_TIMEOUT', 4: 'SEND_REJECTED', 8: 'NOT_CONNECTED', 16: 'APP_NOT_RUNNING',
+               32: 'INVALID_ARGS', 64: 'BUSY', 128: 'BUFFER_OVERFLOW', 512: 'ALREADY_RELEASED',
+               4096: 'OUT_OF_MEMORY', 8192: 'CLOSED', 16384: 'INTERNAL_ERROR', 32768: 'INVALID_STATE'};
+var STATUS = {'-1': 'E_ERROR', '-2': 'E_UNKNOWN', '-3': 'E_INTERNAL', '-4': 'E_INVALID_ARGUMENT',
+              '-5': 'E_OUT_OF_MEMORY', '-6': 'E_OUT_OF_STORAGE', '-7': 'E_OUT_OF_RESOURCES', '-8': 'E_RANGE',
+              '-9': 'E_DOES_NOT_EXIST', '-10': 'E_INVALID_OPERATION', '-11': 'E_BUSY', '-12': 'E_AGAIN'};
+
+function named(table, v) {
+  var n = table[v];
+  return n ? n + ' (' + v + ')' : String(v);
+}
+
+function kb(bytes) {
+  return (Math.round(bytes / 102.4) / 10) + ' KB';
+}
+
+function seconds(s) {
+  if (s < 60) {
+    return s + ' s';
+  }
+  if (s < 3600) {
+    return Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
+  }
+  return Math.floor(s / 3600) + ' h ' + Math.floor(s / 60) % 60 + ' min';
+}
+
+function battery(v) {
+  return 'battery ' + (v & 255) + '%' + (v & 256 ? ' charging' : v & 512 ? ' plugged in' : '');
+}
+
+// Cruise minutes as "D3 14:15" (the log's own day and time) when the sail
+// date (ISO) is known.
+function cruiseText(cm, sailIso) {
+  if (cm === -1) {
+    return 'none';
+  }
+  if (!sailIso) {
+    return 'cruise minute ' + cm;
+  }
+  var day = slice.cruiseDayIndex(cm);
+  var min = cm - day * 1440;
+  return dayText(day) + ' ' + pad2(Math.floor(min / 60) % 24) + ':' + pad2(min % 60);
+}
+
+function screenText(screen, detail, sailIso) {
+  var name = SCREENS[screen] || 'screen ' + screen;
+  switch (screen) {
+    case 1: return name + ' (' + (HOME_CARDS[detail] || 'card ' + detail) + ')';
+    case 2: return name + (detail ? ' (tomorrow)' : ' (today)');
+    case 4: case 9: return name + ' (' + cruiseText(detail, sailIso) + ')';
+    case 6: case 7: case 8: return name + ' page ' + detail;
+    case 10: return name + ' (at ' + cruiseText(detail, sailIso) + ')';
+    case 11: return name + ' (' + detail + ')';
+    default: return name;
+  }
+}
+
+// One watch entry ({at, code, x, a, b, c}) as {kind, detail}. `sailIso` is the
+// sail date the watch's cruise minutes count from.
+function watchEntry(e, sailIso) {
+  var x = e.x, a = e.a, b = e.b, c = e.c;
+  switch (e.code) {
+    case 1:
+      return {kind: 'open', detail: 'opened ' + (LAUNCH[x] || 'launch reason ' + x) + ', ' + battery(a) + ', ' +
+              (c & 1 ? 'phone connected' : 'phone away') + (c & 2 ? ', schedule from watch storage' : '') +
+              ', ' + kb(b) + ' free'};
+    case 2:
+      return {kind: 'close', detail: 'closed after ' + seconds(b) + ', ' + battery(a) +
+              ', lowest free memory ' + kb(c)};
+    case 3:
+      return {kind: 'screen', detail: screenText(x, c, sailIso) + ': ' + seconds(b) +
+              (a ? ', ' + a + (a === 1 ? ' scroll' : ' scrolls') : '')};
+    case 4:
+      return {kind: 'button', detail: (BUTTONS[a & 15] || 'button ' + (a & 15)) + (a & 16 ? ' (long)' : '') +
+              ' on ' + screenText(x, c, sailIso) + (b >= 0 ? ', row ' + b : '') + (a & 32 ? ', did nothing' : '')};
+    case 5:
+      return {kind: 'alert', detail: x ? x + ' wakeups scheduled from ' + a + ' alerts, ' + cruiseText(b, sailIso) +
+              ' to ' + cruiseText(c, sailIso) : 'no wakeups scheduled (' + a + ' alerts)'};
+    case 6:
+      return {kind: 'alert', detail: (ALERT_KINDS[x] || (x === 255 ? 'alert not in the plan' : 'alert kind ' + x)) +
+              ' at ' + cruiseText(b, sailIso) + ' fired ' + (a < 0 ? -a + ' s early' : a + ' s late') +
+              (c ? ', opened the app' : ', app was open')};
+    case 7:
+      return {kind: 'alert', detail: 'alert at ' + cruiseText(b, sailIso) + ' closed with ' +
+              (x ? 'Select' : 'Back') + ' after ' + seconds(a)};
+    case 8:
+      return {kind: 'alert', detail: x + (x === 1 ? ' alert time' : ' alert times') +
+              ' missed while the app was closed: ' + cruiseText(b, sailIso) +
+              (c !== b ? ' to ' + cruiseText(c, sailIso) : '')};
+    case 9:
+      return {kind: 'error', detail: 'wakeup for ' + cruiseText(b, sailIso) + ' not scheduled: ' + named(STATUS, a)};
+    case 10:
+      return {kind: 'battery', detail: battery(a)};
+    case 11:
+      return {kind: 'connection', detail: x ? 'watch: phone connected' : 'watch: phone connection lost'};
+    case 12:
+      return {kind: 'error', detail: x === 1 ? 'phone message dropped on the watch: ' + named(APP_MSG, a) :
+              'watch message ' + named(MSG_TYPES, b) + (x === 2 ? ' not sent, outbox busy' :
+                                                       ' not delivered: ' + named(APP_MSG, a))};
+    case 13:
+      return {kind: 'error', detail: 'watch storage write failed (' + (STORES[x] || x) + ', key ' + b + '): ' +
+              named(STATUS, a)};
+    default:
+      return {kind: 'watch', detail: 'entry ' + e.code + ': ' + [x, a, b, c].join(' ')};
+  }
+}
+
 // The export header. `info`: {bundle, watch (Pebble.getActiveWatchInfo()),
 // phone (text), label, count, dropped, now (Date)}.
 function header(info) {
@@ -314,6 +440,7 @@ module.exports = {
   STORE_LOG: STORE_LOG,
   STORE_NOTES: STORE_NOTES,
   makeLog: makeLog,
+  watchEntry: watchEntry,
   renderEntry: renderEntry,
   encodedLength: encodedLength,
   header: header,

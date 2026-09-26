@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // Home: port day before all-aboard shows the all-aboard countdown, then the
 // next two starred events (topped up with the next items); otherwise the next
@@ -375,6 +376,36 @@ static int route_target(int32_t now) {
   return index >= 0 && routable(data_event(index)) ? index : -1;
 }
 
+// What the main card shows, for the usage log (docs/WATCH_PROTOCOL.md).
+static int32_t home_card(void) {
+  int32_t now = now_cruise();
+  if (!data_ready()) {
+    return 0;
+  }
+  if (sail_ahead()) {
+    return 1;
+  }
+  if (cruise_day_index(now) > data_day()->index) {
+    return 2;
+  }
+  if (data_day()->kind == DAY_NONE) {
+    return 3;
+  }
+  if (!shows_headline(now)) {
+    return 4;
+  }
+  bool featured = false;
+  int index = find_headline(now, &featured);
+  if (index < 0) {
+    return 8;
+  }
+  return event_in_progress(data_event(index), now) ? 7 : featured ? 6 : 5;
+}
+
+// The card when Home came on top; a "loading" one is replaced once the
+// schedule arrives.
+static int32_t s_card;
+
 // Big muted message with a smaller line under it.
 static void draw_message(GContext *ctx, int width, const char *title, const char *hint) {
   graphics_context_set_text_color(ctx, g_theme->text);
@@ -525,7 +556,10 @@ static void hint_timer_fired(void *data) {
 // A press only dismisses the hints, so it can't open something by surprise.
 // Back isn't taken: it exits as its label says, and once a window subscribes
 // Back the firmware keeps it from exiting after the normal config returns.
-static void hint_click(ClickRecognizerRef recognizer, void *context) { hints_hide(); }
+static void hint_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(click_recognizer_get_button_id(recognizer), 0, -1);
+  hints_hide();
+}
 
 static void hints_click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_UP, hint_click);
@@ -578,12 +612,24 @@ static void apply_style(void) {
   top_bar_set_right(s_top_bar, counting || !data_ready() ? "" : day->status, false, 0);
 }
 
-static void up_click(ClickRecognizerRef recognizer, void *context) { info_window_push(); }
-static void down_click(ClickRecognizerRef recognizer, void *context) { today_window_push(); }
-static void up_long_click(ClickRecognizerRef recognizer, void *context) { demo_next(); }
+static void up_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_UP, 0, -1);
+  info_window_push();
+}
+
+static void down_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_DOWN, 0, -1);
+  today_window_push();
+}
+
+static void up_long_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_UP, USAGE_LONG | (data_meta()->is_demo ? 0 : USAGE_NOTHING), -1);
+  demo_next();
+}
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
   int index = route_target(now_cruise());
+  usage_press(BUTTON_ID_SELECT, index >= 0 ? 0 : USAGE_NOTHING, -1);
   if (index >= 0) {
     route_window_push_event(data_event(index));
   }
@@ -611,7 +657,11 @@ static void window_load(Window *window) {
   apply_style();
 }
 
-static void window_appear(Window *window) { hints_maybe_show(); }
+static void window_appear(Window *window) {
+  s_card = home_card();
+  usage_screen(SCREEN_HOME, s_card);
+  hints_maybe_show();
+}
 static void window_disappear(Window *window) { hints_hide(); }
 
 static void window_unload(Window *window) {
@@ -632,6 +682,10 @@ void home_window_refresh(void) {
       layer_mark_dirty(s_hints);
     }
     hints_maybe_show();
+    if (s_card == 0 && home_window_is_top()) {
+      s_card = home_card();
+      usage_screen_detail(SCREEN_HOME, s_card);
+    }
   }
 }
 

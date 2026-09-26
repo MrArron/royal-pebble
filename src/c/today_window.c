@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // Today list: events grouped by start time. The time shows on a group's first
 // row only and dividers sit between groups. In-progress events show NOW, and
@@ -145,9 +146,16 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
 }
 
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
+  usage_press(BUTTON_ID_SELECT, index->row < s_row_count ? 0 : USAGE_NOTHING, index->row);
   if (index->row < s_row_count) {
     details_window_push(s_rows[index->row]);
   }
+}
+
+// Only Up and Down call this, not the minute's refresh.
+static void selection_will_change(MenuLayer *menu, MenuIndex *new_index, MenuIndex old_index,
+                                  void *context) {
+  usage_move(old_index.row, new_index->row);
 }
 
 // "Clashes with" / "1:00p Adults Only Trivia" beside a large "!".
@@ -182,6 +190,7 @@ static void hide_toast(void *context) {
 }
 
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (index->row < s_row_count ? 0 : USAGE_NOTHING), index->row);
   if (index->row >= s_row_count) {
     return;
   }
@@ -238,6 +247,7 @@ static void window_load(Window *window) {
     .draw_row = draw_row,
     .select_click = select_click,
     .select_long_click = select_long_click,
+    .selection_will_change = selection_will_change,
   });
   menu_layer_set_normal_colors(s_menu, g_theme->bg, g_theme->text);
   menu_layer_set_highlight_colors(s_menu, g_theme->cursor_bg, g_theme->cursor_text);
@@ -283,10 +293,13 @@ void today_window_refresh(void) {
   }
 }
 
+static void window_appear(Window *window) { usage_screen(SCREEN_TODAY, 0); }
+
 void today_window_push(void) {
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   window_stack_push(s_window, true);

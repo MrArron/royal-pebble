@@ -1,6 +1,7 @@
 #include "store.h"
 #include "codec.h"
 #include "data.h"
+#include "usage.h"
 
 // Storage is values of at most PERSIST_DATA_MAX_LENGTH (256) bytes, and the
 // total per app is capped: 4 KB on older firmware, more on newer (the emulator
@@ -276,6 +277,7 @@ void store_save(void) {
     int written = persist_write_data(KEY_BLOB + k, s_blob + start, n);
     if (written < n) {
       APP_LOG(APP_LOG_LEVEL_ERROR, "Saving slice part %d failed: %d", k, written);
+      usage_add(USAGE_STORAGE_ERROR, USAGE_STORE_SCHEDULE, (int16_t)written, KEY_BLOB + k, 0);
     }
   }
   // Version 3 values that the blob doesn't reuse.

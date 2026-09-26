@@ -227,9 +227,11 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
   events to the phone in a new watch → phone message and queues them in its own
   storage while the phone is away (about 200 entries). Every entry has a real
   timestamp and the ship time. Fully offline.
-- **Detail:** while the phone is connected, every button press is logged. While
-  it's away, the watch records screen views with time on screen and a scroll count
-  per screen instead.
+- **Detail:** while the phone is connected, every button press is logged. Screen
+  views with time on screen and a scroll count per screen are logged all the
+  time (PR 2: they cost little and give the presses their context), so with the
+  phone away the log still shows where time went. Formats in
+  `docs/WATCH_PROTOCOL.md`, "Usage log".
 - **Events:** (A) app opened (you or an alert, battery %, phone connected, first
   screen) and closed (time open); (B) screens shown and time on each, and what
   Home's main card showed at open; (C) star/unstar from watch or phone with the

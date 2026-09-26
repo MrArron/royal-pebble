@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // Morning summary (docs/DESIGN_V1_1.md §8.1, mockups in docs/mockups/phase2):
 // one card with the day, its port times and what's starred. It replaces Home
@@ -302,11 +303,16 @@ static void close_then(void (*next)(void)) {
 
 // Any button leaves. Opened in place of Home, Up and Down go on to My info and
 // Today as they would from Home.
-static void select_click(ClickRecognizerRef recognizer, void *context) { close_then(NULL); }
+static void select_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_SELECT, 0, -1);
+  close_then(NULL);
+}
 static void up_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_UP, 0, -1);
   close_then(s_from_home ? info_window_push : NULL);
 }
 static void down_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_DOWN, 0, -1);
   close_then(s_from_home ? today_window_push : NULL);
 }
 
@@ -343,6 +349,8 @@ void summary_window_refresh(void) {
   }
 }
 
+static void window_appear(Window *window) { usage_screen(SCREEN_SUMMARY, s_tomorrow ? 1 : 0); }
+
 void summary_window_push(bool tomorrow, bool from_home) {
   if (s_window) {
     return;
@@ -353,6 +361,7 @@ void summary_window_push(bool tomorrow, bool from_home) {
   window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   // In place of Home: no slide-in, so it reads as the first screen.

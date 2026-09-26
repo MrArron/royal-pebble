@@ -21,6 +21,9 @@ bool comm_send_star_changes(const StarChange *changes, int count);
 // limit, for its settings page.
 void comm_send_saved(int32_t cutoff, int bytes);
 void comm_demo_next(void);
+// Sends usage log entries (16 bytes each, docs/WATCH_PROTOCOL.md) and how many
+// the queue lost since the last send; false if the outbox was busy.
+bool comm_send_log(const uint8_t *entries, int length, int32_t dropped);
 
 // A ship directory page from the phone (docs/WATCH_PROTOCOL.md, Ship
 // directory). `rows` points into the message and is only valid in the handler.
