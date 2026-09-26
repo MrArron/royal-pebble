@@ -118,4 +118,7 @@ both clocks, and "Change itinerary" for skipped/added ports and changed times),
 **Filters** (featured-events switch, category switches expanding to subcategory
 chips, Shop off by default), **Events** (search, day chips, My entries card with
 Add, star buttons), **Me** (stateroom, deck, stairs, walking distance units,
-muster station, theme, reminder lead time, Always show button hints switch).
+muster station, theme, reminder lead time, and a Help card). **Help**, under Me
+(`DESIGN_V1_1.md` §9.7): the Always show button hints switch, every watch
+button per screen, notes, the ships with Ship GPS, and port/starboard settings
+for a mapped ship.

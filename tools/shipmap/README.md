@@ -20,8 +20,8 @@ Harmony uses deck plans profile 2396 (sailings from May 21, 2026), length overal
 | `HM` | Harmony of the Seas | 2396 (sailings from May 21, 2026) | In the app; port/starboard to confirm on board |
 
 When a ship is added here, add it to every other list of GPS ships too: the
-root README (Ships with Ship GPS), the settings page's Help section, and the
-store listing once there is one.
+root README (Ships with Ship GPS), the settings page's Help section (`NAMES`
+in `src/pkjs/shipmap.js`), and the store listing once there is one.
 
 **Contributions welcome.** To map another Royal Caribbean ship, follow
 Rebuilding below with its ship name and profile, read "Other ships" under

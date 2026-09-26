@@ -362,6 +362,35 @@ test('route: steps with glyphs, the arrival last, and the summary', function() {
   assert.ok(/^[0-9]+ ft/.test(route('Royal Theater', false, {settings: {me: CABIN.me, units: 'ft'}}).steps[0].text));
 });
 
+test('route: port/starboard settings from Help (§9.7) reach the steps and reset', function() {
+  var cross = /^Cross (the ship|to port|to stbd)$/;
+  function crossing(p) {
+    return p.steps.filter(function(s) { return cross.test(s.text); }).map(function(s) { return s.text; });
+  }
+  // A venue whose route from the cabin changes side.
+  var name = directory.places('HM').map(function(v) { return v.name; }).filter(function(n) {
+    var p = route(n);
+    return !p.flags && crossing(p).length === 1;
+  })[0];
+  assert.ok(name, 'some route crosses the ship');
+  assert.deepStrictEqual(crossing(route(name)), ['Cross the ship'], 'no side word until confirmed');
+  var sure = {me: CABIN.me, shipSides: {HM: {confirmed: true}}};
+  var word = crossing(route(name, false, {settings: sure}))[0];
+  assert.ok(word === 'Cross to port' || word === 'Cross to stbd', word);
+  var arrive = route(name, false, {settings: sure}).steps.slice(-1)[0].text;
+  assert.ok(arrive.indexOf(name) === 0, arrive);
+  var flipped = {me: CABIN.me, shipSides: {HM: {confirmed: true, all: true}}};
+  assert.strictEqual(crossing(route(name, false, {settings: flipped}))[0],
+                     word === 'Cross to port' ? 'Cross to stbd' : 'Cross to port', 'whole-ship flip');
+  // One flipped deck on top of the whole ship puts that deck back.
+  var cabinDeck = 9;
+  var back = {me: CABIN.me, shipSides: {HM: {confirmed: true, all: true, decks: [cabinDeck]}}};
+  assert.ok(route(name, false, {settings: back}).steps.length, 'routes across a flipped deck');
+  // Settings without a flip put the map back as drawn.
+  assert.deepStrictEqual(crossing(route(name)), ['Cross the ship']);
+  assert.strictEqual(crossing(route(name, false, {settings: sure}))[0], word);
+});
+
 test('route: shown less for an approximate spot, same area on the cabin deck', function() {
   var shops = route('Medical Center');
   assert.strictEqual(shops.flags, directory.ROUTE_REDUCED);
