@@ -192,6 +192,31 @@ function decodeStarChanges(bytes) {
   return out;
 }
 
+// Usage log entries from the watch (docs/WATCH_PROTOCOL.md, Usage log), 16
+// bytes each: {at (s), code, x, a, b, c}.
+var LOG_ENTRY_BYTES = 16;
+
+function decodeLogEntries(bytes) {
+  var out = [];
+  for (var i = 0; i + LOG_ENTRY_BYTES <= bytes.length; i += LOG_ENTRY_BYTES) {
+    out.push({
+      at: readInt32(bytes, i),
+      code: bytes[i + 4],
+      x: bytes[i + 5],
+      a: ((bytes[i + 6] | (bytes[i + 7] << 8)) << 16) >> 16,
+      b: readInt32(bytes, i + 8),
+      c: readInt32(bytes, i + 12)
+    });
+  }
+  return out;
+}
+
+// Encodes like the watch does (for tests).
+function encodeLogEntry(e) {
+  var a = e.a | 0;
+  return int32(e.at).concat([e.code & 255, (e.x | 0) & 255, a & 255, (a >> 8) & 255], int32(e.b | 0), int32(e.c | 0));
+}
+
 // Encodes like the watch does (for tests).
 function encodeStarChange(c) {
   var day = c.day | 0;
@@ -206,6 +231,7 @@ module.exports = {packEvents: packEvents, packAlarms: packAlarms, packNotices: p
                   encodeEvent: encodeEvent, encodeAlarm: encodeAlarm, encodeWhere: encodeWhere,
                   encodeNotice: encodeNotice, utf8: utf8, cutText: cutText,
                   decodeStarChanges: decodeStarChanges, encodeStarChange: encodeStarChange,
+                  decodeLogEntries: decodeLogEntries, encodeLogEntry: encodeLogEntry,
                   TITLE_MAX: TITLE_MAX, VENUE_MAX: VENUE_MAX,
                   ALARM_TITLE_MAX: ALARM_TITLE_MAX, ALARM_VENUE_MAX: ALARM_VENUE_MAX,
                   STAR_CHANGE_TITLE_MAX: STAR_CHANGE_TITLE_MAX, STAR_CHANGE_VENUE_MAX: STAR_CHANGE_VENUE_MAX};

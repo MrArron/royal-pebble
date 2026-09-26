@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // Shown when a re-sync moved or cancelled starred events: "Schedule" in the top
 // bar, then "MOVED" with the new and old time, like the alert screen. Also when
@@ -142,6 +143,7 @@ static void draw_more(GContext *ctx, GRect b) {
 static void step(int delta) {
   int next = s_index + delta;
   if (next >= 0 && next < s_count) {
+    usage_move(s_index, next);
     s_index = next;
     layer_mark_dirty(s_layer);
   }
@@ -150,6 +152,7 @@ static void step(int delta) {
 static void up_click(ClickRecognizerRef recognizer, void *context) { step(-1); }
 static void down_click(ClickRecognizerRef recognizer, void *context) { step(1); }
 static void close_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(click_recognizer_get_button_id(recognizer), 0, s_index);
   window_stack_remove(s_window, true);
 }
 
@@ -159,6 +162,8 @@ static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, close_click);
   window_single_click_subscribe(BUTTON_ID_BACK, close_click);
 }
+
+static void window_appear(Window *window) { usage_screen(SCREEN_NOTICE, s_count); }
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
@@ -207,6 +212,7 @@ void notice_window_show_pending(void) {
   window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   window_stack_push(s_window, true);

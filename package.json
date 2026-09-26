@@ -82,7 +82,9 @@
       "route",
       "route_start",
       "route_venue",
-      "button_hints"
+      "button_hints",
+      "log_entries",
+      "log_dropped"
     ],
     "resources": {
       "media": []

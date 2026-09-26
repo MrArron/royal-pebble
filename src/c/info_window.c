@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // My info: the day's summary (docs/DESIGN_V1_1.md §8.1) at the top, then the
 // stateroom (with deck and stairs), muster station, ship clock note, last sync,
@@ -91,6 +92,7 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
 }
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_SELECT, 0, s_cursor);
   if (s_cursor == ROW_SUMMARY && summary_available()) {
     summary_window_push(summary_shows_tomorrow(), false);
   } else {
@@ -101,6 +103,7 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
 static void move_click(ClickRecognizerRef recognizer, void *context) {
   int cursor = click_recognizer_get_button_id(recognizer) == BUTTON_ID_UP ? ROW_SUMMARY : ROW_DIRECTORY;
   if (cursor != s_cursor && (cursor == ROW_DIRECTORY || summary_available())) {
+    usage_move(s_cursor, cursor);
     s_cursor = cursor;
     layer_mark_dirty(s_body);
   }
@@ -143,12 +146,15 @@ void info_window_refresh(void) {
   }
 }
 
+static void window_appear(Window *window) { usage_screen(SCREEN_INFO, 0); }
+
 void info_window_push(void) {
   s_cursor = ROW_SUMMARY;
   s_window = window_create();
   window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   window_stack_push(s_window, true);

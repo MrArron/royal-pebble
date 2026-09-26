@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "data.h"
 #include "ui.h"
+#include "usage.h"
 
 // Event details: title, venue, deck and position, time and duration,
 // reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §5, §8.4).
@@ -108,10 +109,12 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
 }
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
-  toggle_reserved(s_index);
+  bool done = toggle_reserved(s_index);
+  usage_press(BUTTON_ID_SELECT, done ? 0 : USAGE_NOTHING, -1);
 }
 
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
   toggle_star(s_index);
 }
 
@@ -152,12 +155,17 @@ void details_window_refresh(void) {
   }
 }
 
+static void window_appear(Window *window) {
+  usage_screen(SCREEN_DETAILS, s_index < data_event_count() ? data_event(s_index)->start : NO_TIME);
+}
+
 void details_window_push(int event_index) {
   s_index = event_index;
   s_window = window_create();
   window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   window_stack_push(s_window, true);

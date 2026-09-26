@@ -6,6 +6,7 @@
 #include "stars.h"
 #include "store.h"
 #include "ui.h"
+#include "usage.h"
 
 // Cruise Watch for the Pebble Time 2 (emery).
 //
@@ -111,12 +112,29 @@ static void notices_received(const Notice *notices, int count) {
 
 // Back in touch with the phone: send star changes made while it was away.
 static void app_connection_handler(bool connected) {
+  usage_connection(connected);
   if (connected) {
     stars_send();
   }
 }
 
+// For the usage log: the alert's kind and how late its wakeup came.
+static void log_alert_fired(int32_t at, bool opened_app) {
+  int kind = 255;
+  for (int i = 0; i < data_alarm_count(); i++) {
+    if (data_alarm(i)->at == at) {
+      kind = data_alarm(i)->kind;
+      break;
+    }
+  }
+  time_t t = time(NULL);
+  int32_t late = (now_cruise() - at) * 60 + localtime(&t)->tm_sec;
+  late = late > INT16_MAX ? INT16_MAX : late < INT16_MIN ? INT16_MIN : late;
+  usage_add(USAGE_ALERT_FIRED, (uint8_t)kind, (int16_t)late, at, opened_app ? 1 : 0);
+}
+
 static void wakeup_handler(WakeupId id, int32_t cookie) {
+  log_alert_fired(cookie, false);
   alert_window_push(cookie, false);
   alarms_schedule();
 }
@@ -130,24 +148,31 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       comm_request_slice();
     }
   }
+  usage_tick();
   refresh_all();
 }
 
 static void init(void) {
+  usage_init();
   data_init();
   stars_init();
-  if (store_load()) {
+  bool stored = store_load();
+  if (stored) {
     theme_set_dark(data_meta()->dark_theme);
   }
   comm_init(slice_received, notices_received);
   wakeup_service_subscribe(wakeup_handler);
   connection_service_subscribe((ConnectionHandlers){.pebble_app_connection_handler = app_connection_handler});
-  home_window_push();
 
   WakeupId id;
   int32_t cookie;
   AppLaunchReason reason = launch_reason();
-  if (reason == APP_LAUNCH_WAKEUP && wakeup_get_launch_event(&id, &cookie)) {
+  bool by_alert = reason == APP_LAUNCH_WAKEUP && wakeup_get_launch_event(&id, &cookie);
+  usage_opened(reason, stored);
+  usage_check_missed(by_alert ? cookie : NO_TIME);
+  home_window_push();
+  if (by_alert) {
+    log_alert_fired(cookie, true);
     alert_window_push(cookie, true);
   }
   // Only an open by the user uses up the day's summary, not an alert.
@@ -162,6 +187,7 @@ static void init(void) {
 }
 
 static void deinit(void) {
+  usage_deinit();
   tick_timer_service_unsubscribe();
   connection_service_unsubscribe();
   comm_deinit();

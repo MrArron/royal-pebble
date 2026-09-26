@@ -2,6 +2,7 @@
 #include "codec.h"
 #include "data.h"
 #include "stars.h"
+#include "usage.h"
 
 // Message types (msg_type key).
 enum {
@@ -20,6 +21,7 @@ enum {
   MSG_DIR_REQUEST = 15,
   MSG_ROUTE_REQUEST = 16,
   MSG_ROUTE_PAGE = 17,
+  MSG_LOG = 18,
 };
 
 #define INBOX_SIZE 2048
@@ -313,10 +315,23 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
 
 static void inbox_dropped(AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_WARNING, "Inbox dropped: %d", (int)reason);
+  usage_add(USAGE_MSG_ERROR, USAGE_MSG_DROPPED, (int16_t)reason, 0, 0);
+}
+
+static void outbox_sent(DictionaryIterator *iter, void *context) {
+  if (s_outbox_msg == MSG_LOG) {
+    usage_sent();
+  }
 }
 
 static void outbox_failed(DictionaryIterator *iter, AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_WARNING, "Message %d not delivered: %d", (int)s_outbox_msg, (int)reason);
+  if (s_outbox_msg == MSG_LOG) {
+    // Not logged: the entry would go out in the next LOG, which fails the same way.
+    usage_send_failed();
+    return;
+  }
+  usage_add(USAGE_MSG_ERROR, USAGE_MSG_NOT_DELIVERED, (int16_t)reason, s_outbox_msg, 0);
   if (s_outbox_msg == MSG_STAR_CHANGES) {
     stars_send_failed();
   } else if (s_outbox_msg == MSG_DIR_REQUEST && s_on_dir_failed) {
@@ -326,15 +341,39 @@ static void outbox_failed(DictionaryIterator *iter, AppMessageResult reason, voi
   }
 }
 
-static void send_simple(int32_t msg) {
+// A request with nothing but its type. The outbox may be busy (a usage log
+// message, say), so it's tried again a few times.
+#define SIMPLE_RETRY_MS 500
+#define SIMPLE_TRIES 5
+static int32_t s_simple_msg;
+static int s_simple_tries;
+static AppTimer *s_simple_timer;
+
+static void send_simple_now(void *context) {
+  s_simple_timer = NULL;
   DictionaryIterator *iter;
-  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
-    APP_LOG(APP_LOG_LEVEL_WARNING, "Outbox busy, message %d not sent", (int)msg);
-    return;
+  if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
+    dict_write_int32(iter, MESSAGE_KEY_msg_type, s_simple_msg);
+    s_outbox_msg = s_simple_msg;
+    if (app_message_outbox_send() == APP_MSG_OK) {
+      return;
+    }
   }
-  dict_write_int32(iter, MESSAGE_KEY_msg_type, msg);
-  s_outbox_msg = msg;
-  app_message_outbox_send();
+  if (++s_simple_tries < SIMPLE_TRIES) {
+    s_simple_timer = app_timer_register(SIMPLE_RETRY_MS, send_simple_now, NULL);
+  } else {
+    APP_LOG(APP_LOG_LEVEL_WARNING, "Outbox busy, message %d not sent", (int)s_simple_msg);
+    usage_add(USAGE_MSG_ERROR, USAGE_MSG_BUSY, 0, s_simple_msg, 0);
+  }
+}
+
+static void send_simple(int32_t msg) {
+  s_simple_msg = msg;
+  s_simple_tries = 0;
+  if (s_simple_timer) {
+    app_timer_cancel(s_simple_timer);
+  }
+  send_simple_now(NULL);
 }
 
 void comm_set_dir_handlers(CommDirPageHandler on_page, CommDirFailedHandler on_failed) {
@@ -456,11 +495,24 @@ bool comm_send_star_changes(const StarChange *changes, int count) {
   return true;
 }
 
+bool comm_send_log(const uint8_t *entries, int length, int32_t dropped) {
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
+    return false;
+  }
+  dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_LOG);
+  dict_write_data(iter, MESSAGE_KEY_log_entries, entries, length);
+  dict_write_int32(iter, MESSAGE_KEY_log_dropped, dropped);
+  s_outbox_msg = MSG_LOG;
+  return app_message_outbox_send() == APP_MSG_OK;
+}
+
 void comm_init(CommSliceHandler on_slice, CommNoticeHandler on_notices) {
   s_on_slice = on_slice;
   s_on_notices = on_notices;
   app_message_register_inbox_received(inbox_received);
   app_message_register_inbox_dropped(inbox_dropped);
+  app_message_register_outbox_sent(outbox_sent);
   app_message_register_outbox_failed(outbox_failed);
   uint32_t inbox = app_message_inbox_size_maximum();
   if (inbox < INBOX_SIZE) {

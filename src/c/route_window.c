@@ -2,6 +2,7 @@
 #include "codec.h"
 #include "comm.h"
 #include "ui.h"
+#include "usage.h"
 
 // Route screen (docs/DESIGN_V1_1.md §9.2): the walking route to a place, from
 // a place to its closest restroom, or to Home's NEXT event (§9.5), one line
@@ -230,6 +231,18 @@ static void content_update(Layer *layer, GContext *ctx) {
   layout(ctx, layer_get_bounds(layer).size.w);
 }
 
+// The content's scroll position as the user left it, for the usage log.
+static int s_scroll_y;
+static bool s_relayout;
+
+static void offset_changed(ScrollLayer *scroll, void *context) {
+  int y = scroll_layer_get_content_offset(scroll).y;
+  if (!s_relayout && y != s_scroll_y) {
+    usage_move(-s_scroll_y, -y);  // down makes the offset more negative
+  }
+  s_scroll_y = y;
+}
+
 // Sizes the content to the page and goes back to its top.
 static void relayout(void) {
   if (!s_scroll) {
@@ -239,7 +252,10 @@ static void relayout(void) {
   int h = layout(NULL, frame.size.w);
   layer_set_frame(s_content, GRect(0, 0, frame.size.w, h));
   scroll_layer_set_content_size(s_scroll, GSize(frame.size.w, h));
+  s_relayout = true;
   scroll_layer_set_content_offset(s_scroll, GPointZero, false);
+  s_relayout = false;
+  s_scroll_y = 0;
   layer_mark_dirty(s_content);
 }
 
@@ -328,6 +344,7 @@ static void request_failed(void) {
 // ---- Window ------------------------------------------------------------------
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_SELECT, s_state == STATE_NO_PHONE ? 0 : USAGE_NOTHING, -1);
   if (s_state == STATE_NO_PHONE) {
     request();
   }
@@ -365,7 +382,8 @@ static void window_load(Window *window) {
 
   s_scroll = scroll_layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
   scroll_layer_set_shadow_hidden(s_scroll, true);
-  scroll_layer_set_callbacks(s_scroll, (ScrollLayerCallbacks){.click_config_provider = click_config});
+  scroll_layer_set_callbacks(s_scroll, (ScrollLayerCallbacks){.click_config_provider = click_config,
+                                                              .content_offset_changed_handler = offset_changed});
   scroll_layer_set_click_config_onto_window(s_scroll, window);
   s_content = layer_create(GRect(0, 0, b.size.w, b.size.h));
   layer_set_update_proc(s_content, content_update);
@@ -394,6 +412,14 @@ static void window_unload(Window *window) {
 }
 
 static void push(int32_t ref, bool rest, const char *title, const char *header);
+
+static void window_appear(Window *window) {
+  if (s_start != NO_TIME) {
+    usage_screen(SCREEN_ROUTE_EVENT, s_start);
+  } else {
+    usage_screen(s_rest ? SCREEN_ROUTE_REST : SCREEN_ROUTE, s_ref);
+  }
+}
 
 void route_window_push(int32_t ref, bool rest, const char *title, const char *header) {
   if (s_window) {
@@ -428,6 +454,7 @@ static void push(int32_t ref, bool rest, const char *title, const char *header) 
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload,
   });
   comm_set_route_handlers(page_received, request_failed);

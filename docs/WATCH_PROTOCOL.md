@@ -96,6 +96,7 @@ buffers.
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
 | 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank); `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
+| 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
 
 (11 was an index-based STAR message, replaced by STAR_CHANGES.)
 
@@ -469,6 +470,75 @@ time and title there itself (it formats the time for its 12/24h setting).
 Both lines under the steps are empty on a `Same area` route; a divider is drawn
 before them only when one is there. Units are the phone's setting, as on place
 pages.
+
+## Usage log
+
+The watch's part of the usage log (`docs/PROJECT_BRIEF.md`, "Usage log";
+`src/c/usage.c`). The watch records what happens on it as small fixed
+records, keeps them in a queue and sends them to the phone in LOG messages; the
+phone turns each into a line of text (`src/pkjs/log.js`, `watchEntry`) and adds
+it to its log at the watch's time, in time order. The watch never formats log
+text.
+
+- **Queue:** at most 200 entries, in persistent keys 89 (head, count, entries
+  dropped) and 90-102 (16 entries each). When it's full the oldest entry is
+  dropped and counted; the next LOG reports the count and the phone logs it.
+- **Sending:** while the phone is connected, 1.5 s after the latest entry (so a
+  burst goes in one message), at most 40 entries per LOG. The watch drops them
+  once the message is delivered (the AppMessage ack), then sends the rest. A
+  failed send is tried again in 5 s, 3 times at most; the next entry, a
+  reconnect or the next open tries again. Requests the user is waiting for
+  (directory pages, routes) retry when the outbox is busy, so a LOG never blocks
+  them.
+- **Saved:** entries are written to storage as they're added while the phone is
+  away, and the whole queue when the app closes. With the phone connected they
+  usually reach it within seconds.
+
+`LOG.log_entries` is entries back to back, 16 bytes each, little-endian:
+
+| Bytes | Field |
+|---|---|
+| 4 | `at`: int32 seconds since 1970 UTC (`time(NULL)`), when it happened |
+| 1 | `code` (below) |
+| 1 | `x`: uint8 |
+| 2 | `a`: int16 |
+| 4 | `b`: int32 |
+| 4 | `c`: int32 |
+
+**Battery** values are the percent, plus 256 while charging and 512 while
+plugged in. **Screens:** 1 Home, 2 summary card, 3 Today, 4 event details,
+5 My info, 6 ship directory page, 7 route to a place, 8 route to a restroom,
+9 route to Home's next event, 10 alert, 11 notice (schedule change or `PHONE
+NEEDED`). A screen's **detail**: Home, what its main card shows (below); the
+summary card, 1 for tomorrow's; event details, the event's start; a directory
+page or a route to a place or restroom, its `dir_ref`; a route to an event, its
+start; an alert, its `at`. **Home's card:** 0 loading or no phone, 1 days to
+sail, 2 connect your phone (a new day with no slice), 3 no cruise today, 4
+all-aboard countdown, 5 NEXT (starred), 6 FEATURED, 7 NOW (in progress), 8
+nothing starred today.
+
+| `code` | Entry | `x` | `a` | `b` | `c` |
+|---|---|---|---|---|---|
+| 1 | app opened | launch reason (`AppLaunchReason`: 1 you, 3 alert, 5 quick launch...) | battery | free memory (bytes) | bit 0 phone connected, bit 1 schedule loaded from the watch's storage |
+| 2 | app closed | — | battery | seconds open | lowest free memory while open (bytes) |
+| 3 | screen view ended | screen | scrolls (Up/Down that moved something) | seconds on screen | detail |
+| 4 | button | screen | button: 0 Back, 1 Up, 2 Select, 3 Down; +16 long press; +32 did nothing | row or cursor (−1 none) | detail |
+| 5 | alerts scheduled (when the plan's wakeups change) | wakeups scheduled | alerts in the plan | first wakeup's `at` (−1 none) | last wakeup's `at` |
+| 6 | alert fired | its kind (as in ALARMS; 255 not in the plan) | seconds late | `at` | 1 it opened the app, 0 the app was open |
+| 7 | alert closed | 0 Back, 1 Select | seconds shown | `at` | — |
+| 8 | alerts missed (their time passed with the app closed and no wakeup came) | how many alert minutes | — | first `at` | last `at` |
+| 9 | wakeup not scheduled | — | the error (`E_RANGE` −8, `E_OUT_OF_RESOURCES` −7...) | `at` | — |
+| 10 | battery (hourly while the app is open) | — | battery | — | — |
+| 11 | phone connection | 1 connected, 0 lost | — | — | — |
+| 12 | message error | 0 not delivered, 1 phone's message dropped, 2 outbox busy | `AppMessageResult` | `msg_type` (0 unknown) | — |
+| 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short | persistent key | — |
+
+Button presses are logged while the phone is connected; a Select that did
+nothing always is. Screen views are always logged, so with the phone away the
+log still shows where time went. Back is seen as the screen's view ending.
+**Missed alerts:** the watch keeps the cruise minute it was last closed (key
+8); at each open, alert times in the stored plan between then and now that
+didn't open the app are missed.
 
 ## Demo data
 

@@ -226,6 +226,65 @@ test('settings diff follows nested values', function() {
   assert.deepStrictEqual(log.diffSettings({a: [1, 2]}, {a: [1, 2]}), []);
 });
 
+test('late entries (the watch queue) go in time order', function() {
+  var l = makeTestLog(memStorage(), '2027-03-06');
+  var t = l.clock.ms;
+  l.add('open', 'phone entry');
+  l.add('screen', 'from the watch, earlier', t - 60000);
+  l.clock.ms = t + 1000;
+  l.add('open', 'later');
+  var lines = l.pageState('').text.split('\n').map(function(x) { return x.split('  ').slice(2).join('  '); });
+  assert.deepStrictEqual(lines, ['screen  from the watch, earlier', 'open  phone entry', 'open  later']);
+});
+
+test('watch entries decode and render', function() {
+  var pack = require('../../src/pkjs/pack');
+  var sail = '2027-03-06';
+  var entries = [
+    {at: 1804000000, code: 1, x: 3, a: 80 + 256, b: 65536, c: 3},
+    {at: 1804000100, code: 2, x: 0, a: 79, b: 125, c: 51200},
+    {at: 1804000101, code: 3, x: 1, a: 0, b: 42, c: 5},
+    {at: 1804000102, code: 3, x: 3, a: 4, b: 12, c: 0},
+    {at: 1804000103, code: 4, x: 3, a: 2 + 32, b: 7, c: 0},
+    {at: 1804000104, code: 4, x: 6, a: 2 + 16, b: 1, c: 1003},
+    {at: 1804000105, code: 5, x: 8, a: 12, b: 1440 + 825, c: 2880 + 540},
+    {at: 1804000106, code: 6, x: 1, a: 23, b: 1440 + 825, c: 1},
+    {at: 1804000107, code: 7, x: 1, a: 9, b: 1440 + 825, c: 0},
+    {at: 1804000108, code: 8, x: 2, a: 0, b: 1440 + 600, c: 1440 + 630},
+    {at: 1804000109, code: 9, x: 0, a: -7, b: 1440 + 700, c: 0},
+    {at: 1804000110, code: 12, x: 0, a: 2, b: 10, c: 0},
+    {at: 1804000111, code: 13, x: 1, a: -6, b: 31, c: 0},
+    {at: 1804000112, code: 3, x: 1, a: 0, b: 3, c: 7}
+  ];
+  var bytes = [];
+  entries.forEach(function(e) { bytes = bytes.concat(pack.encodeLogEntry(e)); });
+  var decoded = pack.decodeLogEntries(bytes);
+  assert.deepStrictEqual(decoded, entries);
+  var text = decoded.map(function(e) { var r = log.watchEntry(e, sail); return r.kind + '  ' + r.detail; });
+  assert.deepStrictEqual(text, [
+    'open  opened by an alert, battery 80% charging, phone connected, schedule from watch storage, 64 KB free',
+    'close  closed after 2 min 5 s, battery 79%, lowest free memory 50 KB',
+    'screen  Home (NEXT): 42 s',
+    'screen  Today: 12 s, 4 scrolls',
+    'button  Select on Today, row 7, did nothing',
+    'button  Select (long) on Ship directory page 1003, row 1',
+    'alert  8 wakeups scheduled from 12 alerts, D2 13:45 to D3 09:00',
+    'alert  reminder at D2 13:45 fired 23 s late, opened the app',
+    'alert  alert at D2 13:45 closed with Select after 9 s',
+    'alert  2 alert times missed while the app was closed: D2 10:00 to D2 10:30',
+    'error  wakeup for D2 11:40 not scheduled: E_OUT_OF_RESOURCES (-7)',
+    'error  watch message REQUEST (10) not delivered: SEND_TIMEOUT (2)',
+    'error  watch storage write failed (star queue, key 31): E_OUT_OF_STORAGE (-6)',
+    'screen  Home (NOW): 3 s'
+  ]);
+  // 01:00 after midnight still belongs to the evening before.
+  var late = log.watchEntry({at: 0, code: 3, x: 10, a: 0, b: 5, c: 2880 + 1500}, sail).detail;
+  assert.strictEqual(late, 'Alert (at D3 01:00): 5 s');
+  assert.strictEqual(log.watchEntry({at: 0, code: 10, x: 0, a: 55, b: 0, c: 0}, null).detail, 'battery 55%');
+  assert.strictEqual(log.watchEntry({at: 0, code: 3, x: 9, a: 0, b: 1, c: 900}, null).detail,
+                     'Route to next event (cruise minute 900): 1 s');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {

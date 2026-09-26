@@ -74,6 +74,23 @@ test('the watch storage report is logged only when it changes', function() {
                                  'watch  storage: schedule uses 4314 of 1048576 bytes']);
 });
 
+test('watch log entries are added at the watch time, and a full queue is reported', function() {
+  var pack = require('../../src/pkjs/pack');
+  var c = companion();
+  var at = Math.floor(Date.now() / 1000) - 3600;
+  var bytes = pack.encodeLogEntry({at: at, code: 4, x: 1, a: 1, b: -1, c: 5})
+    .concat(pack.encodeLogEntry({at: at + 5, code: 11, x: 0, a: 0, b: 0, c: 0}));
+  c.handlers.appmessage({payload: {msg_type: 18, log_entries: bytes, log_dropped: 3}});
+  c.run();
+  var saved = JSON.parse(c.store.usageLog).entries;
+  var button = saved.filter(function(e) { return e[3] === 'button'; })[0];
+  assert.strictEqual(button[0], at * 1000);
+  assert.strictEqual(button[4], 'Up on Home (NEXT)');
+  var lines = c.log();
+  assert.ok(has(lines, /^connection  watch: phone connection lost$/), lines.join('\n'));
+  assert.ok(has(lines, /^error  watch log queue was full: 3 oldest entries lost$/), lines.join('\n'));
+});
+
 test('settings page: opened, closed, setting changes and log settings', function() {
   var c = companion();
   c.handlers.showConfiguration();
