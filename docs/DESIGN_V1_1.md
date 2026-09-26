@@ -939,7 +939,8 @@ owner's phone.
 - Screens for no match (with a `TRY` example) and phone away (`Voice is heard
   on the phone`).
 - A spoken cabin number is used for routing only: never stored beyond the
-  current start, and never in the usage log.
+  current start. The usage log may record it (owner, 2026-09-26); the log
+  never goes into the repo.
 
 ### 9.7 Phone settings page (not mocked)
 
