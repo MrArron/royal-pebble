@@ -55,18 +55,34 @@ test('schedule parsing matches the sync tool rules', function() {
                 {offeringDate: '20270307', offeringTime: '2000'},  // duplicate
                 {offeringDate: '20270308', offeringTime: '0000', offeringDurationInMinutes: 30}]},
     {productType: {productType: 'SHORE_EXCURSION'}, productTitle: 'Snorkel', offering: []},
+    // Reserved shows and paid classes are their own product types.
+    {productType: {productType: 'ENTERTAINMENT'}, productTitle: 'The Fine Line',
+     productCategory: [{categoryName: 'entertainment'}], productLocation: {locationTitle: 'AquaTheater'},
+     productDuration: {durationInMinutes: 50}, isFeatured: true, isReservationRequired: true,
+     offering: [{offeringDate: '20270307', offeringTime: '2200', offeringDurationInMinutes: '50'}]},
+    {productType: {productType: 'ACTIVITIES'}, productTitle: 'FlowRider Group Lesson',
+     productCategory: [{categoryName: 'activities'}], productLocation: {locationTitle: 'FlowRider'},
+     isReservationRequired: true, offering: [{offeringDate: '20270307', offeringTime: '0900'}]},
+    {productType: {productType: 'ACTIVITIES'}, productTitle: 'NextCruise Consultation Appointment',
+     isReservationRequired: true, offering: [{offeringDate: '20270307', offeringTime: '1100'}]},
+    {productType: {productType: 'DINING'}, productTitle: 'Chops Grille', isReservationRequired: true,
+     offering: [{offeringDate: '20270307', offeringTime: '1800'}]},
+    {productType: {productType: 'SPA'}, productTitle: 'Massage', isReservationRequired: true,
+     offering: [{offeringDate: '20270307', offeringTime: '1000'}]},
     {productType: {productType: 'NON_REVENUE_SCHEDULABLE'}, productTitle: 'Bingo',
      productCategory: [{categoryName: 'activities'}], productLocation: {locationTitle: 'Studio B'},
      offering: [{offeringDate: '20270307', offeringTime: '1000'}]}
   ]}});
-  assert.strictEqual(n, 3);
+  assert.strictEqual(n, 8);
   var sched = royal.finishSchedule(acc);
   assert.strictEqual(sched.published, true);
-  assert.deepStrictEqual(sched.cats, [['Entertainment', 'Shows'], ['Activities', '']]);
-  assert.deepStrictEqual(sched.venues, ['Studio B']);
+  assert.deepStrictEqual(sched.cats, [['Entertainment', 'Shows'], ['Entertainment', ''], ['Activities', '']]);
+  assert.deepStrictEqual(sched.venues, ['Studio B', 'AquaTheater', 'FlowRider']);
   assert.deepStrictEqual(sched.events, [
-    ['Bingo', 0, 1, '2027-03-07', '10:00', 0, 0, 0],
+    ['FlowRider Group Lesson', 2, 2, '2027-03-07', '09:00', 0, 0, 1],
+    ['Bingo', 0, 2, '2027-03-07', '10:00', 0, 0, 0],
     ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 1, 1],
+    ['The Fine Line', 1, 1, '2027-03-07', '22:00', 50, 1, 1],
     ['Ice Show', 0, 0, '2027-03-08', null, 30, 1, 1]
   ]);
   assert.strictEqual(royal.finishSchedule({cats: [], venues: [], events: [], seen: {}}).published, false);

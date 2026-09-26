@@ -48,6 +48,13 @@ text. One compact JSON object, ASCII only.
   - `events[]`: arrays in `fields` order. `time` is `null` for untimed entries
     (Royal's 00:00). `minutes` may be 0. `featured` and `reservation` are 0/1.
     Sorted by date, time, title; duplicates removed.
+  - Which of Royal's products become events: the free activities
+    (`NON_REVENUE_SCHEDULABLE`, never marked reservation-required), the shows you
+    reserve (`ENTERTAINMENT`: free, featured, reservation required) and the paid
+    classes and experiences (`ACTIVITIES`: escape room, FlowRider lessons,
+    tastings). Spa, dining and shore excursions are left out: they are booking
+    slots, not events. So are NextCruise sales appointments (by title), about 22
+    slots a day that would push busy days past the watch's 160 events. Checked on a live Harmony sailing, 2026-09-25.
 - `mine` — only when fetched with login. Contains a stateroom number: private.
   `stateroom` is `null` until a cabin is assigned (Royal lists guarantee
   bookings as "GTY"); consumers also treat a value without digits as unassigned.

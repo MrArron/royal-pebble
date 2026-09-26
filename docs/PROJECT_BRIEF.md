@@ -53,7 +53,7 @@ every request.
 | Ships | `/en/royal/web/v2/ships` | name ↔ code |
 | Sailings | `/en/royal/web/v3/ships/{code}/voyages` | sail dates |
 | Itinerary | `/en/royal/web/v3/ships/{code}/sailDate/{YYYYMMDD}` | port, type, arrive/depart |
-| Schedule | `/en/royal/web/v3/products?sailingID={code}{YYYYMMDD}&limit=200&offset=N` | keep `NON_REVENUE_SCHEDULABLE` |
+| Schedule | `/en/royal/web/v3/products?sailingID={code}{YYYYMMDD}&limit=200&offset=N` | keep `NON_REVENUE_SCHEDULABLE`, `ENTERTAINMENT`, `ACTIVITIES` |
 
 Known facts about the data:
 

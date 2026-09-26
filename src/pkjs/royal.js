@@ -82,6 +82,16 @@ function parseItinerary(json) {
   });
 }
 
+// Product types kept for the schedule (docs/DATA_FORMAT.md): the free
+// activities, plus the shows you reserve (ENTERTAINMENT: free, reservation
+// required) and the paid classes and experiences (ACTIVITIES), which come
+// through with `reservation` set. Spa, dining and shore excursions are
+// booking slots, not events. Keep in step with cruise_sync.py.
+var SCHEDULE_TYPES = ['NON_REVENUE_SCHEDULABLE', 'ENTERTAINMENT', 'ACTIVITIES'];
+// Left out by title: NextCruise sales appointments (about 22 slots a day)
+// would push busy days past the watch's 160 events.
+var SKIP_TITLES = /nextcruise/i;
+
 // Adds one page of products to `acc` ({cats, venues, events, seen}).
 // Returns the number of products on the page.
 function addProducts(acc, json) {
@@ -97,7 +107,7 @@ function addProducts(acc, json) {
     return table.length - 1;
   }
   products.forEach(function(p) {
-    if (((p.productType || {}).productType) !== 'NON_REVENUE_SCHEDULABLE') {
+    if (SCHEDULE_TYPES.indexOf((p.productType || {}).productType) === -1 || SKIP_TITLES.test(p.productTitle || '')) {
       return;
     }
     var parent = 'Other';
