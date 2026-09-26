@@ -3,6 +3,7 @@ cruise-watch-*.json
 
 # Usage log and map note exports hold cabin details
 royal-pebble-log-*.txt
+royal-pebble-map-notes-*
 
 # Account explorer output (tools/cruise-sync/explore_account.py): personal data
 royal-pebble-explore-*/

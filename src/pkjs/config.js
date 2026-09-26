@@ -11,7 +11,9 @@
 //    each was made), personal: [{title, venue, date, time, minutes}],
 //    download: {ship: {code, name}, sailDate}, bundle, ships,
 //    venues: {ship, overrides} (all venue edits for that ship, only when changed),
-//    usage: {on, label, clear} (Me > Usage log)}
+//    usage: {on, label, clear} (Me > Usage log),
+//    mapCheck: {ship, clear, notes: {id: {answer, deck, pos, side, note, place} | null},
+//               added: [{place, deck, pos, side, note}]} (Me > Map check, mapped ships only)}
 
 var venues = require('./venues');
 var log = require('./log');
@@ -242,7 +244,15 @@ var CSS = [
   '.keys .row{justify-content:flex-start}.keys .row b{flex:none;width:104px;font-weight:600}',
   '.keys .row span:last-child{flex:1;font-weight:400;text-align:left}',
   '.notes{margin:8px 0 0;padding-left:20px}.notes li{margin:6px 0}',
-  '.deckchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.deckchips .fchip{min-width:48px}'
+  '.deckchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.deckchips .fchip{min-width:48px}',
+  '.mch{margin:18px 0 2px;font-size:14px;font-weight:600;color:var(--on-surface-variant)}',
+  '.mc{border-top:1px solid rgba(0,0,0,.08);padding:10px 0}',
+  '.mc summary{gap:12px;min-height:48px}.mc summary .t{flex:1;min-width:0}',
+  '.mc summary b{display:block;font-weight:600}.mc summary .schip{flex:none}',
+  '.mc .src{margin:8px 0 0;font-size:14px}.mc .src b{font-weight:600}',
+  '.mc .seg.ans button{font-size:13px;padding:0 4px}',
+  '.mcw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.mcw select{width:auto;min-width:96px}',
+  '.mcw .seg.small{margin:0}'
 ].join('');
 
 var BACK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
@@ -263,7 +273,8 @@ var HELP_KEYS = [
                      ['Select', 'Mark reserved, or not (starred events that need a reservation)']]],
   ['My info', [['Up, Down', 'Pick the summary or Ship directory'], ['Select', 'Open it']]],
   ['Ship directory', [['Up, Down', 'Move, or scroll a place page'], ['Select', 'Open; on a place page, its route'],
-                      ['Hold Select', 'On a place page: the route to its closest restroom']]],
+                      ['Hold Select', 'On a place page: the route to its closest restroom'],
+                      ['Select on Flag a map problem', 'Save a map note for Me > Map check (last row of a place page)']]],
   ['Route', [['Up, Down', 'Scroll a long route'], ['Select', 'Try again when the phone was away']]],
   ['Alerts', [['Select', 'Home'], ['Back', 'Close (back to what you were doing)']]],
   ['Schedule change', [['Up, Down', 'Previous or next change'], ['Select, Back', 'Close']]]
@@ -386,6 +397,17 @@ var BODY = [
   '<p class="help">Saves and closes this page. About 2 minutes later your watch shows a test reminder, ',
   'then a test all-aboard alert a minute after that, then a test reminder to reserve. Close the app on the watch first to check that ',
   'alerts open it by themselves.</p><p class="help" id="watchStorage"></p></div>',
+  '<div class="card" id="mapCard" hidden><h2>Map check</h2>',
+  '<p class="muted" id="mapIntro"></p>',
+  '<div class="stats"><div class="stat"><b id="mapChecked"></b><span id="mapOf"></span></div>',
+  '<div class="stat"><b id="mapFlags"></b><span>flagged on watch</span></div>',
+  '<div class="stat"><b id="mapFound"></b><span>found by the app</span></div></div>',
+  '<div id="mapList"></div>',
+  '<button class="pill tonal wide" id="mapAdd">Add a problem</button>',
+  '<button class="pill tonal wide" id="mapCopy">Copy notes</button><p class="help ok" id="mapCopied" role="status"></p>',
+  '<p class="help">Notes are saved when you tap Save. Copy them after the sailing, so the map can be fixed.</p>',
+  '<div class="actions"><button class="textbtn" id="mapClear">Clear notes</button></div>',
+  '<p class="help" id="mapClearNote" hidden></p></div>',
   '<div class="card" id="logCard"><h2>Usage log</h2>',
   '<p class="muted">Records how Royal Pebble is used on this phone and watch, to improve the app after ',
   'the sailing. It stays on this phone until you copy it.</p>',
@@ -451,6 +473,58 @@ function findClashes(items) {
       return j !== i && o.at !== null && x.at < end(o) && o.at < end(x);
     }).sort(function(a, b) { return items[a].at - items[b].at; });
   });
+}
+
+// Map check notes as text to copy (docs/PROJECT_BRIEF.md, "Map check"): JSON
+// with the answers keyed by conflict id, then the watch flags, the problems the
+// app found and the ones added. `mc` is the page's mapCheck state, `notes` the
+// notes as edited on the page. Also runs in the page.
+function mapExport(mc, notes, label, now) {
+  function p2(n) {
+    return (n < 10 ? '0' : '') + n;
+  }
+  function when(ms) {
+    if (!ms) {
+      return undefined;
+    }
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' +
+      p2(d.getMinutes());
+  }
+  function where(n) {
+    var w = {};
+    ['deck', 'pos', 'side'].forEach(function(k) {
+      if (n[k]) {
+        w[k] = n[k];
+      }
+    });
+    return Object.keys(w).length ? w : undefined;
+  }
+  var out = {format: 'royal-pebble-map-notes', v: 1, ship: mc.ship, device: label || '',
+             copied: when(now.getTime()), conflicts: {}, flags: [], found: [], added: []};
+  var byId = {};
+  notes.forEach(function(n) { byId[n.id] = n; });
+  mc.conflicts.forEach(function(c) {
+    var n = byId['c:' + c.id] || {};
+    out.conflicts[c.id] = {check: c.check, answer: n.answer || 'not checked', where: where(n), note: n.note,
+                           at: when(n.edited || n.ms)};
+  });
+  notes.forEach(function(n) {
+    if (n.type === 'answer' && !out.conflicts[n.conflict]) {
+      // Answered on an earlier map whose conflict is no longer open.
+      out.conflicts[n.conflict] = {answer: n.answer || 'not checked', where: where(n), note: n.note,
+                                   at: when(n.edited || n.ms)};
+    } else if (n.type === 'flag') {
+      out.flags.push({at: when(n.ms), place: n.place, decks: n.decks, page: n.shown || undefined, start: n.start,
+                      approx: n.approx || undefined, demo: n.demo || undefined, where: where(n), note: n.note});
+    } else if (n.type === 'found') {
+      out.found.push({first: when(n.ms), last: when(n.last), times: n.count, place: n.place, problem: n.problem,
+                      where: where(n), note: n.note});
+    } else if (n.type === 'added') {
+      out.added.push({at: when(n.ms), place: n.place, where: where(n), note: n.note});
+    }
+  });
+  return JSON.stringify(out, null, 2);
 }
 
 // The usage log split into parts the phone's clipboard can hold (at most `max`
@@ -2361,6 +2435,233 @@ function pageMain(S, V) {
     $('logClearNote').hidden = !logClear;
   });
 
+  // ---- Me > Map check (docs/PROJECT_BRIEF.md, "Map check"): on a ship with a
+  // map, answers to its open source conflicts, the watch's flags and the map
+  // problems the app found, each with an optional where and note.
+  var MC = S.mapCheck;
+  var mcNotes = {};    // id -> note, edited in place
+  var mcTouched = {};  // id -> true when changed here, null when removed
+  var mcAdded = [];    // Add a problem: {type, place, deck, pos, side, note}, null once removed
+  var mcClear = false;
+  var MC_ANSWERS = [['website right', 'Website right'], ['app right', 'App right'], ['neither', 'Neither'],
+                    ['not checked', 'Not checked']];
+  function mcNote(id) {
+    if (id.indexOf('new:') === 0) {
+      return mcAdded[+id.slice(4)];
+    }
+    if (!mcNotes[id]) {
+      mcNotes[id] = {id: id, type: 'answer', conflict: id.slice(2)};
+    }
+    return mcNotes[id];
+  }
+  function mcHasDetails(n) {
+    return !!(n.note || n.deck || n.pos || n.side || (n.answer && n.answer !== 'not checked'));
+  }
+  function mcWhen(ms) {
+    var d = new Date(ms);
+    return DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ', ' +
+      d.toLocaleTimeString(undefined, {hour: 'numeric', minute: '2-digit'});
+  }
+  function mcChip(n) {
+    if (n.type === 'answer') {
+      var a = MC_ANSWERS.filter(function(x) { return x[0] === n.answer; })[0];
+      return n.answer && n.answer !== 'not checked' ? '<span class="schip done">' + a[1] + '</span>' :
+        mcHasDetails(n) ? '<span class="schip done">Noted</span>' : '<span class="schip need">Not checked</span>';
+    }
+    if (n.type === 'added') {
+      return '<span class="schip done">Added</span>';
+    }
+    return mcHasDetails(n) ? '<span class="schip done">Details added</span>' :
+      '<span class="schip need">Add details</span>';
+  }
+  function mcSeg(field, value, options, cls) {
+    return '<div class="seg ' + cls + '">' + options.map(function(o) {
+      return '<button data-f="' + field + '" data-v="' + o[0] + '" aria-pressed="' + (value === o[0]) + '">' +
+        o[1] + '</button>';
+    }).join('') + '</div>';
+  }
+  function mcEditor(n) {
+    return '<label>Where (optional)</label><div class="mcw"><select data-f="deck" aria-label="Deck">' +
+      '<option value="">Deck</option>' + MC.decks.map(function(d) {
+        return '<option value="' + d + '"' + (+n.deck === d ? ' selected' : '') + '>Deck ' + d + '</option>';
+      }).join('') + '</select>' +
+      mcSeg('pos', n.pos, [['fore', 'Fore'], ['mid', 'Mid'], ['aft', 'Aft']], 'small') +
+      mcSeg('side', n.side, [['port', 'Port'], ['stbd', 'Stbd']], 'small') + '</div>' +
+      '<label>Note</label><input data-f="note" maxlength="200" value="' + esc(n.note || '') + '" ' +
+      'placeholder="What you found">';
+  }
+  function mcItem(id, n, title, sub, body, removable) {
+    return '<details class="mc" data-id="' + id + '"' + (id.indexOf('new:') === 0 ? ' open' : '') + '><summary>' +
+      '<span class="t"><b>' + title + '</b><span class="muted">' + sub + '</span></span>' +
+      '<span data-chip>' + mcChip(n) + '</span></summary>' + body + mcEditor(n) +
+      (removable ? '<div class="actions"><button class="textbtn" data-act="remove">Remove</button></div>' : '') +
+      '</details>';
+  }
+  function mcRender() {
+    var html = [];
+    var notes = Object.keys(mcNotes).map(function(id) { return mcNotes[id]; })
+      .sort(function(a, b) { return (a.ms || 0) - (b.ms || 0); });
+    html.push('<h3 class="mch">To check on board</h3>');
+    MC.conflicts.forEach(function(c) {
+      var id = 'c:' + c.id;
+      var n = mcNotes[id] || {id: id, type: 'answer'};
+      html.push(mcItem(id, n, esc(c.check), esc(c.venues ? c.venues.join(', ') : 'Deck ' + c.deck + ' restrooms'),
+        '<p class="src"><b>Website plans:</b> ' + esc(c.svg) + '</p><p class="src"><b>Royal app:</b> ' +
+        esc(c.app) + '</p><p class="src"><b>The map uses:</b> ' +
+        esc(c.using === 'svg' ? 'the website plans' : c.using === 'app' ? 'the Royal app' : c.using) + '</p>' +
+        '<label>Which is right?</label>' + mcSeg('answer', n.answer || 'not checked', MC_ANSWERS, 'ans'), false));
+    });
+    var groups = [['flag', 'Flagged on the watch'], ['found', 'Found by the app'], ['added', 'Problems you added']];
+    groups.forEach(function(g) {
+      var list = notes.filter(function(n) { return n.type === g[0]; });
+      if (g[0] === 'added') {
+        list = list.concat(mcAdded.map(function(n, i) { return n ? {n: n, id: 'new:' + i} : null; })
+          .filter(Boolean));
+      }
+      if (!list.length) {
+        return;
+      }
+      html.push('<h3 class="mch">' + g[1] + '</h3>');
+      list.forEach(function(x) {
+        var n = x.n || x;
+        var id = x.n ? x.id : n.id;
+        if (g[0] === 'flag') {
+          html.push(mcItem(id, n, esc(n.place) + (mcHasDetails(n) ? '' : ' &ndash; add details'),
+            'Flagged on watch ' + esc(mcWhen(n.ms)),
+            (n.shown ? '<p class="src"><b>The page showed:</b> ' + esc(n.shown) + '</p>' : '') +
+            '<p class="src"><b>Route start:</b> ' + esc(n.start || 'unknown') + '</p>' +
+            (n.approx ? '<p class="src">The spot was marked approximate.</p>' : '') +
+            (n.demo ? '<p class="src">Flagged while the watch showed the demo.</p>' : ''), true));
+        } else if (g[0] === 'found') {
+          html.push(mcItem(id, n, esc(n.place), esc(n.problem),
+            '<p class="src">Found ' + (n.count > 1 ? n.count + ' times, first ' + esc(mcWhen(n.ms)) + ', last ' +
+              esc(mcWhen(n.last)) : esc(mcWhen(n.ms))) + '.</p>', true));
+        } else {
+          html.push(mcItem(id, n, esc(n.place || 'New problem'), n.ms ? 'Added ' + esc(mcWhen(n.ms)) : 'Not saved yet',
+            '<label>Place</label><input data-f="place" maxlength="60" value="' + esc(n.place || '') + '" ' +
+            'placeholder="Venue, restroom, stairs...">', true));
+        }
+      });
+    });
+    $('mapList').innerHTML = html.join('');
+    mcStats();
+  }
+  function mcStats() {
+    var answered = MC.conflicts.filter(function(c) {
+      var n = mcNotes['c:' + c.id];
+      return n && n.answer && n.answer !== 'not checked';
+    }).length;
+    var count = function(type) {
+      return Object.keys(mcNotes).filter(function(id) { return mcNotes[id].type === type; }).length;
+    };
+    $('mapChecked').textContent = String(answered);
+    $('mapOf').textContent = 'of ' + MC.conflicts.length + ' checked';
+    $('mapFlags').textContent = String(count('flag'));
+    $('mapFound').textContent = String(count('found'));
+  }
+  function mcChanged(box, n) {
+    var id = box.getAttribute('data-id');
+    if (id.indexOf('new:') !== 0) {
+      mcTouched[id] = true;
+    }
+    box.querySelector('[data-chip]').innerHTML = mcChip(n);
+    if (n.type === 'added') {
+      box.querySelector('summary b').textContent = n.place || 'New problem';
+    } else if (n.type === 'flag') {
+      box.querySelector('summary b').innerHTML = esc(n.place) + (mcHasDetails(n) ? '' : ' &ndash; add details');
+    }
+    mcStats();
+  }
+  if (MC) {
+    $('mapCard').hidden = false;
+    (MC.notes || []).forEach(function(n) { mcNotes[n.id] = n; });
+    $('mapIntro').textContent = 'The ' + MC.name + ' map was built from two sources that disagree in places. ' +
+      'On board, check each question below and note what\'s right. Flag a map problem on a watch place page, ' +
+      'or add one here, for anything else that\'s wrong.';
+    mcRender();
+    $('mapList').addEventListener('click', function(e) {
+      var b = e.target.closest('button');
+      var box = e.target.closest('.mc');
+      if (!b || !box) {
+        return;
+      }
+      var id = box.getAttribute('data-id');
+      var n = mcNote(id);
+      if (b.getAttribute('data-act') === 'remove') {
+        if (id.indexOf('new:') === 0) {
+          mcAdded[+id.slice(4)] = null;
+        } else {
+          mcTouched[id] = null;
+          delete mcNotes[id];
+        }
+        mcRender();
+        return;
+      }
+      var f = b.getAttribute('data-f');
+      var v = b.getAttribute('data-v');
+      // Where buttons turn off when tapped again; an answer is always one of four.
+      n[f] = f !== 'answer' && n[f] === v ? undefined : v;
+      Array.prototype.forEach.call(b.parentNode.querySelectorAll('button'), function(o) {
+        o.setAttribute('aria-pressed', String(o.getAttribute('data-v') === n[f]));
+      });
+      mcChanged(box, n);
+    });
+    var onField = function(e) {
+      var el = e.target;
+      var box = el.closest('.mc');
+      var f = el.getAttribute('data-f');
+      if (!box || !f || el.tagName === 'BUTTON') {
+        return;
+      }
+      var n = mcNote(box.getAttribute('data-id'));
+      n[f] = el.value.trim() ? (f === 'deck' ? +el.value : el.value.trim()) : undefined;
+      mcChanged(box, n);
+    };
+    $('mapList').addEventListener('input', onField);
+    $('mapList').addEventListener('change', onField);
+    $('mapAdd').addEventListener('click', function() {
+      mcAdded.push({type: 'added'});
+      mcRender();
+      var inputs = $('mapList').querySelectorAll('[data-id="new:' + (mcAdded.length - 1) + '"] input');
+      if (inputs.length) {
+        inputs[0].focus();
+      }
+    });
+    $('mapCopy').addEventListener('click', function() {
+      var notes = Object.keys(mcNotes).map(function(id) { return mcNotes[id]; })
+        .concat(mcAdded.filter(Boolean)).sort(function(a, b) { return (a.ms || 0) - (b.ms || 0); });
+      var text = mapExport(MC, notes, $('logLabel').value.trim(), new Date());
+      var ok = copyText(text);
+      $('mapCopied').className = ok ? 'help ok' : 'help error';
+      $('mapCopied').textContent = ok ? 'Notes copied (' + kb(text.length) + '). Paste them into a note or an email.' :
+        'Copying didn\'t work. Try again.';
+    });
+    $('mapClear').addEventListener('click', function() {
+      mcClear = !mcClear;
+      $('mapClear').textContent = mcClear ? 'Keep notes' : 'Clear notes';
+      $('mapClearNote').textContent = 'Every map note and answer is deleted when you tap Save. Copy them first ' +
+        'if you need them.';
+      $('mapClearNote').hidden = !mcClear;
+    });
+  }
+  function mapResult() {
+    var FIELDS = ['answer', 'deck', 'pos', 'side', 'note', 'place'];
+    var pick = function(n) {
+      var f = {};
+      FIELDS.forEach(function(k) {
+        if (n[k] !== undefined) {
+          f[k] = n[k];
+        }
+      });
+      return f;
+    };
+    var notes = {};
+    Object.keys(mcTouched).forEach(function(id) {
+      notes[id] = mcTouched[id] === null ? null : pick(mcNotes[id]);
+    });
+    return {ship: MC.ship, clear: mcClear, notes: notes, added: mcAdded.filter(Boolean).map(pick)};
+  }
+
   // ---- Save / Download
   function result(action) {
     var r = {
@@ -2380,6 +2681,9 @@ function pageMain(S, V) {
     r.showFeatured = featuredOn();
     r.alwaysHints = hintsOn();
     r.usage = {on: switchOn('logOn'), label: $('logLabel').value.trim(), clear: logClear};
+    if (MC) {
+      r.mapCheck = mapResult();
+    }
     if (SD) {
       r.shipSides = {ship: SD.ship, all: switchOn('flipAll'), decks: flipDecks.slice(), confirmed: switchOn('sidesOk')};
     }
@@ -2475,7 +2779,8 @@ function buildPage(state, now) {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<title>Royal Pebble</title><style>' + CSS + '</style></head><body>' + BODY +
-    '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';(' + pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')());</script>' +
+    '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';' + mapExport.toString() + ';(' +
+    pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')());</script>' +
     '</body></html>';
 }
 
@@ -2483,4 +2788,5 @@ function pageUrl(state, now) {
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(buildPage(state, now));
 }
 
-module.exports = {buildPage: buildPage, pageUrl: pageUrl, findClashes: findClashes, splitLog: splitLog};
+module.exports = {buildPage: buildPage, pageUrl: pageUrl, findClashes: findClashes, splitLog: splitLog,
+                  mapExport: mapExport};

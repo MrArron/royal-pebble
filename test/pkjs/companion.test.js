@@ -116,6 +116,70 @@ test('settings page: opened, closed, setting changes and log settings', function
   assert.ok(html.indexOf('setting  theme: (none) -> \\"dark\\"') !== -1);
 });
 
+// A saved cruise on Harmony (made-up), sailing yesterday.
+function savedCruise() {
+  var d = new Date(Date.now() - 24 * 3600 * 1000);
+  var iso = d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1) + '-' +
+    (d.getDate() < 10 ? '0' : '') + d.getDate();
+  return {format: 'cruise-watch', v: 1, generated: new Date().toISOString(), ship: {code: 'HM', name: 'Harmony of the Seas'},
+          sailDate: iso, itinerary: [{day: 1, date: iso, port: 'Test Port', type: 'EMBARK', arrive: null, depart: '16:00'}],
+          schedule: {published: false, cats: [], venues: [], fields: [], events: []}};
+}
+
+test('map check: a watch flag saves a note once; problems found are counted; the page edits them', function() {
+  var directory = require('../../src/pkjs/directory');
+  var c = companion({bundle: JSON.stringify(savedCruise()),
+                     settings: JSON.stringify({me: {stateroom: '9254', deck: 'Deck 9'}})});
+  var list = directory.places('HM');
+  var ref = directory.REF_PLACE + list.indexOf(list.filter(function(v) { return v.name === 'Studio B'; })[0]);
+  c.handlers.appmessage({payload: {msg_type: 15, dir_ref: directory.REF_FLAG + ref}});
+  c.handlers.appmessage({payload: {msg_type: 15, dir_ref: directory.REF_FLAG + ref}});  // a retry
+  var notes = JSON.parse(c.store.mapNotes);
+  assert.strictEqual(notes.length, 1);
+  assert.deepStrictEqual([notes[0].type, notes[0].place, notes[0].ship, notes[0].start],
+                         ['flag', 'Studio B', 'HM', 'stateroom']);
+  assert.ok(/^FROM YOUR CABIN /.test(notes[0].shown), notes[0].shown);
+  // The watch got the page that says so.
+  var sent = c.sent[c.sent.length - 1];
+  assert.strictEqual(sent.dir_ref, directory.REF_FLAG + ref);
+  // A route with no way there, twice: one note, counted.
+  c.handlers.appmessage({payload: {msg_type: 16, route_start: 2000, route_venue: 'Nowhere Lounge'}});
+  c.handlers.appmessage({payload: {msg_type: 16, route_start: 2000, route_venue: 'Nowhere Lounge'}});
+  notes = JSON.parse(c.store.mapNotes);
+  assert.deepStrictEqual(notes.map(function(n) { return [n.type, n.count]; }), [['flag', undefined], ['found', 2]]);
+  var lines = c.log();
+  assert.ok(has(lines, /^map  flagged on the watch: Studio B \(page showed FROM YOUR CABIN .*\), start: stateroom$/),
+            lines.join('\n'));
+  assert.strictEqual(lines.filter(function(l) { return /^map  found by the app: Nowhere Lounge/.test(l); }).length, 1);
+
+  // The settings page shows them and saves the answers.
+  c.handlers.showConfiguration();
+  var html = decodeURIComponent(c.opened[0].slice('data:text/html;charset=utf-8,'.length));
+  assert.ok(html.indexOf('"mapCheck":{"ship":"HM"') !== -1);
+  assert.ok(html.indexOf('"id":"starbucks-deck"') !== -1);
+  var edits = {};
+  edits[notes[0].id] = {note: 'Test note'};
+  edits['c:starbucks-deck'] = {answer: 'app right', deck: 5};
+  c.handlers.webviewclosed({response: encodeURIComponent(JSON.stringify({action: 'save',
+    mapCheck: {ship: 'HM', clear: false, notes: edits, added: [{place: 'Test Stairs', note: 'Closed'}]}}))});
+  notes = JSON.parse(c.store.mapNotes);
+  assert.deepStrictEqual(notes.map(function(n) { return n.type; }), ['flag', 'found', 'answer', 'added']);
+  assert.strictEqual(notes[0].note, 'Test note');
+  lines = c.log();
+  assert.ok(has(lines, /^map  note c:starbucks-deck: answer "app right", deck 5$/), lines.join('\n'));
+  assert.ok(has(lines, /^map  note added: place "Test Stairs", note "Closed"$/), lines.join('\n'));
+});
+
+test('map check: flags while the watch shows the demo are marked; problems found are not saved', function() {
+  var directory = require('../../src/pkjs/directory');
+  var c = companion();
+  c.handlers.appmessage({payload: {msg_type: 15, dir_ref: directory.REF_FLAG + directory.REF_BANK}});
+  c.handlers.appmessage({payload: {msg_type: 16, route_start: 2000, route_venue: 'Nowhere Lounge'}});
+  var notes = JSON.parse(c.store.mapNotes);
+  assert.deepStrictEqual(notes.map(function(n) { return [n.type, n.place, n.demo]; }),
+                         [['flag', 'Fore elevators', true]]);
+});
+
 test('backing out saves nothing and is logged; turning the log off stops it', function() {
   var c = companion();
   c.handlers.showConfiguration();

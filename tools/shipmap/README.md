@@ -114,9 +114,12 @@ the question to answer on board.
   source) is compared with the data. Each difference becomes an entry here;
   the data isn't changed to match the new source until it's confirmed.
 - **Settled only in person.** The owner checks the open entries during the
-  sailing. On-board logging for this is still to be added (brief, Ship GPS).
-  When an entry is confirmed, set `status` to `confirmed` with `truth`, fix the
-  overrides or the venue table, and rebuild.
+  sailing on the settings page's Me > Map check card (brief, "Map check"),
+  and copies the notes afterwards. When an entry is confirmed, set `status` to
+  `confirmed` with `truth`, fix the overrides or the venue table, and rebuild.
+- **After any change here**, run `node tools/shipmap/build_conflicts.js`: it
+  bundles the open entries into `src/pkjs/data/conflicts-HM.js` for the card
+  (the data test fails until it's up to date).
 - `node test/pkjs/shipmap-data.test.js` checks the file: ids, statuses, and
   that every venue named is in the venue table.
 - **Other ships:** fetch that ship's SVGs, check `BANK_GAP` in

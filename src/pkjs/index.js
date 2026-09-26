@@ -330,8 +330,12 @@ function sendDirPage() {
   s_dirRef = null;
   var built = Date.now();
   var data = currentData();
-  var page = directory.buildPage(ref, {bundle: data.bundle, settings: data.settings, stars: data.stars,
-                                       now: new Date()});
+  var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
+  if (ref >= directory.REF_FLAG) {
+    flagFromWatch(ref - directory.REF_FLAG, ctx, data.isDemo);
+  }
+  var page = directory.buildPage(ref, ctx);
+  mapProblem(page, data.isDemo);
   var msg = directory.message(page);
   built = Date.now() - built;
   msg.msg_type = MSG_DIR_PAGE;
@@ -359,6 +363,7 @@ function sendRoute() {
   var data = currentData();
   var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
   var page = req.venue !== undefined ? directory.eventRoutePage(req, ctx) : directory.routePage(req.ref, req.rest, ctx);
+  mapProblem(page, data.isDemo);
   var msg = directory.routeMsg(page);
   built = Date.now() - built;
   msg.msg_type = MSG_ROUTE_PAGE;
@@ -379,6 +384,47 @@ function sendRoute() {
                 page.steps.length + ' steps, ' + msg.route.length + ' bytes');
     sendNext();
   });
+}
+
+// Map check (docs/PROJECT_BRIEF.md): Flag a map problem on a place page saves a
+// note with what the page showed. The watch may ask again after a timeout, so
+// a second flag of the same place within a minute is the same one.
+var s_lastFlag = null;  // {ref, ms}
+function flagFromWatch(ref, ctx, isDemo) {
+  var info = directory.flagInfo(ref, ctx);
+  if (!info) {
+    usage.add('map', 'flag from the watch for a page that no longer exists (' + ref + ')');
+    return;
+  }
+  var ms = Date.now();
+  if (s_lastFlag && s_lastFlag.ref === ref && ms - s_lastFlag.ms < 60000) {
+    return;
+  }
+  s_lastFlag = {ref: ref, ms: ms};
+  var note = {type: 'flag', ship: info.ship, place: info.place, decks: info.decks, area: info.area,
+              shown: info.shown, start: info.start};
+  if (info.approx) {
+    note.approx = true;
+  }
+  if (isDemo) {
+    note.demo = true;
+  }
+  usage.addMapNote(note);
+  usage.add('map', 'flagged on the watch: ' + info.place + (info.shown ? ' (page showed ' + info.shown + ')' : '') +
+            ', start: ' + info.start + (isDemo ? ', demo data' : ''));
+}
+
+// A map problem the app ran into while building a page (a venue with no spot,
+// no route found): saved once as a Map check note, then counted.
+function mapProblem(page, isDemo) {
+  var p = page.problem;
+  if (!p || isDemo) {
+    return;
+  }
+  var ship = (currentData().bundle.ship || {}).code || '';
+  if (usage.appFound(ship + ':' + p.key, {ship: ship, place: p.place, problem: p.text})) {
+    usage.add('map', 'found by the app: ' + p.place + ', ' + p.text);
+  }
 }
 
 // Star changes made on the watch, possibly long ago with the phone away. The
@@ -495,6 +541,8 @@ function pageState(ships) {
     // For Help > Port and starboard: only on a ship with a map (§9.7).
     shipSides: shipSidesState(bundle, settings),
     gpsShips: shipmap.shipNames(),
+    // For Me > Map check: only on a ship with a map.
+    mapCheck: mapCheckState(bundle),
     api: royal.API,
     appKey: royal.APPKEY
   };
@@ -508,6 +556,18 @@ function shipSidesState(bundle, settings) {
   var s = (settings.shipSides || {})[code] || {};
   return {ship: code, name: bundle.ship.name || code, decks: shipmap.decks(code), all: s.all === true,
           flipDecks: s.decks || [], confirmed: s.confirmed === true};
+}
+
+// Me > Map check (docs/PROJECT_BRIEF.md): the ship's open conflicts and the
+// notes saved for it.
+function mapCheckState(bundle) {
+  var code = bundle && bundle.ship && bundle.ship.code;
+  if (!code || !shipmap.data(code)) {
+    return null;
+  }
+  return {ship: code, name: bundle.ship.name || code, decks: shipmap.decks(code),
+          conflicts: shipmap.conflicts(code),
+          notes: usage.mapNotes().filter(function(n) { return !n.ship || n.ship === code; })};
 }
 
 // Help > Port and starboard as the page returned it: {ship, all, decks, confirmed}.
@@ -633,6 +693,7 @@ function settingsClosed(text) {
   }
   usage.add('settings', 'page closed: ' + (r.action || 'save') + ', result ' + Math.round(text.length / 1024) + ' KB');
   usage.applySettings(r.usage);
+  usage.applyMapNotes(r.mapCheck).forEach(function(d) { usage.add('map', 'note ' + d); });
 
   if (Array.isArray(r.ships) && r.ships.length) {
     save(STORE_SHIPS, {at: Date.now(), list: r.ships});

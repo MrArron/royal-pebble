@@ -168,6 +168,57 @@ test('settings page has the Usage log card on Me, returning on, label and clear'
   assert.ok(html.indexOf('"logCapChars":' + log.CAP_CHARS) !== -1);
 });
 
+test('settings page has the Map check card on Me, hidden without a mapped ship', function() {
+  var conflicts = require('../../src/pkjs/data/conflicts-HM').conflicts;
+  var base = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
+    api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(base, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('id="mapCard" hidden') !== -1);
+  var state = JSON.parse(JSON.stringify(base));
+  state.mapCheck = {ship: 'HM', name: 'Harmony of the Seas', decks: [3, 4, 5], conflicts: conflicts,
+                    notes: [{id: 'f1', type: 'flag', ship: 'HM', place: '</script>Test Place', ms: 1}]};
+  html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  var me = html.slice(html.indexOf('<section class="screen" id="me">'));
+  me = me.slice(0, me.indexOf('</section>'));
+  ['mapCard', 'mapList', 'mapAdd', 'mapCopy', 'mapClear'].forEach(function(id) {
+    assert.ok(me.indexOf('id="' + id + '"') !== -1, id + ' on Me');
+  });
+  assert.ok(me.indexOf('id="mapCard"') < me.indexOf('id="logCard"'), 'above the Usage log');
+  assert.strictEqual(html.indexOf('</script>Test Place'), -1, 'notes cannot close the script tag');
+  assert.ok(html.indexOf('r.mapCheck = mapResult();') !== -1);
+});
+
+test('map check export: answers keyed by conflict id, then flags, problems found and added', function() {
+  var mc = {ship: 'HM', conflicts: [{id: 'one', check: 'Which deck?'}, {id: 'two', check: 'Where?'}]};
+  var t0 = new Date(2027, 2, 7, 14, 3).getTime();
+  var notes = [
+    {id: 'c:one', type: 'answer', conflict: 'one', answer: 'app right', deck: 5, pos: 'fore', note: 'By the stairs',
+     ms: t0},
+    {id: 'c:gone', type: 'answer', conflict: 'gone', answer: 'neither', ms: t0},
+    {id: 'f1', type: 'flag', place: 'Test Place', decks: [4], shown: 'FROM YOUR CABIN 2 decks', start: 'stateroom',
+     ms: t0, note: 'Wrong side'},
+    {id: 'a:HM:no-route:X', type: 'found', place: 'X', problem: 'no route found to it', count: 3, ms: t0,
+     last: t0 + 3600000},
+    {type: 'added', place: 'Test Stairs', side: 'port'}
+  ];
+  var out = JSON.parse(config.mapExport(mc, notes, 'Test watch', new Date(2027, 2, 8, 9, 0)));
+  assert.deepStrictEqual([out.format, out.v, out.ship, out.device, out.copied],
+                         ['royal-pebble-map-notes', 1, 'HM', 'Test watch', '2027-03-08 09:00']);
+  assert.deepStrictEqual(Object.keys(out.conflicts), ['one', 'two', 'gone']);
+  assert.deepStrictEqual(out.conflicts.one, {check: 'Which deck?', answer: 'app right',
+                                             where: {deck: 5, pos: 'fore'}, note: 'By the stairs',
+                                             at: '2027-03-07 14:03'});
+  assert.deepStrictEqual(out.conflicts.two, {check: 'Where?', answer: 'not checked'});
+  assert.strictEqual(out.conflicts.gone.answer, 'neither');
+  assert.deepStrictEqual(out.flags, [{at: '2027-03-07 14:03', place: 'Test Place', decks: [4],
+                                      page: 'FROM YOUR CABIN 2 decks', start: 'stateroom', note: 'Wrong side'}]);
+  assert.deepStrictEqual(out.found, [{first: '2027-03-07 14:03', last: '2027-03-07 15:03', times: 3, place: 'X',
+                                      problem: 'no route found to it'}]);
+  assert.deepStrictEqual(out.added, [{place: 'Test Stairs', where: {side: 'port'}}]);
+});
+
 test('settings page has the walking distance units, feet, metres or steps', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15, units: 'ft',
     api: royal.API, appKey: royal.APPKEY};

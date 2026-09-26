@@ -536,7 +536,9 @@ test('elevator banks: deck rows, the Elevators area and bank pages', function() 
 
   var aft = page(directory.REF_BANK + 1, {settings: CABIN});
   assert.strictEqual(aft.title, 'Place');
-  assert.deepStrictEqual(aft.rows, [{kind: directory.ROW_PLACE, ref: 0, line1: 'Aft elevators', line2: ''}]);
+  assert.deepStrictEqual(aft.rows, [{kind: directory.ROW_PLACE, ref: 0, line1: 'Aft elevators', line2: ''},
+                                    {kind: directory.ROW_ITEM, ref: directory.REF_FLAG + directory.REF_BANK + 1,
+                                     line1: 'Flag a map problem', line2: 'Note it for the Map check', flags: 0}]);
   assert.strictEqual(aft.bank.text, 'Aft' + DOT + 'Decks 3-17');
   assert.deepStrictEqual(aft.bank.decks, [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17]);
   assert.strictEqual(aft.bank.cabin, 9);
@@ -558,6 +560,66 @@ test('elevator banks: deck rows, the Elevators area and bank pages', function() 
   assert.ok(!find(none.rows, 'Elevators'));
   assert.strictEqual(directory.buildPage(directory.REF_BANK, {bundle: other, settings: {}, now: NOW}).rows[0].line1,
                      'Not found');
+});
+
+// Map check (docs/PROJECT_BRIEF.md): Flag a map problem on place pages, and
+// problems the app runs into.
+test('map check: place pages on a mapped ship end with Flag a map problem', function() {
+  var ref = placeRef('Studio B', CABIN);
+  var p = gpsPage('Studio B');
+  var last = p.rows[p.rows.length - 1];
+  assert.deepStrictEqual([last.kind, last.ref, last.line1], [directory.ROW_ITEM, directory.REF_FLAG + ref,
+                                                             'Flag a map problem']);
+  assert.ok(directory.message(p).dir_rows.length <= directory.ROWS_MAX_BYTES);
+  // Not on deck or area pages, not without a cruise, not on a ship with no map.
+  assert.ok(!find(page(directory.REF_DECK + 4).rows, 'Flag a map problem'));
+  var other = makeBundle();
+  other.ship.code = 'XX';
+  var off = directory.buildPage(ref, {bundle: other, settings: CABIN, now: NOW});
+  assert.ok(!find(off.rows, 'Flag a map problem'));
+  var none = directory.buildPage(ref, {bundle: null, settings: CABIN, now: NOW});
+  assert.ok(!find(none.rows, 'Flag a map problem'));
+});
+
+test('map check: a flag opens a page saying it is saved, and flagInfo records the page', function() {
+  var ref = placeRef('Studio B', CABIN);
+  var f = page(directory.REF_FLAG + ref, {settings: CABIN});
+  assert.strictEqual(f.title, 'Map check');
+  assert.deepStrictEqual(f.rows.map(function(r) { return [r.kind, r.ref, r.line1, r.line2]; }), [
+    [directory.ROW_PLACE, 0, 'Flagged', 'Studio B'],
+    [directory.ROW_ITEM, 0, 'Saved on your phone', 'Add details: Me > Map check']]);
+  var ctx = {bundle: makeBundle(), settings: CABIN, stars: {}, now: NOW};
+  var info = directory.flagInfo(ref, ctx);
+  var shown = gpsPage('Studio B').gps;
+  assert.strictEqual(info.place, 'Studio B');
+  assert.strictEqual(info.ship, 'HM');
+  assert.deepStrictEqual(info.decks, [4]);
+  assert.strictEqual(info.start, 'stateroom');
+  assert.strictEqual(info.shown, shown.header + ' ' + shown.text + '; restroom ' + shown.rest.text);
+  assert.strictEqual(info.approx, false);
+  assert.strictEqual(directory.flagInfo(directory.REF_PLACE + 9999, ctx), null);
+  assert.strictEqual(page(directory.REF_FLAG + directory.REF_PLACE + 9999).rows[0].line1, 'Not found');
+  var bank = directory.flagInfo(directory.REF_BANK, ctx);
+  assert.deepStrictEqual([bank.place, bank.area], ['Fore elevators', 'Fore']);
+  assert.ok(/^FROM YOUR CABIN /.test(bank.shown), bank.shown);
+  assert.ok(directory.flagInfo(placeRef('Medical Center', CABIN), ctx).approx);
+});
+
+test('map check: pages carry the map problems the app runs into', function() {
+  assert.strictEqual(gpsPage('Studio B').problem, undefined);
+  assert.strictEqual(route('Studio B').problem, undefined);
+  // A stateroom the map doesn't know: no route.
+  assert.deepStrictEqual(route('Studio B', false, {settings: {me: {stateroom: '99999'}}}).problem,
+                         {key: 'no-route:Studio B', place: 'Studio B', text: 'no route found to it'});
+  // An event at a venue that isn't in the venue table.
+  assert.deepStrictEqual(eventRoute('Nowhere Lounge', AT_3PM).problem,
+                         {key: 'unknown:Nowhere Lounge', place: 'Nowhere Lounge',
+                          text: 'not in the venue table, so not on the map'});
+  // Ashore isn't a map problem.
+  assert.strictEqual(eventRoute('Perfect Day at CocoCay', AT_3PM).problem, undefined);
+  assert.strictEqual(eventRoute('Royal Theater', AT_3PM).problem, undefined);
+  // Missing a cabin isn't either: the page asks for one.
+  assert.strictEqual(route('Studio B', false, {settings: {me: {deck: 'Deck 9'}}}).problem, undefined);
 });
 
 var failed = 0;
