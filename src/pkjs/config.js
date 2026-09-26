@@ -1,11 +1,12 @@
 // The settings page, built on the phone and opened as a data: URL so it works
 // with no internet (docs/DESIGN.md, "Phone settings"). Screens: Cruise, Days, Filters,
-// Events and Me.
+// Events and Me, with Help under Me (docs/DESIGN_V1_1.md §9.7).
 //
 // The page returns its result through `return_to` (the emulator tooling adds
 // it) or the phone app's pebblejs://close# URL:
 //   {action: 'save' | 'download' | 'test', me, theme, reminderLead, reserveAlertAt,
 //    days: {date: {offset, buffer, allAboard, edit} | null}, showFeatured, alwaysHints, hiddenCats,
+//    shipSides: {ship, all, decks, confirmed} (Help > Port and starboard, mapped ships only),
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
 //    each was made), personal: [{title, venue, date, time, minutes}],
 //    download: {ship: {code, name}, sailDate}, bundle, ships,
@@ -230,10 +231,91 @@ var CSS = [
   'body.editing nav{display:none}body.editing .editbar{display:flex}',
   '.pill.big{min-height:56px;padding:0 22px;border-radius:28px;display:flex;align-items:center;gap:8px}',
   '.pill.big svg{width:20px;height:20px;stroke-width:2.4}',
-  '.vlink{background:none;padding:0;font:inherit;color:var(--primary);font-weight:600;text-align:left}'
+  '.vlink{background:none;padding:0;font:inherit;color:var(--primary);font-weight:600;text-align:left}',
+  '.linkcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;color:inherit;font:inherit}',
+  '.linkcard .t{flex:1;min-width:0}.linkcard h2{margin:0}',
+  '.linkcard>svg{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;',
+  'stroke-linejoin:round}',
+  '.card h3{margin:16px 0 0;font-size:15px;font-weight:600}',
+  '.keys .row{justify-content:flex-start}.keys .row b{flex:none;width:104px;font-weight:600}',
+  '.keys .row span:last-child{flex:1;font-weight:400;text-align:left}',
+  '.notes{margin:8px 0 0;padding-left:20px}.notes li{margin:6px 0}',
+  '.deckchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.deckchips .fchip{min-width:48px}'
 ].join('');
 
 var BACK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
+var NEXT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+var HELP_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/>' +
+  '<path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></svg>';
+
+// Help > Watch buttons: [screen, [[button, what it does]]]. Keep in step with the
+// watch's click handlers (src/c/*_window.c) whenever a control changes.
+var HELP_KEYS = [
+  ['Home', [['Up', 'My info'], ['Down', 'Today'], ['Select', 'Route to the next event, when its venue is on board'],
+            ['Hold Up', 'Next demo screen (only while the watch shows the demo)'], ['Back', 'Exit']]],
+  ['Morning summary', [['Any button', 'On to Home'],
+                       ['Up, Down', 'On to My info or Today, when it opened with the app']]],
+  ['Today', [['Up, Down', 'Move'], ['Select', 'Event details'],
+             ['Hold Select', 'Star or unstar (the watch warns of a clash)'], ['Back', 'Home']]],
+  ['Event details', [['Hold Select', 'Star or unstar'],
+                     ['Select', 'Mark reserved, or not (starred events that need a reservation)']]],
+  ['My info', [['Up, Down', 'Pick the summary or Ship directory'], ['Select', 'Open it']]],
+  ['Ship directory', [['Up, Down', 'Move, or scroll a place page'], ['Select', 'Open; on a place page, its route'],
+                      ['Hold Select', 'On a place page: the route to its closest restroom']]],
+  ['Route', [['Up, Down', 'Scroll a long route'], ['Select', 'Try again when the phone was away']]],
+  ['Alerts', [['Select', 'Home'], ['Back', 'Close (back to what you were doing)']]],
+  ['Schedule change', [['Up, Down', 'Previous or next change'], ['Select, Back', 'Close']]]
+];
+
+var HELP_NOTES = [
+  'Download your sailing and its schedule before you sail, while you have internet. After that, everything ' +
+    'works at sea with no internet.',
+  'The watch\'s day changes at 4:00 am ship time, so a late show after midnight still counts as the evening ' +
+    'before.',
+  'Routes start at your stateroom, or at a starred event or your own entry that is on now or ended less than ' +
+    '15 minutes before. They go back to the stateroom by themselves.',
+  'Every distance and route is approximate: the ship map is measured from Royal\'s deck plans, not surveyed. ' +
+    'Follow the ship\'s signs where they disagree.',
+  '<b>Spot approximate</b> on a place page means the deck plans don\'t show that venue, so its spot is a rough ' +
+    'guess from its deck and fore/mid/aft.',
+  'Routes don\'t say port or starboard until the sides have been checked on board; they say ' +
+    '<b>Cross the ship</b> instead.',
+  'Place pages and routes are worked out on the phone, so keep it nearby (Bluetooth only, no internet needed). ' +
+    'The schedule, stars and alerts work without it.'
+];
+
+var HELP_HTML = [
+  '<section class="screen" id="help">',
+  '<div class="card switch-row"><span class="t"><b>Always show button hints</b>',
+  '<span class="muted">Label the watch\'s buttons on Home every time Royal Pebble opens, not just the ',
+  'first 3 times</span></span>',
+  '<button class="switch" role="switch" id="hints" aria-label="Always show button hints"></button></div>',
+  '<div class="card keys"><h2>Watch buttons</h2>',
+  HELP_KEYS.map(function(k) {
+    return '<h3>' + k[0] + '</h3><div class="rows">' + k[1].map(function(r) {
+      return '<div class="row"><b>' + r[0] + '</b><span>' + r[1] + '</span></div>';
+    }).join('') + '</div>';
+  }).join(''),
+  '</div>',
+  '<div class="card"><h2>Good to know</h2><ul class="notes">',
+  HELP_NOTES.map(function(n) { return '<li>' + n + '</li>'; }).join(''),
+  '</ul></div>',
+  '<div class="card"><h2>Ships with Ship GPS</h2><ul class="notes" id="gpsShips"></ul>',
+  '<p class="muted">On other ships everything else works (the schedule, alerts, the ship directory with ',
+  'decks), with no walking distances or routes.</p></div>',
+  '<div class="card" id="sidesCard" hidden><h2>Port and starboard</h2>',
+  '<p class="muted" id="sidesIntro"></p>',
+  '<div class="switch-row" style="margin-top:12px"><span class="t"><b>Sides checked on board</b>',
+  '<span class="muted">Routes say port or starboard (&ldquo;Cross to port&rdquo;, &ldquo;stbd side&rdquo;)</span></span>',
+  '<button class="switch" role="switch" id="sidesOk" aria-label="Sides checked on board"></button></div>',
+  '<div class="switch-row" style="margin-top:12px"><span class="t"><b>Flip the whole ship</b>',
+  '<span class="muted">If port and starboard are the wrong way round everywhere</span></span>',
+  '<button class="switch" role="switch" id="flipAll" aria-label="Flip the whole ship"></button></div>',
+  '<label>Flip single decks</label><div class="deckchips" id="flipDecks"></div>',
+  '<p class="help">A deck picked here flips on top of the whole-ship switch, so with both it goes back to the ',
+  'plans\' sides. For the first sailing with a new map; the map is fixed afterwards.</p></div>',
+  '</section>'
+].join('');
 
 var BODY = [
   '<header><button class="iconbtn" id="back" aria-label="Back" hidden>' + BACK_SVG + '</button>',
@@ -302,11 +384,10 @@ var BODY = [
   '<p class="help">Saves and closes this page. About 2 minutes later your watch shows a test reminder, ',
   'then a test all-aboard alert a minute after that, then a test reminder to reserve. Close the app on the watch first to check that ',
   'alerts open it by themselves.</p><p class="help" id="watchStorage"></p></div>',
-  '<div class="card switch-row"><span class="t"><b>Always show button hints</b>',
-  '<span class="muted">Label the watch\'s buttons on Home every time Royal Pebble opens, not just the ',
-  'first 3 times</span></span>',
-  '<button class="switch" role="switch" id="hints" aria-label="Always show button hints"></button></div>',
+  '<button class="card linkcard" id="openHelp"><span class="vicon">' + HELP_SVG + '</span><span class="t"><h2>Help</h2>',
+  '<span class="muted">Watch buttons, how the Ship GPS works, button hints</span></span>' + NEXT_SVG + '</button>',
   '</section>',
+  HELP_HTML,
   '<section class="screen" id="venues"><div class="vtools">',
   '<label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/>',
   '<path d="M20 20l-4.5-4.5"/></svg><input type="search" id="vSearch" placeholder="Search venues" ',
@@ -393,7 +474,7 @@ function pageMain(S, V) {
     });
     $('title').textContent = title;
     $('subtitle').textContent = sub || '';
-    $('back').hidden = id !== 'venues' && id !== 'venueEdit';
+    $('back').hidden = id !== 'venues' && id !== 'venueEdit' && id !== 'help';
     document.body.classList.toggle('editing', id === 'venueEdit');
     $('vFab').hidden = true;  // renderVenues() shows it
     window.scrollTo(0, 0);
@@ -1046,13 +1127,50 @@ function pageMain(S, V) {
     return $('featured').getAttribute('aria-checked') === 'true';
   }
 
-  // ---- Me > Always show button hints (docs/DESIGN_V1_1.md §9.5).
-  $('hints').setAttribute('aria-checked', String(S.alwaysHints === true));
-  $('hints').addEventListener('click', function() {
-    $('hints').setAttribute('aria-checked', String(!hintsOn()));
-  });
+  // ---- Me > Help (docs/DESIGN_V1_1.md §9.7), a screen under Me as the venues are
+  // under Cruise. The button hints switch (§9.5) lives here.
+  $('openHelp').addEventListener('click', function() { show('help', 'Help'); });
+  function switchOn(id) {
+    return $(id).getAttribute('aria-checked') === 'true';
+  }
+  function makeSwitch(id, on) {
+    $(id).setAttribute('aria-checked', String(on));
+    $(id).addEventListener('click', function() {
+      $(id).setAttribute('aria-checked', String(!switchOn(id)));
+    });
+  }
+  makeSwitch('hints', S.alwaysHints === true);
   function hintsOn() {
-    return $('hints').getAttribute('aria-checked') === 'true';
+    return switchOn('hints');
+  }
+  $('gpsShips').innerHTML = (S.gpsShips || []).map(function(n) { return '<li>' + esc(n) + '</li>'; }).join('');
+
+  // Port and starboard (§9.7): only for a ship with a map, to set the sides right
+  // on the first sailing with it.
+  var SD = S.shipSides;
+  var flipDecks = SD ? SD.flipDecks.slice() : [];
+  if (SD) {
+    $('sidesCard').hidden = false;
+    $('sidesIntro').textContent = 'The ' + SD.name + ' map hasn\'t been checked on board for port and starboard ' +
+      'yet. Check one known cabin: if its side is wrong, flip the whole ship or just the decks that are wrong, ' +
+      'then turn on Sides checked on board.';
+    makeSwitch('sidesOk', SD.confirmed);
+    makeSwitch('flipAll', SD.all);
+    $('flipDecks').innerHTML = SD.decks.map(function(d) {
+      return '<button class="fchip" data-deck="' + d + '" aria-pressed="' + (flipDecks.indexOf(d) !== -1) + '">' +
+        d + '</button>';
+    }).join('');
+    Array.prototype.forEach.call($('flipDecks').querySelectorAll('button'), function(b) {
+      b.addEventListener('click', function() {
+        var d = +b.getAttribute('data-deck'), i = flipDecks.indexOf(d);
+        if (i === -1) {
+          flipDecks.push(d);
+        } else {
+          flipDecks.splice(i, 1);
+        }
+        b.setAttribute('aria-pressed', String(i === -1));
+      });
+    });
   }
 
   function subKey(cat, sub) {
@@ -2100,6 +2218,8 @@ function pageMain(S, V) {
   $('back').addEventListener('click', function() {
     if ($('venueEdit').classList.contains('active')) {
       leaveVenue();
+    } else if ($('help').classList.contains('active')) {
+      goTo('me');
     } else {
       goTo('cruise');
     }
@@ -2150,6 +2270,9 @@ function pageMain(S, V) {
     }
     r.showFeatured = featuredOn();
     r.alwaysHints = hintsOn();
+    if (SD) {
+      r.shipSides = {ship: SD.ship, all: switchOn('flipAll'), decks: flipDecks.slice(), confirmed: switchOn('sidesOk')};
+    }
     r.hiddenCats = hidden.slice();
     if (Object.keys(starChanges).length) {
       r.stars = starChanges;
@@ -2225,7 +2348,8 @@ function pad2(n) {
 }
 
 // state: {ships, cruise, status, itinerary, days, categories, hiddenCats, showFeatured, schedule, stars,
-//         personal, venues, me, theme, reminderLead, reserveAlertAt, units, api, appKey}
+//         personal, venues, me, theme, reminderLead, reserveAlertAt, units, alwaysHints,
+//         shipSides ({ship, name, decks, all, flipDecks, confirmed} or null), gpsShips (names), api, appKey}
 function buildPage(state, now) {
   now = now || new Date();
   // List sailings from two weeks ago on, so a sailing in progress still shows.

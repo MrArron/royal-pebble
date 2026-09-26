@@ -29,6 +29,11 @@ var PLACES = {
 var WALKWAYS = {
   HM: require('./data/walkways-HM')
 };
+// Names for the settings page's Help (keep in step with the README's "Ships with
+// Ship GPS").
+var NAMES = {
+  HM: 'Harmony of the Seas'
+};
 
 var FLIP = {};             // ship -> {all: bool, decks: {deck: true}}
 
@@ -58,10 +63,15 @@ function X(ship, deck, x) {
 
 // Flip settings: {all: bool, decks: [deck numbers]}. A deck in `decks` is flipped
 // on top of `all` (so with all set, listing a deck puts it back).
+// Setting the same flip again keeps the built graph.
 function setFlip(ship, flip) {
   var decks = {};
   ((flip && flip.decks) || []).forEach(function(d) { decks[d] = true; });
-  FLIP[ship] = {all: !!(flip && flip.all), decks: decks};
+  var next = {all: !!(flip && flip.all), decks: decks};
+  if (JSON.stringify(next) === JSON.stringify(FLIP[ship] || {all: false, decks: {}})) {
+    return;
+  }
+  FLIP[ship] = next;
   delete GRAPHS[ship];
 }
 
@@ -499,6 +509,12 @@ module.exports = {
   walkMetres: walkMetres,
   data: function(ship) { return PLACES[ship] || null; },
   walkways: function(ship) { return WALKWAYS[ship] || null; },
+  // The decks the map covers, lowest first ([] for a ship with no map).
+  decks: function(ship) {
+    return WALKWAYS[ship] ? Object.keys(WALKWAYS[ship].decks).map(Number).sort(function(a, b) { return a - b; }) : [];
+  },
+  // The mapped ships' names, for the Help page.
+  shipNames: function() { return Object.keys(PLACES).map(function(k) { return NAMES[k] || k; }); },
   setFlip: setFlip,
   flipped: flipped,
   banks: function(ship) { return PLACES[ship] ? {fwd: PLACES[ship].banks.fwd.a, aft: PLACES[ship].banks.aft.a} : null; },

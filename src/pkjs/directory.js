@@ -495,7 +495,7 @@ function capSteps(list) {
 function routePage(ref, rest, ctx) {
   var s = setup(ctx);
   var ship = s.c.shipCode;
-  var opts = {units: s.c.settings.units, banks: shipmap.banks(ship)};
+  var opts = {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)};
   var target = null;
   if (ref >= REF_BANK && ref < REF_BANK + s.banks.length && !rest) {
     var b = s.banks[ref - REF_BANK];
@@ -550,7 +550,7 @@ function eventRoutePage(ev, ctx) {
     } else if (best.flags) {
       page = routeMessage(target.name, 'No route found');
     } else {
-      page = placeRoute(target, best, {units: s.c.settings.units, banks: shipmap.banks(ship)});
+      page = placeRoute(target, best, {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)});
       page.small = {decks: 0, text: ''};
     }
   }
@@ -583,7 +583,7 @@ function sameArea(r, from, banks) {
 
 function placeRoute(target, best, opts) {
   var r = best.route;
-  var o = {units: opts.units, banks: opts.banks, name: target.name};
+  var o = {units: opts.units, sides: opts.sides, banks: opts.banks, name: target.name};
   var page = {title: target.name, header: best.header, lead: '', steps: capSteps(gpstext.steps(r, best.from, o)),
               big: '', small: gpstext.summary(r, best.from, o), flags: gpstext.reduced(r) ? ROUTE_REDUCED : 0};
   if (sameArea(r, best.from, opts.banks)) {
@@ -606,7 +606,7 @@ function restroomRoute(target, at, ship, opts) {
   if (!r.to) {
     r.to = {deck: found.deck, a: found.a, x: found.x};
   }
-  var o = {units: opts.units, banks: opts.banks, name: title};
+  var o = {units: opts.units, sides: opts.sides, banks: opts.banks, name: title};
   var where = 'Deck ' + found.deck + (opts.banks ? DOT + gpstext.zone(found.a, opts.banks) : '');
   return {title: title, header: 'CLOSEST TO ' + target.short.toUpperCase(), lead: '',
           steps: capSteps(gpstext.steps(r, at, o)), big: where,
@@ -642,14 +642,20 @@ function routeMsg(page) {
 }
 
 // What every page needs: the context with defaults, the directory's places,
-// the elevator banks and the cabin deck.
+// the elevator banks and the cabin deck. Also applies the ship's port/starboard
+// settings from the Help page (§9.7): the flip to the map, `sides` (confirmed
+// on board) to the route wording.
 function setup(ctx) {
   var bundle = ctx.bundle || {};
   var settings = ctx.settings || {};
   var shipCode = (bundle.ship && bundle.ship.code) || '';
+  var sides = (settings.shipSides || {})[shipCode] || {};
+  if (shipmap.data(shipCode)) {
+    shipmap.setFlip(shipCode, {all: sides.all, decks: sides.decks});
+  }
   return {
     c: {bundle: ctx.bundle, settings: settings, stars: ctx.stars || {}, now: ctx.now || new Date(),
-        shipCode: shipCode},
+        shipCode: shipCode, sides: sides.confirmed === true},
     list: places(shipCode, (settings.venues || {})[shipCode]),
     banks: banksOf(shipCode),
     cabin: L.cabinDeck((settings.me || {}).deck)

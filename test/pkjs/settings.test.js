@@ -143,18 +143,49 @@ test('settings page has the walking distance units, feet, metres or steps', func
   assert.ok(html.indexOf('"units":"ft"') !== -1, 'saved choice embedded');
 });
 
-test('settings page has the Always show button hints switch, off by default', function() {
+test('settings page has the Always show button hints switch in Help, off by default', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
     api: royal.API, appKey: royal.APPKEY};
   var html = config.buildPage(state, new Date(2026, 8, 24));
   new Function(pageScript(html));
-  assert.ok(html.indexOf('id="hints"') !== -1);
+  var help = html.slice(html.indexOf('<section class="screen" id="help">'));
+  help = help.slice(0, help.indexOf('</section>'));
+  assert.ok(help.indexOf('id="hints"') !== -1, 'the switch is in Help');
+  assert.strictEqual(html.split('id="hints"').length, 2, 'and only there');
   assert.ok(html.indexOf('Always show button hints') !== -1);
-  assert.ok(html.indexOf("String(S.alwaysHints === true)") !== -1, 'off unless saved on');
+  assert.ok(html.indexOf("makeSwitch('hints', S.alwaysHints === true)") !== -1, 'off unless saved on');
   assert.ok(html.indexOf('r.alwaysHints = hintsOn()') !== -1, 'sent back with the rest');
   state.alwaysHints = true;
   assert.ok(config.buildPage(state, new Date(2026, 8, 24)).indexOf('"alwaysHints":true') !== -1,
     'saved choice embedded');
+});
+
+test('Help: opened from Me, lists controls, notes and the ships with Ship GPS', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
+    gpsShips: ['Harmony of the Seas'], shipSides: null, api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  var me = html.slice(html.indexOf('<section class="screen" id="me">'), html.indexOf('<section class="screen" id="help">'));
+  assert.ok(me.indexOf('id="openHelp"') !== -1, 'Help card on Me');
+  ['Watch buttons', 'Hold Select', 'Route to the next event', 'closest restroom', 'Good to know',
+   '4:00 am', 'approximate', 'Spot approximate', 'Cross the ship', 'no internet', 'Ships with Ship GPS']
+    .forEach(function(t) { assert.ok(html.indexOf(t) !== -1, t); });
+  assert.ok(html.indexOf('"gpsShips":["Harmony of the Seas"]') !== -1);
+  assert.ok(html.indexOf('id="sidesCard" hidden') !== -1, 'port/starboard hidden without a mapped ship');
+});
+
+test('Help: port and starboard settings for a mapped ship go back per ship', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
+    shipSides: {ship: 'HM', name: 'Harmony of the Seas', decks: [2, 3, 4], all: false, flipDecks: [3],
+                confirmed: false},
+    api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('"flipDecks":[3]') !== -1);
+  ['id="sidesOk"', 'id="flipAll"', 'id="flipDecks"', 'Sides checked on board', 'Flip the whole ship']
+    .forEach(function(t) { assert.ok(html.indexOf(t) !== -1, t); });
+  assert.ok(html.indexOf("r.shipSides = {ship: SD.ship, all: switchOn('flipAll'), decks: flipDecks.slice(), " +
+    "confirmed: switchOn('sidesOk')}") !== -1, 'sent back with the rest');
 });
 
 test('settings page with an itinerary includes the Days screen', function() {

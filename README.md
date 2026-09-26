@@ -97,11 +97,11 @@ tested on the watch before it's merged. The full plan is in the
 - **Done:** v1; v1.1 Phase 1 (wayfinding: the venue table, deck and position on
   the watch, "From" directions and the ship directory); Phase 2 (daily view: the
   morning summary, days-to-sail countdown, clash warnings, last-chance tags and
-  the reservation reminder with **Mark reserved**); and most of the Ship GPS
-  (walking distances, closest restrooms, elevator banks and routes).
-- **Next:** the rest of the Ship GPS (button hints and a Help section on the
-  settings page), then a usage log to review after the sailing, followed by
-  port-day and planning features if time allows.
+  the reservation reminder with **Mark reserved**); and the Ship GPS
+  (walking distances, closest restrooms, elevator banks, routes, button hints
+  and a Help section on the settings page).
+- **Next:** a usage log and on-board logging of map corrections, to review
+  after the sailing, followed by port-day and planning features if time allows.
 
 ## Getting it on your watch
 

@@ -12,6 +12,7 @@ var config = require('./config');
 var venues = require('./venues');
 var directory = require('./directory');
 var gpstext = require('./gpstext');
+var shipmap = require('./shipmap');
 
 var MSG_BEGIN = 1;
 var MSG_INFO = 2;
@@ -371,9 +372,34 @@ function pageState(ships) {
     reserveAlertAt: slice.reserveAlertAt(settings),
     units: settings.units || 'm',
     alwaysHints: settings.alwaysHints === true,
+    // For Help > Port and starboard: only on a ship with a map (§9.7).
+    shipSides: shipSidesState(bundle, settings),
+    gpsShips: shipmap.shipNames(),
     api: royal.API,
     appKey: royal.APPKEY
   };
+}
+
+function shipSidesState(bundle, settings) {
+  var code = bundle && bundle.ship && bundle.ship.code;
+  if (!code || !shipmap.data(code)) {
+    return null;
+  }
+  var s = (settings.shipSides || {})[code] || {};
+  return {ship: code, name: bundle.ship.name || code, decks: shipmap.decks(code), all: s.all === true,
+          flipDecks: s.decks || [], confirmed: s.confirmed === true};
+}
+
+// Help > Port and starboard as the page returned it: {ship, all, decks, confirmed}.
+function cleanShipSides(r) {
+  if (!r || typeof r.ship !== 'string' || !shipmap.data(r.ship)) {
+    return null;
+  }
+  var known = shipmap.decks(r.ship);
+  var decks = (Array.isArray(r.decks) ? r.decks : []).filter(function(d, i, a) {
+    return known.indexOf(d) !== -1 && a.indexOf(d) === i;
+  }).sort(function(a, b) { return a - b; });
+  return {all: r.all === true, decks: decks, confirmed: r.confirmed === true};
 }
 
 function savedCutoff(bundle) {
@@ -465,6 +491,12 @@ function settingsClosed(text) {
   // Home's button hints at every open, not just the first few (§9.5).
   if (typeof r.alwaysHints === 'boolean') {
     settings.alwaysHints = r.alwaysHints;
+  }
+  // Port/starboard flip and "sides confirmed", kept per ship (§9.7).
+  var sides = cleanShipSides(r.shipSides);
+  if (sides) {
+    settings.shipSides = settings.shipSides || {};
+    settings.shipSides[r.shipSides.ship] = sides;
   }
   var personal = slice.cleanPersonal(r.personal);
   if (personal) {

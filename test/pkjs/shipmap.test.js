@@ -108,6 +108,14 @@ test('flip: whole ship mirrors sides, not distances; one deck flips alone', func
   assert.strictEqual(map.cabin('HM', '8130').side, 'Port');
 });
 
+test('decks and ship names for the Help page', function() {
+  var decks = map.decks('HM');
+  assert.ok(decks.length > 10 && decks.indexOf(8) !== -1, decks.join(','));
+  assert.deepStrictEqual(decks.slice().sort(function(a, b) { return a - b; }), decks, 'lowest first');
+  assert.deepStrictEqual(map.decks('XX'), []);
+  assert.deepStrictEqual(map.shipNames(), ['Harmony of the Seas']);
+});
+
 test('a route is quick enough for the phone', function() {
   var t0 = Date.now();
   for (var i = 0; i < 10; i++) {

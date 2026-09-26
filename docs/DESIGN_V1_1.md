@@ -722,8 +722,9 @@ As built (item 8):
 **Status: designed and approved 2026-09-25.** Written from the Claude Design
 pass and the owner's answers (9.9). Built so far: the planner (phone only),
 the place page's FROM block with the units setting (9.1, 9.7), and the
-restroom line and elevator banks (9.1, 9.3), the route screen (9.2) and Home
-Select (9.5); the button hints and Help follow. The mockups and their
+restroom line and elevator banks (9.1, 9.3), the route screen (9.2), Home
+Select and the button hints (9.5), and the Help section with the port/starboard
+settings (9.7). The mockups and their
 `NOTES.md` in `docs/mockups/gps/` are the final word on text and layout; the
 sketches below are at watch size. Design canvas (private to the owner):
 https://claude.ai/artifact/Cq3jrWKZAZE6qHxbqNVy6n
@@ -911,9 +912,8 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
   alert or an install), once Home is on top with its data, so after the
   morning summary. Up, Select and Down only dismiss them; Back isn't taken and
   exits as labelled. The count and a hints version live in the watch's
-  storage (`WATCH_PROTOCOL.md`). The **Always show button hints** switch is on
-  the settings page's Me tab for now; it moves to the Help section when that
-  is built.
+  storage (`WATCH_PROTOCOL.md`). The **Always show button hints** switch is in
+  the settings page's Help section (9.7).
 
 ### 9.6 Voice (concept, later)
 
@@ -959,6 +959,20 @@ All built into the local settings page, so they work offline.
   the 04:00 day change); the ships that have the Ship GPS (the same list as
   the README, owner 2026-09-26); and the Always show button hints toggle. Keep
   it in step with the app as controls change.
+- **As built:** Help is its own screen under the Me tab (a `Help` card at the
+  bottom of Me opens it, with a Back arrow, like Ship venues under Cruise).
+  Cards: the Always show button hints switch; `Watch buttons`, every press
+  and hold per screen (`HELP_KEYS` in `config.js`, to update with the watch's
+  click handlers); `Good to know` (sync before sailing, the 04:00 day change,
+  where routes start, distances approximate, `Spot approximate`, no side until
+  checked, the phone nearby for place pages and routes); `Ships with Ship GPS`
+  (from `shipmap.js`, kept in step with the README); and, only when the synced
+  ship has a map, `Port and starboard`: a `Sides checked on board` switch
+  (turns on `Cross to port` / `· stbd side`), `Flip the whole ship` and a chip
+  per mapped deck for `Flip single decks` (a deck chip flips on top of the
+  whole-ship switch). These are kept per ship (`settings.shipSides`) and
+  applied to the planner for every directory and route page. No voice
+  commands yet (9.6 is still Later).
 
 ### 9.8 Check before or while building
 
