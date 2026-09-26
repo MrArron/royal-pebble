@@ -46,6 +46,11 @@ includes:
   meeting time and end time of timed bookings such as shore excursions;
 - gangway times and approximate locations for port days.
 
+The watch app uses your stateroom from this now. The rest is saved in the bundle
+for the planned port-day features (booked excursions on Today with reminders, the
+terminal arrival time on embark day, a port-day card with gangway times; project
+brief, Phase 3).
+
 Treat that file as private. Run it again after booking or changing anything. What
 each part is based on is in [docs/ROYAL_LOGIN_DATA.md](../../docs/ROYAL_LOGIN_DATA.md).
 
@@ -77,6 +82,7 @@ It only reads (no bookings or changes), one request at a time with a short pause
 ```
 py cruise_sync.py --ship harmony --date YYYY-MM-DD
 py cruise_sync.py --ship HM --date YYYY-MM-DD --login
+py cruise_sync.py --ship HM --date YYYY-MM-DD --out-dir <folder> --no-clipboard
 py cruise_sync.py --help
 py test_cruise_sync.py          (offline tests, no login needed)
 ```
