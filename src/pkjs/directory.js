@@ -384,6 +384,27 @@ function bestRoute(to, ctx, cabin, target) {
           route: best.route, flags: 0};
 }
 
+// Why a route starts where it does, for the usage log: 'stateroom', 'starred
+// "Title" at Venue 14:00 (60 min)' or 'your entry ...', or 'nowhere'. With
+// `target` (an event {start}), the start before that event.
+function startReason(ctx, target) {
+  if (!ctx.bundle) {
+    return 'nowhere';
+  }
+  var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
+  var now = slice.cruiseMinutes(sailDays, ctx.now);
+  var room = stateroom(ctx);
+  var s = routestart.start({stops: stops(ctx, sailDays, slice.cruiseDayIndex(now)), now: now, target: target,
+                            cabin: room});
+  if (s.kind === 'stop') {
+    var p = s.stop;
+    var t = ((p.start % 1440) + 1440) % 1440;
+    return ((p.flags & slice.FLAG_PERSONAL) ? 'your entry "' : 'starred "') + p.title + '" at ' + p.venue + ' ' +
+      Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60) + ' (' + (p.minutes || 'no') + ' min)';
+  }
+  return s.kind === 'cabin' ? 'stateroom' : s.kind === 'none' ? 'nowhere' : s.kind;
+}
+
 // The FROM block to the nearest of the spots `to`: {header, decks, text, flags,
 // to (the spot the route reaches)}, with GPS_NO_CABIN or GPS_NO_FROM when there's
 // no block to show.
@@ -786,5 +807,6 @@ module.exports = {
   places: places, deckRanges: deckRanges, bankDecksText: bankDecksText, buildPage: buildPage,
   encodeRow: encodeRow, packRows: packRows, encodeGps: encodeGps, encodeBank: encodeBank, message: message,
   ROUTE_REDUCED: ROUTE_REDUCED, ROUTE_STEPS_MAX: ROUTE_STEPS_MAX,
-  routePage: routePage, eventRoutePage: eventRoutePage, encodeRoute: encodeRoute, routeMsg: routeMsg
+  routePage: routePage, eventRoutePage: eventRoutePage, encodeRoute: encodeRoute, routeMsg: routeMsg,
+  startReason: startReason
 };

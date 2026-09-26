@@ -338,7 +338,8 @@ function sendDirPage() {
   sendQueue([msg], function(ok, info) {
     s_sending = false;
     // A place page shows its walking distance and where it's measured from.
-    var gps = page.gps && page.gps.text ? ', gps "' + (page.gps.header || '') + ' ' + page.gps.text + '"' :
+    var gps = page.gps && page.gps.text ? ', gps "' + (page.gps.header || '') + ' ' + page.gps.text + '" (start: ' +
+      directory.startReason({bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()}) + ')' :
       page.gps && page.gps.flags ? ', gps flags ' + page.gps.flags : '';
     usage.add('dir', 'page ' + ref + ' "' + page.title + (page.label ? ' ' + page.label : '') + '": ' +
               page.rows.length + ' rows' + gps + ', built in ' + built + ' ms, ' + sendText(ok, info));
@@ -368,6 +369,7 @@ function sendRoute() {
               ': "' + page.title + '", ' + (page.header ? page.header + ', ' : '') +
               (page.steps.length ? page.steps.length + ' steps, ' + [page.big, page.small && page.small.text]
                 .filter(function(t) { return t; }).join(' / ') : 'no route: ' + page.lead) +
+              ', start: ' + directory.startReason(ctx, req.venue !== undefined ? {start: req.start} : undefined) +
               ', planned in ' + built + ' ms, ' + sendText(ok, info));
     console.log('Route ' + (req.venue !== undefined ? 'to event at ' + req.start : req.ref) +
                 (req.rest ? ' (restroom)' : '') + (ok ? ' sent: ' : ' failed: ') +

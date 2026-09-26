@@ -309,6 +309,20 @@ test('GPS: a stop on now (or just ended) is the start (§9.4)', function() {
   assert.strictEqual(gpsPage('Royal Theater', {settings: noRoom}).gps.header, 'FROM STUDIO B');
 });
 
+test('startReason says why a route starts where it does (usage log)', function() {
+  function ctx(settings, stars) {
+    return {bundle: makeBundle(), settings: settings, stars: stars || {}, now: NOW};
+  }
+  var mine = {me: CABIN.me, personal: [{title: 'Show', venue: 'Studio B', date: '2027-03-07', time: '13:30',
+                                         minutes: 60}]};
+  assert.strictEqual(directory.startReason(ctx(mine)), 'your entry "Show" at Studio B 13:30 (60 min)');
+  assert.strictEqual(directory.startReason(ctx(CABIN)), 'stateroom');
+  assert.strictEqual(directory.startReason(ctx({})), 'nowhere');
+  assert.strictEqual(directory.startReason({bundle: null, now: NOW}), 'nowhere');
+  // Before an event: the stop ending just before it, not the one on now.
+  assert.strictEqual(directory.startReason(ctx(mine), {start: 1440 + 20 * 60}), 'stateroom');
+});
+
 test('GPS: dir_gps packs decks, flags, header and text', function() {
   var g = {header: 'FROM YOUR CABIN', decks: -2, text: '160 m fore', flags: directory.GPS_APPROX};
   var b = directory.encodeGps(g);
