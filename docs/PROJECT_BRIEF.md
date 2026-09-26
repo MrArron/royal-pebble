@@ -354,6 +354,17 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
     built-in table (this itinerary plus common Caribbean and Bahamas ports), with a
     lat/long field or a default 7:00–18:00 window for unknown ports. The watch keeps
     only the next reminder scheduled so star reminders keep their wakeup slots.
+22. **Silent morning sync** (owner's idea, 2026-09-24; added 2026-09-26): a
+    wakeup every night between 04:00 and 05:00 ship time (about 04:30, not
+    exactly on the day boundary) that opens the app with no vibration, gets the
+    new day's slice from the phone and closes again once it arrives, or after a
+    short timeout if the phone doesn't answer. The watch is most likely near the
+    phone then (in the stateroom overnight), so each morning starts with that
+    day's schedule already on the watch. It takes one of the app's wakeup slots
+    (shared with reminder alerts), must keep clear of an early reminder, and is
+    scheduled again every time it fires and after each sync so the chain never
+    breaks. The usage log records each outcome (synced, phone unreachable, timed
+    out). Check the Wakeup API limits against the current SDK docs first.
 
 ### Phase 4: Planning
 
