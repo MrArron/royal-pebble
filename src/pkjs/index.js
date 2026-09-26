@@ -26,6 +26,8 @@ var MSG_DEMO_NEXT = 12;
 var MSG_STAR_CHANGES = 13;
 var MSG_SAVED = 14;
 var MSG_DIR_REQUEST = 15;
+var MSG_ROUTE_REQUEST = 16;
+var MSG_ROUTE_PAGE = 17;
 
 // Keep each events chunk well under the watch's 2048-byte inbox.
 var CHUNK_BYTES = 1500;
@@ -62,6 +64,7 @@ var s_sending = false;   // one send at a time: a slice or a star ack
 var s_resend = false;
 var s_ack = null;        // star ack to send: {seq, resend}
 var s_dirRef = null;     // ship directory page the watch asked for
+var s_route = null;      // route the watch asked for: {ref, rest}
 
 function load(key, fallback) {
   try {
@@ -217,6 +220,8 @@ function sendNext() {
     sendAck();
   } else if (s_dirRef !== null) {
     sendDirPage();
+  } else if (s_route) {
+    sendRoute();
   } else if (s_resend) {
     s_resend = false;
     sendSlice();
@@ -252,6 +257,25 @@ function sendDirPage() {
     s_sending = false;
     console.log('Directory page ' + ref + (ok ? ' sent: ' : ' failed: ') + page.rows.length + ' rows, ' +
                 msg.dir_rows.length + ' bytes');
+    sendNext();
+  });
+}
+
+// A Route screen (docs/WATCH_PROTOCOL.md, Route screen): to a place, or to its
+// closest restroom. Only the latest request is answered.
+function sendRoute() {
+  var req = s_route;
+  s_route = null;
+  var data = currentData();
+  var page = directory.routePage(req.ref, req.rest, {bundle: data.bundle, settings: data.settings,
+                                                     stars: data.stars, now: new Date()});
+  var msg = directory.routeMsg(page);
+  msg.msg_type = MSG_ROUTE_PAGE;
+  s_sending = true;
+  sendQueue([msg], function(ok) {
+    s_sending = false;
+    console.log('Route ' + req.ref + (req.rest ? ' (restroom)' : '') + (ok ? ' sent: ' : ' failed: ') +
+                page.steps.length + ' steps, ' + msg.route.length + ' bytes');
     sendNext();
   });
 }
@@ -531,6 +555,12 @@ Pebble.addEventListener('appmessage', function(e) {
       break;
     case MSG_DIR_REQUEST:
       s_dirRef = p.dir_ref | 0;
+      if (!s_sending) {
+        sendNext();
+      }
+      break;
+    case MSG_ROUTE_REQUEST:
+      s_route = {ref: p.dir_ref | 0, rest: !!p.route_rest};
       if (!s_sending) {
         sendNext();
       }

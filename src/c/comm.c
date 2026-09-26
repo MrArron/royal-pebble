@@ -18,6 +18,8 @@ enum {
   MSG_STAR_CHANGES = 13,
   MSG_SAVED = 14,
   MSG_DIR_REQUEST = 15,
+  MSG_ROUTE_REQUEST = 16,
+  MSG_ROUTE_PAGE = 17,
 };
 
 #define INBOX_SIZE 2048
@@ -31,6 +33,8 @@ static CommSliceHandler s_on_slice;
 static CommNoticeHandler s_on_notices;
 static CommDirPageHandler s_on_dir_page;
 static CommDirFailedHandler s_on_dir_failed;
+static CommRoutePageHandler s_on_route_page;
+static CommDirFailedHandler s_on_route_failed;
 static Notice s_notices[MAX_NOTICES];
 
 // The slice being received; committed to data.c on MSG_END.
@@ -245,6 +249,16 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     handle_dir_page(iter);
     return;
   }
+  if (msg == MSG_ROUTE_PAGE) {
+    Tuple *route = dict_find(iter, MESSAGE_KEY_route);
+    if (s_on_route_page && route && route->type == TUPLE_BYTE_ARRAY) {
+      RoutePageMsg page = {.ref = find_int(iter, MESSAGE_KEY_dir_ref),
+                           .rest = find_int(iter, MESSAGE_KEY_route_rest) != 0,
+                           .data = route->value->data, .length = route->length};
+      s_on_route_page(&page);
+    }
+    return;
+  }
   if (msg == MSG_NOTICE) {
     Tuple *bytes = dict_find(iter, MESSAGE_KEY_notices);
     if (bytes && bytes->type == TUPLE_BYTE_ARRAY) {
@@ -305,6 +319,8 @@ static void outbox_failed(DictionaryIterator *iter, AppMessageResult reason, voi
     stars_send_failed();
   } else if (s_outbox_msg == MSG_DIR_REQUEST && s_on_dir_failed) {
     s_on_dir_failed();
+  } else if (s_outbox_msg == MSG_ROUTE_REQUEST && s_on_route_failed) {
+    s_on_route_failed();
   }
 }
 
@@ -332,6 +348,23 @@ bool comm_request_dir(int32_t ref) {
   dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_DIR_REQUEST);
   dict_write_int32(iter, MESSAGE_KEY_dir_ref, ref);
   s_outbox_msg = MSG_DIR_REQUEST;
+  return app_message_outbox_send() == APP_MSG_OK;
+}
+
+void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler on_failed) {
+  s_on_route_page = on_page;
+  s_on_route_failed = on_failed;
+}
+
+bool comm_request_route(int32_t ref, bool rest) {
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
+    return false;
+  }
+  dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_ROUTE_REQUEST);
+  dict_write_int32(iter, MESSAGE_KEY_dir_ref, ref);
+  dict_write_int32(iter, MESSAGE_KEY_route_rest, rest ? 1 : 0);
+  s_outbox_msg = MSG_ROUTE_REQUEST;
   return app_message_outbox_send() == APP_MSG_OK;
 }
 

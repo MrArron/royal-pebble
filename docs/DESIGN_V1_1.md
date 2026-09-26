@@ -722,8 +722,8 @@ As built (item 8):
 **Status: designed and approved 2026-09-25.** Written from the Claude Design
 pass and the owner's answers (9.9). Built so far: the planner (phone only),
 the place page's FROM block with the units setting (9.1, 9.7), and the
-restroom line and elevator banks (9.1, 9.3); the route screen, Home Select,
-hints and Help follow. The mockups and their
+restroom line and elevator banks (9.1, 9.3), and the route screen (9.2);
+Home Select, the button hints and Help follow. The mockups and their
 `NOTES.md` in `docs/mockups/gps/` are the final word on text and layout; the
 sketches below are at watch size. Design canvas (private to the owner):
 https://claude.ai/artifact/Cq3jrWKZAZE6qHxbqNVy6n
@@ -831,6 +831,14 @@ FROM YOUR CABIN                small caps, muted (the start, 9.4)
 - **Stairs** are named by where they are: `Fore` / `Aft stairs` beside the
   elevator banks, `Mid stairs` between them. With sides confirmed, the arrive
   step adds `· port side` or `· stbd side`.
+- **As built:** Select on a place page routes to the entrance its FROM line
+  reaches (an elevator bank: its lobby); Hold Select routes from that entrance
+  to its closest restroom, so it works without a stateroom. The restroom route
+  ends with `Deck 5 · Fore` and `Same deck as Royal Theater`, or `1 deck above`
+  / `2 decks below Royal Theater`. `Same area` adds `· your deck` only when the
+  route starts at the cabin. At most 8 steps, the arrival last. The
+  `Evening Show ends 9:00p` under a route from a venue (`WatchRouteFromVenue`)
+  is not built.
 - Option B (the steps inline on the place page, `WatchPlaceInlineTop`,
   `WatchPlaceInlineScrolled`) was mocked and not chosen.
 
@@ -984,6 +992,10 @@ For the build PRs:
     The mockups still show `~`; this supersedes them.
 13. **Elevator bank line (2026-09-26):** `Aft · Decks 3-17`, not the mockup's
     `Aft · all decks but 1`, which could be read as "except deck 1" (9.3).
+14. **Route screen wording (2026-09-26):** approved as built in PR 5: the
+    restroom route's `1 deck above` / `2 decks below Royal Theater`, `No route
+    found`, `No restroom found`, and `Same area` without `· your deck` when the
+    route starts at a venue (9.2).
 
 
 ## Mockup index

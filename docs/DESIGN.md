@@ -64,6 +64,21 @@ small `SHIP TIME` label. Band color by context, same in both themes:
   color → title large (wraps) → venue (muted) → `1:00p - 2:00p · 1 h` (bold;
   `Any time today` if untimed) → `Reservation needed` (port accent) → divider →
   ★ `Starred` (sea accent) or `Hold Select to star` (muted). Hold Select toggles.
+- **Place page** (Ship directory, top bar `Place`; `DESIGN_V1_1.md` §9.1): name
+  large → `Deck 5 · Fore` → area (muted) → `Closest restroom · 30 m aft` (muted)
+  and `Hold Select for its route` (sea accent) → divider → `FROM YOUR CABIN`
+  (muted) → `↓1 deck · 160 m fore` (bold) → `Select for route ›` (sea accent) →
+  divider → `LATER TODAY` and the events there. Select opens the route to the
+  place, Hold Select the route to its closest restroom; each hint shows only
+  when its route exists. An elevator bank's page has the STOPS AT deck chips and
+  no restroom line.
+- **Route** (top bar `Route`; `DESIGN_V1_1.md` §9.2): destination large → the
+  start (`FROM YOUR CABIN`, muted) → divider → one line per step with a drawn
+  sea-accent glyph (dot walk, double arrow cross the ship, elevator box, stairs,
+  ring arrive) → divider → `↓1 deck · 100 m in all` (muted). The restroom route
+  says `Restroom` / `CLOSEST TO ROYAL THEATER` and ends with its `Deck 5 · Fore`
+  and `Same deck as Royal Theater`. `Finding route…` while loading; `Connect your
+  phone` / `Select tries again` with the phone away. Long routes scroll.
 
 ## Phone settings page
 

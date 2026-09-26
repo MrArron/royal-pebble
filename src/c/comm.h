@@ -47,3 +47,21 @@ typedef void (*CommDirFailedHandler)(void);
 void comm_set_dir_handlers(CommDirPageHandler on_page, CommDirFailedHandler on_failed);
 // Asks the phone for directory page `ref`; false if the outbox was busy.
 bool comm_request_dir(int32_t ref);
+
+// A Route screen from the phone (docs/WATCH_PROTOCOL.md, Route screen) for
+// place page `ref`, to its closest restroom when `rest`. `data` points into the
+// message and is only valid in the handler.
+typedef struct {
+  int32_t ref;
+  bool rest;
+  const uint8_t *data;
+  int length;
+} RoutePageMsg;
+
+typedef void (*CommRoutePageHandler)(const RoutePageMsg *page);
+
+// Handlers for route pages and for a request the phone didn't get.
+void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler on_failed);
+// Asks the phone for the route to place page `ref` (or to its closest restroom);
+// false if the outbox was busy.
+bool comm_request_route(int32_t ref, bool rest);

@@ -6,10 +6,20 @@ static SliceMeta s_meta = {.show_featured = true};
 static Day s_day = {.kind = DAY_NONE, .all_aboard = NO_TIME, .arrive = NO_TIME, .depart = NO_TIME};
 static Tomorrow s_tomorrow = {.kind = DAY_NONE};
 static MyInfo s_info;
-static Event s_events[MAX_EVENTS];
+// On the heap (data_init): as a static array the events pushed the app past the
+// SDK's limit on code plus static data, 64 KB (PebbleProcessInfo.virtual_size is
+// 16 bits). It takes the same RAM either way.
+static Event *s_events;
 static int s_event_count;
 static Alarm s_alarms[MAX_ALARMS];
 static int s_alarm_count;
+
+void data_init(void) {
+  s_events = calloc(MAX_EVENTS, sizeof(Event));
+  if (!s_events) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "No room for %d events", MAX_EVENTS);
+  }
+}
 
 bool data_ready(void) { return s_ready; }
 const Day *data_day(void) { return &s_day; }
