@@ -850,8 +850,8 @@ FROM YOUR CABIN                small caps, muted (the start, 9.4)
 - **As built:** the line under the name reads `Aft · Decks 3-17` (`all decks`
   when the bank stops everywhere), counted over the ship's decks so the missing
   deck 13 doesn't split the run; the Elevators area lists each bank with its
-  decks. The FROM block goes to the bank's lobby on the best deck. Wording to
-  confirm with the owner.
+  decks. The FROM block goes to the bank's lobby on the best deck. The owner
+  approved this wording (9.9, decision 13).
 
 ### 9.4 Where routes start
 
@@ -982,6 +982,8 @@ For the build PRs:
     unofficial app, so the `~` on each one added nothing. Distances show as
     `160 m fore`; the Help section says once that they are approximate (9.7).
     The mockups still show `~`; this supersedes them.
+13. **Elevator bank line (2026-09-26):** `Aft · Decks 3-17`, not the mockup's
+    `Aft · all decks but 1`, which could be read as "except deck 1" (9.3).
 
 
 ## Mockup index
