@@ -343,11 +343,10 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
 11. **"Leave now" alert** at all-aboard minus a walking time the owner sets.
 12. **Tender-day warning** with a larger suggested buffer, if Royal's itinerary
     marks tender ports (check the data first).
-13. **Sun and hydration reminders.** Separate toggles and intervals (sun default
-    80 min: 60/80/120; hydration default 60 min: 45/60/90), on or off per day with
-    defaults by day type. Sun reminders only between sunrise and sunset; hydration
-    within waking hours (default 8:00–22:00). The **phone** computes sunrise and
-    sunset with a simple solar formula (approximate is fine) from port coordinates
+13. **Sun reminders.** A toggle and interval (default 80 min: 60/80/120), on or
+    off per day with defaults by day type, only between sunrise and sunset.
+    (Hydration reminders moved to Future concepts, owner 2026-09-26.) The
+    **phone** computes sunrise and sunset with a simple solar formula (approximate is fine) from port coordinates
     on port days and, on sea days, a point interpolated between the previous and
     next port at (day − departure day) ÷ (arrival day − departure day), e.g. 1/3
     and 2/3 on the two sea days from Port Canaveral to St. Thomas. It sends
@@ -414,6 +413,16 @@ way, copy-in-parts covers the usage log export, and it would be a large rebuild
 with unconfirmed support for third-party PebbleKit Android apps in the new Pebble
 app. Revisit for v2 after two cheap probes: dictation in airplane mode, and
 whether the Pebble app accepts a PebbleKit Android companion.
+
+### Future concepts (no timeline)
+
+Ideas kept for later with no version or date attached.
+
+**Hydration reminders** (in v1.1 Phase 3 with sun reminders until the owner
+moved them here on 2026-09-26): a toggle and interval (default 60 min:
+45/60/90), on or off per day with defaults by day type, within waking hours
+(default 8:00–22:00). They could share the sun reminders' scheduling (only the
+next reminder kept as a wakeup).
 
 ### Out of scope
 
