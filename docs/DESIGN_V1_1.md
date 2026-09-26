@@ -817,6 +817,13 @@ FROM YOUR CABIN                small caps, muted (the start, 9.4)
     closed at night;
   - when the planner isn't sure, show less (deck and fore/aft) rather than a
     guessed route.
+- **Shown less** (a route that needs an unconfirmed link, or a spot that can't be
+  placed on the walkways): `To Deck 16` (only with a deck change), then the
+  overall `~300 m aft`, then arrive; the summary drops `in all`. Wording to
+  approve with the rest (`gpstext.js`).
+- **Stairs** are named by where they are: `Fore` / `Aft stairs` beside the
+  elevator banks, `Mid stairs` between them. With sides confirmed, the arrive
+  step adds `· port side` or `· stbd side`.
 - Option B (the steps inline on the place page, `WatchPlaceInlineTop`,
   `WatchPlaceInlineScrolled`) was mocked and not chosen.
 
@@ -836,19 +843,22 @@ FROM YOUR CABIN                small caps, muted (the start, 9.4)
 
 ### 9.4 Where routes start
 
+One rule for the Ship GPS and for the existing "From" lines on event details and
+reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
+
 - **The cabin**, by default.
-- A spoken location (`I'm at the Solarium`, 9.6) becomes the start for
-  **1.5 hours**, or until a **starred event starts**, when that event's venue
-  becomes the start.
-- At the **04:00 day change** it goes back to the cabin.
+- **A starred event or personal entry** when it ends less than 15 minutes before
+  the one you're going to, or overlaps it (the rule from item 3; no length counts
+  as 30 minutes). For a route from where you are now (place pages), that's one
+  that's on now or ended less than 15 minutes ago. A stop hours earlier doesn't
+  count: a show ending at 9:00p doesn't start the route to an 11:00p event.
+- **A spoken location** (`I'm at the Solarium`, 9.6) for **1.5 hours**, until a
+  starred event or entry starts after it, and never past the **04:00 day
+  change**. A stop that starts after you said where you were wins.
 - The Route header and the place page's FROM block always name the start
   (`FROM YOUR CABIN`, `FROM SOLARIUM`, `FROM ROYAL THEATER`).
 - The phone keeps the start and its timer (it already knows the starred events
   and the day boundary); the watch only shows the header it's sent.
-- **To reconcile in the first build PR:** the existing "From" rule for event
-  details and reminders (previous starred event or entry ending < 15 min before,
-  top of this file) and this rule should become one rule. Ask the owner if they
-  disagree for a case.
 
 ### 9.5 Home and button hints
 
@@ -953,6 +963,8 @@ For the build PRs:
 9. **Help section** in the phone settings (voice commands, controls, notes).
 10. **Voice:** designed as a concept; stays under "Later" until the dictation
     test passes.
+11. **Route start (2026-09-26):** the 15-minute rule, not "the last starred
+    venue until 04:00" (9.4).
 
 
 ## Mockup index
