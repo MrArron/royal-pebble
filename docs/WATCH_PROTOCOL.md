@@ -48,6 +48,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | 6 | NOTICE | `notice_count`, `notices` (bytes, below). No `slice_id`; sent after a slice. |
 | 7 | STAR_ACK | `star_ack`: the phone saved every star change up to this `seq`. No `slice_id`. |
 | 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_gps` (place pages with a Ship GPS block), `dir_rows`. No `slice_id`; see Ship directory. |
+| 17 | ROUTE_PAGE | A Route screen: `dir_ref` and `route_rest` (echoing the request), `route` (bytes). No `slice_id`; see Route screen. |
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
 e.g. `SAILS MAR 6` or `CRUISE ENDED`. Before the cruise, Home shows the
@@ -94,6 +95,7 @@ buffers.
 | 13 | STAR_CHANGES | `star_count`, `star_changes` (bytes, below): stars changed on the watch and not yet acked |
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
+| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank); `route_rest`: 1 for the route to its closest restroom, else 0. |
 
 (11 was an index-based STAR message, replaced by STAR_CHANGES.)
 
@@ -414,6 +416,42 @@ day`) so they follow its 12/24h setting. A place page lists what's on there for
 the rest of the watch day as the watch's lists show it: events and personal
 entries at the venue (its aliases included) that haven't finished, with hidden
 categories left out unless starred.
+
+## Route screen
+
+On a place page (`docs/DESIGN_V1_1.md` §9.2), Select asks for the walking route
+to the place and Hold Select for the route from it to its closest restroom: the
+watch sends ROUTE_REQUEST with the page's `dir_ref` and `route_rest`, and the
+phone answers with ROUTE_PAGE (`directory.routePage`). The watch offers Select
+only when the page has a FROM block (`dir_gps` without flags 2 and 4) and Hold
+Select only on a venue with a restroom line. As with directory pages, nothing is
+stored; the watch ignores a page that doesn't match its request, and with the
+phone away (not connected, the request fails, or no answer within 8 seconds) it
+says `Connect your phone`, and Select asks again.
+
+- The route to a place starts where the place page's FROM block does (§9.4) and
+  goes to the entrance that route reaches (an elevator bank: its lobby on the
+  best deck).
+- The restroom route starts at that entrance (the one the place page's
+  `Closest restroom` line is measured from), so it works with no stateroom too.
+
+`route` is packed little-endian:
+
+| Bytes | Field |
+|---|---|
+| 1 | `flags`: 1 shown less (the planner isn't sure, or the spot is approximate: `To Deck N`, then the overall distance; `in all` is dropped) |
+| 1 | `decks`: int8, the small line's deck change (+ = up); the watch draws the arrow and `1 deck` / `N decks` before it |
+| 1 + n | the destination (`Royal Theater`, `Restroom`), ≤ 39 bytes |
+| 1 + n | the header (`FROM YOUR CABIN`, `CLOSEST TO ROYAL THEATER`), ≤ 31 bytes |
+| 1 + n | the lead line above the steps (`Same area · your deck`, or a message such as `No route found` with no steps), ≤ 63 bytes |
+| 1 + n | the large line under the steps (a restroom's `Deck 5 · Fore`), ≤ 31 bytes |
+| 1 + n | the small line under the steps (`100 m in all`, `Same deck as Royal Theater`), ≤ 39 bytes |
+| 1 | how many steps (at most 8; a longer route keeps the arrival last) |
+| 1 + 1 + n | each step: its glyph (0 walk, 1 cross the ship, 2 elevator, 3 stairs, 4 arrive; the watch draws them) and text (`60 m fore`, `Fore stairs to Deck 5`), ≤ 39 bytes |
+
+Both lines under the steps are empty on a `Same area` route; a divider is drawn
+before them only when one is there. Units are the phone's setting, as on place
+pages.
 
 ## Demo data
 

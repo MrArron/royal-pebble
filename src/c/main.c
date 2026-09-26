@@ -21,6 +21,7 @@ static void refresh_all(void) {
   today_window_refresh();
   info_window_refresh();
   dir_window_refresh();
+  route_window_refresh();
   details_window_refresh();
   alert_window_refresh();
   notice_window_refresh();
@@ -133,6 +134,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 static void init(void) {
+  data_init();
   stars_init();
   if (store_load()) {
     theme_set_dark(data_meta()->dark_theme);

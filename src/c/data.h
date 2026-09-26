@@ -228,6 +228,8 @@ typedef struct {
   char sail_port[32];      // "Galveston"; "" when not known
 } SliceMeta;
 
+// Allocates the events; call before anything else.
+void data_init(void);
 bool data_ready(void);
 const Day *data_day(void);
 const Tomorrow *data_tomorrow(void);

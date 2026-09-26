@@ -63,6 +63,16 @@ static bool selectable(const View *v, const DirRow *r) {
          (r->kind == DIR_ROW_PLACE && is_place(v));
 }
 
+// Select opens the route: a place page with a FROM block (�9.2).
+static bool has_route(const View *v) {
+  return is_place(v) && v->has_gps && !(v->gps.flags & (DIR_GPS_NO_CABIN | DIR_GPS_NO_FROM));
+}
+
+// Hold Select opens the route to its closest restroom.
+static bool has_rest_route(const View *v) {
+  return v->has_where && v->has_gps && v->gps.has_rest;
+}
+
 static int first_selectable(const View *v) {
   for (int row = 0; row < v->row_count; row++) {
     if (selectable(v, &v->rows[row])) {
@@ -216,28 +226,49 @@ static void fmt_decks(char *buf, size_t size, int decks, const char *text) {
 
 #define REST_LABEL "Closest restroom"
 
+// A button hint in the sea accent (docs/mockups/gps/NOTES.md), in Gothic 14
+// bold at y, with a drawn `�` after it when `chevron`.
+static void draw_hint(GContext *ctx, const char *text, bool chevron, int y, int w) {
+  GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  draw_line(ctx, text, font, g_theme->sea_accent, y - 2, w, 18);
+  if (chevron) {
+    int x = PAD + graphics_text_layout_get_content_size(text, font, GRect(0, 0, w, 18),
+                                                        GTextOverflowModeTrailingEllipsis,
+                                                        GTextAlignmentLeft).w + 4;
+    graphics_context_set_stroke_color(ctx, g_theme->sea_accent);
+    graphics_context_set_stroke_width(ctx, 2);
+    graphics_draw_line(ctx, GPoint(x, y + 3), GPoint(x + 3, y + 6));
+    graphics_draw_line(ctx, GPoint(x + 3, y + 6), GPoint(x, y + 9));
+    graphics_context_set_stroke_width(ctx, 1);
+  }
+}
+
 // `Closest restroom · 30 m aft`, measured from the venue (§9.1). With a deck
 // change, or when it doesn't fit on one line, the distance goes on a second
-// line (with the arrow). Draws when ctx isn't NULL; returns the new y.
+// line (with the arrow). Then the `Hold Select for its route` hint. Draws when
+// ctx isn't NULL; returns the new y.
 static int layout_rest(GContext *ctx, const View *v, int y, int w) {
   GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
   int tw = w - 2 * PAD;
   char text[64];
-  if (v->gps.rest_decks == 0) {
-    snprintf(text, sizeof(text), REST_LABEL " \xc2\xb7 %s", v->gps.rest_text);
-    if (text_height(text, small, tw, 40) < 24) {
-      if (ctx) {
-        draw_line(ctx, text, small, g_theme->muted, y - 2, tw, 18);
-      }
-      return y + 18;
+  snprintf(text, sizeof(text), REST_LABEL " \xc2\xb7 %s", v->gps.rest_text);
+  if (v->gps.rest_decks == 0 && text_height(text, small, tw, 40) < 24) {
+    if (ctx) {
+      draw_line(ctx, text, small, g_theme->muted, y - 2, tw, 18);
     }
+    y += 18;
+  } else {
+    if (ctx) {
+      draw_line(ctx, REST_LABEL, small, g_theme->muted, y - 2, tw, 18);
+      fmt_decks(text, sizeof(text), v->gps.rest_decks, v->gps.rest_text);
+      draw_arrow_line(ctx, false, g_theme->muted, PAD, y + 16, tw, "", v->gps.rest_decks, text);
+    }
+    y += 36;
   }
   if (ctx) {
-    draw_line(ctx, REST_LABEL, small, g_theme->muted, y - 2, tw, 18);
-    fmt_decks(text, sizeof(text), v->gps.rest_decks, v->gps.rest_text);
-    draw_arrow_line(ctx, false, g_theme->muted, PAD, y + 16, tw, "", v->gps.rest_decks, text);
+    draw_hint(ctx, "Hold Select for its route", false, y, tw);
   }
-  return y + 36;
+  return y + 18;
 }
 
 // The decks an elevator bank stops at, 7 chips a row; the cabin's deck is
@@ -298,7 +329,10 @@ static int layout_gps(GContext *ctx, const View *v, int y, int w) {
     }
     y += 18;
   }
-  return y;
+  if (ctx) {
+    draw_hint(ctx, "Select for route", true, y, tw);
+  }
+  return y + 18;
 }
 
 // A heading: the name (up to two lines); on a place page, where it is, how far
@@ -519,7 +553,18 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
     const DirRow *r = &v->rows[index->row];
     if (r->kind == DIR_ROW_ITEM && r->ref != 0) {
       dir_window_push(r->ref, r->line1);
+    } else if (r->kind == DIR_ROW_PLACE && has_route(v)) {
+      route_window_push(v->ref, false, r->line1, v->gps.header);
     }
+  }
+}
+
+// On a place page's heading: the route to its closest restroom.
+static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
+  View *v = context;
+  if (v->state == STATE_READY && index->row < v->row_count && v->rows[index->row].kind == DIR_ROW_PLACE &&
+      has_rest_route(v)) {
+    route_window_push(v->ref, true, "Restroom", "");
   }
 }
 
@@ -543,6 +588,7 @@ static void window_load(Window *window) {
     .draw_separator = draw_separator,
     .draw_row = draw_row,
     .select_click = select_click,
+    .select_long_click = select_long_click,
     .selection_will_change = selection_will_change,
   });
   menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);

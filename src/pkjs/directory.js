@@ -346,10 +346,10 @@ function stops(ctx, sailDays, today) {
   return out;
 }
 
-// The FROM block to the nearest of the spots `to`: {header, decks, text, flags,
-// to (the spot the route reaches)}, with GPS_NO_CABIN or GPS_NO_FROM when there's
-// no block to show. The route starts where routestart.js says for "now" (§9.4).
-function fromBlock(to, ctx, cabin) {
+// The route from where routestart.js says you are now (§9.4) to the nearest of
+// the spots `to`: {start, header, from (the spot it leaves), route}, or {flags}
+// with GPS_NO_CABIN or GPS_NO_FROM when there's none.
+function bestRoute(to, ctx, cabin) {
   var ship = ctx.shipCode;
   var settings = ctx.settings || {};
   var finder = venues.venueFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
@@ -364,7 +364,7 @@ function fromBlock(to, ctx, cabin) {
     from = [shipmap.cabin(ship, room)].filter(Boolean);
   }
   if (!room && !from.length) {
-    return {header: '', decks: 0, text: '', flags: GPS_NO_CABIN};
+    return {flags: GPS_NO_CABIN};
   }
   var best = null;
   from.forEach(function(f) {
@@ -376,11 +376,23 @@ function fromBlock(to, ctx, cabin) {
   });
   if (!best) {
     // A stateroom the map doesn't know, say.
-    return {header: '', decks: 0, text: '', flags: GPS_NO_FROM};
+    return {flags: GPS_NO_FROM};
   }
-  var line = gpstext.fromLine(best.route, best.from, {units: settings.units, fromCabin: start.kind === 'cabin'});
-  return {header: gpstext.fromHeader(start, finder.short(start.venue)), decks: line.decks, text: line.text,
-          flags: 0, to: best.route.to};
+  return {start: start, header: gpstext.fromHeader(start, finder.short(start.venue)), from: best.from,
+          route: best.route, flags: 0};
+}
+
+// The FROM block to the nearest of the spots `to`: {header, decks, text, flags,
+// to (the spot the route reaches)}, with GPS_NO_CABIN or GPS_NO_FROM when there's
+// no block to show.
+function fromBlock(to, ctx, cabin) {
+  var best = bestRoute(to, ctx, cabin);
+  if (best.flags) {
+    return {header: '', decks: 0, text: '', flags: best.flags};
+  }
+  var line = gpstext.fromLine(best.route, best.from, {units: (ctx.settings || {}).units,
+                                                      fromCabin: best.start.kind === 'cabin'});
+  return {header: best.header, decks: line.decks, text: line.text, flags: 0, to: best.route.to};
 }
 
 // A place page's Ship GPS lines (§9.1): {header, decks, text, flags, rest}, or
@@ -446,17 +458,155 @@ function placePage(v, ctx, cabin) {
   return {title: 'Place', label: '', where: where, gps: gps, rows: rows};
 }
 
-// ctx: {bundle, settings, stars, now (Date)}. Returns {ref, title, label,
-// rel (decks from the cabin, or null), where and gps (place pages), rows}.
-function buildPage(ref, ctx) {
+// ---- Route screen (docs/DESIGN_V1_1.md §9.2) --------------------------------
+
+var ROUTE_REDUCED = 1;  // shown less: the planner isn't sure (§9.2)
+var ROUTE_STEPS_MAX = 8;  // the watch keeps 8, the arrival last
+var ROUTE_TEXT_MAX = 39;  // title, steps and the small foot line: 40 bytes with the NUL
+var ROUTE_LEAD_MAX = 63;
+
+// "Same deck as Royal Theater", "1 deck above Royal Theater".
+function deckFrom(decks, name) {
+  if (!decks) {
+    return 'Same deck as ' + name;
+  }
+  return gpstext.deckText(decks) + (decks > 0 ? ' above ' : ' below ') + name;
+}
+
+// A route page with only a message in its lead line.
+function routeMessage(title, lead) {
+  return {title: title, header: '', lead: lead, steps: [], big: '', small: {decks: 0, text: ''}, flags: 0};
+}
+
+// The steps, at most ROUTE_STEPS_MAX with the arrival kept last.
+function capSteps(list) {
+  return list.length <= ROUTE_STEPS_MAX ? list : list.slice(0, ROUTE_STEPS_MAX - 1).concat(list.slice(-1));
+}
+
+// The Route screen for place page `ref` (a venue or an elevator bank): the route
+// from where you are (§9.4), or with `rest` the one from the venue to its closest
+// restroom. Returns {ref, rest, title, header, lead, steps: [{glyph, text}], big,
+// small: {decks, text}, flags}: `lead` is a line above the steps (`Same area ·
+// your deck`, or a message when there's no route), `big` and `small` the lines
+// under them (the summary; for a restroom, its deck and how it relates to the
+// venue).
+function routePage(ref, rest, ctx) {
+  var s = setup(ctx);
+  var ship = s.c.shipCode;
+  var opts = {units: s.c.settings.units, banks: shipmap.banks(ship)};
+  var target = null;
+  if (ref >= REF_BANK && ref < REF_BANK + s.banks.length && !rest) {
+    var b = s.banks[ref - REF_BANK];
+    target = {name: b.name, short: b.name, to: b.spots};
+  } else if (ref >= REF_PLACE && ref - REF_PLACE < s.list.length) {
+    var v = s.list[ref - REF_PLACE];
+    var finder = venues.venueFinder(ship, (s.c.settings.venues || {})[ship], (s.c.settings.me || {}).deck);
+    target = {name: v.name, short: finder.short(v.name) || v.name, to: spotsOf(ship, v, s.cabin)};
+  }
+  var page;
+  if (!ctx.bundle || !target || !target.to.length) {
+    page = routeMessage('Not found', 'Go back and try again');
+  } else {
+    var best = bestRoute(target.to, s.c, s.cabin);
+    if (rest) {
+      page = restroomRoute(target, best.route ? best.route.to || target.to[0] : target.to[0], ship, opts);
+    } else if (best.flags & GPS_NO_CABIN) {
+      page = routeMessage(target.name, 'Add your stateroom on the phone for walking directions');
+    } else if (best.flags) {
+      page = routeMessage(target.name, 'No route found');
+    } else {
+      page = placeRoute(target, best, opts);
+    }
+  }
+  page.ref = ref;
+  page.rest = !!rest;
+  return page;
+}
+
+// Only walking, on one deck, within one of Fore / Mid / Aft.
+function sameArea(r, from, banks) {
+  var to = r.to;
+  return !gpstext.reduced(r) && to && from && to.deck === from.deck && banks &&
+         gpstext.zone(to.a, banks) === gpstext.zone(from.a, banks) &&
+         r.steps.every(function(st) { return st.do === 'walk'; });
+}
+
+function placeRoute(target, best, opts) {
+  var r = best.route;
+  var o = {units: opts.units, banks: opts.banks, name: target.name};
+  var page = {title: target.name, header: best.header, lead: '', steps: capSteps(gpstext.steps(r, best.from, o)),
+              big: '', small: gpstext.summary(r, best.from, o), flags: gpstext.reduced(r) ? ROUTE_REDUCED : 0};
+  if (sameArea(r, best.from, opts.banks)) {
+    // `Same area · your deck`, one walk and the arrival; no summary.
+    page.lead = 'Same area' + (best.start.kind === 'cabin' ? DOT + 'your deck' : '');
+    page.small = {decks: 0, text: ''};
+  }
+  return page;
+}
+
+// From the venue's entrance `at` to its closest restroom: header `CLOSEST TO
+// ROYAL THEATER`, and under the steps the restroom's deck and position.
+function restroomRoute(target, at, ship, opts) {
+  var title = 'Restroom';
+  var found = shipmap.restroom(ship, at);
+  if (!found) {
+    return routeMessage(title, 'No restroom found');
+  }
+  var r = found.route;
+  if (!r.to) {
+    r.to = {deck: found.deck, a: found.a, x: found.x};
+  }
+  var o = {units: opts.units, banks: opts.banks, name: title};
+  var where = 'Deck ' + found.deck + (opts.banks ? DOT + gpstext.zone(found.a, opts.banks) : '');
+  return {title: title, header: 'CLOSEST TO ' + target.short.toUpperCase(), lead: '',
+          steps: capSteps(gpstext.steps(r, at, o)), big: where,
+          small: {decks: 0, text: deckFrom(found.deck - at.deck, target.short)},
+          flags: gpstext.reduced(r) ? ROUTE_REDUCED : 0};
+}
+
+// uint8 flags, int8 decks (the small line's arrow), then title, header, lead,
+// big and small texts as uint8 length and UTF-8 bytes, then uint8 step count
+// and each step's uint8 glyph and text.
+function encodeRoute(p) {
+  var out = [p.flags & 255, int8(p.small.decks)];
+  [[p.title, ROUTE_TEXT_MAX], [p.header, GPS_TEXT_MAX], [p.lead, ROUTE_LEAD_MAX], [p.big, GPS_TEXT_MAX],
+   [p.small.text, ROUTE_TEXT_MAX]].forEach(function(f) {
+    var b = pack.utf8(f[0] || '', f[1]);
+    out = out.concat([b.length], b);
+  });
+  out.push(p.steps.length);
+  p.steps.forEach(function(st) {
+    var b = pack.utf8(st.text || '', ROUTE_TEXT_MAX);
+    out = out.concat([st.glyph & 255, b.length], b);
+  });
+  return out;
+}
+
+// The ROUTE_PAGE message (without msg_type).
+function routeMsg(page) {
+  return {dir_ref: page.ref, route_rest: page.rest ? 1 : 0, route: encodeRoute(page)};
+}
+
+// What every page needs: the context with defaults, the directory's places,
+// the elevator banks and the cabin deck.
+function setup(ctx) {
   var bundle = ctx.bundle || {};
   var settings = ctx.settings || {};
   var shipCode = (bundle.ship && bundle.ship.code) || '';
-  var c = {bundle: ctx.bundle, settings: settings, stars: ctx.stars || {}, now: ctx.now || new Date(),
-           shipCode: shipCode};
-  var list = places(shipCode, (settings.venues || {})[shipCode]);
-  var banks = banksOf(shipCode);
-  var cabin = L.cabinDeck((settings.me || {}).deck);
+  return {
+    c: {bundle: ctx.bundle, settings: settings, stars: ctx.stars || {}, now: ctx.now || new Date(),
+        shipCode: shipCode},
+    list: places(shipCode, (settings.venues || {})[shipCode]),
+    banks: banksOf(shipCode),
+    cabin: L.cabinDeck((settings.me || {}).deck)
+  };
+}
+
+// ctx: {bundle, settings, stars, now (Date)}. Returns {ref, title, label,
+// rel (decks from the cabin, or null), where and gps (place pages), rows}.
+function buildPage(ref, ctx) {
+  var s = setup(ctx);
+  var c = s.c, list = s.list, banks = s.banks, cabin = s.cabin;
   function placeRef(v) {
     return REF_PLACE + list.indexOf(v);
   }
@@ -574,5 +724,7 @@ module.exports = {
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
   GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,
   places: places, deckRanges: deckRanges, bankDecksText: bankDecksText, buildPage: buildPage,
-  encodeRow: encodeRow, packRows: packRows, encodeGps: encodeGps, encodeBank: encodeBank, message: message
+  encodeRow: encodeRow, packRows: packRows, encodeGps: encodeGps, encodeBank: encodeBank, message: message,
+  ROUTE_REDUCED: ROUTE_REDUCED, ROUTE_STEPS_MAX: ROUTE_STEPS_MAX,
+  routePage: routePage, encodeRoute: encodeRoute, routeMsg: routeMsg
 };

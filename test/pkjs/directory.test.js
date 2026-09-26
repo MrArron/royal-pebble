@@ -336,6 +336,95 @@ test('GPS: closest restroom from the venue, in the owner units', function() {
   assert.strictEqual(gpsPage('Perfect Day at CocoCay').gps, null);
 });
 
+// ---- Route screen (docs/DESIGN_V1_1.md §9.2) --------------------------------
+
+function route(name, rest, opts) {
+  opts = opts || {};
+  var settings = opts.settings || CABIN;
+  var ref = typeof name === 'number' ? name : placeRef(name, settings);
+  return directory.routePage(ref, rest, {bundle: opts.bundle || makeBundle(), settings: settings, stars: {},
+                                         now: NOW});
+}
+
+test('route: steps with glyphs, the arrival last, and the summary', function() {
+  var p = route('Royal Theater');
+  assert.strictEqual(p.title, 'Royal Theater');
+  assert.strictEqual(p.header, 'FROM YOUR CABIN');
+  assert.strictEqual(p.lead, '');
+  assert.strictEqual(p.flags, 0);
+  var last = p.steps[p.steps.length - 1];
+  assert.deepStrictEqual(last, {glyph: 4, text: 'Royal Theater'});
+  assert.ok(p.steps.some(function(s) { return s.glyph === 2 || s.glyph === 3; }), 'changes deck');
+  assert.ok(/^(Fore|Mid|Aft) (elev|stairs) to Deck [0-9]+$/.test(p.steps[1].text), p.steps[1].text);
+  assert.ok(p.small.decks < 0);
+  assert.ok(/^[0-9]+ m in all$/.test(p.small.text), p.small.text);
+  assert.strictEqual(p.big, '');
+  assert.ok(/^[0-9]+ ft/.test(route('Royal Theater', false, {settings: {me: CABIN.me, units: 'ft'}}).steps[0].text));
+});
+
+test('route: shown less for an approximate spot, same area on the cabin deck', function() {
+  var shops = route('Royal Shops');
+  assert.strictEqual(shops.flags, directory.ROUTE_REDUCED);
+  assert.ok(!/in all/.test(shops.small.text), shops.small.text);
+  var near = route(directory.REF_BANK + 1);  // the aft bank, near cabin 9254
+  assert.strictEqual(near.title, 'Aft elevators');
+  assert.strictEqual(near.lead, 'Same area' + DOT + 'your deck');
+  assert.strictEqual(near.steps.length, 2);
+  assert.strictEqual(near.small.text, '');
+});
+
+test('route: from a stop on now, and messages when there is none', function() {
+  var settings = {me: CABIN.me, personal: [{title: 'Show', venue: 'Studio B', date: '2027-03-07', time: '13:30',
+                                            minutes: 60}]};
+  assert.strictEqual(route('Royal Theater', false, {settings: settings}).header, 'FROM STUDIO B');
+  var none = route('Studio B', false, {settings: {me: {deck: 'Deck 9'}}});
+  assert.deepStrictEqual([none.title, none.steps.length], ['Studio B', 0]);
+  assert.ok(/stateroom/.test(none.lead));
+  assert.strictEqual(route('Studio B', false, {settings: {me: {stateroom: '99999'}}}).lead, 'No route found');
+  assert.strictEqual(route(directory.REF_PLACE + 9999).title, 'Not found');
+  assert.strictEqual(route('Perfect Day at CocoCay').title, 'Not found');
+  // Elevator banks have no restroom route.
+  assert.strictEqual(route(directory.REF_BANK, true).title, 'Not found');
+});
+
+test('route: to the closest restroom from the venue, as on the place page', function() {
+  var p = route('Royal Theater', true);
+  assert.strictEqual(p.title, 'Restroom');
+  assert.strictEqual(p.header, 'CLOSEST TO ROYAL THEATER');
+  assert.deepStrictEqual(p.steps[p.steps.length - 1], {glyph: 4, text: 'Restroom'});
+  assert.ok(/^Deck [0-9]+ · (Fore|Mid|Aft)$/.test(p.big), p.big);
+  assert.ok(/^(Same deck as|[0-9]+ decks? (above|below)) Royal Theater$/.test(p.small.text), p.small.text);
+  // The same restroom as the place page's line (one walk there).
+  assert.strictEqual(p.steps.length, 2);
+  assert.strictEqual(p.steps[0].text, gpsPage('Royal Theater').gps.rest.text);
+  // Without a stateroom it still works: it starts at the venue.
+  assert.strictEqual(route('Royal Theater', true, {settings: {me: {deck: 'Deck 9'}}}).title, 'Restroom');
+});
+
+test('route: ROUTE_PAGE packs flags, decks, texts and steps', function() {
+  var p = {ref: 1074, rest: true, title: 'Restroom', header: 'CLOSEST TO X', lead: '', big: 'Deck 4',
+           small: {decks: -1, text: 'ab'}, flags: 1, steps: [{glyph: 0, text: '5 m'}, {glyph: 4, text: 'Restroom'}]};
+  var b = directory.encodeRoute(p);
+  assert.deepStrictEqual(b.slice(0, 3), [1, 255, 8]);
+  var i = 3 + 8;
+  assert.strictEqual(b[i], 12);
+  i += 13;
+  assert.strictEqual(b[i], 0);  // lead
+  i += 1;
+  assert.strictEqual(b[i], 6);  // big
+  i += 7;
+  assert.deepStrictEqual(b.slice(i, i + 3), [2, 97, 98]);
+  i += 3;
+  assert.deepStrictEqual(b.slice(i, i + 5), [2, 0, 3, 53, 32]);
+  assert.strictEqual(b.length, i + 1 + 5 + 10);
+  var m = directory.routeMsg(p);
+  assert.deepStrictEqual([m.dir_ref, m.route_rest], [1074, 1]);
+  // A route with a crossing: every step and the arrival fit.
+  var boleros = route('Boleros').steps;
+  assert.ok(boleros.some(function(s) { return s.glyph === 1 && s.text === 'Cross the ship'; }));
+  assert.ok(boleros.length <= directory.ROUTE_STEPS_MAX);
+});
+
 test('elevator banks: deck rows, the Elevators area and bank pages', function() {
   var d5 = page(directory.REF_DECK + 5, {settings: CABIN});
   var names = d5.rows.map(function(r) { return r.line1; });
