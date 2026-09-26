@@ -36,7 +36,7 @@ typedef struct {
   int8_t gps_decks;   // decks to go, + = up
   uint8_t gps_flags;
   char gps_header[32];  // "FROM YOUR CABIN"
-  char gps_text[32];    // "~160 m fore", "Your deck · ~50 m aft"
+  char gps_text[32];    // "160 m fore", "Your deck · 50 m aft"
   const uint8_t *rows;
   int rows_length;
 } DirPageMsg;

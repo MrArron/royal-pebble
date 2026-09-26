@@ -120,12 +120,12 @@ test('a route is quick enough for the phone', function() {
 // --- watch text ----------------------------------------------------------
 
 test('distances round and convert', function() {
-  assert.strictEqual(text.distance(2, 'm'), '~5 m');
-  assert.strictEqual(text.distance(31, 'm'), '~30 m');
-  assert.strictEqual(text.distance(158, 'm'), '~160 m');
-  assert.strictEqual(text.distance(161.5, 'ft'), '~530 ft');
-  assert.strictEqual(text.distance(157.5, 'steps'), '~210 steps');
-  assert.strictEqual(text.distance(40, 'bogus'), '~40 m');
+  assert.strictEqual(text.distance(2, 'm'), '5 m');
+  assert.strictEqual(text.distance(31, 'm'), '30 m');
+  assert.strictEqual(text.distance(158, 'm'), '160 m');
+  assert.strictEqual(text.distance(161.5, 'ft'), '530 ft');
+  assert.strictEqual(text.distance(157.5, 'steps'), '210 steps');
+  assert.strictEqual(text.distance(40, 'bogus'), '40 m');
 });
 
 test('steps use the design wording, with no side words until confirmed', function() {
@@ -165,12 +165,12 @@ test('FROM line and summary', function() {
   var from = map.cabin('HM', '8130');
   var same = text.fromLine(route('8130', 'Chops Grille'), from, {fromCabin: true});
   assert.strictEqual(same.decks, 0);
-  assert.ok(/^Your deck · ~\d+ m aft$/.test(same.text), same.text);
+  assert.ok(/^Your deck · \d+ m aft$/.test(same.text), same.text);
   var down = text.fromLine(route('8130', 'Royal Theater'), from, {});
   assert.ok(down.decks < 0);
-  assert.ok(/^↓\d decks? · ~\d+ m (fore|aft)$/.test(text.plain(down)), text.plain(down));
+  assert.ok(/^↓\d decks? · \d+ m (fore|aft)$/.test(text.plain(down)), text.plain(down));
   var sum = text.summary(route('8130', 'Royal Theater'), from, {units: 'ft'});
-  assert.ok(/^~\d+ ft in all$/.test(sum.text), sum.text);
+  assert.ok(/^\d+ ft in all$/.test(sum.text), sum.text);
 });
 
 test('a reduced route shows the deck and fore/aft only', function() {
@@ -178,7 +178,7 @@ test('a reduced route shows the deck and fore/aft only', function() {
   var r = map.route('HM', from, map.approx('HM', 5, 'Aft'));
   var t = texts(r, from, {name: 'Kids Shop'});
   assert.deepStrictEqual([t.length, t[0], t[2]], [3, 'To Deck 5', 'Kids Shop']);
-  assert.ok(/^~\d+ m aft$/.test(t[1]), t[1]);
+  assert.ok(/^\d+ m aft$/.test(t[1]), t[1]);
 });
 
 test('restroom line and headers', function() {

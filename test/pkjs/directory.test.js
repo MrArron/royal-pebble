@@ -242,11 +242,11 @@ test('GPS: FROM YOUR CABIN with the deck change and walking distance', function(
   assert.strictEqual(p.gps.header, 'FROM YOUR CABIN');
   assert.strictEqual(p.gps.flags, 0);
   assert.ok(p.gps.decks < 0, 'theater is below deck 9');
-  assert.ok(/^~[0-9]+ m fore$/.test(p.gps.text), p.gps.text);
+  assert.ok(/^[0-9]+ m fore$/.test(p.gps.text), p.gps.text);
   assert.strictEqual(p.where.rel, null);
-  assert.ok(/^~[0-9]+ ft fore$/.test(gpsPage('Royal Theater', {settings: {
+  assert.ok(/^[0-9]+ ft fore$/.test(gpsPage('Royal Theater', {settings: {
     me: CABIN.me, units: 'ft'}}).gps.text));
-  assert.ok(/^~[0-9]+ steps fore$/.test(gpsPage('Royal Theater', {settings: {
+  assert.ok(/^[0-9]+ steps fore$/.test(gpsPage('Royal Theater', {settings: {
     me: CABIN.me, units: 'steps'}}).gps.text));
 });
 
@@ -255,7 +255,7 @@ test('GPS: a place on the cabin deck says "Your deck"', function() {
   var item = d9.rows.filter(function(r) { return r.kind === directory.ROW_ITEM; })[0];
   var p = page(item.ref, {settings: CABIN});
   assert.strictEqual(p.gps.decks, 0);
-  assert.ok(new RegExp('^Your deck' + DOT + '~').test(p.gps.text), p.gps.text);
+  assert.ok(new RegExp('^Your deck' + DOT + '[0-9]').test(p.gps.text), p.gps.text);
 });
 
 test('GPS: approximate spots, owner-added venues, no GPS ashore or off the map', function() {
@@ -305,12 +305,12 @@ test('GPS: a stop on now (or just ended) is the start (§9.4)', function() {
 });
 
 test('GPS: dir_gps packs decks, flags, header and text', function() {
-  var g = {header: 'FROM YOUR CABIN', decks: -2, text: '~160 m fore', flags: directory.GPS_APPROX};
+  var g = {header: 'FROM YOUR CABIN', decks: -2, text: '160 m fore', flags: directory.GPS_APPROX};
   var b = directory.encodeGps(g);
   assert.deepStrictEqual(b.slice(0, 3), [254, 1, 15]);
   assert.strictEqual(String.fromCharCode.apply(null, b.slice(3, 18)), 'FROM YOUR CABIN');
-  assert.strictEqual(b[18], 11);
-  assert.strictEqual(b.length, 30);
+  assert.strictEqual(b[18], 10);
+  assert.strictEqual(b.length, 29);
   assert.deepStrictEqual(directory.message(gpsPage('Royal Theater')).dir_gps,
                          directory.encodeGps(gpsPage('Royal Theater').gps));
 });

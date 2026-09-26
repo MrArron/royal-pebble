@@ -743,11 +743,11 @@ places (9.3), and the route start follows a new rule (9.4).
 Royal Theater                  Gothic 24 bold, wraps
 Deck 5 · Fore                  Gothic 18 bold
 Entertainment Place            Gothic 14 bold, muted (area)
-Closest restroom · ~30 m aft   Gothic 14 bold, muted
+Closest restroom · 30 m aft   Gothic 14 bold, muted
 Hold Select for its route      Gothic 14 bold, sea accent
 ──────────
 FROM YOUR CABIN                small caps, muted
-↓1 deck · ~160 m fore          Gothic 18 bold
+↓1 deck · 160 m fore          Gothic 18 bold
 Select for route ›             Gothic 14 bold, sea accent
 ──────────
 LATER TODAY                    small caps, muted
@@ -756,10 +756,10 @@ Evening Show · 7:00p ★         events still to come there
 
 - The FROM block replaces the old `↓1 deck from cabin` line: the deck change
   and the walking distance on one line. On the cabin's deck: `Your deck ·
-  ~180 m fore`. The header names the route start (9.4).
+  180 m fore`. The header names the route start (9.4).
 - `Closest restroom` is measured from the venue, not the cabin. When the
   restroom is on another deck, the direction goes on its own line:
-  `Closest restroom` / `↑1 deck · ~20 m aft`.
+  `Closest restroom` / `↑1 deck · 20 m aft`.
 - Long pages scroll, with ScrollLayer's content indicator.
 - **Approximate spot** (the 19 venues with no spot on the plans): a muted
   `Spot approximate` line under the distance (`WatchGpsApprox`).
@@ -769,7 +769,8 @@ Evening Show · 7:00p ★         events still to come there
   the phone for walking directions`. The closest restroom still shows
   (`WatchGpsNoCabin`).
 - **Phone away:** as today, `Connect your phone`; Select tries again.
-- Distances use the unit set on the phone (9.7); always `~`, rounded.
+- Distances use the unit set on the phone (9.7), rounded, with no `~` (9.9,
+  decision 12): the Help section says once that every distance is approximate.
 
 ### 9.2 Route screen (item 21, option A)
 
@@ -788,18 +789,18 @@ Opened by:
 Royal Theater                  Gothic 24 bold (destination)
 FROM YOUR CABIN                small caps, muted (the start, 9.4)
 ──────────
-•  ~60 m fore                  Gothic 18 bold, one line per step
+•  60 m fore                  Gothic 18 bold, one line per step
 ⟋  Fore stairs to Deck 5
-•  ~40 m fore
+•  40 m fore
 ◎  Royal Theater
 ──────────
-↓1 deck · ~100 m in all        Gothic 14 bold, muted
+↓1 deck · 100 m in all        Gothic 14 bold, muted
 ```
 
 - **Step glyphs** (drawn, about 13 px, sea accent): dot = walk, double-headed
   arrow = cross the ship, square with ▲▼ = elevator, stair line = stairs,
   ring = arrive.
-- About 3-6 short steps: `~50 m aft`, `Aft elev to Deck 16`, `Fore stairs to
+- About 3-6 short steps: `50 m aft`, `Aft elev to Deck 16`, `Fore stairs to
   Deck 5`.
 - **Crossing step:** its own step whenever the route changes side:
   `Cross the ship` until port/starboard is confirmed, then `Cross to port` /
@@ -821,7 +822,7 @@ FROM YOUR CABIN                small caps, muted (the start, 9.4)
     guessed route.
 - **Shown less** (a route that needs an unconfirmed link, or a spot that can't be
   placed on the walkways): `To Deck 16` (only with a deck change), then the
-  overall `~300 m aft`, then arrive; the summary drops `in all`. Wording to
+  overall `300 m aft`, then arrive; the summary drops `in all`. Wording to
   approve with the rest (`gpstext.js`).
 - **Stairs** are named by where they are: `Fore` / `Aft stairs` beside the
   elevator banks, `Mid stairs` between them. With sides confirmed, the arrive
@@ -916,7 +917,8 @@ All built into the local settings page, so they work offline.
   test cruise: once the map is confirmed, fix the data and hide or remove it.
 - **Help section:** voice commands with example phrases (and what can't be a
   location); the watch controls, every press and hold on every screen;
-  useful-to-know notes (where routes start and when it resets, `~` distances,
+  useful-to-know notes (where routes start and when it resets, that every
+  distance is approximate since distances carry no `~` (9.9, decision 12),
   `Spot approximate`, no side until confirmed, voice needs the phone nearby,
   the 04:00 day change); and the Always show button hints toggle. Keep it in
   step with the app as controls change.
@@ -928,7 +930,7 @@ In the ship map and planner:
   crossing step depends on it). Unverified.
 - The planner knows which cabin corridors connect and where the ship can be
   crossed. Unverified.
-- The longest lines still fit in feet and steps (`~530 ft fore`, `~210 steps
+- The longest lines still fit in feet and steps (`530 ft fore`, `210 steps
   fore`).
 
 On board (the owner's test cruise):
@@ -967,6 +969,10 @@ For the build PRs:
     test passes.
 11. **Route start (2026-09-26):** the 15-minute rule, not "the last starred
     venue until 04:00" (9.4).
+12. **No `~` on distances (2026-09-26):** every figure is approximate in an
+    unofficial app, so the `~` on each one added nothing. Distances show as
+    `160 m fore`; the Help section says once that they are approximate (9.7).
+    The mockups still show `~`; this supersedes them.
 
 
 ## Mockup index
