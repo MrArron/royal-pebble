@@ -27,8 +27,20 @@ var FLAG_RESERVED = 64;     // the owner marked it reserved (docs/DESIGN_V1_1.md
 
 var ALARM_ALL_ABOARD = 0;
 var ALARM_REMINDER = 1;
+var ALARM_TO_RESERVE = 2;              // the evening before: starred events still to reserve
 var ALL_ABOARD_ALERTS = [60, 30, 15];  // minutes before all-aboard
 var MAX_ALARMS = 24;                   // the watch keeps up to 24
+var MAX_TO_RESERVE = 5;                // to-reserve alerts per evening; `extra` has the full count
+
+// When the evening's to-reserve alert buzzes (Settings > Me), in minutes after
+// midnight ship time. 20:00 unless set.
+var RESERVE_ALERT_TIMES = [18 * 60, 19 * 60, 20 * 60, 21 * 60, 22 * 60];
+var RESERVE_ALERT_DEFAULT = 20 * 60;
+
+function reserveAlertAt(settings) {
+  var v = settings && settings.reserveAlertAt;
+  return RESERVE_ALERT_TIMES.indexOf(v) !== -1 ? v : RESERVE_ALERT_DEFAULT;
+}
 
 var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
@@ -721,14 +733,15 @@ function finalShows(bundle) {
 
 // Tomorrow's card for the evening summary (docs/DESIGN_V1_1.md §8.1): the
 // day, how many starred events and personal entries it holds and the first
-// timed one, how many featured events, and a show to catch (`last`, with
+// timed one, how many featured events, a show to catch (`last`, with
 // `lastKind` a FINAL_ value, 0 none): a last chance before an only show, the
-// earliest of each.
+// earliest of each; and how many starred events still need a reservation
+// (`toReserve`, §5).
 function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
   var day = buildDay(bundle, settings, dayIndex + 1, sailDays);
   var t = {kind: day.kind, status: '', location: '', arrive: NO_TIME, depart: NO_TIME,
            allAboard: NO_TIME, starred: 0, featured: 0, first: '', firstStart: NO_TIME,
-           last: '', lastKind: 0};
+           last: '', lastKind: 0, toReserve: 0};
   if (day.kind === DAY_NONE) {
     return t;
   }
@@ -747,6 +760,9 @@ function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
     }
     if (e.flags & FLAG_FEATURED) {
       t.featured++;
+    }
+    if (notReserved(e)) {
+      t.toReserve++;
     }
     var kind = e.flags & FLAG_LAST_CHANCE ? FINAL_LAST_CHANCE : e.flags & FLAG_ONLY_SHOW ? FINAL_ONLY_SHOW : 0;
     if (kind && (!t.lastKind || kind < t.lastKind)) {
@@ -819,6 +835,10 @@ function notReserved(e) {
 // (venues.FROM_*), `fromPos` and `fromVenue` (the previous venue's short name,
 // for a route). `notReserved` is set on a reminder for a starred event that
 // needs a reservation and isn't marked reserved.
+// Each evening also gets to-reserve alerts (§5): at the Me tab's time (see
+// reserveAlertAt) on a watch day, one per starred event of the next watch day
+// that needs a reservation and isn't marked reserved, at most MAX_TO_RESERVE,
+// in time order. `ref` is the event's start, `extra` how many there are in all.
 function buildAlarms(bundle, settings, stars, now, testAt) {
   settings = settings || {};
   stars = stars || {};
@@ -858,6 +878,11 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
                    fromVenue: route && route.kind === venues.FROM_ROUTE ? finder.short(prev.venue) : '',
                    notReserved: notReserved(e)});
     });
+    var toReserve = buildEvents(bundle, settings, stars, d + 1, sailDays).filter(notReserved);
+    toReserve.slice(0, MAX_TO_RESERVE).forEach(function(e) {
+      alarms.push({at: d * MINUTES_PER_DAY + reserveAlertAt(settings), ref: e.start, kind: ALARM_TO_RESERVE,
+                   extra: toReserve.length, title: e.title, venue: finder.short(e.venue), notReserved: true});
+    });
   }
 
   if (testAt) {
@@ -865,17 +890,22 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
   }
   return alarms
     .filter(function(a) { return a.at > nowMin; })
-    .sort(function(a, b) { return a.at - b.at || a.kind - b.kind; })
+    .sort(function(a, b) { return a.at - b.at || a.kind - b.kind || a.ref - b.ref; })
     .slice(0, MAX_ALARMS);
 }
 
-// Two alerts from Settings > Me > Test alerts, anchored to when it was tapped:
-// a reminder 2 minutes later and an all-aboard warning a minute after that.
+// Alerts from Settings > Me > Test alerts, anchored to when it was tapped: a
+// reminder 2 minutes later, an all-aboard warning a minute after that and a
+// to-reserve alert (two events) a minute after that.
 function testAlarms(sailDays, requestedAt) {
   var t = cruiseMinutes(sailDays, requestedAt);
   return [
     {at: t + 2, ref: t + 17, kind: ALARM_REMINDER, extra: 30, title: 'Test reminder', venue: 'Alert test'},
-    {at: t + 3, ref: t + 18, kind: ALARM_ALL_ABOARD, extra: 0, title: 'Test all-aboard', venue: ''}
+    {at: t + 3, ref: t + 18, kind: ALARM_ALL_ABOARD, extra: 0, title: 'Test all-aboard', venue: ''},
+    {at: t + 4, ref: t + MINUTES_PER_DAY, kind: ALARM_TO_RESERVE, extra: 2, title: 'Test show',
+     venue: 'Alert test', notReserved: true},
+    {at: t + 4, ref: t + MINUTES_PER_DAY + 90, kind: ALARM_TO_RESERVE, extra: 2, title: 'Test show 2',
+     venue: 'Alert test', notReserved: true}
   ];
 }
 
@@ -899,6 +929,7 @@ function cutoffWhen(sailDate, cutoff, now) {
 // settings: {theme, showFeatured, hiddenCats,
 //            days: {date: {offset, buffer, allAboard, edit: {type, port, arrive, depart}}},
 //            personal: [...], me: {stateroom, deck, stairs, muster, clockNote},
+//            reminderLead, reserveAlertAt (minutes after midnight),
 //            venues: {shipCode: owner's venue edits}}
 // stars: {starKey: true}
 // testAt: Date when Test alerts was tapped, or null.
@@ -952,6 +983,10 @@ module.exports = {
   FLAG_RESERVED: FLAG_RESERVED,
   ALARM_ALL_ABOARD: ALARM_ALL_ABOARD,
   ALARM_REMINDER: ALARM_REMINDER,
+  ALARM_TO_RESERVE: ALARM_TO_RESERVE,
+  RESERVE_ALERT_TIMES: RESERVE_ALERT_TIMES,
+  RESERVE_ALERT_DEFAULT: RESERVE_ALERT_DEFAULT,
+  reserveAlertAt: reserveAlertAt,
   NOTICE_MOVED: NOTICE_MOVED,
   NOTICE_CANCELLED: NOTICE_CANCELLED,
   NOTICE_CHECK: NOTICE_CHECK,

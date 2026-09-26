@@ -17,7 +17,8 @@
 // The first starred event or alert that doesn't fit is then the "cutoff": the
 // phone has to be back before then.
 
-#define STORE_VERSION 6  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown
+#define STORE_VERSION 7  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown;
+                         // 7: tomorrow's to-reserve count
 #define STORE_MAX_KEYS 40
 #define STORE_MAX_BUDGET (STORE_MAX_KEYS * PERSIST_DATA_MAX_LENGTH)
 #define STORE_MIN_BUDGET (4 * PERSIST_DATA_MAX_LENGTH)
@@ -42,10 +43,10 @@ enum {
 // all-aboard, int16 local offset, int32 cutoff, uint8 alert count, uint8 event
 // count, uint8 cruise starred count; then for the summary int32 arrive and depart, and
 // tomorrow's uint8 kind, int32 arrive, depart, all-aboard and first start,
-// uint8 starred, featured and last kind. Then the texts: the day's status and
+// uint8 starred, featured, last kind and to-reserve count. Then the texts: the day's status and
 // location, My info's six, the ship name, tomorrow's status, location, first
 // and last, and the sail port.
-#define HEADER_FIXED 54
+#define HEADER_FIXED 55
 #define HEADER_TEXTS 14
 
 // On the heap, not static: the app's code, data and static buffers must stay
@@ -122,6 +123,7 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   p[51] = t->starred;
   p[52] = t->featured;
   p[53] = t->last_kind;
+  p[54] = t->to_reserve;
   p += HEADER_FIXED;
   p = codec_write_str(p, day->status, sizeof(day->status) - 1);
   p = codec_write_str(p, day->location, sizeof(day->location) - 1);
@@ -334,6 +336,7 @@ bool store_load(void) {
     .starred = p[51],
     .featured = p[52],
     .last_kind = p[53],
+    .to_reserve = p[54],
   };
   s_cutoff = codec_read_int32(p + 19);
   int alarms = p[23] < MAX_ALARMS ? p[23] : MAX_ALARMS;

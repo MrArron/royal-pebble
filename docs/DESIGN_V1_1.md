@@ -417,6 +417,23 @@ N`. Paid classes never get Last chance / Only show tags.
   the tomorrow summary card (§8.1).
 - The alert time is a setting on the Me tab (default 20:00 ship time).
 
+As built (item 9, part 2):
+- Me tab: `Evening reminder to reserve`, 6 pm to 10 pm on the hour, default
+  8 pm. Ship time.
+- The alert buzzes like a reminder (double pulse). Top bar `To reserve`, then
+  `TOMORROW` (sea accent) and each event as `7:00p Hairspray` over its venue,
+  untimed ones first, as many as fit (3 to 4), then `+ 3 more` (port accent).
+  No alert when nothing is left to reserve.
+- It lists the next watch day, so a show just after midnight counts with the
+  evening before. Booked paid sessions are already reserved and never appear.
+- The tomorrow card reads `2 to reserve` (Gothic 14 bold, port accent) under
+  the `First` line.
+- Test alerts adds a to-reserve alert with two test events a minute after the
+  test all-aboard warning.
+- If a reminder or all-aboard warning falls in the same minute, that is shown
+  with `+ N more` and the list isn't (rare: a starred event exactly one
+  reminder lead after the alert time).
+
 ---
 
 ## 6. Data shape changes
@@ -499,8 +516,8 @@ authoritative for this flag until it's acknowledged.
 **Status: as returned, approved 2026-09-24.** Written as the brief for a Claude
 Design pass; the mockups came back and the owner answered the open decisions
 (8.6). Items 5 (the morning summary), 6 (the countdown), 7 (the clash
-warning) and 8 (the last-chance tag) are built. Item 9 (reservation reminder) is designed in
-§5; its Mark reserved half is built. The layouts below are the original text sketches at watch size; the mockups
+warning), 8 (the last-chance tag) and 9 (Mark reserved and the reservation
+reminder, §5) are built. The layouts below are the original text sketches at watch size; the mockups
 and their `NOTES.md` are the final word on text and layout.
 
 **Brief for Claude Design:**

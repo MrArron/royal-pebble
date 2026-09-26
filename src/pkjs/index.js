@@ -165,6 +165,7 @@ function sendSlice() {
     tmr_first_start: sl.tomorrow.firstStart,
     tmr_last: pack.cutText(sl.tomorrow.last, 39),
     tmr_last_kind: sl.tomorrow.lastKind,
+    tmr_to_reserve: Math.min(sl.tomorrow.toReserve, 255),
     event_count: sl.events.length,
     theme: sl.theme,
     show_featured: sl.showFeatured,
@@ -340,6 +341,7 @@ function pageState(ships) {
     me: settings.me || {},
     theme: settings.theme || 'light',
     reminderLead: settings.reminderLead || 15,
+    reserveAlertAt: slice.reserveAlertAt(settings),
     api: royal.API,
     appKey: royal.APPKEY
   };
@@ -423,6 +425,7 @@ function settingsClosed(text) {
   settings.me = r.me || settings.me || {};
   settings.theme = r.theme === 'dark' ? 'dark' : 'light';
   settings.reminderLead = [5, 15, 30].indexOf(r.reminderLead) !== -1 ? r.reminderLead : 15;
+  settings.reserveAlertAt = slice.reserveAlertAt(r);
   if (typeof r.showFeatured === 'boolean') {
     settings.showFeatured = r.showFeatured;
   }

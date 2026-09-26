@@ -4,7 +4,8 @@
 
 // Shown when an alert fires: the top bar says "Reminder" or "All aboard",
 // then "IN 15 MIN", what it's about and, for reminders, where it is
-// (docs/DESIGN_V1_1.md §2). Opened by a wakeup (app closed) it is the only
+// (docs/DESIGN_V1_1.md §2). The evening's "To reserve" alert lists tomorrow's
+// starred events that still need a reservation (§5). Opened by a wakeup (app closed) it is the only
 // screen the user asked for, so Back leaves the app; Select opens Home.
 
 static Window *s_window;
@@ -16,6 +17,21 @@ static bool s_from_wakeup;
 // app starts, and that plan no longer contains an alert that has just fired.
 static Alarm s_alarm;
 static int s_count;  // alerts sharing this minute
+
+// To reserve: the phone sends one alert per event (at most 5), all in the
+// same minute, and each carries how many there are in all (`extra`).
+#define MAX_TO_RESERVE 5
+typedef struct {
+  int32_t start;
+  char title[ALARM_TITLE_LEN];
+  char venue[ALARM_VENUE_LEN];
+} ReserveItem;
+static ReserveItem s_reserve[MAX_TO_RESERVE];
+static int s_reserve_count;
+
+static const char *top_label(uint8_t kind) {
+  return kind == ALARM_ALL_ABOARD ? "All aboard" : kind == ALARM_TO_RESERVE ? "To reserve" : "Reminder";
+}
 
 // "From" directions under a divider (the phone decided which): "From Royal
 // Theater:" over "↓1 deck · Fore → Mid", or "Same venue", or "Same area ·
@@ -47,8 +63,63 @@ static int draw_from(GContext *ctx, const Alarm *a, FromKind from, int y, int w)
   return y + 22;
 }
 
+// "TOMORROW", then each event as "7:00p Hairspray" over its venue, as many as
+// fit, then "+ 2 more".
+static void draw_to_reserve(GContext *ctx, GRect b) {
+  int w = b.size.w - 2 * PAD;
+  int y = 2;
+  graphics_context_set_text_color(ctx, g_theme->sea_accent);
+  graphics_draw_text(ctx, "TOMORROW", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  y += 24;
+  int total = s_alarm.extra > s_reserve_count ? s_alarm.extra : s_reserve_count;
+  int shown = 0;
+  for (int i = 0; i < s_reserve_count; i++) {
+    const ReserveItem *r = &s_reserve[i];
+    int height = 22 + (r->venue[0] ? 18 : 0);
+    // Keep room for the "+ N more" line when some are left out.
+    int reserve = i + 1 < total ? 22 : 0;
+    if (y + height + reserve > b.size.h) {
+      break;
+    }
+    char buf[ALARM_TITLE_LEN + 12];
+    if (r->start != NO_TIME) {
+      char time_buf[8];
+      fmt_clock(time_buf, sizeof(time_buf), r->start);
+      snprintf(buf, sizeof(buf), "%s %s", time_buf, r->title);
+    } else {
+      snprintf(buf, sizeof(buf), "%s", r->title);
+    }
+    graphics_context_set_text_color(ctx, g_theme->text);
+    graphics_draw_text(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 22;
+    if (r->venue[0]) {
+      graphics_context_set_text_color(ctx, g_theme->muted);
+      graphics_draw_text(ctx, r->venue, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                         GRect(PAD, y - 2, w, 18), GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+      y += 18;
+    }
+    shown++;
+  }
+  if (total > shown) {
+    char more[24];
+    snprintf(more, sizeof(more), "+ %d more", total - shown);
+    graphics_context_set_text_color(ctx, g_theme->port_accent);
+    graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+  }
+}
+
 static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
+  if (s_alarm.kind == ALARM_TO_RESERVE) {
+    draw_to_reserve(ctx, b);
+    return;
+  }
   Alarm *a = &s_alarm;
   int count = s_count;
   bool all_aboard = a->kind == ALARM_ALL_ABOARD;
@@ -163,8 +234,7 @@ static void window_load(Window *window) {
   window_set_background_color(window, g_theme->bg);
   bool port = data_ready() && data_day()->kind == DAY_PORT;
   s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), port ? BAND_PORT : BAND_SEA,
-                             BAND_LABEL,
-                             s_alarm.kind == ALARM_ALL_ABOARD ? "All aboard" : "Reminder");
+                             BAND_LABEL, top_label(s_alarm.kind));
   layer_add_child(root, s_top_bar);
   s_layer = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
   layer_set_update_proc(s_layer, update_proc);
@@ -204,6 +274,8 @@ void alert_window_refresh(void) {
 
 void alert_window_push(int32_t at, bool from_wakeup) {
   int count = 0;
+  int old_reserve_count = s_reserve_count;
+  s_reserve_count = 0;
   for (int i = 0; i < data_alarm_count(); i++) {
     Alarm *a = data_alarm(i);
     if (a->at == at) {
@@ -211,9 +283,16 @@ void alert_window_push(int32_t at, bool from_wakeup) {
         s_alarm = *a;
       }
       count++;
+      if (a->kind == ALARM_TO_RESERVE && s_reserve_count < MAX_TO_RESERVE) {
+        ReserveItem *r = &s_reserve[s_reserve_count++];
+        r->start = a->ref;
+        memcpy(r->title, a->title, sizeof(r->title));
+        memcpy(r->venue, a->venue, sizeof(r->venue));
+      }
     }
   }
   if (count == 0) {
+    s_reserve_count = old_reserve_count;  // keep what's on screen
     APP_LOG(APP_LOG_LEVEL_WARNING, "No alert found for %d", (int)at);
     return;
   }
@@ -222,7 +301,7 @@ void alert_window_push(int32_t at, bool from_wakeup) {
   if (s_window) {
     s_from_wakeup = s_from_wakeup || from_wakeup;
     top_bar_set(s_top_bar, data_ready() && data_day()->kind == DAY_PORT ? BAND_PORT : BAND_SEA,
-                BAND_LABEL, s_alarm.kind == ALARM_ALL_ABOARD ? "All aboard" : "Reminder");
+                BAND_LABEL, top_label(s_alarm.kind));
     layer_mark_dirty(s_layer);
     return;
   }

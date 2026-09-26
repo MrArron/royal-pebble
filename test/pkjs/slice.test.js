@@ -349,19 +349,22 @@ test('alert plan defaults and cap', function() {
   console.log('    24 alerts -> ' + p.length + ' chunks, ' + bytes + ' bytes');
 });
 
-test('Test alerts: reminder in 2 min and all-aboard in 3, even before the cruise', function() {
+test('Test alerts: reminder in 2 min, all-aboard in 3, to reserve in 4, even before the cruise', function() {
   var b = makeBundle([]);  // sails 2027-03-06
   var tapped = at('2027-02-22', 20, 10);
   var s = slice.buildSlice(b, {}, {}, at('2027-02-22', 20, 11), tapped);
   var nowC = slice.cruiseMinutes(slice.daysFromIso(b.sailDate), at('2027-02-22', 20, 10));
   assert.deepStrictEqual(s.alarms.map(function(a) { return [a.kind, a.at - nowC, a.ref - nowC, a.title]; }), [
     [slice.ALARM_REMINDER, 2, 17, 'Test reminder'],
-    [slice.ALARM_ALL_ABOARD, 3, 18, 'Test all-aboard']
+    [slice.ALARM_ALL_ABOARD, 3, 18, 'Test all-aboard'],
+    [slice.ALARM_TO_RESERVE, 4, 1440, 'Test show'],
+    [slice.ALARM_TO_RESERVE, 4, 1530, 'Test show 2']
   ]);
+  assert.ok(s.alarms.slice(2).every(function(a) { return a.extra === 2 && a.notReserved; }));
   // Anchored to the tap: a later launch doesn't move them, and they expire.
   var later = slice.buildSlice(b, {}, {}, at('2027-02-22', 20, 12), tapped).alarms;
-  assert.deepStrictEqual(later.map(function(a) { return a.at - nowC; }), [3]);
-  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-02-22', 20, 14), tapped).alarms.length, 0);
+  assert.deepStrictEqual(later.map(function(a) { return a.at - nowC; }), [3, 4, 4]);
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-02-22', 20, 15), tapped).alarms.length, 0);
 });
 
 test('packed alarm layout', function() {
@@ -1195,6 +1198,90 @@ test('tomorrow card: counts, first starred, last chance before only show', funct
                          [slice.DAY_NONE, '', 0, slice.NO_TIME, 0]);
   // The ship name comes along for the countdown.
   assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-02-22', 12, 0)).shipName, 'Harmony of the Seas');
+});
+
+test('to-reserve alerts: the evening before, starred and not reserved only', function() {
+  var b = makeBundle([
+    ['Hairspray', 0, 0, '2027-03-08', '19:00', 90, 1, 1],
+    ['Ice Show', 0, 0, '2027-03-08', '14:00', 60, 1, 1],
+    ['Aqua Show', 1, 0, '2027-03-07', '01:30', 60, 1, 1],   // after midnight: the 7th's night, today's
+    ['Comedy', 1, 0, '2027-03-08', '00:30', 45, 0, 1],      // after midnight on the 8th's night
+    ['Magic', 0, 0, '2027-03-08', '16:00', 60, 1, 1],       // not starred
+    ['Laser Tag', 1, 0, '2027-03-08', '10:00', 30, 0, 0],   // starred, no reservation needed
+    ['Late Show', 0, 0, '2027-03-09', '21:00', 60, 1, 1]    // debark day: listed on the 8th's evening
+  ]);
+  var stars = {};
+  [['Hairspray', '2027-03-08', '19:00', 'Studio B'], ['Ice Show', '2027-03-08', '14:00', 'Studio B'],
+   ['Aqua Show', '2027-03-07', '01:30', 'Boardwalk'], ['Comedy', '2027-03-08', '00:30', 'Boardwalk'],
+   ['Laser Tag', '2027-03-08', '10:00', 'Boardwalk'], ['Late Show', '2027-03-09', '21:00', 'Studio B']
+  ].forEach(function(k) { stars[slice.starKey(k[0], k[1], k[2], k[3])] = true; });
+  // Ice Show is already reserved.
+  stars[slice.reservedKey(slice.starKey('Ice Show', '2027-03-08', '14:00', 'Studio B'))] = true;
+
+  function toReserve(settings, now) {
+    return slice.buildAlarms(b, settings, stars, now).filter(function(a) {
+      return a.kind === slice.ALARM_TO_RESERVE;
+    }).map(function(a) { return [a.at, a.ref, a.title, a.extra, a.venue, a.notReserved]; });
+  }
+  var day2 = 1440, day3 = 2 * 1440;
+  // Day 2 (sea day) at noon: 20:00 tonight lists the 8th's Hairspray and the
+  // 00:30 Comedy; 20:00 tomorrow lists the 9th's Late Show.
+  assert.deepStrictEqual(toReserve({}, at('2027-03-07', 12, 0)), [
+    [day2 + 1200, day3 + 1140, 'Hairspray', 2, 'Studio B', true],
+    [day2 + 1200, day3 + 1440 + 30, 'Comedy', 2, 'Boardwalk', true],
+    [day3 + 1200, 3 * 1440 + 1260, 'Late Show', 1, 'Studio B', true]
+  ]);
+  // The Me tab's time; after it has passed tonight's is gone.
+  var nine = toReserve({reserveAlertAt: 21 * 60}, at('2027-03-07', 12, 0));
+  assert.deepStrictEqual(nine.map(function(a) { return a[0]; }), [day2 + 1260, day2 + 1260, day3 + 1260]);
+  assert.deepStrictEqual(toReserve({}, at('2027-03-07', 20, 0)).map(function(a) { return a[2]; }), ['Late Show']);
+  // Marking reserved removes it; unstarring too.
+  stars[slice.reservedKey(slice.starKey('Hairspray', '2027-03-08', '19:00', 'Studio B'))] = true;
+  delete stars[slice.starKey('Comedy', '2027-03-08', '00:30', 'Boardwalk')];
+  assert.deepStrictEqual(toReserve({}, at('2027-03-07', 12, 0)).map(function(a) { return a[2]; }), ['Late Show']);
+});
+
+test('to-reserve alerts: at most 5 an evening, with the full count', function() {
+  var events = [];
+  var stars = {};
+  for (var i = 0; i < 7; i++) {
+    events.push(['Show ' + i, 0, 0, '2027-03-08', (12 + i) + ':00', 60, 1, 1]);
+    stars[slice.starKey('Show ' + i, '2027-03-08', (12 + i) + ':00', 'Studio B')] = true;
+  }
+  var alarms = slice.buildAlarms(makeBundle(events), {}, stars, at('2027-03-07', 12, 0)).filter(function(a) {
+    return a.kind === slice.ALARM_TO_RESERVE;
+  });
+  assert.deepStrictEqual(alarms.map(function(a) { return a.title; }),
+                         ['Show 0', 'Show 1', 'Show 2', 'Show 3', 'Show 4']);
+  assert.ok(alarms.every(function(a) { return a.extra === 7; }));
+  // They pack like other alerts.
+  assert.strictEqual(pack.packAlarms(alarms, 1500).length, 1);
+});
+
+test('reserve alert time: a Me tab choice, else 20:00', function() {
+  assert.strictEqual(slice.reserveAlertAt({}), 1200);
+  assert.strictEqual(slice.reserveAlertAt(null), 1200);
+  assert.strictEqual(slice.reserveAlertAt({reserveAlertAt: 1080}), 1080);
+  assert.strictEqual(slice.reserveAlertAt({reserveAlertAt: 1320}), 1320);
+  assert.strictEqual(slice.reserveAlertAt({reserveAlertAt: 1230}), 1200);
+  assert.strictEqual(slice.reserveAlertAt({reserveAlertAt: '1080'}), 1200);
+});
+
+test('tomorrow card: to reserve counts starred events not marked reserved', function() {
+  var b = makeBundle([
+    ['Hairspray', 0, 0, '2027-03-08', '19:00', 90, 1, 1],
+    ['Ice Show', 0, 0, '2027-03-08', '14:00', 60, 1, 1],
+    ['Magic', 0, 0, '2027-03-08', '16:00', 60, 1, 1]
+  ]);
+  var stars = {};
+  stars[slice.starKey('Hairspray', '2027-03-08', '19:00', 'Studio B')] = true;
+  stars[slice.starKey('Ice Show', '2027-03-08', '14:00', 'Studio B')] = true;
+  var now = at('2027-03-07', 21, 0);
+  assert.strictEqual(slice.buildSlice(b, {}, stars, now).tomorrow.toReserve, 2);
+  stars[slice.reservedKey(slice.starKey('Ice Show', '2027-03-08', '14:00', 'Studio B'))] = true;
+  assert.strictEqual(slice.buildSlice(b, {}, stars, now).tomorrow.toReserve, 1);
+  assert.strictEqual(slice.buildSlice(b, {}, {}, now).tomorrow.toReserve, 0);
+  assert.strictEqual(slice.buildSlice(b, {}, stars, at('2027-03-09', 21, 0)).tomorrow.toReserve, 0);
 });
 
 test('demo: tomorrow has a starred class and a last chance or only show', function() {

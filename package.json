@@ -74,7 +74,8 @@
       "tmr_last",
       "tmr_last_kind",
       "sail_port",
-      "cruise_starred"
+      "cruise_starred",
+      "tmr_to_reserve"
     ],
     "resources": {
       "media": []
