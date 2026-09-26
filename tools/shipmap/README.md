@@ -9,6 +9,7 @@ turns it into short strings.
 | `src/pkjs/data/cabins-HM.js` | 2,855 cabins, stored as runs | `extract_cabins.py` |
 | `src/pkjs/data/places-HM.js` | venue spots, elevator banks, stairwells, restroom symbols | `extract_places.py` + `build_places.js` |
 | `src/pkjs/data/walkways-HM.js` | walkable corridors per deck, lobby and stair nodes, restrooms | `build_walkways.py` |
+| `src/pkjs/data/conflicts-HM.js` | open source conflicts, for the settings page's Map check card | `build_conflicts.js` |
 
 Harmony uses deck plans profile 2396 (sailings from May 21, 2026), length overall
 362.1 m. Don't edit the generated files by hand: change the inputs and rebuild.
@@ -17,7 +18,7 @@ Harmony uses deck plans profile 2396 (sailings from May 21, 2026), length overal
 
 | Code | Ship | Deck plans profile | Status |
 |---|---|---|---|
-| `HM` | Harmony of the Seas | 2396 (sailings from May 21, 2026) | In the app; port/starboard to confirm on board |
+| `HM` | Harmony of the Seas | 2396 (sailings from May 21, 2026) | In the app; port/starboard and the open conflicts to confirm on board |
 
 When a ship is added here, add it to every other list of GPS ships too: the
 root README (Ships with Ship GPS), the settings page's Help section (`NAMES`
@@ -74,8 +75,11 @@ Then run `node test/pkjs/shipmap-data.test.js` and `node test/pkjs/cabins.test.j
 ## Things to know
 
 - **Port and starboard** are read from the plans as top views and have not been
-  checked on board. If they're wrong, flip the sign in `X()` in the extractors
-  and rebuild (the app will also get test-cruise flip settings).
+  checked on board. Until they are, routes say "Cross the ship" and never name a
+  side. On the first sailing with a map, the settings page's Help > Port and
+  starboard card can flip the whole ship or single decks and mark the sides
+  checked. Afterwards, fix the map itself: flip the sign in `X()` in the
+  extractors and rebuild.
 - **Uncertain links.** 58 walkway edges are marked `'?'`: doors and walkways the
   plans don't show clearly. Each has a reason in `walkways-HM.paths.json`. Routes
   should use them only when nothing certain connects, and say so.
