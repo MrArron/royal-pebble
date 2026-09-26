@@ -132,6 +132,7 @@ static void handle_begin(DictionaryIterator *iter, uint16_t slice_id) {
   s_meta.dark_theme = find_int(iter, MESSAGE_KEY_theme) != 0;
   s_meta.show_featured = find_int(iter, MESSAGE_KEY_show_featured) != 0;
   s_meta.is_demo = find_int(iter, MESSAGE_KEY_is_demo) != 0;
+  s_meta.always_hints = find_int(iter, MESSAGE_KEY_button_hints) != 0;
   s_meta.from_storage = false;
   s_meta.reminder_lead = (uint8_t)find_int(iter, MESSAGE_KEY_reminder_lead);
 

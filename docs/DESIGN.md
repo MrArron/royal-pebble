@@ -53,7 +53,8 @@ small `SHIP TIME` label. Band color by context, same in both themes:
   with `Route ›` (sea accent) at its right end → divider → next two items.
   Select opens the route to that event (`DESIGN_V1_1.md` §9.5); the hint shows
   only when the venue is on board. Up = My info, Down = Today, Hold Up = next
-  demo variant (demo data only).
+  demo variant (demo data only). The first 3 opens label the buttons for
+  about 3 s (`DESIGN_V1_1.md` §9.5).
 - **Today list:** rows of time column + title/venue. Same-start-time events are
   grouped: time only on the first row, dividers only between groups. In-progress
   event shows `NOW` and `ends 11:45`. Starred rows show ★. The cursor highlight is
@@ -117,4 +118,4 @@ both clocks, and "Change itinerary" for skipped/added ports and changed times),
 **Filters** (featured-events switch, category switches expanding to subcategory
 chips, Shop off by default), **Events** (search, day chips, My entries card with
 Add, star buttons), **Me** (stateroom, deck, stairs, walking distance units,
-muster station, theme, reminder lead time).
+muster station, theme, reminder lead time, Always show button hints switch).

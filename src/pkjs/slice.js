@@ -914,7 +914,7 @@ function cutoffWhen(sailDate, cutoff, now) {
   return {date: isoFromDays(sailDays + day), time: pad2(Math.floor(min / 60)) + ':' + pad2(min % 60)};
 }
 
-// settings: {theme, showFeatured, hiddenCats,
+// settings: {theme, showFeatured, alwaysHints, hiddenCats,
 //            days: {date: {offset, buffer, allAboard, edit: {type, port, arrive, depart}}},
 //            personal: [...], me: {stateroom, deck, stairs, muster, clockNote},
 //            reminderLead, reserveAlertAt (minutes after midnight),
@@ -944,6 +944,7 @@ function buildSlice(bundle, settings, stars, now, testAt) {
     reminderLead: [5, 15, 30].indexOf(settings.reminderLead) !== -1 ? settings.reminderLead : 15,
     theme: settings.theme === 'dark' ? 1 : 0,
     showFeatured: settings.showFeatured === false ? 0 : 1,
+    buttonHints: settings.alwaysHints === true ? 1 : 0,
     info: {
       // Guarantee bookings list "GTY" until a cabin is assigned.
       stateroom: me.stateroom || (/[0-9]/.test(mine.stateroom || '') ? mine.stateroom : '-'),

@@ -95,6 +95,14 @@ test('countdown: sail port and stars across the whole cruise', function() {
   assert.strictEqual(slice.buildSlice(b, {}, {}, at('2026-12-18', 9, 0)).sailPort, '');
 });
 
+test('button hints: off unless Always show is on', function() {
+  var b = makeBundle([]);
+  var now = at('2027-03-08', 9, 0);
+  assert.strictEqual(slice.buildSlice(b, {}, {}, now).buttonHints, 0);
+  assert.strictEqual(slice.buildSlice(b, {alwaysHints: false}, {}, now).buttonHints, 0);
+  assert.strictEqual(slice.buildSlice(b, {alwaysHints: true}, {}, now).buttonHints, 1);
+});
+
 test('stateroom: a guarantee booking shows as not assigned', function() {
   var b = makeBundle([]);
   var now = at('2027-03-08', 10, 0);

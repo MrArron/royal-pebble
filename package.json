@@ -81,7 +81,8 @@
       "route_rest",
       "route",
       "route_start",
-      "route_venue"
+      "route_venue",
+      "button_hints"
     ],
     "resources": {
       "media": []

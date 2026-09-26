@@ -387,7 +387,7 @@ static void draw_message(GContext *ctx, int width, const char *title, const char
                      GTextAlignmentLeft, NULL);
 }
 
-static void body_update_proc(Layer *layer, GContext *ctx) {
+static void draw_body(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   const Day *day = data_day();
   if (!data_ready()) {
@@ -430,6 +430,142 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   draw_next_items(ctx, y + 4, b.size.w, b.size.h, now, skip, countdown);
 }
 
+// ---- Button hints (docs/DESIGN_V1_1.md §9.5) --------------------------------
+
+// Labels beside each button over a faded Home, for about 3 s on the first
+// HINT_OPENS opens by the user (every open with the phone's Always show
+// setting). Any press dismisses them. Raise HINTS_VERSION when an update adds a
+// button to Home, so they show again.
+#define KEY_HINTS 7
+#define HINTS_VERSION 1  // 1: Select routes to the next event
+#define HINT_OPENS 3
+#define HINT_MS 3000
+
+typedef struct {
+  uint8_t version;
+  uint8_t opens;  // opens that showed the hints since `version`
+} HintState;
+
+static Layer *s_hints;
+static AppTimer *s_hint_timer;
+static bool s_hints_armed;
+
+static bool hints_shown(void) { return s_hints && !layer_get_hidden(s_hints); }
+
+static void body_update_proc(Layer *layer, GContext *ctx) {
+  const Theme *theme = g_theme;
+  if (hints_shown()) {
+    g_theme = theme_faded();
+  }
+  draw_body(layer, ctx);
+  g_theme = theme;
+}
+
+// A label with a pointer toward its button: Back on the left, the others on
+// the right. `cy` is the button's height in window coordinates.
+static void draw_hint_label(GContext *ctx, const char *text, GColor fill, bool left, int cy,
+                            int screen_w) {
+  GFont font = fonts_get_system_font(left ? FONT_KEY_GOTHIC_14_BOLD : FONT_KEY_GOTHIC_18_BOLD);
+  int h = left ? 18 : 22;
+  int tip = 7;
+  int text_w = graphics_text_layout_get_content_size(text, font, GRect(0, 0, screen_w, h),
+                                                     GTextOverflowModeFill, GTextAlignmentLeft).w;
+  int box_w = text_w + 12;
+  GRect box = GRect(left ? tip : screen_w - tip - box_w, cy - h / 2, box_w, h);
+  graphics_context_set_fill_color(ctx, fill);
+  graphics_fill_rect(ctx, box, 0, GCornerNone);
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_rect(ctx, box);
+  graphics_context_set_stroke_color(ctx, fill);
+  for (int i = 0; i < tip; i++) {
+    int x = left ? tip - 1 - i : screen_w - tip + i;
+    graphics_draw_line(ctx, GPoint(x, cy - (tip - i)), GPoint(x, cy + (tip - i)));
+  }
+  // Outlined like the box, so a black pointer shows on the dark theme.
+  int base = left ? tip - 1 : screen_w - tip;
+  int point = left ? 0 : screen_w - 1;
+  graphics_context_set_stroke_color(ctx, GColorWhite);
+  graphics_draw_line(ctx, GPoint(base, cy - tip), GPoint(point, cy));
+  graphics_draw_line(ctx, GPoint(base, cy + tip), GPoint(point, cy));
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_draw_text(ctx, text, font, GRect(box.origin.x + 6, box.origin.y + (left ? -2 : -3), text_w + 2, h),
+                     GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+}
+
+static void hints_update_proc(Layer *layer, GContext *ctx) {
+  int w = layer_get_bounds(layer).size.w;
+  draw_hint_label(ctx, "My info", GColorBlack, false, 46, w);
+  // Select does nothing without a NEXT card on board, so no label then.
+  if (route_target(now_cruise()) >= 0) {
+    draw_hint_label(ctx, "Route to next", GColorCobaltBlue, false, 114, w);
+  }
+  draw_hint_label(ctx, "Today", GColorBlack, false, 187, w);
+  draw_hint_label(ctx, "Exit", GColorDarkGray, true, 46, w);
+}
+
+static void click_config(void *context);
+
+static void hints_hide(void) {
+  if (s_hint_timer) {
+    app_timer_cancel(s_hint_timer);
+    s_hint_timer = NULL;
+  }
+  if (hints_shown()) {
+    layer_set_hidden(s_hints, true);
+    layer_mark_dirty(s_body);
+    window_set_click_config_provider(s_window, click_config);
+  }
+}
+
+static void hint_timer_fired(void *data) {
+  s_hint_timer = NULL;
+  hints_hide();
+}
+
+// A press only dismisses the hints, so it can't open something by surprise.
+// Back isn't taken: it exits as its label says, and once a window subscribes
+// Back the firmware keeps it from exiting after the normal config returns.
+static void hint_click(ClickRecognizerRef recognizer, void *context) { hints_hide(); }
+
+static void hints_click_config(void *context) {
+  window_single_click_subscribe(BUTTON_ID_UP, hint_click);
+  window_single_click_subscribe(BUTTON_ID_SELECT, hint_click);
+  window_single_click_subscribe(BUTTON_ID_DOWN, hint_click);
+}
+
+// Shows the hints once per armed open, when Home is on top with its data and
+// they're due. The watch counts the opens itself.
+static void hints_maybe_show(void) {
+  if (!s_hints_armed || !s_hints || !data_ready() || !home_window_is_top()) {
+    return;
+  }
+  s_hints_armed = false;
+  HintState state = {0, 0};
+  if (persist_get_size(KEY_HINTS) == (int)sizeof(state)) {
+    persist_read_data(KEY_HINTS, &state, sizeof(state));
+  }
+  if (state.version != HINTS_VERSION) {
+    state.version = HINTS_VERSION;
+    state.opens = 0;
+  }
+  if (state.opens >= HINT_OPENS && !data_meta()->always_hints) {
+    return;
+  }
+  if (state.opens < 255) {
+    state.opens++;
+  }
+  persist_write_data(KEY_HINTS, &state, sizeof(state));
+  layer_set_hidden(s_hints, false);
+  layer_mark_dirty(s_body);
+  window_set_click_config_provider(s_window, hints_click_config);
+  s_hint_timer = app_timer_register(HINT_MS, hint_timer_fired, NULL);
+}
+
+void home_window_arm_hints(void) {
+  s_hints_armed = true;
+  hints_maybe_show();
+}
+
 static void apply_style(void) {
   const Day *day = data_day();
   window_set_background_color(s_window, g_theme->bg);
@@ -468,10 +604,20 @@ static void window_load(Window *window) {
   s_body = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
   layer_set_update_proc(s_body, body_update_proc);
   layer_add_child(root, s_body);
+  s_hints = layer_create(b);
+  layer_set_update_proc(s_hints, hints_update_proc);
+  layer_set_hidden(s_hints, true);
+  layer_add_child(root, s_hints);
   apply_style();
 }
 
+static void window_appear(Window *window) { hints_maybe_show(); }
+static void window_disappear(Window *window) { hints_hide(); }
+
 static void window_unload(Window *window) {
+  hints_hide();
+  layer_destroy(s_hints);
+  s_hints = NULL;
   layer_destroy(s_body);
   top_bar_destroy(s_top_bar);
   s_body = NULL;
@@ -482,6 +628,10 @@ void home_window_refresh(void) {
   if (s_top_bar) {
     apply_style();
     layer_mark_dirty(s_body);
+    if (hints_shown()) {
+      layer_mark_dirty(s_hints);
+    }
+    hints_maybe_show();
   }
 }
 
@@ -490,6 +640,8 @@ void home_window_push(void) {
   window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
+    .appear = window_appear,
+    .disappear = window_disappear,
     .unload = window_unload,
   });
   window_stack_push(s_window, true);

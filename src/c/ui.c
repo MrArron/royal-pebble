@@ -25,10 +25,36 @@ static const Theme DARK = {
   .now_label = {GColorMediumAquamarineARGB8},  // #55FFAA
 };
 
+// Everything in one quiet gray, for a screen behind Home's button hints (§9.5).
+static const Theme FADED_LIGHT = {
+  .bg = {GColorWhiteARGB8},
+  .text = {GColorLightGrayARGB8},
+  .muted = {GColorLightGrayARGB8},
+  .divider = {GColorLightGrayARGB8},
+  .port_accent = {GColorLightGrayARGB8},
+  .sea_accent = {GColorLightGrayARGB8},
+  .cursor_bg = {GColorLightGrayARGB8},
+  .cursor_text = {GColorWhiteARGB8},
+  .now_label = {GColorLightGrayARGB8},
+};
+
+static const Theme FADED_DARK = {
+  .bg = {GColorBlackARGB8},
+  .text = {GColorDarkGrayARGB8},
+  .muted = {GColorDarkGrayARGB8},
+  .divider = {GColorDarkGrayARGB8},
+  .port_accent = {GColorDarkGrayARGB8},
+  .sea_accent = {GColorDarkGrayARGB8},
+  .cursor_bg = {GColorDarkGrayARGB8},
+  .cursor_text = {GColorBlackARGB8},
+  .now_label = {GColorDarkGrayARGB8},
+};
+
 const Theme *g_theme = &LIGHT;
 
 void theme_set_dark(bool dark) { g_theme = dark ? &DARK : &LIGHT; }
-bool theme_is_dark(void) { return g_theme == &DARK; }
+bool theme_is_dark(void) { return g_theme == &DARK || g_theme == &FADED_DARK; }
+const Theme *theme_faded(void) { return theme_is_dark() ? &FADED_DARK : &FADED_LIGHT; }
 
 int now_minutes(void) {
   time_t now = time(NULL);

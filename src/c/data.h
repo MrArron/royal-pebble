@@ -221,6 +221,7 @@ typedef struct {
   bool dark_theme;
   bool show_featured;
   bool is_demo;
+  bool always_hints;       // Home's button hints at every open (§9.5)
   bool from_storage;       // loaded from the watch, not fresh from the phone
   uint8_t reminder_lead;   // minutes before starred events
   uint8_t cruise_starred;  // starred events and personal entries in the whole cruise

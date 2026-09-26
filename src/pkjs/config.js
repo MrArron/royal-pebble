@@ -5,7 +5,7 @@
 // The page returns its result through `return_to` (the emulator tooling adds
 // it) or the phone app's pebblejs://close# URL:
 //   {action: 'save' | 'download' | 'test', me, theme, reminderLead, reserveAlertAt,
-//    days: {date: {offset, buffer, allAboard, edit} | null}, showFeatured, hiddenCats,
+//    days: {date: {offset, buffer, allAboard, edit} | null}, showFeatured, alwaysHints, hiddenCats,
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
 //    each was made), personal: [{title, venue, date, time, minutes}],
 //    download: {ship: {code, name}, sailDate}, bundle, ships,
@@ -302,6 +302,10 @@ var BODY = [
   '<p class="help">Saves and closes this page. About 2 minutes later your watch shows a test reminder, ',
   'then a test all-aboard alert a minute after that, then a test reminder to reserve. Close the app on the watch first to check that ',
   'alerts open it by themselves.</p><p class="help" id="watchStorage"></p></div>',
+  '<div class="card switch-row"><span class="t"><b>Always show button hints</b>',
+  '<span class="muted">Label the watch\'s buttons on Home every time Royal Pebble opens, not just the ',
+  'first 3 times</span></span>',
+  '<button class="switch" role="switch" id="hints" aria-label="Always show button hints"></button></div>',
   '</section>',
   '<section class="screen" id="venues"><div class="vtools">',
   '<label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/>',
@@ -1040,6 +1044,15 @@ function pageMain(S, V) {
   });
   function featuredOn() {
     return $('featured').getAttribute('aria-checked') === 'true';
+  }
+
+  // ---- Me > Always show button hints (docs/DESIGN_V1_1.md §9.5).
+  $('hints').setAttribute('aria-checked', String(S.alwaysHints === true));
+  $('hints').addEventListener('click', function() {
+    $('hints').setAttribute('aria-checked', String(!hintsOn()));
+  });
+  function hintsOn() {
+    return $('hints').getAttribute('aria-checked') === 'true';
   }
 
   function subKey(cat, sub) {
@@ -2136,6 +2149,7 @@ function pageMain(S, V) {
       r.ships = fetchedShips;
     }
     r.showFeatured = featuredOn();
+    r.alwaysHints = hintsOn();
     r.hiddenCats = hidden.slice();
     if (Object.keys(starChanges).length) {
       r.stars = starChanges;
