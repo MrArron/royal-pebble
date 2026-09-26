@@ -10,9 +10,11 @@
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
 //    each was made), personal: [{title, venue, date, time, minutes}],
 //    download: {ship: {code, name}, sailDate}, bundle, ships,
-//    venues: {ship, overrides} (all venue edits for that ship, only when changed)}
+//    venues: {ship, overrides} (all venue edits for that ship, only when changed),
+//    usage: {on, label, clear} (Me > Usage log)}
 
 var venues = require('./venues');
+var log = require('./log');
 
 var CSS = [
   ':root{--primary:#006A6A;--on-primary:#FFFFFF;--primary-container:#9CF1F0;--on-primary-container:#002020;',
@@ -384,6 +386,23 @@ var BODY = [
   '<p class="help">Saves and closes this page. About 2 minutes later your watch shows a test reminder, ',
   'then a test all-aboard alert a minute after that, then a test reminder to reserve. Close the app on the watch first to check that ',
   'alerts open it by themselves.</p><p class="help" id="watchStorage"></p></div>',
+  '<div class="card" id="logCard"><h2>Usage log</h2>',
+  '<p class="muted">Records how Royal Pebble is used on this phone and watch, to improve the app after ',
+  'the sailing. It stays on this phone until you copy it.</p>',
+  '<div class="switch-row" style="margin-top:12px"><span class="t"><b>Record usage</b>',
+  '<span class="muted">Stars, routes, syncs, settings and errors, with the time</span></span>',
+  '<button class="switch" role="switch" id="logOn" aria-label="Record usage"></button></div>',
+  '<label for="logLabel">Device label</label><input id="logLabel" maxlength="40" placeholder="Whose watch this is">',
+  '<p class="help">Starts every copy of the log, so two people\'s logs don\'t get mixed up.</p>',
+  '<div class="stats"><div class="stat"><b id="logCount"></b><span>entries</span></div>',
+  '<div class="stat"><b id="logSize"></b><span id="logCap"></span></div>',
+  '<div class="stat"><b id="logSince"></b><span>since</span></div></div>',
+  '<p class="help" id="logTrim" hidden></p>',
+  '<div id="logParts"></div><p class="help ok" id="logCopied" role="status"></p>',
+  '<p class="help">Each part fits the phone\'s clipboard; paste them into a note or an email in order. ',
+  'To paste, long-press and choose Paste: the keyboard\'s clipboard suggestion cuts long text short.</p>',
+  '<div class="actions"><button class="textbtn" id="logClear">Clear log</button></div>',
+  '<p class="help" id="logClearNote" hidden></p></div>',
   '<button class="card linkcard" id="openHelp"><span class="vicon">' + HELP_SVG + '</span><span class="t"><h2>Help</h2>',
   '<span class="muted">Watch buttons, how the Ship GPS works, button hints</span></span>' + NEXT_SVG + '</button>',
   '</section>',
@@ -431,6 +450,33 @@ function findClashes(items) {
       var o = items[j];
       return j !== i && o.at !== null && x.at < end(o) && o.at < end(x);
     }).sort(function(a, b) { return items[a].at - items[b].at; });
+  });
+}
+
+// The usage log split into parts the phone's clipboard can hold (at most `max`
+// characters each), whole lines only. Each part starts with the log header and
+// "Part k of N". Also runs in the page.
+function splitLog(header, text, max) {
+  var NL = String.fromCharCode(10);
+  var lines = text ? text.split(NL) : [];
+  var room = max - header.length - 24;
+  var groups = [];
+  var cur = [];
+  var len = 0;
+  lines.forEach(function(l) {
+    if (cur.length && len + l.length + 1 > room) {
+      groups.push(cur);
+      cur = [];
+      len = 0;
+    }
+    cur.push(l);
+    len += l.length + 1;
+  });
+  if (cur.length) {
+    groups.push(cur);
+  }
+  return groups.map(function(g, i) {
+    return header + NL + 'Part ' + (i + 1) + ' of ' + groups.length + NL + NL + g.join(NL) + NL;
   });
 }
 
@@ -2252,6 +2298,69 @@ function pageMain(S, V) {
   var getReserveAt = segment('reserveAt', S.reserveAlertAt || 1200);
   var getUnits = segment('units', S.units || 'm');
 
+  // ---- Me > Usage log (docs/PROJECT_BRIEF.md, "Usage log"). Copied in parts,
+  // since the Pebble app's WebView can't save or share a file.
+  var U = S.usage || {on: true, label: '', count: 0, chars: 0, dropped: 0, since: null, header: '', shown: 0, text: ''};
+  var logParts = splitLog(U.header, U.text, S.logPartChars);
+  var logClear = false;
+  makeSwitch('logOn', U.on !== false);
+  $('logLabel').value = U.label || '';
+  $('logCount').textContent = String(U.count);
+  $('logSize').textContent = kb(U.chars);
+  $('logCap').textContent = 'of ' + kb(S.logCapChars);
+  $('logSince').textContent = U.since ?
+    new Date(U.since).toLocaleDateString(undefined, {day: 'numeric', month: 'short'}) : '-';
+  var trimNotes = [];
+  if (U.shown < U.count) {
+    trimNotes.push('This page holds the newest ' + U.shown + ' of ' + U.count + ' entries (it has a size limit), ' +
+                   'so the copy starts there. Nothing is deleted.');
+  }
+  if (U.dropped) {
+    trimNotes.push(U.dropped + ' oldest entries were dropped when the log was full.');
+  }
+  $('logTrim').textContent = trimNotes.join(' ');
+  $('logTrim').hidden = !trimNotes.length;
+  $('logParts').innerHTML = logParts.length ? logParts.map(function(p, i) {
+    return '<button class="pill tonal wide" data-part="' + i + '">' +
+      (logParts.length > 1 ? 'Copy part ' + (i + 1) + ' of ' + logParts.length : 'Copy log') + '</button>';
+  }).join('') : '<p class="muted" style="margin-top:12px">Nothing logged yet.</p>';
+  function copyText(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    var ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (e) {
+      ok = false;
+    }
+    document.body.removeChild(ta);
+    return ok;
+  }
+  Array.prototype.forEach.call($('logParts').querySelectorAll('[data-part]'), function(b) {
+    b.addEventListener('click', function() {
+      var i = +b.getAttribute('data-part');
+      var ok = copyText(logParts[i]);
+      var what = logParts.length > 1 ? 'Part ' + (i + 1) + ' of ' + logParts.length : 'The log';
+      $('logCopied').className = ok ? 'help ok' : 'help error';
+      $('logCopied').textContent = ok ? what + ' copied (' + kb(logParts[i].length) + '). Paste it' +
+        (i + 1 < logParts.length ? ', then copy the next part.' : '.') : 'Copying didn\'t work. Try again.';
+    });
+  });
+  $('logClear').addEventListener('click', function() {
+    logClear = !logClear;
+    $('logClear').textContent = logClear ? 'Keep log' : 'Clear log';
+    $('logClearNote').textContent = 'The log (' + U.count + ' entries) is cleared when you tap Save. ' +
+      'Copy it first if you need it.';
+    $('logClearNote').hidden = !logClear;
+  });
+
   // ---- Save / Download
   function result(action) {
     var r = {
@@ -2270,6 +2379,7 @@ function pageMain(S, V) {
     }
     r.showFeatured = featuredOn();
     r.alwaysHints = hintsOn();
+    r.usage = {on: switchOn('logOn'), label: $('logLabel').value.trim(), clear: logClear};
     if (SD) {
       r.shipSides = {ship: SD.ship, all: switchOn('flipAll'), decks: flipDecks.slice(), confirmed: switchOn('sidesOk')};
     }
@@ -2355,6 +2465,8 @@ function buildPage(state, now) {
   // List sailings from two weeks ago on, so a sailing in progress still shows.
   var oldest = new Date(now.getTime() - 14 * 24 * 3600 * 1000);
   state.oldestSailDate = oldest.getFullYear() + '-' + pad2(oldest.getMonth() + 1) + '-' + pad2(oldest.getDate());
+  state.logCapChars = log.CAP_CHARS;
+  state.logPartChars = log.PART_CHARS;
   // Escape '<' and the JS line separators U+2028/U+2029 so the state can't end the
   // script tag or break the script.
   var json = JSON.stringify(state).replace(/</g, '\\u003c')
@@ -2363,7 +2475,7 @@ function buildPage(state, now) {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<title>Royal Pebble</title><style>' + CSS + '</style></head><body>' + BODY +
-    '<script>' + findClashes.toString() + ';(' + pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')());</script>' +
+    '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';(' + pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')());</script>' +
     '</body></html>';
 }
 
@@ -2371,4 +2483,4 @@ function pageUrl(state, now) {
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(buildPage(state, now));
 }
 
-module.exports = {buildPage: buildPage, pageUrl: pageUrl, findClashes: findClashes};
+module.exports = {buildPage: buildPage, pageUrl: pageUrl, findClashes: findClashes, splitLog: splitLog};

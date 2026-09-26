@@ -129,6 +129,45 @@ test('settings page builds, embeds state safely and its script parses', function
   console.log('    page ' + Math.round(html.length / 1024) + ' KB, data URL ' + Math.round(url.length / 1024) + ' KB');
 });
 
+test('usage log splits into clipboard-sized parts of whole lines, each with the header', function() {
+  var lines = [];
+  for (var i = 0; i < 50; i++) {
+    lines.push('2027-03-07 14:03:12  D2 14:03  pad  entry ' + i + ' ' + new Array(40).join('x'));
+  }
+  var parts = config.splitLog('HEAD', lines.join('\n'), 1000);
+  assert.ok(parts.length > 3);
+  var back = [];
+  parts.forEach(function(p, k) {
+    assert.ok(p.length <= 1000, 'part ' + k + ' is ' + p.length);
+    var head = 'HEAD\nPart ' + (k + 1) + ' of ' + parts.length + '\n\n';
+    assert.strictEqual(p.indexOf(head), 0);
+    back = back.concat(p.slice(head.length).replace(/\n$/, '').split('\n'));
+  });
+  assert.deepStrictEqual(back, lines, 'every line once, in order');
+  assert.deepStrictEqual(config.splitLog('HEAD', '', 1000), []);
+  assert.deepStrictEqual(config.splitLog('HEAD', 'one', 1000), ['HEAD\nPart 1 of 1\n\none\n']);
+});
+
+test('settings page has the Usage log card on Me, returning on, label and clear', function() {
+  var log = require('../../src/pkjs/log');
+  var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
+    api: royal.API, appKey: royal.APPKEY,
+    usage: {on: true, label: 'Test watch', count: 2, chars: 100, dropped: 0, since: 1, header: 'H', shown: 2,
+            text: 'a </script> b\nc'}};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  var me = html.slice(html.indexOf('<section class="screen" id="me">'));
+  me = me.slice(0, me.indexOf('</section>'));
+  ['logCard', 'logOn', 'logLabel', 'logParts', 'logClear'].forEach(function(id) {
+    assert.ok(me.indexOf('id="' + id + '"') !== -1, id + ' on Me');
+  });
+  assert.ok(me.indexOf('long-press and choose Paste') !== -1, 'paste tip');
+  assert.strictEqual(html.indexOf('a </script> b'), -1, 'log text cannot close the script tag');
+  assert.ok(html.indexOf("r.usage = {on: switchOn('logOn'), label: $('logLabel').value.trim(), clear: logClear}") !== -1);
+  assert.ok(html.indexOf('"logPartChars":' + log.PART_CHARS) !== -1);
+  assert.ok(html.indexOf('"logCapChars":' + log.CAP_CHARS) !== -1);
+});
+
 test('settings page has the walking distance units, feet, metres or steps', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15, units: 'ft',
     api: royal.API, appKey: royal.APPKEY};

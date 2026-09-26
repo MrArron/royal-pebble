@@ -13,6 +13,7 @@ var venues = require('./venues');
 var directory = require('./directory');
 var gpstext = require('./gpstext');
 var shipmap = require('./shipmap');
+var logLib = require('./log');
 
 var MSG_BEGIN = 1;
 var MSG_INFO = 2;
@@ -80,6 +81,62 @@ function save(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+// ---- Usage log (log.js). The saved cruise's sail date gives each entry its
+// cruise day; it's cached so a burst of entries doesn't re-read the bundle.
+var s_sailDate;  // undefined until read; null with no cruise saved
+var usage = logLib.makeLog(localStorage, {
+  sailDate: function() {
+    if (s_sailDate === undefined) {
+      var b = load(STORE_BUNDLE, null);
+      s_sailDate = b ? b.sailDate : null;
+    }
+    return s_sailDate;
+  }
+});
+
+// "Title, 2027-03-07 20:00, Venue" from a star key (slice.starKey); reserved
+// marks say so.
+function starText(key) {
+  var reserved = slice.isReservedKey(key);
+  var p = String(reserved ? key.slice(2) : key).split('|');
+  return (reserved ? 'reserved mark: ' : '') + p[0] + ', ' + p[1] + (p[2] ? ' ' + p[2] : '') + (p[3] ? ', ' + p[3] : '');
+}
+
+// About how many bytes an AppMessage carries (values plus a small header each).
+function msgBytes(m) {
+  return Object.keys(m).reduce(function(n, k) {
+    var v = m[k];
+    var len = typeof v === 'string' ? v.length + 1 : (v && typeof v.length === 'number' ? v.length : 4);
+    return n + 7 + len;
+  }, 0);
+}
+
+function watchInfo() {
+  try {
+    return Pebble.getActiveWatchInfo ? Pebble.getActiveWatchInfo() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function phoneText() {
+  var ua = typeof navigator !== 'undefined' && navigator.userAgent;
+  return ua ? String(ua).slice(0, 160) : 'unknown';
+}
+
+// Event handlers log what goes wrong in them before the error surfaces.
+function guard(name, fn) {
+  return function(e) {
+    try {
+      return fn(e);
+    } catch (err) {
+      usage.add('error', name + ': ' + ((err && err.message) || err));
+      usage.flush();
+      throw err;
+    }
+  };
+}
+
 // {bundle, settings, stars, isDemo}
 function currentData() {
   var bundle = load(STORE_BUNDLE, null);
@@ -107,12 +164,19 @@ function sailDateInt(iso) {
   return (+p[0]) * 10000 + (+p[1]) * 100 + (+p[2]);
 }
 
+// done(ok, {ms, bytes, retries}).
 function sendQueue(messages, done) {
   var i = 0;
   var retried = false;
+  var retries = 0;
+  var started = Date.now();
+  var bytes = messages.reduce(function(n, m) { return n + msgBytes(m); }, 0);
+  function finish(ok) {
+    done(ok, {ms: Date.now() - started, bytes: bytes, retries: retries});
+  }
   function next() {
     if (i >= messages.length) {
-      done(true);
+      finish(true);
       return;
     }
     Pebble.sendAppMessage(messages[i], function() {
@@ -122,14 +186,22 @@ function sendQueue(messages, done) {
     }, function(e) {
       if (!retried) {
         retried = true;
+        retries++;
         setTimeout(next, 500);
       } else {
         console.log('Send failed at message ' + i + ': ' + JSON.stringify(e));
-        done(false);
+        usage.add('error', 'send failed at message ' + (i + 1) + ' of ' + messages.length + ': ' +
+                  JSON.stringify(e && e.data ? e.data : e).slice(0, 160));
+        finish(false);
       }
     });
   }
   next();
+}
+
+function sendText(ok, info) {
+  return (ok ? 'sent' : 'FAILED') + ' in ' + info.ms + ' ms, about ' + info.bytes + ' bytes' +
+    (info.retries ? ', ' + info.retries + ' retries' : '');
 }
 
 function sendSlice() {
@@ -137,10 +209,12 @@ function sendSlice() {
     s_resend = true;
     return;
   }
+  var built = Date.now();
   var data = currentData();
   var testAt = load(STORE_TEST, 0);
   var sl = slice.buildSlice(data.bundle, data.settings, data.stars, new Date(),
                             Date.now() - testAt < 3600 * 1000 ? new Date(testAt) : null);
+  built = Date.now() - built;
   s_sliceId = (s_sliceId + 1) & 0x7FFF;
 
   var messages = [{
@@ -203,11 +277,15 @@ function sendSlice() {
 
   s_sending = true;
   var started = Date.now();
-  sendQueue(messages, function(ok) {
+  sendQueue(messages, function(ok, info) {
     s_sending = false;
+    usage.add('slice', (data.isDemo ? 'demo ' + s_demoVariant + ', ' : '') + 'day ' + sl.dayIndex + ', ' +
+              sl.events.length + ' events, ' + sl.alarms.length + ' alerts, ' + messages.length + ' messages, built in ' +
+              built + ' ms, ' + sendText(ok, info));
     if (ok && notices.length) {
       save(STORE_NOTICES, []);
       console.log('Sent ' + notices.length + ' schedule change notices');
+      usage.add('notice', notices.length + ' schedule change notices sent to the watch');
     }
     console.log('Slice ' + s_sliceId + (ok ? ' sent: ' : ' failed: ') + sl.events.length + ' events, ' + sl.alarms.length + ' alerts, ' +
                 messages.length + ' messages, ' + (Date.now() - started) + ' ms');
@@ -249,14 +327,21 @@ function sendAck() {
 function sendDirPage() {
   var ref = s_dirRef;
   s_dirRef = null;
+  var built = Date.now();
   var data = currentData();
   var page = directory.buildPage(ref, {bundle: data.bundle, settings: data.settings, stars: data.stars,
                                        now: new Date()});
   var msg = directory.message(page);
+  built = Date.now() - built;
   msg.msg_type = MSG_DIR_PAGE;
   s_sending = true;
-  sendQueue([msg], function(ok) {
+  sendQueue([msg], function(ok, info) {
     s_sending = false;
+    // A place page shows its walking distance and where it's measured from.
+    var gps = page.gps && page.gps.text ? ', gps "' + (page.gps.header || '') + ' ' + page.gps.text + '"' :
+      page.gps && page.gps.flags ? ', gps flags ' + page.gps.flags : '';
+    usage.add('dir', 'page ' + ref + ' "' + page.title + (page.label ? ' ' + page.label : '') + '": ' +
+              page.rows.length + ' rows' + gps + ', built in ' + built + ' ms, ' + sendText(ok, info));
     console.log('Directory page ' + ref + (ok ? ' sent: ' : ' failed: ') + page.rows.length + ' rows, ' +
                 msg.dir_rows.length + ' bytes');
     sendNext();
@@ -268,14 +353,22 @@ function sendDirPage() {
 function sendRoute() {
   var req = s_route;
   s_route = null;
+  var built = Date.now();
   var data = currentData();
   var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
   var page = req.venue !== undefined ? directory.eventRoutePage(req, ctx) : directory.routePage(req.ref, req.rest, ctx);
   var msg = directory.routeMsg(page);
+  built = Date.now() - built;
   msg.msg_type = MSG_ROUTE_PAGE;
   s_sending = true;
-  sendQueue([msg], function(ok) {
+  sendQueue([msg], function(ok, info) {
     s_sending = false;
+    usage.add('route', (req.venue !== undefined ? 'to event at ' + req.venue + ' (start ' + req.start + ')' :
+                        (req.rest ? 'restroom from place ' : 'to place ') + req.ref) +
+              ': "' + page.title + '", ' + (page.header ? page.header + ', ' : '') +
+              (page.steps.length ? page.steps.length + ' steps, ' + [page.big, page.small && page.small.text]
+                .filter(function(t) { return t; }).join(' / ') : 'no route: ' + page.lead) +
+              ', planned in ' + built + ' ms, ' + sendText(ok, info));
     console.log('Route ' + (req.venue !== undefined ? 'to event at ' + req.start : req.ref) +
                 (req.rest ? ' (restroom)' : '') + (ok ? ' sent: ' : ' failed: ') +
                 page.steps.length + ' steps, ' + msg.route.length + ' bytes');
@@ -300,9 +393,16 @@ function starChangesReceived(bytes) {
   r.applied.forEach(function(c) {
     var what = c.reserved ? (c.on ? 'Marked reserved' : 'Marked not reserved') : (c.on ? 'Starred' : 'Unstarred');
     console.log(what + ' on the watch: ' + c.key);
+    usage.add('star', what.toLowerCase() + ' on the watch: ' + starText(c.key));
   });
-  r.ignored.forEach(function(c) { console.log('Older than a change on the phone, ignored: ' + c.key); });
-  r.unmatched.forEach(function(c) { console.log('No such event, ignored: ' + c.title); });
+  r.ignored.forEach(function(c) {
+    console.log('Older than a change on the phone, ignored: ' + c.key);
+    usage.add('star', 'watch change older than the phone\'s, ignored: ' + starText(c.key));
+  });
+  r.unmatched.forEach(function(c) {
+    console.log('No such event, ignored: ' + c.title);
+    usage.add('star', 'watch change for no such event, ignored: ' + c.title);
+  });
   var seq = changes.reduce(function(max, c) { return Math.max(max, c.seq); }, 0);
   // When the watch shows something the phone didn't take, send it a new slice.
   var resend = r.ignored.length + r.unmatched.length > 0;
@@ -415,18 +515,49 @@ function watchStorage() {
   return saved && saved.max > 0 ? {bytes: saved.bytes || 0, max: saved.max} : null;
 }
 
+// The Pebble app's WebView doesn't load a data: URL of about 2 MB or more
+// (probe, 2026-09-26), so the page gets the newest log entries that keep it
+// under this. A page that never returns a result (it may not have loaded)
+// halves the limit for the next open, until one does.
+var PAGE_URL_MAX = 1800 * 1024;
+var STORE_PAGE = 'settingsPage';  // {pending, urlKB, shrink}
+
 // Opens right away (the phone app expects openURL during showConfiguration).
 // The page fetches the ship list itself when the cached one is missing or old,
 // and hands it back for caching.
 function openSettings() {
   console.log('Opening settings');
+  var built = Date.now();
+  var last = load(STORE_PAGE, {});
+  var shrink = last.shrink || 0;
+  if (last.pending && last.urlKB > 1024) {
+    shrink = Math.min(shrink + 1, 4);
+    usage.add('error', 'last settings page (' + last.urlKB + ' KB) returned nothing; this one is kept under ' +
+              Math.round((PAGE_URL_MAX >> shrink) / 1024) + ' KB');
+  }
   var cached = load(STORE_SHIPS, null);
   var state = pageState((cached && cached.list) || []);
   state.shipsStale = !cached || !cached.list || !cached.list.length || Date.now() - cached.at > SHIPS_MAX_AGE_MS;
-  Pebble.openURL(config.pageUrl(state));
+  var bundle = load(STORE_BUNDLE, null);
+  var hdr = logLib.header({bundle: bundle, watch: watchInfo(), phone: phoneText(), label: usage.label(),
+                           count: usage.count(), dropped: usage.pageState('').dropped, now: new Date()});
+  state.usage = usage.pageState(hdr);
+  var url = config.pageUrl(state);
+  var max = PAGE_URL_MAX >> shrink;
+  if (url.length > max) {
+    var rest = url.length - logLib.encodedLength(state.usage.text);
+    state.usage = usage.pageState(hdr, Math.max(0, max - rest));
+    url = config.pageUrl(state);
+  }
+  save(STORE_PAGE, {pending: true, urlKB: Math.round(url.length / 1024), shrink: shrink});
+  usage.add('settings', 'page opened: ' + Math.round(url.length / 1024) + ' KB URL, built in ' +
+            (Date.now() - built) + ' ms, log ' + state.usage.shown + ' of ' + state.usage.count + ' entries shown');
+  usage.flush();
+  Pebble.openURL(url);
 }
 
-function useBundle(bundle) {
+// `how`: 'downloaded' or 'pasted'.
+function useBundle(bundle, how) {
   // Stars of rescheduled events follow them; cancelled ones are dropped. The
   // user hears about both on the watch and the settings page.
   var old = load(STORE_BUNDLE, null);
@@ -442,8 +573,10 @@ function useBundle(bundle) {
     // Added to any the watch hasn't received yet.
     save(STORE_NOTICES, load(STORE_NOTICES, []).concat(slice.buildNotices(bundle.sailDate, r.changes)).slice(-8));
     r.changes.forEach(function(c) {
-      console.log('Star ' + c.kind + ': ' + c.title + ' ' + c.date + ' ' + (c.time || '') +
-                  (c.to ? ' -> ' + c.to.date + ' ' + (c.to.time || '') + ' ' + c.to.venue : ''));
+      var text = c.title + ' ' + c.date + ' ' + (c.time || '') +
+        (c.to ? ' -> ' + c.to.date + ' ' + (c.to.time || '') + ' ' + c.to.venue : '');
+      console.log('Star ' + c.kind + ': ' + text);
+      usage.add('resync', 'starred event ' + c.kind + ': ' + text);
     });
   }
   if (sameSailing) {
@@ -452,11 +585,17 @@ function useBundle(bundle) {
     save(STORE_STAR_CHANGES, null);
     save(STORE_NOTICES, []);
   }
-  save(STORE_BUNDLE, bundle);
+  var text = JSON.stringify(bundle);
+  localStorage.setItem(STORE_BUNDLE, text);
   save(STORE_STATUS, {});
   s_demo = null;
+  s_sailDate = bundle.sailDate;
   console.log('Cruise data saved: ' + bundle.ship.code + ' ' + bundle.sailDate + ', ' +
               bundle.itinerary.length + ' days, ' + bundle.schedule.events.length + ' events');
+  // Counts only, no contents.
+  usage.add('bundle', how + ': ship ' + bundle.ship.code + ', ' + (sameSailing ? 'same sailing' : 'new sailing') +
+            ', ' + bundle.itinerary.length + ' days, ' + bundle.schedule.events.length + ' events, ' +
+            Math.round(text.length / 1024) + ' KB, ' + r.changes.length + ' starred events moved or cancelled');
 }
 
 function settingsClosed(text) {
@@ -468,15 +607,19 @@ function settingsClosed(text) {
       r = JSON.parse(text);
     } catch (e2) {
       console.log('Settings: could not read the result');
+      usage.add('error', 'settings page result unreadable (' + text.length + ' chars)');
       return;
     }
   }
+  usage.add('settings', 'page closed: ' + (r.action || 'save') + ', result ' + Math.round(text.length / 1024) + ' KB');
+  usage.applySettings(r.usage);
 
   if (Array.isArray(r.ships) && r.ships.length) {
     save(STORE_SHIPS, {at: Date.now(), list: r.ships});
   }
 
   var settings = load(STORE_SETTINGS, {});
+  var before = JSON.parse(JSON.stringify(settings));
   settings.me = r.me || settings.me || {};
   settings.theme = r.theme === 'dark' ? 'dark' : 'light';
   settings.reminderLead = [5, 15, 30].indexOf(r.reminderLead) !== -1 ? r.reminderLead : 15;
@@ -505,6 +648,10 @@ function settingsClosed(text) {
   // Only stars changed on the page come back, so ones set on the watch meanwhile
   // stay; if the watch changed the same star after the page did, the watch wins.
   if (r.stars && load(STORE_BUNDLE, null)) {
+    Object.keys(r.stars).forEach(function(key) {
+      usage.add('star', (slice.isReservedKey(key) ? (r.stars[key] ? 'marked' : 'unmarked') :
+                         (r.stars[key] ? 'starred' : 'unstarred')) + ' on the phone: ' + starText(key));
+    });
     var times = load(STORE_STAR_TIMES, {});
     save(STORE_STARS, slice.applyStarChanges(load(STORE_STARS, {}), r.stars, times, r.starTimes, Date.now()));
     save(STORE_STAR_TIMES, times);
@@ -540,9 +687,11 @@ function settingsClosed(text) {
     });
   }
   save(STORE_SETTINGS, settings);
+  logLib.diffSettings(before, settings).forEach(function(d) { usage.add('setting', d); });
 
   if (r.action === 'test') {
     console.log('Test alerts requested');
+    usage.add('alert', 'test alerts asked for');
     save(STORE_TEST, Date.now());
   }
 
@@ -550,43 +699,60 @@ function settingsClosed(text) {
     var error = bundleLib.validate(r.bundle);
     if (error) {
       save(STORE_STATUS, {error: 'Pasted data: ' + error, at: nowStamp()});
+      usage.add('error', 'pasted cruise data rejected: ' + error);
     } else {
-      useBundle(r.bundle);
+      useBundle(r.bundle, 'pasted');
     }
   }
   sendSlice();
 
   if (r.download && r.download.ship && r.download.ship.code && r.download.sailDate) {
     console.log('Downloading ' + r.download.ship.code + ' ' + r.download.sailDate);
+    usage.add('download', 'asked for ' + r.download.ship.code + ' ' + r.download.sailDate);
+    var started = Date.now();
     royal.download(r.download.ship, r.download.sailDate, function(err, bundle) {
       if (err) {
         console.log('Download failed: ' + err);
+        usage.add('download', 'FAILED after ' + (Date.now() - started) + ' ms: ' + err);
         save(STORE_STATUS, {error: err, at: nowStamp()});
         return;
       }
-      useBundle(bundle);
+      usage.add('download', 'done in ' + (Date.now() - started) + ' ms');
+      useBundle(bundle, 'downloaded');
       sendSlice();
     });
   }
 }
 
-Pebble.addEventListener('showConfiguration', openSettings);
+Pebble.addEventListener('showConfiguration', guard('showConfiguration', openSettings));
 
-Pebble.addEventListener('webviewclosed', function(e) {
+Pebble.addEventListener('webviewclosed', guard('webviewclosed', function(e) {
+  var page = load(STORE_PAGE, {});
   if (e && e.response) {
+    save(STORE_PAGE, {pending: false, urlKB: page.urlKB, shrink: 0});
     settingsClosed(e.response);
+  } else {
+    // Closed with no result: backed out, or the page never loaded. Left pending,
+    // so a big page that keeps failing gets smaller (openSettings).
+    usage.add('settings', 'page closed without saving');
   }
-});
+}));
 
-Pebble.addEventListener('ready', function() {
+Pebble.addEventListener('ready', guard('ready', function() {
   console.log('Cruise Watch companion ready, phone time ' + new Date().toString());
+  var w = watchInfo();
+  usage.add('phone', 'companion started (watch app open, phone connected); watch ' +
+            ((w && (w.model || w.platform)) || 'unknown') + (w && w.firmware ? ' firmware ' + w.firmware.major + '.' +
+            w.firmware.minor + '.' + w.firmware.patch : '') + ', log ' + usage.count() + ' entries, ' +
+            Math.round(usage.chars() / 1024) + ' KB');
   sendSlice();
-});
+}));
 
-Pebble.addEventListener('appmessage', function(e) {
+Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
   var p = e.payload;
   switch (p.msg_type) {
     case MSG_REQUEST:
+      usage.add('sync', 'watch asked for data');
       sendSlice();
       break;
     case MSG_STAR_CHANGES:
@@ -612,9 +778,12 @@ Pebble.addEventListener('appmessage', function(e) {
         console.log('Watch storage full from cruise minute ' + p.saved_cutoff);
       }
       console.log('Watch saved ' + p.saved_bytes + ' of ' + p.saved_max + ' bytes');
+      usage.add('watch', 'storage: schedule uses ' + p.saved_bytes + ' of ' + p.saved_max + ' bytes' +
+                (p.saved_cutoff !== slice.NO_TIME ? ', FULL from cruise minute ' + p.saved_cutoff : ''));
       break;
     case MSG_DEMO_NEXT:
       if (!load(STORE_BUNDLE, null)) {
+        usage.add('demo', 'next demo screen (variant ' + ((s_demoVariant + 1) % demo.VARIANTS) + ')');
         s_demoVariant = (s_demoVariant + 1) % demo.VARIANTS;
         save(STORE_DEMO, {variant: s_demoVariant, at: Date.now()});
         s_demo = null;
@@ -622,4 +791,4 @@ Pebble.addEventListener('appmessage', function(e) {
       }
       break;
   }
-});
+}));
