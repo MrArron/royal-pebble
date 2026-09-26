@@ -945,8 +945,9 @@ All built into the local settings page, so they work offline.
   useful-to-know notes (where routes start and when it resets, that every
   distance is approximate since distances carry no `~` (9.9, decision 12),
   `Spot approximate`, no side until confirmed, voice needs the phone nearby,
-  the 04:00 day change); and the Always show button hints toggle. Keep it in
-  step with the app as controls change.
+  the 04:00 day change); the ships that have the Ship GPS (the same list as
+  the README, owner 2026-09-26); and the Always show button hints toggle. Keep
+  it in step with the app as controls change.
 
 ### 9.8 Check before or while building
 
