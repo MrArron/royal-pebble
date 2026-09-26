@@ -381,6 +381,30 @@ Reserved; Hold Select still stars. If short Select is already used on that
 screen, put "Mark reserved" in a small action menu instead, or make it
 phone-only. Check the current input handling before building.
 
+As built (item 9, part 1):
+- Short Select was free on event details, so it toggles Reserved there (short
+  buzz); on other events it does nothing. Details show `Not reserved yet` or a
+  drawn ✓ `Reserved` in the reservation line's place, and the Select hint under
+  ★ Starred.
+- The phone keeps the mark with the stars under `R|` + the star key, so it goes
+  through the watch's star queue and the latest change wins
+  (`docs/WATCH_PROTOCOL.md`, Star changes). A rescheduled star takes its mark
+  along.
+- Home items read `Only show · Studio B · 4 Mid · ✓ Reserved`; the venue gives
+  way (ellipsis) so the mark always fits. The reminder alert's `Not reserved`
+  line comes after the where and "From" lines.
+- Settings page: the chip and button replace the old `Reservation` word in the
+  row's details line; the button and star update the row in place. `To reserve
+  · N` sits after `★ Starred` and shows while N > 0 (or while it's open); rows
+  marked on it stay until another chip is picked, so a mark can be undone. My
+  entries is hidden on it.
+
+**Reservation reminder** (item 9, part 2; owner's choices, 2026-09-25):
+- A buzzing alert the evening before, listing tomorrow's starred events that
+  need a reservation and aren't marked reserved, plus a `To reserve` line on
+  the tomorrow summary card (§8.1).
+- The alert time is a setting on the Me tab (default 20:00 ship time).
+
 ---
 
 ## 6. Data shape changes
@@ -464,7 +488,7 @@ authoritative for this flag until it's acknowledged.
 Design pass; the mockups came back and the owner answered the open decisions
 (8.6). Items 5 (the morning summary), 6 (the countdown), 7 (the clash
 warning) and 8 (the last-chance tag) are built. Item 9 (reservation reminder) is designed in
-§5. The layouts below are the original text sketches at watch size; the mockups
+§5; its Mark reserved half is built. The layouts below are the original text sketches at watch size; the mockups
 and their `NOTES.md` are the final word on text and layout.
 
 **Brief for Claude Design:**
