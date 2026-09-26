@@ -10,6 +10,9 @@ void home_window_refresh(void);
 void home_window_destroy(void);
 // Home is the screen on top (nothing opened over it).
 bool home_window_is_top(void);
+// An open by the user: Home shows its button hints (§9.5) if they're due, as
+// soon as it is on top with its data.
+void home_window_arm_hints(void);
 
 // Morning summary (docs/DESIGN_V1_1.md §8.1). The launch sets whether the user
 // opened the app (alerts don't count); summary_check then shows today's card,

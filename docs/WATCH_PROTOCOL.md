@@ -40,7 +40,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 
 | `msg_type` | Name | Other keys |
 |---|---|---|
-| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
+| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `button_hints` (0/1: Home's button hints at every open), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
 | 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_clock`, `info_sync` (display strings) |
 | 3 | EVENTS | `event_first` (index of the first event in this chunk), `events` (bytes, below) |
 | 5 | ALARMS | `alarm_first`, `alarms` (bytes, below) |
@@ -291,7 +291,8 @@ The watch saves what it needs without the phone after every slice and star chang
 (`src/c/store.c`), and loads it at launch. It is one blob in the packed layouts
 above, spread over 256-byte values (keys 40 on):
 
-1. Header (55 bytes: sail date, settings bits, reminder lead, slice id, day
+1. Header (55 bytes: sail date, settings bits (1 dark theme, 2 featured, 4
+   demo, 8 always show button hints), reminder lead, slice id, day
    index and kind, all-aboard, local offset, cutoff, alert and event counts,
    the cruise's starred count, then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
    first start, starred and featured counts, last kind and to-reserve count),
@@ -329,6 +330,13 @@ away the app still shows the countdown and next events, and alerts keep firing.
 After the 04:00 rollover without a new slice, Home says to connect the phone
 instead of showing yesterday. Stars made on a stored slice are queued like any
 other (see Star changes) and reach the phone once it is back.
+
+Home's button hints (`docs/DESIGN_V1_1.md` §9.5) keep their own count in
+persistent key 7, outside the blob: a hints version and the user opens that
+showed them. They show on the first 3 opens by the user (not an alert wakeup or
+an install) once Home is on top with its data, and on every such open while
+`button_hints` is 1. A version other than the watch's `HINTS_VERSION` restarts
+the count, so raising it after an update adds a button shows them again.
 
 ## Morning summary
 

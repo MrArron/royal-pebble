@@ -903,6 +903,17 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
   screen ends with the event's time and title (`WatchHomeRoute`) instead of the
   summary. Select is a single press, so it doesn't meet the firmware's
   long-press shortcuts; check on the watch.
+- **As built (hints):** Home fades to one gray (the top bar keeps its colors)
+  under white-outlined labels with a pointer toward each button: `My info` and
+  `Today` in black, `Route to next` in sea blue (only when Select has an event
+  to route to, so not on the port-day countdown), `Exit` in dark gray on the
+  left. No voice line until voice exists. They show on a user open (not an
+  alert or an install), once Home is on top with its data, so after the
+  morning summary. Up, Select and Down only dismiss them; Back isn't taken and
+  exits as labelled. The count and a hints version live in the watch's
+  storage (`WATCH_PROTOCOL.md`). The **Always show button hints** switch is on
+  the settings page's Me tab for now; it moves to the Help section when that
+  is built.
 
 ### 9.6 Voice (concept, later)
 

@@ -173,6 +173,7 @@ function sendSlice() {
     event_count: sl.events.length,
     theme: sl.theme,
     show_featured: sl.showFeatured,
+    button_hints: sl.buttonHints,
     is_demo: data.isDemo ? 1 : 0,
     reminder_lead: sl.reminderLead,
     alarm_count: sl.alarms.length
@@ -369,6 +370,7 @@ function pageState(ships) {
     reminderLead: settings.reminderLead || 15,
     reserveAlertAt: slice.reserveAlertAt(settings),
     units: settings.units || 'm',
+    alwaysHints: settings.alwaysHints === true,
     api: royal.API,
     appKey: royal.APPKEY
   };
@@ -459,6 +461,10 @@ function settingsClosed(text) {
   }
   if (typeof r.showFeatured === 'boolean') {
     settings.showFeatured = r.showFeatured;
+  }
+  // Home's button hints at every open, not just the first few (§9.5).
+  if (typeof r.alwaysHints === 'boolean') {
+    settings.alwaysHints = r.alwaysHints;
   }
   var personal = slice.cleanPersonal(r.personal);
   if (personal) {

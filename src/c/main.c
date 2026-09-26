@@ -153,6 +153,10 @@ static void init(void) {
   // Only an open by the user uses up the day's summary, not an alert.
   summary_set_user_open(reason == APP_LAUNCH_USER || reason == APP_LAUNCH_QUICK_LAUNCH);
   summary_check();
+  // After the summary, which may open over Home: the hints wait for Home.
+  if (reason == APP_LAUNCH_USER || reason == APP_LAUNCH_QUICK_LAUNCH) {
+    home_window_arm_hints();
+  }
   alarms_schedule();
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 }

@@ -143,6 +143,20 @@ test('settings page has the walking distance units, feet, metres or steps', func
   assert.ok(html.indexOf('"units":"ft"') !== -1, 'saved choice embedded');
 });
 
+test('settings page has the Always show button hints switch, off by default', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
+    api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('id="hints"') !== -1);
+  assert.ok(html.indexOf('Always show button hints') !== -1);
+  assert.ok(html.indexOf("String(S.alwaysHints === true)") !== -1, 'off unless saved on');
+  assert.ok(html.indexOf('r.alwaysHints = hintsOn()') !== -1, 'sent back with the rest');
+  state.alwaysHints = true;
+  assert.ok(config.buildPage(state, new Date(2026, 8, 24)).indexOf('"alwaysHints":true') !== -1,
+    'saved choice embedded');
+});
+
 test('settings page with an itinerary includes the Days screen', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
     itinerary: [{date: '2027-03-08', type: 'DOCKED', port: '</script>St. Thomas', arrive: '08:00', depart: '17:00'}],

@@ -100,7 +100,8 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   const MyInfo *info = data_my_info();
   const Tomorrow *t = data_tomorrow();
   codec_write_int32(p, meta->sail_days);
-  p[4] = (meta->dark_theme ? 1 : 0) | (meta->show_featured ? 2 : 0) | (meta->is_demo ? 4 : 0);
+  p[4] = (meta->dark_theme ? 1 : 0) | (meta->show_featured ? 2 : 0) | (meta->is_demo ? 4 : 0) |
+         (meta->always_hints ? 8 : 0);
   p[5] = meta->reminder_lead;
   p[6] = (uint8_t)data_slice_id();
   p[7] = (uint8_t)(data_slice_id() >> 8);
@@ -314,6 +315,7 @@ bool store_load(void) {
     .dark_theme = (p[4] & 1) != 0,
     .show_featured = (p[4] & 2) != 0,
     .is_demo = (p[4] & 4) != 0,
+    .always_hints = (p[4] & 8) != 0,
     .from_storage = true,
     .reminder_lead = p[5],
     .cruise_starred = p[25],

@@ -22,6 +22,8 @@ typedef struct {
 extern const Theme *g_theme;
 void theme_set_dark(bool dark);
 bool theme_is_dark(void);
+// The current theme all in gray; swap it into g_theme for one draw.
+const Theme *theme_faded(void);
 
 // Top bar band colors (same in both themes).
 #define BAND_PORT GColorFromHEX(0x005555)
