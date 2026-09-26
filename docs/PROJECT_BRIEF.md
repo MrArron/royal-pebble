@@ -254,9 +254,13 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
 - **Log header** on export: app and bundle versions, watch firmware, phone
   platform, ship code, a device label set on the Me tab (two people, two
   watches: each phone keeps its own log).
-- **Titles are included; cabin details never are** (stateroom, muster station),
-  because the exported log is pasted into Claude sessions for evaluation.
-  The log is personal cruise data: never commit or print it in full.
+- **Titles and cabin details are included** (stateroom, muster station, spoken
+  cabin numbers; owner, 2026-09-26), on condition that none of it ever reaches
+  the GitHub repo. The log is personal cruise data: never commit it, any export
+  or excerpt of it, or findings that quote it; never print it in full. Saved
+  exports use the git-ignored name `royal-pebble-log-*.txt` and belong outside
+  the repo. Tests use made-up cabin numbers, never the owner's. PR descriptions
+  and issues about log findings describe patterns, not the entries.
 - **Export:** a Usage log card on the settings page Me tab with Copy log (plain
   text), entry count and size, Clear log and an on/off switch. When full, the
   oldest entries drop first.

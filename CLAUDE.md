@@ -38,7 +38,9 @@ Read before making changes:
   asking.
 - **Secrets.** Never commit or print passwords, tokens or personal cruise data.
   Output bundles (`cruise-watch-*.json`) can contain a stateroom number and are
-  git-ignored. The Royal `AppKey` and login client in `cruise_sync.py` are Royal's
+  git-ignored. The usage log and map notes hold cabin details: never commit
+  a log, an export or quotes from it (exports: `royal-pebble-log-*.txt`,
+  git-ignored), and use made-up cabin numbers in tests. The Royal `AppKey` and login client in `cruise_sync.py` are Royal's
   public web-app values (from an MIT project) and are fine to keep.
 - **Be gentle with Royal's servers.** Unofficial endpoints: keep requests minimal,
   no polling, no parallel hammering in tests.
