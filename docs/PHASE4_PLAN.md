@@ -324,7 +324,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | G | 1.4.5 | 7 | Selectable excursions; sync tool meet fallback | Node tests, `test_cruise_sync.py`, one `--login` run on the owner's booking |
 | H | 1.4.6 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes |
 | K | none (PC tool only) | checks | `--dump-products` (Windows sync tool section) | `test_cruise_sync.py`, one live run |
-| — | throwaway | login | Phone sign-in probe (not merged) | the owner's phone |
+| — | throwaway | login | Phone sign-in probe (not merged): passed 2026-09-27 | the owner's phone |
 | I | none (docs) | login | `DATA_FORMAT.md`, page text | review |
 | J | 1.4.7 | login | Advanced download block, `royal.fetchMine`, log guards | Node tests with made-up bookings, then the owner's real account on the phone |
 
@@ -422,35 +422,52 @@ doesn't block the Windows tool.
 > your data synced with Royal's. This uses Royal's website sign-in, which Royal
 > could change without notice; if it stops working, use the Windows sync tool.
 
-**Probe before building** (throwaway build, not merged):
+**Probe: passed on 2026-09-27.** The throwaway RP Probe app (round 2, repo
+`MrArron/rp-webview-probe`) ran on the owner's Android phone and Pebble Time 2.
+It recorded only status codes, timings, yes/no checks and a count:
 
-- [ ] On the owner's phone (Android and, if available, iPhone), sign in with the
-  real account and fetch only the bookings list. Record the status codes, not the
-  replies.
-- [ ] Check that the password survives the close URL (special characters like
-  `#`, `&`, `%`) and that it doesn't show up in the Pebble app's own logs.
-- [ ] If Royal answers 403 on the phone: stop, and keep the Windows tool as the
-  login path.
+- [x] **Sign-in from the phone script:** 200 in 753 ms (no 403). The token came
+  back and its account id was readable. The bookings list then answered 200 in
+  420 ms and could be read. The requests used the same headers as `cruise_sync.py`,
+  without its browser `User-Agent`, which a phone script can't set anyway.
+- [x] **The password survives the close URL.** A password and a test string with
+  `#`, `&`, `%`, `+`, `=`, `?`, `/`, an accented letter and an emoji all arrived
+  unchanged.
+- [x] **No password manager prompt.** LastPass didn't offer to save the password
+  from the page's masked field.
+- [ ] Not checked: iPhone (the owner has none), and whether the Pebble app's own
+  logs hold the close URL. The page text already says the login passes through
+  the Pebble app.
 
-**PRs if the probe passes:** a docs PR (`DATA_FORMAT.md`; the page text), then one
+So the login track goes ahead.
+
+**PRs:** a docs PR (`DATA_FORMAT.md`; the page text), then one
 app PR for the page block, `royal.fetchMine` and the log guards, with offline tests
 using made-up bookings and cabin numbers.
 
 ## Open questions and risks
 
 - [ ] **Product id stability:** re-pull on 2026-09-30. It gates PR H.
-- [ ] **Paste-in size.** A 7-night bundle may grow from about 90 KB to about 135
-  KB, plus excursion sessions. Real phones return the settings page through
-  `pebblejs://close#`; confirm a bundle that size survives on the owner's phone
-  before PR B ships (the emulator caps at about 64 KB).
+- [x] **Paste-in size: no problem (2026-09-27).** A 7-night bundle may grow from
+  about 90 KB to about 135 KB, plus excursion sessions. On the owner's Android
+  phone, RP Probe sent made-up bundles of 128, 192, 256, 512 and 1,024 KB back
+  through `pebblejs://close#` (1,675 KB in the URL), and every one arrived whole.
+  The page's own size is a separate limit of about 1.8 MB (`PROJECT_BRIEF.md`).
+  Only the emulator caps results at about 64 KB, so test big pastes on the phone.
+- [ ] **The Pebble app decodes the result itself.** On the phone, `e.response`
+  arrives already URL-decoded. `settingsClosed` in `index.js` tries
+  `decodeURIComponent` first, which throws on most decoded text and falls back
+  to a plain parse. But text holding a valid escape (a note with `%41`, say)
+  would be decoded twice and changed. PR B, which puts Royal's notes in the
+  bundle, should parse the plain text first and decode only when that fails.
 - [ ] **Watch storage.** 4 more bytes per event and 1 per alarm. Check
   `saved_bytes` against `saved_max` on the busiest day of a 7-night sailing after
   PR D.
 - [ ] **One short sailing.** All numbers come from a 2-night trip 4 days out.
   Re-run the dump on the owner's sailing once its schedule is out (about two weeks
   before) for more venue codes, notes, age wordings and excursions.
-- [ ] **Login probe on the owner's phone** decides whether the login track goes
-  ahead.
+- [x] **Login probe on the owner's phone** passed on 2026-09-27 (Advanced
+  download with your Royal login), so the login track goes ahead.
 - [ ] **Time before the sailing.** Phase 3 items 25-28 plus this phase is a lot
   before the freeze. If it gets tight, B-E and G are the ones that matter most on
   board.

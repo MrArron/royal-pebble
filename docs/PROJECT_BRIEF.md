@@ -534,7 +534,7 @@ only the next reminder scheduled so star reminders keep their wakeup slots.
 
 Live data onboard, messaging between phones, app glances, a watch face.
 (Logging in from the phone app moved to Phase 4 item 38 on 2026-09-27, as an
-optional track that goes ahead only if the phone probe passes.)
+optional track gated on a phone probe; the probe passed the same day.)
 
 ## Edge cases to handle from the start
 
