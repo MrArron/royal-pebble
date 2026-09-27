@@ -19,11 +19,11 @@ This file only lists what Phase 4 adds or changes. The data behind it is in
 | Item | Status |
 |---|---|
 | 32 Venue codes | No screens (phone matching only, §1) |
-| 33 Ages and the age filters | **Draft, for review** (§2) |
-| 34 Arrive-early times | **Draft, for review** (§3) |
-| 35 Short descriptions, 6 notes | **Draft, for review** (§4) |
+| 33 Ages and the age filters | **Approved 2026-09-27** (§2) |
+| 34 Arrive-early times | **Approved 2026-09-27** (§3) |
+| 35 Short descriptions, 6 notes | **Approved 2026-09-27** (§4) |
 | 36 Stable ids for re-sync | No screens (§5) |
-| 37 Shore excursions | **Draft, for review** (§6) |
+| 37 Shore excursions | **Approved 2026-09-27** (§6) |
 | 38 Login download | Not designed yet (its own docs PR, `PHASE4_PLAN.md` PR I) |
 
 ---
@@ -78,11 +78,11 @@ The row's details line adds the age after the venue: `Sports Court · Ages
 ### 2.4 Settings page, Filters tab (`Phone4Filters`)
 
 A new **AGES** heading above CATEGORIES, with two switches, both off by
-default:
+default (the owner chose these names on review, 2026-09-27):
 
-- **Hide adults-only events** — sub-line `18+ and 21+ · 31 events`. For a
+- **Hide Adult only events** — sub-line `18+ and 21+ · 31 events`. For a
   teen's watch.
-- **Hide teen and kids-only events** — sub-line `17 and under · 14 events`. For
+- **Hide Teen and Kid only events** — sub-line `17 and under · 14 events`. For
   adults cruising without kids.
 
 The note under them: `Events you star always show. Events with no age listed

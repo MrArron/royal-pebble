@@ -257,8 +257,8 @@ def heading(text):
 def phone_filters():
     rows = [
         heading("AGES"),
-        switch_row("Hide adults-only events", "18+ and 21+ · 31 events", False),
-        switch_row("Hide teen and kids-only events", "17 and under · 14 events", True),
+        switch_row("Hide Adult only events", "18+ and 21+ · 31 events", False),
+        switch_row("Hide Teen and Kid only events", "17 and under · 14 events", True),
         f'<div style="font-size: 13px; line-height: 19px; color: {P["muted"]}; padding: 0 4px">Events you star always '
         'show. Events with no age listed never hide. Casino games are in the Casino category below.</div>',
         heading("CATEGORIES"),

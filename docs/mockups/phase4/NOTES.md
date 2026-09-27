@@ -1,6 +1,6 @@
 # Phase 4 mockups (DESIGN_PHASE4.md)
 
-**Draft, for review.** Written by `tools/mockups/gen_phase4.py` in the same
+**Approved 2026-09-27** (filter names changed on review). Written by `tools/mockups/gen_phase4.py` in the same
 format as `docs/mockups/phase3`: Claude Design component files, 400×456 (2×)
 for the watch and 390×844 for the phone, inline styles, Roboto Condensed
 standing in for Gothic. `preview.html` shows them all as a plain page (no canvas

@@ -143,10 +143,10 @@ medium, because it opens the watch protocol change that items 3 and 6 share.
       to notes (item 6).
 - **Filters** (settings page, Filters tab, beside the Casino category from
   Phase 3 item 27):
-    - **Hide adults-only events (18+ and 21+)**, for a teen's watch. It hides adult
+    - **Hide Adult only events (18+ and 21+)**, for a teen's watch. It hides adult
       parties, drinking events and adult game shows. Casino games are covered by
       the Casino category, and turning both on hides everything a teen can't join.
-    - **Hide teen and kids-only events** (any event whose `age` has a maximum of
+    - **Hide Teen and Kid only events** (any event whose `age` has a maximum of
       17 or under), for adults cruising without kids.
     - Both are off by default and work like hidden categories. They apply to
       lists, Today, search and the morning summary counts. Starred and booked
@@ -315,7 +315,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 
 | # | Version | Items | What changes | Tested on |
 | --- | --- | --- | --- | --- |
-| A | none (docs) | all | `DATA_FORMAT.md` fields and the excursions change; `WATCH_PROTOCOL.md` 4 event bytes + 1 alarm byte; mockups in a new `DESIGN_PHASE4.md` | review (done: design is a draft for the owner's review) |
+| A | none (docs) | all | `DATA_FORMAT.md` fields and the excursions change; `WATCH_PROTOCOL.md` 4 event bytes + 1 alarm byte; mockups in a new `DESIGN_PHASE4.md` | review (done; design approved 2026-09-27) |
 | B | 1.4.0 | data for 1-7 | Both producers write `venueCodes`, `notes`, `infos`, `info`, `pid` and keep SHOREX; shared fixture trimmed from the 2026-10-01 pull | `test_cruise_sync.py`, a producer test in `test/pkjs`, live pull of a sailing within 2 weeks |
 | C | 1.4.1 | 1 | Venue codes in `venues.js`, code-first lookup, blank titles filled, conflicts entries | `venues.test.js`, `slice.test.js` |
 | D | 1.4.2 | 2, 4, 6 (+3 display) | Packed events +4 bytes and the alarm's `early` byte (sent as 0 until F), storage version 9; watch details lines; settings page rows | Node tests, emulator screenshots, then the Pebble Time 2 |
