@@ -24,14 +24,16 @@ static int s_toast_event;
 
 enum { GROUP_UNTIMED = -3, GROUP_NOW = -2 };
 
-// Event index for each list row: the events that haven't finished.
-static int16_t s_rows[MAX_EVENTS];
+// Event index for each list row: the events that haven't finished. On the heap
+// while open, not static: the app's code, data and static buffers must stay
+// under 64 KB.
+static int16_t *s_rows;
 static int s_row_count;
 
 static void rebuild_rows(void) {
   int32_t now = now_cruise();
   s_row_count = 0;
-  for (int i = 0; i < data_event_count() && s_row_count < MAX_EVENTS; i++) {
+  for (int i = 0; s_rows && i < data_event_count() && s_row_count < MAX_EVENTS; i++) {
     if (!event_is_finished(data_event(i), now)) {
       s_rows[s_row_count++] = i;
     }
@@ -272,6 +274,10 @@ static void window_load(Window *window) {
   menu_layer_set_normal_colors(s_menu, g_theme->bg, g_theme->text);
   menu_layer_set_highlight_colors(s_menu, g_theme->cursor_bg, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(s_menu, window);
+  s_rows = malloc(MAX_EVENTS * sizeof(int16_t));
+  if (!s_rows) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for Today's rows");
+  }
   rebuild_rows();
   menu_layer_set_selected_index(s_menu, MenuIndex(0, first_current_row()), MenuRowAlignTop, false);
   layer_add_child(root, menu_layer_get_layer(s_menu));
@@ -293,6 +299,9 @@ static void window_unload(Window *window) {
   top_bar_destroy(s_top_bar);
   s_menu = NULL;
   s_top_bar = NULL;
+  free(s_rows);
+  s_rows = NULL;
+  s_row_count = 0;
   window_destroy(window);
   s_window = NULL;
 }

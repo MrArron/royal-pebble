@@ -32,7 +32,9 @@ typedef struct {
   char title[ALARM_TITLE_LEN];
   char venue[ALARM_VENUE_LEN];
 } ReserveItem;
-static ReserveItem s_reserve[MAX_TO_RESERVE];
+// On the heap while an alert is open, not static: the app's code, data and
+// static buffers must stay under 64 KB.
+static ReserveItem *s_reserve;
 static int s_reserve_count;
 
 static const char *top_label(uint8_t kind) {
@@ -349,6 +351,9 @@ static void window_unload(Window *window) {
   s_top_bar = NULL;
   window_destroy(window);
   s_window = NULL;
+  free(s_reserve);
+  s_reserve = NULL;
+  s_reserve_count = 0;
   notice_window_show_pending();
 }
 
@@ -377,6 +382,12 @@ void alert_window_push(int32_t at, bool from_wakeup) {
   int count = 0;
   int old_reserve_count = s_reserve_count;
   s_reserve_count = 0;
+  if (!s_reserve) {
+    s_reserve = malloc(MAX_TO_RESERVE * sizeof(ReserveItem));
+    if (!s_reserve) {
+      APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for events to reserve");
+    }
+  }
   for (int i = 0; i < data_alarm_count(); i++) {
     Alarm *a = data_alarm(i);
     if (a->at == at && !onboard_silences(a)) {
@@ -384,7 +395,7 @@ void alert_window_push(int32_t at, bool from_wakeup) {
         s_alarm = *a;
       }
       count++;
-      if (a->kind == ALARM_TO_RESERVE && s_reserve_count < MAX_TO_RESERVE) {
+      if (a->kind == ALARM_TO_RESERVE && s_reserve && s_reserve_count < MAX_TO_RESERVE) {
         ReserveItem *r = &s_reserve[s_reserve_count++];
         r->start = a->ref;
         memcpy(r->title, a->title, sizeof(r->title));
@@ -394,6 +405,10 @@ void alert_window_push(int32_t at, bool from_wakeup) {
   }
   if (count == 0) {
     s_reserve_count = old_reserve_count;  // keep what's on screen
+    if (!s_window) {
+      free(s_reserve);
+      s_reserve = NULL;
+    }
     APP_LOG(APP_LOG_LEVEL_WARNING, "No alert found for %d", (int)at);
     return;
   }
