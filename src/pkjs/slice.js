@@ -547,11 +547,13 @@ function cleanHiddenCats(list) {
   return out;
 }
 
-function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
+// countOnly (for dayLoad): hide nothing, don't trim to MAX_EVENTS, and give each
+// event a filter could hide its `cat`.
+function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var from = dayIndex * MINUTES_PER_DAY + DAY_START;
   var to = from + MINUTES_PER_DAY;
   var today = isoFromDays(sailDays + dayIndex);
-  var hidden = hiddenCats(settings);
+  var hidden = countOnly ? [] : hiddenCats(settings);
   var events = [];
   var ship = (bundle.ship && bundle.ship.code) || '';
   var whereOf = venues.whereFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
@@ -588,6 +590,9 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
       where: whereOf(venue),
       key: key
     });
+    if (countOnly && cat && cat[0] && !(flags & FLAG_STARRED)) {
+      events[events.length - 1].cat = cat;
+    }
   }
 
   var sched = bundle.schedule || {};
@@ -627,13 +632,50 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
   });
 
   events.sort(eventSort);
-  if (events.length > MAX_EVENTS) {
+  if (events.length > MAX_EVENTS && !countOnly) {
     // Too many for the watch: drop the earliest timed events (already past, most likely).
     var untimed = events.filter(function(e) { return e.start === NO_TIME; });
     var timed = events.filter(function(e) { return e.start !== NO_TIME; });
     events = untimed.concat(timed.slice(timed.length - (MAX_EVENTS - untimed.length)));
   }
   return events;
+}
+
+// For the settings page's Ready to sail check (docs/DESIGN_PHASE3.md §24.2):
+// what each cruise day would send the watch before the MAX_EVENTS trim, as
+// [{date, fixed, cats: [[category, subcategory, n]]}]. `fixed` counts what no
+// filter hides (starred, personal, booked, no category), so the page can
+// recount as categories are hidden.
+function dayLoad(bundle, settings, stars) {
+  var sailDays = daysFromIso(bundle.sailDate);
+  return (bundle.itinerary || []).map(function(it) {
+    var day = {date: it.date, fixed: 0, cats: []};
+    var at = {};
+    buildEvents(bundle, settings, stars, daysFromIso(it.date) - sailDays, sailDays, true).forEach(function(e) {
+      if (!e.cat) {
+        day.fixed++;
+        return;
+      }
+      var k = e.cat[0] + ' / ' + (e.cat[1] || '');
+      if (at[k] === undefined) {
+        at[k] = day.cats.push([e.cat[0], e.cat[1] || '', 0]) - 1;
+      }
+      day.cats[at[k]][2]++;
+    });
+    return day;
+  });
+}
+
+// Itinerary days with their schedule saved: a day with at least one event, or
+// debark day (Royal lists nothing then).
+function savedDays(bundle) {
+  var sched = bundle.schedule || {};
+  var di = (sched.fields || []).indexOf('date');
+  var dated = {};
+  (sched.events || []).forEach(function(row) { dated[row[di]] = true; });
+  return (bundle.itinerary || []).filter(function(it) {
+    return it.type === 'DEBARK' || dated[it.date];
+  }).length;
 }
 
 // Schedule events of a bundle as objects, with their star keys.
@@ -1155,6 +1197,9 @@ module.exports = {
   finalShows: finalShows,
   buildTomorrow: buildTomorrow,
   buildEvents: buildEvents,
+  dayLoad: dayLoad,
+  savedDays: savedDays,
+  MAX_EVENTS: MAX_EVENTS,
   buildAlarms: buildAlarms,
   reconcileStars: reconcileStars,
   buildNotices: buildNotices,

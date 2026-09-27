@@ -462,6 +462,11 @@ free text.
   cruise card.
 - It shows from the first download until embark day ends, then goes away.
   Muster station is not a check.
+- Built (1.3.4): a day counts as downloaded when Royal lists at least one
+  event on it; debark day always counts (Royal lists none). The busiest day is
+  counted before the watch's trim (`slice.dayLoad`), per category, so the card
+  follows the Filters tab without saving. Stars and My entries changed on the
+  page count from the next time it opens.
 
 ### 24.3 Search events (`Phone24Search`)
 

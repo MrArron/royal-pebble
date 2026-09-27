@@ -393,6 +393,20 @@ test('settings page with starred overlaps builds with the clash filter code', fu
   assert.ok(html.indexOf("'clashes'") !== -1, 'Clashes filter');
 });
 
+test('Ready to sail card replaces the All set line, with the load and the page time (§24.2)', function() {
+  var state = {ships: [], status: {}, me: {}, theme: 'light', reminderLead: 15,
+    cruise: {shipCode: 'HM', shipName: 'Harmony of the Seas', sailDate: '2027-03-06', days: 4, nights: 3,
+             published: true, events: 2, savedDays: 4, lastSync: 'today'},
+    dayLoad: [{date: '2027-03-07', fixed: 2, cats: [['Shop', 'Retail', 1]]}], maxEvents: 160,
+    api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('READY TO SAIL?') !== -1, 'card code');
+  assert.ok(html.indexOf('All set: Royal Pebble works at sea') === -1, 'old line gone');
+  assert.ok(html.indexOf('"pageNow":' + new Date(2027, 2, 6, 12, 0).getTime()) !== -1, 'page time');
+  assert.ok(html.indexOf('"dayLoad":[{"date":"2027-03-07"') !== -1, 'load embedded');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {
