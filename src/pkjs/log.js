@@ -541,9 +541,6 @@ function watchEntry(e, sailIso) {
       }
       return {kind: 'sync', detail: 'morning sync: ' + (SYNC_OUTCOMES[x] || 'outcome ' + x) + ' after ' + seconds(a) +
               (c === 2 ? ', closed with Back before it finished' : c ? ', app stayed open' : ', app closed')};
-    case 16:
-      return {kind: 'star', detail: (x ? 'starred ' : 'star removed ') + cruiseText(b, sailIso) +
-              (c ? ', clashes' : '')};
     default:
       return {kind: 'watch', detail: 'entry ' + e.code + ': ' + [x, a, b, c].join(' ')};
   }

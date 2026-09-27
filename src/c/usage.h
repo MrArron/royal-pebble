@@ -21,7 +21,6 @@ enum {
   USAGE_STORAGE_ERROR = 13,
   USAGE_ONBOARD = 14,
   USAGE_SYNC = 15,
-  USAGE_STAR = 16,
 };
 
 // USAGE_SYNC's `x`: the morning sync (docs/DESIGN_PHASE3.md §25).

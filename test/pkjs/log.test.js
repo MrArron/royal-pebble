@@ -337,9 +337,7 @@ test('watch entries decode and render', function() {
     {at: 1804000121, code: 15, x: 4, a: 0, b: 0, c: 0},
     {at: 1804000122, code: 1, x: 100, a: 60, b: 65536, c: 1},
     {at: 1804000123, code: 15, x: 2, a: 12, b: 0, c: 2},
-    {at: 1804000124, code: 16, x: 1, a: 0, b: 1440 + 1260, c: 1},
-    {at: 1804000125, code: 16, x: 0, a: 0, b: 1440 + 1260, c: 0},
-    {at: 1804000126, code: 3, x: 13, a: 0, b: 3, c: 1440 + 1260}
+    {at: 1804000124, code: 3, x: 13, a: 0, b: 3, c: 1440 + 1260}
   ];
   var bytes = [];
   entries.forEach(function(e) { bytes = bytes.concat(pack.encodeLogEntry(e)); });
@@ -372,8 +370,6 @@ test('watch entries decode and render', function() {
     'sync  morning sync with the app open: asked for data',
     'open  opened by the morning sync, battery 60%, phone connected, 64 KB free',
     'sync  morning sync: phone unreachable after 12 s, closed with Back before it finished',
-    'star  starred D2 21:00, clashes',
-    'star  star removed D2 21:00',
     'screen  Remove star? (D2 21:00): 3 s'
   ]);
   // 01:00 after midnight still belongs to the evening before.

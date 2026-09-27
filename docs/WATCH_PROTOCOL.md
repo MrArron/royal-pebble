@@ -576,8 +576,8 @@ NEEDED`), 12 `On board?`, 13 `Remove star?`. A screen's **detail**: Home, what i
 summary card, 1 for tomorrow's; event details, the event's start; a directory
 page or a route to a place or restroom, its `dir_ref`; a route to an event, its
 start; an alert, its `at`; `On board?`, 1 once confirmed; `Remove star?`, the
-event's start (a `star removed` entry just before the view's entry means Hold
-Down removed it; none means Back kept it). **Home's card:** 0 loading or no phone, 1 days to
+event's start (the phone's `unstarred on the watch` entry right after the view
+means Hold Down removed the star; none means Back kept it). **Home's card:** 0 loading or no phone, 1 days to
 sail, 2 connect your phone (a new day with no slice), 3 no cruise today, 4
 all-aboard countdown, 5 NEXT (starred), 6 FEATURED, 7 NOW (in progress), 8
 nothing starred today, 9 terminal arrival (embark day).
@@ -599,7 +599,6 @@ nothing starred today, 9 terminal arrival (embark day).
 | 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short | persistent key | — |
 | 14 | on board (§22.6); the phone writes `onboard set` or `onboard undo` | 1 set, 0 undo | — | ship time (cruise minutes) | — |
 | 15 | morning sync (§25) | 0 set (when it changes), 1 synced, 2 phone unreachable, 3 timed out (phone connected, no slice), 4 fired with the app open | 0 set: the error when none is set; 1-3: seconds until the slice came, or waited | 0 set: when (−1 none) | 1-3: 0 it closed itself, 1 the app stayed open (a notice, or the user left Home), 2 closed with Back before it finished |
-| 16 | star changed on the watch (Hold Select, or Hold Down on `Remove star?`, §26) | 1 starred, 0 removed | — | the event's start (−1 untimed) | 1 the new star clashes |
 
 Button presses are logged while the phone is connected; a Select that did
 nothing always is. Screen views are always logged, so with the phone away the
