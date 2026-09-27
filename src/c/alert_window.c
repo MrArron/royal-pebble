@@ -5,9 +5,11 @@
 
 // Shown when an alert fires: the top bar says "Reminder" or "All aboard",
 // then "IN 15 MIN", what it's about and, for reminders, where it is
-// (docs/DESIGN_V1_1.md §2). The evening's "To reserve" alert lists tomorrow's
-// starred events that still need a reservation (§5). A booked order's
-// reminder counts down to its meeting time (docs/DESIGN_PHASE3.md §22.4).
+// (docs/DESIGN_V1_1.md §2). A reminder whose event is in the day's data shows
+// the event's details body with the "From" directions under the where lines
+// (docs/DESIGN_PHASE3.md §22.9). The evening's "To reserve" alert lists
+// tomorrow's starred events that still need a reservation (§5). A booked
+// order's reminder counts down to its meeting time (§22.4).
 // Opened by a wakeup (app closed) it is the only
 // screen the user asked for, so Back leaves the app; Select opens Home.
 
@@ -165,6 +167,29 @@ static int draw_booked(GContext *ctx, const Alarm *a, int y, int w) {
   return y + 18;
 }
 
+// "From" directions in the details body (details_draw_event's after_where),
+// closed by a second divider so the times below read as the event's again.
+static int draw_from_in_details(GContext *ctx, int y) {
+  GRect b = layer_get_bounds(s_page.content);
+  y = draw_from(ctx, &s_alarm, alarm_from_kind(&s_alarm), y + 3, b.size.w - 2 * PAD);
+  draw_divider(ctx, y + 3, b.size.w);
+  return y + 6;
+}
+
+// "+ 2 more" when other alerts share this minute, then fits the page.
+static void draw_more(GContext *ctx, int count, int y, int w) {
+  if (count > 1) {
+    char more[24];
+    snprintf(more, sizeof(more), "+ %d more", count - 1);
+    graphics_context_set_text_color(ctx, g_theme->text);
+    graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 22;
+  }
+  scroll_page_fit(&s_page, y);
+}
+
 static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   if (s_alarm.kind == ALARM_TO_RESERVE) {
@@ -199,20 +224,15 @@ static void update_proc(Layer *layer, GContext *ctx) {
                      GTextAlignmentLeft, NULL);
   y += all_aboard ? 34 : 22;
 
-  // A booked order shows what its details page shows (the owner, 2026-09-26).
-  int index = booked && data_ready() ? data_event_for_alarm(a) : -1;
+  // Every reminder shows what its event's details page shows, with its "From"
+  // directions under the where lines (the owner, 2026-09-26 and 09-27). An
+  // event that isn't in the day's data (tomorrow's, say) falls back to the
+  // alert's own fields below.
+  int index = !all_aboard && data_ready() ? data_event_for_alarm(a) : -1;
   if (index >= 0) {
-    y = details_draw_event(ctx, index, b.size.w, y) + 4;
-    if (count > 1) {
-      char more[24];
-      snprintf(more, sizeof(more), "+ %d more", count - 1);
-      graphics_context_set_text_color(ctx, g_theme->text);
-      graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                         GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
-      y += 22;
-    }
-    scroll_page_fit(&s_page, y);
+    bool from = !booked && alarm_from_kind(a) != FROM_NONE;
+    y = details_draw_event(ctx, index, b.size.w, y, from ? draw_from_in_details : NULL) + 4;
+    draw_more(ctx, count, y, w);
     return;
   }
 
@@ -228,16 +248,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   if (booked) {
     y = draw_booked(ctx, a, y, w) + 4;
-    if (count > 1) {
-      char more[24];
-      snprintf(more, sizeof(more), "+ %d more", count - 1);
-      graphics_context_set_text_color(ctx, g_theme->text);
-      graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                         GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
-      y += 22;
-    }
-    scroll_page_fit(&s_page, y);
+    draw_more(ctx, count, y, w);
     return;
   }
 
@@ -287,16 +298,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   }
   y += 4;
 
-  if (count > 1) {
-    char more[24];
-    snprintf(more, sizeof(more), "+ %d more", count - 1);
-    graphics_context_set_text_color(ctx, g_theme->text);
-    graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                       GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
-    y += 22;
-  }
-  scroll_page_fit(&s_page, y);
+  draw_more(ctx, count, y, w);
 }
 
 static time_t s_shown_at;

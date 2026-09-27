@@ -248,6 +248,37 @@ Home then shows the **sea-day layout** (the NEXT card) for the rest of the day.
   Alerts are tested in real time (CLAUDE.md). The flag's hold Select and the
   wakeup cancel need a check on the watch, not only the emulator.
 
+### 22.9 Every reminder shows the full details (owner, 2026-09-27)
+
+After the booked reminder (§22.4) the owner asked for the same on **every**
+reminder card: starred events and personal entries show the event's details
+body under the countdown, and keep the "From" directions they had
+(`docs/DESIGN_V1_1.md` §2). The card scrolls like the details page.
+
+```
+IN 10 MIN                      sea accent
+Title
+Studio B                       muted
+Deck 4 · Mid
+──────────
+From Royal Theater:            Gothic 14 bold, muted
+↓1 deck · Fore → Mid           Gothic 18 bold
+──────────
+1:00p - 2:00p · 1 h
+Clashes with 1:30p Trivia      (when there is one)
+Not reserved yet / ✓ Reserved  (starred, needs a reservation)
+Last chance                    (when tagged)
+```
+
+- The "From" block sits right under the where lines, between two dividers,
+  and **replaces** the details' `↓2 decks from cabin` line (both describe how
+  far the walk is). Without a "From" block the cabin line stays.
+- The body has no star line and no Select hints.
+- When the event isn't in the watch's day data (a reminder for tomorrow, or a
+  day not loaded), the card falls back to the alert's own fields as before.
+- Booked orders keep §22.4 (no "From" block). All-aboard and To reserve cards
+  are unchanged.
+
 ---
 
 ## 23. Port day card

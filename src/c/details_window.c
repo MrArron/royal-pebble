@@ -28,7 +28,8 @@ static int draw_line(GContext *ctx, const char *text, const char *font_key, GCol
   return y + size.h;
 }
 
-int details_draw_event(GContext *ctx, int index, int width, int y) {
+int details_draw_event(GContext *ctx, int index, int width, int y,
+                       int (*after_where)(GContext *ctx, int y)) {
   Event *e = data_event(index);
   int w = width - 2 * PAD;
 
@@ -42,7 +43,11 @@ int details_draw_event(GContext *ctx, int index, int width, int y) {
   if (where[0]) {
     y = draw_line(ctx, where, FONT_KEY_GOTHIC_18_BOLD,
                   where_ashore(&e->where) ? g_theme->port_accent : g_theme->text, PAD, y, w, 22);
-    y += draw_rel_line(ctx, false, g_theme->muted, PAD, y, w, &e->where);
+    if (after_where) {
+      y = after_where(ctx, y);
+    } else {
+      y += draw_rel_line(ctx, false, g_theme->muted, PAD, y, w, &e->where);
+    }
   }
   y += 2;
 
@@ -120,7 +125,7 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   Event *e = data_event(s_index);
   int w = b.size.w - 2 * PAD;
-  int y = details_draw_event(ctx, s_index, b.size.w, 4);
+  int y = details_draw_event(ctx, s_index, b.size.w, 4, NULL);
 
   // The star and what Select does.
   draw_divider(ctx, y + 4, b.size.w);
