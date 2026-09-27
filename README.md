@@ -138,9 +138,12 @@ tested on the watch before it's merged. The full plan is in the
   event search); a silent morning sync that loads each new day before you wake;
   a confirm step before removing a star; a Casino filter; and **Share my plan**
   with a travel companion.
-- **Then:** Phase 4, voice (a scope session first: offline voice questions such
+- **Then:** Phase 4, event data (venue codes, age limits and age filters,
+  arrive-early times, what-to-bring notes, selectable shore excursions, and an
+  optional login download on the phone); Phase 5, voice (a scope session
+  first: offline voice questions such
   as "how do I get to my cabin from the Windjammer", possibly with a native
-  Android companion app); Phase 5, planning (meet-up points, checklists, a dining
+  Android companion app); Phase 6, planning (meet-up points, checklists, a dining
   window hint). The last stretch before the sailing is a freeze: re-sync, a full
   test on the watch and bug fixes only.
 

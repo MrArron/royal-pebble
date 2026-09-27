@@ -10,6 +10,8 @@ Read before making changes:
 - `docs/DESIGN_V1_1.md` — v1.1 designs (venues, wayfinding, Mark reserved)
 - `docs/DESIGN_PHASE3.md` — Phase 3 designs (booked excursions, embark day, I'm on
   board; later items as drafts)
+- `docs/PHASE4_PLAN.md` — Phase 4 plan (event data: venue codes, ages and age
+  filters, arrive-early times, notes, shore excursions, optional phone login)
 - `docs/DATA_FORMAT.md` — the cruise data bundle (v1)
 - `docs/ROYAL_LOGIN_DATA.md` — what a Royal login can see (sync tool only) and
   ideas for using it
