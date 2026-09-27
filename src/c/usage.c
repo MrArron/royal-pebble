@@ -8,8 +8,12 @@
 // 30-33; Home's hints 7; the summary 6; on board 9).
 #define KEY_CLOSED 8       // UsageClosed: when the app last closed, for missed alerts
 #define KEY_META 89
-#define KEY_ENTRIES 90     // 90..102
-#define MAX_ENTRIES 200
+#define KEY_ENTRIES 90     // 90..139
+// About 12.8 KB of heap: room for a long day away from the phone. It isn't
+// part of the 64 KB limit on code plus static data.
+#define MAX_ENTRIES 800
+// The queue's size before PR 42; its saved queue can wrap at this slot.
+#define OLD_MAX_ENTRIES 200
 #define ENTRIES_PER_KEY 16
 #define ENTRY_KEYS ((MAX_ENTRIES + ENTRIES_PER_KEY - 1) / ENTRIES_PER_KEY)
 
@@ -34,7 +38,11 @@ typedef struct {
   int16_t head;
   int16_t count;
   int32_t dropped;  // entries lost to a full queue, not yet reported
+  int16_t capacity; // MAX_ENTRIES when saved (the 200-entry version had no field)
+  int16_t unused;
 } UsageMeta;
+
+#define OLD_META_SIZE 8
 
 typedef struct {
   int32_t sail_days;
@@ -48,7 +56,7 @@ _Static_assert(sizeof(UsageEntry) * ENTRIES_PER_KEY <= PERSIST_DATA_MAX_LENGTH, 
 // the SDK's 64 KB limit on code plus static data.
 static UsageEntry *s_entries;
 static UsageMeta s_meta;
-static uint16_t s_dirty;       // entry keys changed since the last save
+static uint64_t s_dirty;       // entry keys changed since the last save
 static bool s_saving;          // a storage error while saving isn't logged again
 
 static int s_inflight;         // entries in the LOG message being sent
@@ -79,7 +87,7 @@ static void note_memory(void) {
 static void save(void) {
   s_saving = true;
   for (int k = 0; k < ENTRY_KEYS; k++) {
-    if (!(s_dirty & (1 << k))) {
+    if (!(s_dirty & ((uint64_t)1 << k))) {
       continue;
     }
     int first = k * ENTRIES_PER_KEY;
@@ -104,20 +112,36 @@ void usage_init(void) {
   s_opened_at = time(NULL);
   s_battery_at = s_opened_at;
   note_memory();
-  if (!s_entries || persist_get_size(KEY_META) != (int)sizeof(UsageMeta)) {
+  s_meta.capacity = MAX_ENTRIES;
+  int size = persist_get_size(KEY_META);
+  if (!s_entries || (size != (int)sizeof(UsageMeta) && size != OLD_META_SIZE)) {
     return;
   }
-  persist_read_data(KEY_META, &s_meta, sizeof(s_meta));
-  if (s_meta.head < 0 || s_meta.head >= MAX_ENTRIES || s_meta.count < 0 || s_meta.count > MAX_ENTRIES) {
-    s_meta = (UsageMeta){0, 0, 0};
+  persist_read_data(KEY_META, &s_meta, size);
+  bool old = size == OLD_META_SIZE;
+  int capacity = old ? OLD_MAX_ENTRIES : s_meta.capacity;
+  if ((!old && capacity != MAX_ENTRIES) || s_meta.head < 0 || s_meta.head >= capacity ||
+      s_meta.count < 0 || s_meta.count > capacity) {
+    s_meta = (UsageMeta){.capacity = MAX_ENTRIES};
     return;
   }
+  s_meta.capacity = MAX_ENTRIES;
   for (int k = 0; k < ENTRY_KEYS; k++) {
     int first = k * ENTRIES_PER_KEY;
     int n = MAX_ENTRIES - first < ENTRIES_PER_KEY ? MAX_ENTRIES - first : ENTRIES_PER_KEY;
     if (persist_exists(KEY_ENTRIES + k)) {
       persist_read_data(KEY_ENTRIES + k, &s_entries[first], n * sizeof(UsageEntry));
     }
+  }
+  if (old) {
+    // Saved by the 200-entry version: entries past slot 199 wrapped to slot 0.
+    // They go after it instead, and everything is saved in the new layout.
+    int wrapped = s_meta.head + s_meta.count - OLD_MAX_ENTRIES;
+    if (wrapped > 0) {
+      memcpy(&s_entries[OLD_MAX_ENTRIES], &s_entries[0], wrapped * sizeof(UsageEntry));
+    }
+    s_dirty = ((uint64_t)1 << ENTRY_KEYS) - 1;
+    save();
   }
   if (s_meta.count) {
     APP_LOG(APP_LOG_LEVEL_INFO, "%d usage log entries not yet on the phone", s_meta.count);
@@ -203,7 +227,7 @@ void usage_add(uint8_t code, uint8_t x, int16_t a, int32_t b, int32_t c) {
   int slot = (s_meta.head + s_meta.count) % MAX_ENTRIES;
   s_entries[slot] = (UsageEntry){.at = (int32_t)time(NULL), .code = code, .x = x, .a = a, .b = b, .c = c};
   s_meta.count++;
-  s_dirty |= 1 << (slot / ENTRIES_PER_KEY);
+  s_dirty |= (uint64_t)1 << (slot / ENTRIES_PER_KEY);
   if (connected()) {
     // After failed tries, the next minute's tick tries again.
     if (s_tries <= MAX_TRIES) {

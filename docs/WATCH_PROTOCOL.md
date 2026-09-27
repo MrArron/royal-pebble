@@ -535,8 +535,10 @@ phone turns each into a line of text (`src/pkjs/log.js`, `watchEntry`) and adds
 it to its log at the watch's time, in time order. The watch never formats log
 text.
 
-- **Queue:** at most 200 entries, in persistent keys 89 (head, count, entries
-  dropped) and 90-102 (16 entries each). When it's full the oldest entry is
+- **Queue:** at most 800 entries (about 12.8 KB of heap), in persistent keys 89
+  (head, count, entries dropped, capacity) and 90-139 (16 entries each). A queue
+  saved by the earlier 200-entry version (keys 90-102, no capacity) is carried
+  over on the first open. When it's full the oldest entry is
   dropped and counted; the next LOG reports the count and the phone logs it.
 - **Sending:** while the phone is connected, 1.5 s after the latest entry (so a
   burst goes in one message), at most 40 entries per LOG. The watch drops them
