@@ -601,8 +601,8 @@ again until they hide Casino.
 
 ## 28. Share my plan
 
-**Status: reviewed (owner, 2026-09-27).** Mockups: `Phone28Share`,
-`Phone28Import`. Needs a new section in `docs/DATA_FORMAT.md` when built.
+**Status: built in 1.3.9 (§28.1), reviewed (owner, 2026-09-27).** Mockups: `Phone28Share`,
+`Phone28Import`. Format: `docs/DATA_FORMAT.md` ("Shared plan").
 
 - **Share my plan** card on the Cruise tab (`Phone28Share`): what goes in,
   as counts (`14 starred events`, `3 personal entries`, `2 days with
@@ -629,3 +629,25 @@ Review decisions (owner, 2026-09-27):
 - **Text:** one readable line first (`Royal Pebble plan · Harmony · sails
   <date> · 14 stars`) so the chat shows what it is, then a compact code that
   Import reads. The code's format goes in `docs/DATA_FORMAT.md`.
+
+### 28.1 Built (1.3.9)
+
+- **No share sheet:** the probe of 2026-09-26 (`docs/PROJECT_BRIEF.md`,
+  usage log export) already showed that the Pebble app's WebView has no
+  `navigator.share` and that `intent:` and `mailto:` links fail. So **Share
+  plan** copies the message and **Import plan** opens a screen with a box to
+  paste it into. A typical plan is 1-3 KB, so it's never split into parts.
+- The format is in `docs/DATA_FORMAT.md` ("Shared plan"). The code is
+  `src/pkjs/share.js`, which the settings page gets as text.
+- The import screen checks the paste as it arrives. A different ship or sail
+  date is refused, with both sailings named. No differences shows "Nothing to
+  import".
+- Review each lists the rows under STARS, PERSONAL ENTRIES, DAY SETTINGS,
+  VENUE FIXES and CABIN DETAILS, each starting at what Accept all would do.
+  Reserved marks are rows of their own (`Add mark` / `Skip`, `Keep mine` /
+  `Unmark`). Personal entries, settings and fixes that only the receiver has
+  aren't listed, since Accept all never removes them either.
+- **Accept all** and **Apply** make the changes on the page and save it, like
+  the Save button. Imported stars count as changed at that moment, so the
+  latest change still wins against the watch. The usage log records the
+  counts only.
