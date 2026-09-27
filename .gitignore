@@ -8,6 +8,9 @@ royal-pebble-map-notes-*
 # Account explorer output (tools/cruise-sync/explore_account.py): personal data
 royal-pebble-explore-*/
 
+# Raw products listings and reports from cruise_sync.py --dump-products
+royal-pebble-products-*
+
 # Ship map downloads and working files (tools/shipmap/README.md)
 tools/shipmap/decks/
 tools/shipmap/out/

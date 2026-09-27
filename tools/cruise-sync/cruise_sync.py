@@ -70,7 +70,7 @@ PASTE_TESTED = 1024 * 1024
 # plus the shows you reserve (ENTERTAINMENT), the paid classes and experiences
 # (ACTIVITIES), which come through with "reservation" set, and the shore
 # excursions (SHOREX, paid). Spa and dining are booking slots, not events.
-# Everything from here to fetch_schedule: keep in step with src/pkjs/royal.js.
+# Everything from here to fetch_products: keep in step with src/pkjs/royal.js.
 SCHEDULE_TYPES = ("NON_REVENUE_SCHEDULABLE", "ENTERTAINMENT", "ACTIVITIES", "SHOREX")
 PAID_TYPES = ("ACTIVITIES", "SHOREX")
 EXCURSION_CAT = ["Shore excursions", ""]
@@ -394,16 +394,107 @@ def schedule_summary(schedule: dict) -> str:
             f"{sum(1 for r in rows if r[2])} with notes")
 
 
-def fetch_schedule(sess, code: str, date8: str) -> dict:
-    acc = new_schedule_acc()
+def fetch_products(sess, code: str, date8: str) -> list:
+    """Royal's raw products listing for a sailing, all pages."""
+    products = []
     for offset in range(0, 20000, PAGE):
         payload = get_json(sess, "GET", f"{API}/en/royal/web/v3/products",
                            params={"sailingID": code + date8, "limit": str(PAGE), "offset": str(offset)}).get("payload") or {}
-        products = payload.get("products") or []
-        add_products(acc, products)
-        if len(products) < PAGE:
+        page = payload.get("products") or []
+        products += page
+        if len(page) < PAGE:
             break
+    return products
+
+
+def build_schedule(products: list) -> dict:
+    acc = new_schedule_acc()
+    add_products(acc, products)
     return finish_schedule(acc)
+
+
+# ---------------------------------------------------------------- --dump-products
+
+DUMP_PREFIX = "royal-pebble-products"
+
+
+def product_ids(products: list) -> dict:
+    """{title: sorted productIDs} for the products the schedule keeps."""
+    ids = {}
+    for p in products:
+        kind = (p.get("productType") or {}).get("productType")
+        title = clean(p.get("productTitle"))
+        if kind in SCHEDULE_TYPES and title and not SKIP_TITLES.search(title):
+            ids.setdefault(title, set()).add(clean(p.get("productID")) or "-")
+    return {t: sorted(v) for t, v in ids.items()}
+
+
+def compare_ids(old: list, new: list) -> list:
+    """Report lines comparing productID by title between two pulls (the gate
+    for re-sync by product id, docs/PHASE4_PLAN.md item 5)."""
+    a, b = product_ids(old), product_ids(new)
+    both = sorted(set(a) & set(b))
+    changed = [t for t in both if a[t] != b[t]]
+    lines = [f"Titles in both pulls: {len(both)}; same productID: {len(both) - len(changed)}; "
+             f"changed: {len(changed)}; only in the earlier pull: {len(set(a) - set(b))}; "
+             f"only in this pull: {len(set(b) - set(a))}"]
+    lines += [f"  changed  {t}: {', '.join(a[t])} -> {', '.join(b[t])}" for t in changed]
+    lines += [f"  gone     {t}" for t in sorted(set(a) - set(b))]
+    lines += [f"  new      {t}" for t in sorted(set(b) - set(a))]
+    return lines
+
+
+def products_report(products: list, previous=None) -> str:
+    """A text report on a raw products listing: types, venue codes, product ids
+    and field names. `previous` is an earlier pull of the same sailing."""
+    count = lambda items: {k: items.count(k) for k in sorted(set(items))}  # noqa: E731
+    kinds = [(p.get("productType") or {}).get("productType") or "-" for p in products]
+    out = [f"Products: {len(products)}"] + [f"  {k}: {n}" for k, n in count(kinds).items()]
+
+    codes = {}
+    for p in products:
+        loc = p.get("productLocation") or {}
+        codes.setdefault(loc.get("locationCode") or "-", []).append(clean(loc.get("locationTitle")) or "(blank)")
+    out += ["", f"Venue codes: {len(codes)} (code: title x products; * = several titles)"]
+    for code in sorted(codes):
+        titles = count(codes[code])
+        out.append(f"  {'*' if len(titles) > 1 else ' '}{code}: "
+                   + "; ".join(f"{t} x{n}" for t, n in titles.items()))
+
+    ids = product_ids(products)
+    out += ["", f"Product ids by title: {len(ids)} titles (* = several products share the title)"]
+    out += [f"  {'*' if len(v) > 1 else ' '}{t}: {', '.join(v)}" for t, v in sorted(ids.items())]
+
+    fields, offer = [], []
+    for p in products:
+        fields += list(p)
+        for o in p.get("offering") or []:
+            offer += list(o)
+    out += ["", "Product fields (products that have it):"]
+    out += [f"  {k}: {n}" for k, n in count(fields).items()]
+    out += ["", "Offering fields (sessions that have it):"]
+    out += [f"  {k}: {n}" for k, n in count(offer).items()]
+
+    if previous is not None:
+        out += ["", f"Compared with the earlier pull ({previous['pulled']}):"] + compare_ids(previous["products"], products)
+    return "\n".join(out) + "\n"
+
+
+def dump_products(out_dir: Path, ship: dict, date8: str, products: list, now=None) -> tuple:
+    """Saves the raw listing and its report beside any earlier dump of the same
+    sailing, comparing with the newest one. Returns (json path, report path)."""
+    now = now or dt.datetime.now()
+    base = f"{DUMP_PREFIX}-{ship['shipCode']}-{date8}-pulled-"
+    earlier = sorted(out_dir.glob(base + "*.json"))
+    previous = json.loads(earlier[-1].read_text(encoding="utf-8")) if earlier else None
+    pulled = now.strftime("%Y-%m-%d %H:%M")
+    raw = out_dir / f"{base}{now.strftime('%Y%m%d-%H%M')}.json"
+    raw.write_text(json.dumps({"ship": ship["shipCode"], "sailDate": date8, "pulled": pulled, "products": products},
+                              indent=1, ensure_ascii=False), encoding="utf-8")
+    report = raw.with_suffix(".txt")
+    report.write_text(f"{ship['name']} ({ship['shipCode']}), sailing {date8}, pulled {pulled}\n\n"
+                      + products_report(products, previous), encoding="utf-8")
+    return raw, report
 
 
 # ---------------------------------------------------------------- logged-in data
@@ -634,6 +725,9 @@ def main(argv=None) -> int:
     ap.add_argument("--email", help="Royal Caribbean login email (or set RCCL_EMAIL)")
     ap.add_argument("--out-dir", default=".", help="folder for the output file (default: current folder)")
     ap.add_argument("--no-clipboard", action="store_true", help="don't copy the result to the clipboard")
+    ap.add_argument("--dump-products", action="store_true",
+                    help="also save Royal's raw products listing and a report on it (venue codes, product ids, "
+                         "fields), compared with any earlier dump of the same sailing in --out-dir")
     args = ap.parse_args(argv)
 
     sess = new_session()
@@ -646,7 +740,11 @@ def main(argv=None) -> int:
         raise SyncError(f"{ship['name']} has no sailing on {pretty}.")
     itinerary = fetch_itinerary(sess, ship["shipCode"], date8)
     print(f"  Itinerary: {len(itinerary)} days")
-    schedule = fetch_schedule(sess, ship["shipCode"], date8)
+    products = fetch_products(sess, ship["shipCode"], date8)
+    schedule = build_schedule(products)
+    if args.dump_products:
+        raw, report = dump_products(Path(args.out_dir), ship, date8, products)
+        print(f"  Raw products listing: {raw.resolve()}\n  Report: {report.resolve()}")
     if schedule["published"]:
         print(f"  Activity schedule: {schedule_summary(schedule)}")
     else:
