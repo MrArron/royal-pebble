@@ -32,6 +32,12 @@ def build(ctx):
     cached_env = ctx.env
     for platform in ctx.env.TARGET_PLATFORMS:
         ctx.env = ctx.all_envs[platform]
+        # Link-time optimization: about 2.6 KB smaller, which matters under the
+        # SDK's 64 KB limit on code plus static data. Without --undefined, LTO
+        # drops the app header (__pbl_app_info, which no code refers to) and the
+        # build still "succeeds" with an app the watch can't load.
+        ctx.env.append_value('CFLAGS', '-flto')
+        ctx.env.append_value('LINKFLAGS', ['-flto', '-Os', '-Wl,--undefined=__pbl_app_info'])
         ctx.set_group(ctx.env.PLATFORM_NAME)
         app_elf = '{}/pebble-app.elf'.format(ctx.env.BUILD_DIR)
         ctx.pbl_build(source=ctx.path.ant_glob('src/c/**/*.c'), target=app_elf, bin_type='app')
