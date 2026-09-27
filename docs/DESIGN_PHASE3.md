@@ -525,7 +525,7 @@ Built (1.3.6):
 
 ## 26. Confirm before removing a star
 
-**Status: first draft, not reviewed.** Mockups: `Watch26RemoveStarLight/Dark`.
+**Status: reviewed (owner, 2026-09-27).** Mockups: `Watch26RemoveStarLight/Dark`.
 
 - Hold Select on a starred event (Today, details) opens a screen with
   `Remove star?` (Gothic 24 bold), a divider, the title (Gothic 18 bold) and
@@ -541,9 +541,18 @@ Built (1.3.6):
 - Check every screen where hold Select already does something else (place
   pages, Home, Route), per the brief.
 
+Review decisions (owner, 2026-09-27):
+
+- Hold Down confirms, as drafted: the same habit as the `On board?` screen.
+- It applies where a star can be removed on the watch: the Today list and
+  event details. Hold Select on Home (`On board?`) and on place pages (closest
+  restroom) keep their own actions. A clash warning when starring is unchanged.
+- The screen reuses the `On board?` window's code where it can: the watch
+  binary is close to its 64 KiB limit.
+
 ## 27. Casino filter
 
-**Status: first draft, not reviewed.** Mockup: `Phone27Casino`.
+**Status: reviewed (owner, 2026-09-27).** Mockup: `Phone27Casino`.
 
 - A **Hide casino events** card on the Filters tab, above the category
   switches (casino events cut across categories). It's a switch, with the
@@ -554,9 +563,15 @@ Built (1.3.6):
 - Matching is on the phone, per the brief. It affects event lists and Today
   only.
 
+Review decisions (owner, 2026-09-27):
+
+- A starred casino event keeps showing while the switch is on, the same as
+  hidden categories today: a star always reaches the watch.
+- The switch is off by default.
+
 ## 28. Share my plan
 
-**Status: first draft, not reviewed.** Mockups: `Phone28Share`,
+**Status: reviewed (owner, 2026-09-27).** Mockups: `Phone28Share`,
 `Phone28Import`. Needs a new section in `docs/DATA_FORMAT.md` when built.
 
 - **Share my plan** card on the Cruise tab (`Phone28Share`): what goes in,
@@ -573,3 +588,14 @@ Built (1.3.6):
     has a two-way segmented choice: `Add star` / `Skip`, `Keep mine` /
     `Unstar`, `Use theirs` / `Keep mine`.
   - `Apply` and `Cancel` sit in a bottom bar. Nothing is saved until Apply.
+
+Review decisions (owner, 2026-09-27):
+
+- **Sending:** first test whether the settings page (inside the Pebble app on
+  Android) can open Android's share sheet. If it can, `Share plan` opens it.
+  If not, `Share plan` copies the text, in parts when it's too long for the
+  clipboard (as the usage log export does), and `Import plan` has a box to
+  paste it into. Nothing needs the internet: any messaging app carries it.
+- **Text:** one readable line first (`Royal Pebble plan · Harmony · sails
+  <date> · 14 stars`) so the chat shows what it is, then a compact code that
+  Import reads. The code's format goes in `docs/DATA_FORMAT.md`.
