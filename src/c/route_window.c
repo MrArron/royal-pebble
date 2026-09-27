@@ -59,7 +59,7 @@ static char s_lead[LEAD_LEN];    // "Same area · your deck", or a message
 static char s_big[GPS_LEN];      // a restroom's "Deck 5 · Fore"
 static char s_small[TEXT_LEN];   // "100 m in all", "Same deck as Royal Theater"
 static char s_event[TITLE_LEN + 8];  // "12:00p Name That Tune Trivia" (event routes)
-static Step s_steps[STEPS_MAX];
+static Step *s_steps;  // on the heap while open: static data must stay under 64 KB
 static int s_count;
 
 // ---- Layout ------------------------------------------------------------------
@@ -328,7 +328,7 @@ static void page_received(const RoutePageMsg *page) {
   }
   int count = p < end ? *p++ : 0;
   s_count = 0;
-  while (s_count < count && s_count < STEPS_MAX && p < end) {
+  while (s_steps && s_count < count && s_count < STEPS_MAX && p < end) {
     Step *st = &s_steps[s_count];
     st->glyph = *p++;
     if (!codec_read_str(&p, end, st->text, sizeof(st->text))) {
@@ -434,6 +434,9 @@ static void window_unload(Window *window) {
   top_bar_destroy(s_top_bar);
   window_destroy(window);
   s_window = NULL;
+  free(s_steps);
+  s_steps = NULL;
+  s_count = 0;
 }
 
 static void push(int32_t ref, bool rest, const char *title, const char *header);
@@ -476,6 +479,10 @@ static void push(int32_t ref, bool rest, const char *title, const char *header) 
   s_lead[0] = s_big[0] = s_small[0] = '\0';
   snprintf(s_title, sizeof(s_title), "%s", title);
   snprintf(s_header, sizeof(s_header), "%s", header);
+  s_steps = malloc(STEPS_MAX * sizeof(Step));
+  if (!s_steps) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for route steps");
+  }
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,

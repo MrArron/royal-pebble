@@ -19,7 +19,9 @@ typedef struct {
 
 _Static_assert(sizeof(StarChange) * CHANGES_PER_KEY <= PERSIST_DATA_MAX_LENGTH, "star changes too big");
 
-static StarChange s_changes[MAX_STAR_CHANGES];
+// On the heap for the app's lifetime, not static: the app's code, data and
+// static buffers must stay under 64 KB.
+static StarChange *s_changes;
 static StarsMeta s_meta = {.next_seq = 1};
 static AppTimer *s_retry_timer;
 static int s_retries;
@@ -43,6 +45,11 @@ static void save(void) {
 }
 
 void stars_init(void) {
+  s_changes = malloc(MAX_STAR_CHANGES * sizeof(StarChange));
+  if (!s_changes) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for star changes");
+    return;
+  }
   if (persist_get_size(KEY_STARS_META) != (int)sizeof(StarsMeta)) {
     return;
   }
@@ -93,6 +100,9 @@ static bool same_event(const StarChange *a, const StarChange *b) {
 }
 
 void stars_record(const Event *e, bool reserved, bool on) {
+  if (!s_changes) {
+    return;
+  }
   StarChange c = {
     .seq = s_meta.next_seq++,
     .at = (int32_t)time(NULL),

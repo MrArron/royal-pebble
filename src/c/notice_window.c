@@ -12,7 +12,9 @@
 static Window *s_window;
 static Layer *s_top_bar;
 static Layer *s_layer;
-static Notice s_notices[MAX_NOTICES];
+// On the heap while notices are waiting or shown, not static: the app's code,
+// data and static buffers must stay under 64 KB.
+static Notice *s_notices;
 static int s_count;
 static int s_index;
 static bool s_pending;
@@ -184,6 +186,11 @@ static void window_unload(Window *window) {
   s_top_bar = NULL;
   window_destroy(window);
   s_window = NULL;
+  if (!s_pending) {
+    free(s_notices);
+    s_notices = NULL;
+    s_count = 0;
+  }
 }
 
 void notice_window_refresh(void) {
@@ -224,6 +231,13 @@ void notice_window_show(const Notice *notices, int count) {
   if (!s_window && !s_pending) {
     s_count = 0;
     s_index = 0;
+  }
+  if (!s_notices && count > 0) {
+    s_notices = malloc(MAX_NOTICES * sizeof(Notice));
+    if (!s_notices) {
+      APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for notices");
+      return;
+    }
   }
   for (int i = 0; i < count && s_count < MAX_NOTICES; i++) {
     s_notices[s_count++] = notices[i];
