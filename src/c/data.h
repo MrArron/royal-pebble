@@ -1,6 +1,15 @@
 #pragma once
 #include <pebble.h>
 
+// Debug log lines (`pebble logs`) are left out of the build: they cost about
+// 2.3 KB of the SDK's 64 KB limit on code plus static data. Define
+// ROYAL_PEBBLE_LOGS (for example in wscript's CFLAGS) to bring them back while
+// debugging. The usage log (usage.c) is separate and always on.
+#ifndef ROYAL_PEBBLE_LOGS
+#undef APP_LOG
+#define APP_LOG(...) ((void)0)
+#endif
+
 // Today's slice of the cruise, as sent by the phone companion
 // (docs/WATCH_PROTOCOL.md).
 //

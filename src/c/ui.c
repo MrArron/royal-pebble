@@ -604,10 +604,16 @@ void scroll_page_fit(ScrollPage *p, int bottom) {
   }
 }
 
-static void scroll_indicators(ScrollPage *p) {
-  ContentIndicator *ci = scroll_layer_get_content_indicator(p->scroll);
+int text_height(const char *text, GFont font, int w, int max_h) {
+  return graphics_text_layout_get_content_size(text, font, GRect(0, 0, w, max_h),
+                                               GTextOverflowModeTrailingEllipsis,
+                                               GTextAlignmentLeft).h;
+}
+
+void set_scroll_indicators(ScrollLayer *scroll, Layer *above, Layer *below) {
+  ContentIndicator *ci = scroll_layer_get_content_indicator(scroll);
   const ContentIndicatorDirection dirs[2] = {ContentIndicatorDirectionUp, ContentIndicatorDirectionDown};
-  Layer *layers[2] = {p->more_above, p->more_below};
+  Layer *layers[2] = {above, below};
   for (int i = 0; i < 2; i++) {
     const ContentIndicatorConfig config = {
       .layer = layers[i],
@@ -617,6 +623,10 @@ static void scroll_indicators(ScrollPage *p) {
     };
     content_indicator_configure_direction(ci, dirs[i], &config);
   }
+}
+
+static void scroll_indicators(ScrollPage *p) {
+  set_scroll_indicators(p->scroll, p->more_above, p->more_below);
 }
 
 void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,

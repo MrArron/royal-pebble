@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "codec.h"
 #include "comm.h"
+#include "fetch.h"
 #include "ui.h"
 #include "usage.h"
 
@@ -9,12 +10,6 @@
 // per step with a drawn glyph.
 // The phone works out every line (docs/WATCH_PROTOCOL.md, Route screen); the
 // watch only draws them and keeps nothing once the screen closes.
-
-#define REPLY_TIMEOUT_MS 8000
-#define SEND_RETRY_MS 500
-#define SEND_TRIES 4
-// The phone script takes 10-16 s to start after the app opens (owner's logs).
-#define SCRIPT_WAIT_MS 25000
 
 #define STEPS_MAX 8
 #define TEXT_LEN 40
@@ -26,8 +21,6 @@
 
 // Step glyphs, as the phone numbers them (gpstext.js).
 enum { GLYPH_WALK = 0, GLYPH_CROSS = 1, GLYPH_ELEVATOR = 2, GLYPH_STAIRS = 3, GLYPH_ARRIVE = 4 };
-
-typedef enum { STATE_LOADING, STATE_READY, STATE_NO_PHONE } State;
 
 typedef struct {
   uint8_t glyph;
@@ -45,11 +38,7 @@ static int32_t s_ref;
 static bool s_rest;
 static int32_t s_start;          // the event's start (Home's NEXT), else NO_TIME
 static char s_venue[VENUE_LEN];  // the event's venue, as the phone is asked
-static State s_state;
-static int s_tries;
-static bool s_waiting;           // loading, until the phone script is up
-static bool s_waited;            // this request has waited once already
-static AppTimer *s_timer;
+static Fetch s_fetch;
 
 static uint8_t s_flags;         // 1: shown less (not drawn differently yet)
 static int8_t s_small_decks;
@@ -63,12 +52,6 @@ static Step *s_steps;  // on the heap while open: static data must stay under 64
 static int s_count;
 
 // ---- Layout ------------------------------------------------------------------
-
-static int text_height(const char *text, GFont font, int w, int max_h) {
-  return graphics_text_layout_get_content_size(text, font, GRect(0, 0, w, max_h),
-                                               GTextOverflowModeTrailingEllipsis,
-                                               GTextAlignmentLeft).h;
-}
 
 static void draw_text(GContext *ctx, const char *text, GFont font, GColor color, GRect box,
                       GTextAlignment align) {
@@ -168,14 +151,14 @@ static int layout(GContext *ctx, int w) {
   }
   y += 5;
 
-  if (s_state == STATE_LOADING) {
+  if (s_fetch.state == FETCH_LOADING) {
     if (ctx) {
       draw_text(ctx, "Finding route\xe2\x80\xa6", large, g_theme->muted, GRect(PAD, y + 26, tw, 22),
                 GTextAlignmentCenter);
     }
     return y + 60;
   }
-  if (s_state == STATE_NO_PHONE) {
+  if (s_fetch.state == FETCH_NO_PHONE) {
     if (ctx) {
       draw_text(ctx, "Connect your phone", large, g_theme->text, GRect(PAD, y + 16, tw, 22), GTextAlignmentCenter);
       draw_text(ctx, "Select tries again", small, g_theme->muted, GRect(PAD, y + 38, tw, 18), GTextAlignmentCenter);
@@ -265,52 +248,16 @@ static void relayout(void) {
 
 // ---- Asking the phone --------------------------------------------------------
 
-static void set_state(State state) {
-  s_state = state;
-  relayout();
-}
+static void state_changed(void *owner) { relayout(); }
 
-static void cancel_timer(void) {
-  if (s_timer) {
-    app_timer_cancel(s_timer);
-    s_timer = NULL;
-  }
-}
-
-static void timed_out(void *context) {
-  s_timer = NULL;
-  s_waiting = false;
-  if (s_state == STATE_LOADING) {
-    set_state(STATE_NO_PHONE);
-  }
-}
-
-// The outbox may be busy with star changes or a SAVED report: try again shortly.
-static void send_request(void *context) {
-  s_timer = NULL;
-  if (!connection_service_peek_pebble_app_connection()) {
-    set_state(STATE_NO_PHONE);
-  } else if (s_start != NO_TIME ? comm_request_event_route(s_start, s_venue) : comm_request_route(s_ref, s_rest)) {
-    s_timer = app_timer_register(REPLY_TIMEOUT_MS, timed_out, NULL);
-  } else if (++s_tries < SEND_TRIES) {
-    s_timer = app_timer_register(SEND_RETRY_MS, send_request, NULL);
-  } else {
-    set_state(STATE_NO_PHONE);
-  }
-}
-
-static void request(void) {
-  cancel_timer();
-  s_tries = 0;
-  s_waiting = s_waited = false;
-  set_state(STATE_LOADING);
-  send_request(NULL);
+static bool send_request(void *owner) {
+  return s_start != NO_TIME ? comm_request_event_route(s_start, s_venue) : comm_request_route(s_ref, s_rest);
 }
 
 // uint8 flags, int8 decks, five texts, uint8 count, then each step's uint8
 // glyph and text. Stops at the first step that isn't whole.
 static void page_received(const RoutePageMsg *page) {
-  if (!s_window || s_state == STATE_READY || page->ref != s_ref || page->rest != s_rest ||
+  if (!s_window || s_fetch.state == FETCH_READY || page->ref != s_ref || page->rest != s_rest ||
       page->start != s_start || page->length < 2) {
     return;
   }
@@ -336,42 +283,19 @@ static void page_received(const RoutePageMsg *page) {
     }
     s_count++;
   }
-  cancel_timer();
-  s_waiting = false;
-  set_state(STATE_READY);
+  fetch_done(&s_fetch);
 }
 
-// A request sent before the phone script is up (right after the app opens)
-// waits for it, still loading, and goes again when the phone first speaks.
-static void request_failed(bool script_down) {
-  if (s_state != STATE_LOADING) {
-    return;
-  }
-  cancel_timer();
-  if (script_down && !s_waited) {
-    s_waiting = s_waited = true;
-    s_timer = app_timer_register(SCRIPT_WAIT_MS, timed_out, NULL);
-  } else {
-    s_waiting = false;
-    set_state(STATE_NO_PHONE);
-  }
-}
+static void request_failed(bool script_down) { fetch_failed(&s_fetch, script_down); }
 
-static void phone_up(void) {
-  if (s_waiting && s_state == STATE_LOADING) {
-    cancel_timer();
-    s_waiting = false;
-    s_tries = 0;
-    s_timer = app_timer_register(SEND_RETRY_MS, send_request, NULL);
-  }
-}
+static void phone_up(void) { fetch_phone_up(&s_fetch); }
 
 // ---- Window ------------------------------------------------------------------
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
-  usage_press(BUTTON_ID_SELECT, s_state == STATE_NO_PHONE ? 0 : USAGE_NOTHING, -1);
-  if (s_state == STATE_NO_PHONE) {
-    request();
+  usage_press(BUTTON_ID_SELECT, s_fetch.state == FETCH_NO_PHONE ? 0 : USAGE_NOTHING, -1);
+  if (s_fetch.state == FETCH_NO_PHONE) {
+    fetch_start(&s_fetch);
   }
 }
 
@@ -381,20 +305,7 @@ static void click_config(void *context) {
 
 // Muted triangles under the top bar and at the bottom while there's more
 // above or below, as on place pages.
-static void set_indicators(void) {
-  ContentIndicator *ci = scroll_layer_get_content_indicator(s_scroll);
-  const ContentIndicatorDirection dirs[2] = {ContentIndicatorDirectionUp, ContentIndicatorDirectionDown};
-  Layer *layers[2] = {s_more_above, s_more_below};
-  for (int i = 0; i < 2; i++) {
-    const ContentIndicatorConfig config = {
-      .layer = layers[i],
-      .times_out = false,
-      .alignment = GAlignCenter,
-      .colors = {.foreground = g_theme->muted, .background = g_theme->bg},
-    };
-    content_indicator_configure_direction(ci, dirs[i], &config);
-  }
-}
+static void set_indicators(void) { set_scroll_indicators(s_scroll, s_more_above, s_more_below); }
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
@@ -420,11 +331,11 @@ static void window_load(Window *window) {
   layer_add_child(root, s_more_above);
   layer_add_child(root, s_more_below);
   set_indicators();
-  request();
+  fetch_start(&s_fetch);
 }
 
 static void window_unload(Window *window) {
-  cancel_timer();
+  fetch_cancel(&s_fetch);
   comm_set_route_handlers(NULL, NULL, NULL);
   layer_destroy(s_more_above);
   layer_destroy(s_more_below);
@@ -471,6 +382,7 @@ void route_window_push_event(const Event *e) {
 }
 
 static void push(int32_t ref, bool rest, const char *title, const char *header) {
+  s_fetch = (Fetch){.send = send_request, .changed = state_changed};
   s_ref = ref;
   s_rest = rest;
   s_count = 0;
