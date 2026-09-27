@@ -434,8 +434,14 @@ free text.
   table`) text button that puts the filled-in value back. An edited field is
   never refilled by itself, not even after a new stateroom number or a new
   sync.
-- A field keeps its source so the chip survives a reload (stored with the Me
-  settings; the build PR decides the shape).
+- A field keeps its source so the chip survives a reload. Built (1.3.3) as
+  `me.src` in the Me settings: `{stateroom, deck, stairs, muster}`, each
+  `booking`, `cabin`, `map` or `edited`. Deck is stored as `Deck 9`. Settings
+  saved before this have no `src`: a saved value that differs from what would
+  fill it counts as a hand edit, and a free-text stairs value stays as an extra
+  option in the drop-down. My info follows the same rules, so a filled-in
+  muster or deck follows a newer sync and an empty one falls back to the
+  booking and the cabin table.
 
 ### 24.2 Ready to sail (`Phone24Ready`, Cruise tab)
 

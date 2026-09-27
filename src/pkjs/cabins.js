@@ -15,39 +15,84 @@ var DATA = {
   HM: require('./data/cabins-HM')
 };
 
-var CENTRE = 3;   // metres either side of the centreline that count as "centre"
+// The lookups work on one ship's table, so the settings page can run them too:
+// config.js puts cabinLib's source and the ship's table in the page
+// (docs/DESIGN_PHASE3.md §24.1). Keep it self-contained, ES5.
+function cabinLib() {
+  var CENTRE = 3;   // metres either side of the centreline that count as "centre"
+  var NEAR_BANK = 15;   // stairs this close to an elevator bank are named after it
 
-// {deck, a, x, side, zone} for a cabin number, or null if it isn't on the plans.
-function find(ship, number) {
-  var t = DATA[ship];
-  var n = parseInt(String(number).replace(/\D/g, ''), 10);
-  if (!t || !n) {
-    return null;
-  }
-  var decks = Object.keys(t.decks);
-  for (var i = 0; i < decks.length; i++) {
-    var runs = t.decks[decks[i]].runs;
-    for (var j = 0; j < runs.length; j++) {
-      var r = runs[j];
-      var k = r[2] === 0 ? (n === r[0] ? 0 : -1) : (n - r[0]) / r[2];
-      if (k >= 0 && k < r[1] && k === Math.floor(k)) {
-        var a = r[1] > 1 ? r[3] + (r[4] - r[3]) * k / (r[1] - 1) : r[3];
-        return place(t, parseInt(decks[i], 10), Math.round(a * 10) / 10, r[5]);
+  // {deck, a, x, side, zone} for a cabin number, or null if it isn't on the plans.
+  function find(t, number) {
+    var n = parseInt(String(number).replace(/\D/g, ''), 10);
+    if (!t || !n) {
+      return null;
+    }
+    var decks = Object.keys(t.decks);
+    for (var i = 0; i < decks.length; i++) {
+      var runs = t.decks[decks[i]].runs;
+      for (var j = 0; j < runs.length; j++) {
+        var r = runs[j];
+        var k = r[2] === 0 ? (n === r[0] ? 0 : -1) : (n - r[0]) / r[2];
+        if (k >= 0 && k < r[1] && k === Math.floor(k)) {
+          var a = r[1] > 1 ? r[3] + (r[4] - r[3]) * k / (r[1] - 1) : r[3];
+          return place(t, parseInt(decks[i], 10), Math.round(a * 10) / 10, r[5]);
+        }
       }
     }
+    return null;
   }
-  return null;
+
+  function place(t, deck, a, x) {
+    return {
+      deck: deck,
+      a: a,
+      x: x,
+      side: Math.abs(x) <= CENTRE ? 'Centre' : x < 0 ? 'Port' : 'Starboard',
+      zone: a < t.banks.fwd ? 'Fore' : a > t.banks.aft ? 'Aft' : 'Mid'
+    };
+  }
+
+  // Main stairwells on a deck, nearest first: [{a, x, metres}].
+  function stairs(t, where) {
+    var deck = t && where && t.decks[String(where.deck)];
+    if (!deck) {
+      return [];
+    }
+    return deck.stairs.map(function(s) {
+      return {a: s[0], x: s[1], metres: Math.round(Math.abs(s[0] - where.a) + Math.abs(s[1] - where.x))};
+    }).sort(function(p, q) { return p.metres - q.metres; });
+  }
+
+  // A stairwell's name for the Me tab and My info (22 characters at most):
+  // the elevator bank beside it and the side, "Forward stairs, port".
+  function stairName(t, s) {
+    var fwd = Math.abs(s.a - t.banks.fwd);
+    var aft = Math.abs(s.a - t.banks.aft);
+    var where = fwd <= NEAR_BANK ? 'Forward' : aft <= NEAR_BANK ? 'Aft' :
+      s.a > t.banks.aft ? 'Far aft' : s.a < t.banks.fwd ? 'Far forward' : 'Midship';
+    return where + ' stairs, ' + (s.x < 0 ? 'port' : 'stbd');
+  }
+
+  // The names of a deck's stairwells, forward to aft, port first. [] when the
+  // table has no stairs for the deck.
+  function stairNames(t, deck) {
+    var d = t && t.decks[String(deck)];
+    if (!d) {
+      return [];
+    }
+    return d.stairs.slice().sort(function(p, q) { return p[0] - q[0] || p[1] - q[1]; })
+      .map(function(s) { return stairName(t, {a: s[0], x: s[1]}); });
+  }
+
+  return {find: find, stairs: stairs, stairName: stairName, stairNames: stairNames};
 }
 
-function place(t, deck, a, x) {
-  return {
-    deck: deck,
-    a: a,
-    x: x,
-    side: Math.abs(x) <= CENTRE ? 'Centre' : x < 0 ? 'Port' : 'Starboard',
-    zone: a < t.banks.fwd ? 'Fore' : a > t.banks.aft ? 'Aft' : 'Mid'
-  };
-}
+var lib = cabinLib();
+
+// For a ship without map data: every main stairwell a ship might have.
+var GENERIC_STAIRS = ['Forward stairs, port', 'Forward stairs, stbd', 'Midship stairs, port',
+                      'Midship stairs, stbd', 'Aft stairs, port', 'Aft stairs, stbd'];
 
 // The elevator bank to use for a cabin and the walk from it:
 // {bank: 'Forward'|'Aft', side, toward: 'forward'|'aft'|null, metres}.
@@ -69,21 +114,14 @@ function fromElevators(ship, where) {
   };
 }
 
-// Main stairwells on a deck, nearest first: [{a, x, metres}].
-function stairs(ship, where) {
-  var t = DATA[ship];
-  var deck = t && where && t.decks[String(where.deck)];
-  if (!deck) {
-    return [];
-  }
-  return deck.stairs.map(function(s) {
-    return {a: s[0], x: s[1], metres: Math.round(Math.abs(s[0] - where.a) + Math.abs(s[1] - where.x))};
-  }).sort(function(p, q) { return p.metres - q.metres; });
-}
-
 module.exports = {
-  find: find,
+  find: function(ship, number) { return lib.find(DATA[ship], number); },
   fromElevators: fromElevators,
-  stairs: stairs,
+  stairs: function(ship, where) { return lib.stairs(DATA[ship], where); },
+  stairName: function(ship, s) { return DATA[ship] ? lib.stairName(DATA[ship], s) : null; },
+  stairNames: function(ship, deck) { return lib.stairNames(DATA[ship], deck); },
+  table: function(ship) { return DATA[ship] || null; },
+  cabinLib: cabinLib,
+  GENERIC_STAIRS: GENERIC_STAIRS,
   ships: function() { return Object.keys(DATA); }
 };
