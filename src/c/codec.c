@@ -64,6 +64,26 @@ static void write_where(uint8_t *p, const Where *w) {
 }
 
 #define EVENT_FIXED 11
+#define BOOKED_BYTES 3
+
+// A booked order's three trailing bytes: meet_before, guests, kind.
+static bool read_booked(const uint8_t **p, const uint8_t *end, Booked *b) {
+  if (*p + BOOKED_BYTES > end) {
+    return false;
+  }
+  b->meet_before = (*p)[0];
+  b->guests = (*p)[1];
+  b->kind = (*p)[2];
+  *p += BOOKED_BYTES;
+  return true;
+}
+
+static uint8_t *write_booked(uint8_t *p, const Booked *b) {
+  p[0] = b->meet_before;
+  p[1] = b->guests;
+  p[2] = b->kind;
+  return p + BOOKED_BYTES;
+}
 #define DIR_ROW_FIXED 10
 #define ALARM_FIXED 16
 
@@ -81,6 +101,10 @@ bool codec_read_event(const uint8_t **p, const uint8_t *end, Event *e) {
       !codec_read_str(&q, end, e->venue, sizeof(e->venue))) {
     return false;
   }
+  memset(&e->booked, 0, sizeof(e->booked));
+  if ((e->flags & EVENT_BOOKED) && !read_booked(&q, end, &e->booked)) {
+    return false;
+  }
   *p = q;
   return true;
 }
@@ -92,12 +116,13 @@ uint8_t *codec_write_event(uint8_t *p, const Event *e) {
   p[6] = e->flags;
   write_where(p + 7, &e->where);
   p = codec_write_str(p + EVENT_FIXED, e->title, TITLE_LEN - 1);
-  return codec_write_str(p, e->venue, VENUE_LEN - 1);
+  p = codec_write_str(p, e->venue, VENUE_LEN - 1);
+  return (e->flags & EVENT_BOOKED) ? write_booked(p, &e->booked) : p;
 }
 
 int codec_event_size(const Event *e) {
   return EVENT_FIXED + 2 + codec_str_len(e->title, TITLE_LEN - 1) +
-         codec_str_len(e->venue, VENUE_LEN - 1);
+         codec_str_len(e->venue, VENUE_LEN - 1) + ((e->flags & EVENT_BOOKED) ? BOOKED_BYTES : 0);
 }
 
 bool codec_read_alarm(const uint8_t **p, const uint8_t *end, Alarm *a) {
@@ -117,6 +142,10 @@ bool codec_read_alarm(const uint8_t **p, const uint8_t *end, Alarm *a) {
       !codec_read_str(&q, end, a->from_venue, sizeof(a->from_venue))) {
     return false;
   }
+  memset(&a->booked, 0, sizeof(a->booked));
+  if ((a->from & ALARM_BOOKED) && !read_booked(&q, end, &a->booked)) {
+    return false;
+  }
   *p = q;
   return true;
 }
@@ -131,13 +160,15 @@ uint8_t *codec_write_alarm(uint8_t *p, const Alarm *a) {
   write_where(p + 12, &a->where);
   p = codec_write_str(p + ALARM_FIXED, a->title, ALARM_TITLE_LEN - 1);
   p = codec_write_str(p, a->venue, ALARM_VENUE_LEN - 1);
-  return codec_write_str(p, a->from_venue, ALARM_VENUE_LEN - 1);
+  p = codec_write_str(p, a->from_venue, ALARM_VENUE_LEN - 1);
+  return (a->from & ALARM_BOOKED) ? write_booked(p, &a->booked) : p;
 }
 
 int codec_alarm_size(const Alarm *a) {
   return ALARM_FIXED + 3 + codec_str_len(a->title, ALARM_TITLE_LEN - 1) +
          codec_str_len(a->venue, ALARM_VENUE_LEN - 1) +
-         codec_str_len(a->from_venue, ALARM_VENUE_LEN - 1);
+         codec_str_len(a->from_venue, ALARM_VENUE_LEN - 1) +
+         ((a->from & ALARM_BOOKED) ? BOOKED_BYTES : 0);
 }
 
 bool codec_read_dir_row(const uint8_t **p, const uint8_t *end, DirRow *r) {

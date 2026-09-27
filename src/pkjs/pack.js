@@ -65,16 +65,28 @@ function encodeWhere(w) {
   return [(w.deck | 0) & 255, (w.deckTo | 0) & 255, bits, (rel || 0) & 255];
 }
 
+// A booked order (flag 128, docs/DESIGN_PHASE3.md §22) is followed by three
+// bytes: uint8 minutes from `meet` to the start (0 none), uint8 guests (0 not
+// known), uint8 kind (1 excursion, 0 other booking).
+var FLAG_BOOKED = 128;
+
+function bookedBytes(b) {
+  b = b || {};
+  return [(b.meetBefore | 0) & 255, (b.guests | 0) & 255, b.excursion ? 1 : 0];
+}
+
 function encodeEvent(e) {
   var title = utf8(e.title || '', TITLE_MAX);
   var venue = utf8(e.venue || '', VENUE_MAX);
   var start = e.start | 0;
   var minutes = Math.max(0, Math.min(0xFFFF, e.minutes | 0));
+  var flags = (e.flags & 255) | (e.booked ? FLAG_BOOKED : 0);
   return [
     start & 255, (start >> 8) & 255, (start >> 16) & 255, (start >> 24) & 255,
     minutes & 255, (minutes >> 8) & 255,
-    e.flags & 255
-  ].concat(encodeWhere(e.where), [title.length], title, [venue.length], venue);
+    flags
+  ].concat(encodeWhere(e.where), [title.length], title, [venue.length], venue,
+           flags & FLAG_BOOKED ? bookedBytes(e.booked) : []);
 }
 
 // Notices and star changes: the watch buffers are 40 and 24 with the NUL.
@@ -92,19 +104,23 @@ function int32(n) {
 
 // Per alarm, little-endian: int32 at, int32 ref, int16 extra, uint8 kind,
 // uint8 from (bits 0-1 the previous venue's position, 2-3 the kind of "From"
-// directions, 4 set when the event still needs its reservation), 4 bytes where (as events), then title, venue and the previous
-// venue's name, each as uint8 length and bytes.
+// directions, 4 set when the event still needs its reservation, 5 a booked
+// order), 4 bytes where (as events), then title, venue and the previous
+// venue's name, each as uint8 length and bytes; a booked order's reminder ends
+// with the same three bytes as its event.
 var ALARM_NOT_RESERVED = 16;  // bit 4 of `from`
+var ALARM_BOOKED = 32;        // bit 5 of `from`
 
 function encodeAlarm(a) {
   var title = utf8(a.title || '', ALARM_TITLE_MAX);
   var venue = utf8(a.venue || '', ALARM_VENUE_MAX);
   var fromVenue = utf8(a.fromVenue || '', ALARM_VENUE_MAX);
   var extra = a.extra | 0;
-  var from = ((a.fromPos | 0) & 3) | (((a.from | 0) & 3) << 2) | (a.notReserved ? ALARM_NOT_RESERVED : 0);
+  var from = ((a.fromPos | 0) & 3) | (((a.from | 0) & 3) << 2) | (a.notReserved ? ALARM_NOT_RESERVED : 0) |
+    (a.booked ? ALARM_BOOKED : 0);
   return int32(a.at).concat(int32(a.ref), [extra & 255, (extra >> 8) & 255, a.kind & 255, from],
                             encodeWhere(a.where), [title.length], title, [venue.length], venue,
-                            [fromVenue.length], fromVenue);
+                            [fromVenue.length], fromVenue, a.booked ? bookedBytes(a.booked) : []);
 }
 
 // Per notice (starred event moved or cancelled), little-endian: uint8 kind,

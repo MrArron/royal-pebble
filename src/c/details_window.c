@@ -6,11 +6,13 @@
 // Event details: title, venue, deck and position, time and duration,
 // reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §5, §8.4).
 // Hold Select toggles the star; Select toggles Reserved on a starred event
-// that needs a reservation.
+// that needs a reservation. A booked order (docs/DESIGN_PHASE3.md §22.3) shows
+// its meeting time, guests and "✓ Booked", and its star is locked. The page
+// scrolls when it doesn't fit.
 
 static Window *s_window;
 static Layer *s_top_bar;
-static Layer *s_body;
+static ScrollPage s_page;
 static int s_index;
 
 static int draw_line(GContext *ctx, const char *text, const char *font_key, GColor color,
@@ -26,11 +28,9 @@ static int draw_line(GContext *ctx, const char *text, const char *font_key, GCol
   return y + size.h;
 }
 
-static void body_update_proc(Layer *layer, GContext *ctx) {
-  GRect b = layer_get_bounds(layer);
-  Event *e = data_event(s_index);
-  int w = b.size.w - 2 * PAD;
-  int y = 4;
+int details_draw_event(GContext *ctx, int index, int width, int y) {
+  Event *e = data_event(index);
+  int w = width - 2 * PAD;
 
   y = draw_line(ctx, e->title, FONT_KEY_GOTHIC_24_BOLD, g_theme->text, PAD, y, w, 84) + 4;
   if (e->venue[0]) {
@@ -63,9 +63,30 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   }
   y = draw_line(ctx, when, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD, y, w, 22) + 2;
 
+  bool booked = (e->flags & EVENT_BOOKED) != 0;
+  if (booked) {
+    // "Meet 8:45a · 2 guests", then "✓ Booked".
+    char meet[40] = "";
+    int n = 0;
+    if (e->booked.meet_before && event_is_timed(e)) {
+      char meet_buf[8];
+      fmt_clock(meet_buf, sizeof(meet_buf), e->start - e->booked.meet_before);
+      n = snprintf(meet, sizeof(meet), "Meet %s", meet_buf);
+    }
+    if (e->booked.guests && n >= 0 && n < (int)sizeof(meet)) {
+      snprintf(meet + n, sizeof(meet) - n, "%s%d guest%s", n ? " \xc2\xb7 " : "", e->booked.guests,
+               e->booked.guests == 1 ? "" : "s");
+    }
+    if (meet[0]) {
+      y = draw_line(ctx, meet, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 18) + 2;
+    }
+    draw_checked(ctx, "Booked", true, PAD, y, g_theme->sea_accent);
+    y += 22;
+  }
+
   // "Clashes with 1:00p Trivia · +1 more", on up to two lines.
   int first;
-  int clashes = data_clashes_with(s_index, now_cruise(), &first);
+  int clashes = data_clashes_with(index, now_cruise(), &first);
   if (clashes > 0) {
     Event *o = data_event(first);
     char start_buf[8], more[24] = "", line[TITLE_LEN + 48];
@@ -92,20 +113,33 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   if (tag) {
     y = draw_line(ctx, tag, FONT_KEY_GOTHIC_14_BOLD, g_theme->port_accent, PAD, y, w, 18) + 2;
   }
+  return y;
+}
 
+static void body_update_proc(Layer *layer, GContext *ctx) {
+  GRect b = layer_get_bounds(layer);
+  Event *e = data_event(s_index);
+  int w = b.size.w - 2 * PAD;
+  int y = details_draw_event(ctx, s_index, b.size.w, 4);
+
+  // The star and what Select does.
   draw_divider(ctx, y + 4, b.size.w);
   y += 8;
   if (e->flags & EVENT_STARRED) {
+    bool track = (e->flags & EVENT_RESERVATION) != 0;
     draw_star(ctx, GPoint(PAD + 6, y + 12), g_theme->sea_accent);
-    draw_line(ctx, "Starred", FONT_KEY_GOTHIC_18_BOLD, g_theme->sea_accent, PAD + 16, y,
-              w - 16, 22);
-    if (track) {
-      draw_line(ctx, (e->flags & EVENT_RESERVED) ? "Select: not reserved" : "Select: mark reserved",
-                FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y + 22, w, 18);
+    y = draw_line(ctx, "Starred", FONT_KEY_GOTHIC_18_BOLD, g_theme->sea_accent, PAD + 16, y,
+                  w - 16, 22);
+    if (e->flags & EVENT_BOOKED) {
+      y = draw_line(ctx, "From your booking", FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y, w, 18);
+    } else if (track) {
+      y = draw_line(ctx, (e->flags & EVENT_RESERVED) ? "Select: not reserved" : "Select: mark reserved",
+                    FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y, w, 18);
     }
   } else {
-    draw_line(ctx, "Hold Select to star", FONT_KEY_GOTHIC_18, g_theme->muted, PAD, y, w, 22);
+    y = draw_line(ctx, "Hold Select to star", FONT_KEY_GOTHIC_18, g_theme->muted, PAD, y, w, 22);
   }
+  scroll_page_fit(&s_page, y);
 }
 
 static void select_click(ClickRecognizerRef recognizer, void *context) {
@@ -114,8 +148,20 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
-  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
-  toggle_star(s_index);
+  // The star is locked on a booked order: cancel it in the Royal app and sync.
+  bool locked = (data_event(s_index)->flags & EVENT_BOOKED) != 0;
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (locked ? USAGE_NOTHING : 0), -1);
+  if (!locked) {
+    toggle_star(s_index);
+  }
+}
+
+// "Excursion" or "Booking" for a booked order, else "Event".
+static const char *top_name(const Event *e) {
+  if (!(e->flags & EVENT_BOOKED)) {
+    return "Event";
+  }
+  return e->booked.kind == BOOKED_EXCURSION ? "Excursion" : "Booking";
 }
 
 static void click_config(void *context) {
@@ -130,28 +176,27 @@ static void window_load(Window *window) {
   window_set_background_color(window, g_theme->bg);
 
   s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT),
-                             day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL, "Event");
+                             day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL,
+                             top_name(data_event(s_index)));
   layer_add_child(root, s_top_bar);
-  s_body = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
-  layer_set_update_proc(s_body, body_update_proc);
-  layer_add_child(root, s_body);
+  scroll_page_create(&s_page, window, root, GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT),
+                     body_update_proc, click_config);
 }
 
 static void window_unload(Window *window) {
-  layer_destroy(s_body);
+  scroll_page_destroy(&s_page);
   top_bar_destroy(s_top_bar);
-  s_body = NULL;
   s_top_bar = NULL;
   window_destroy(window);
   s_window = NULL;
 }
 
 void details_window_refresh(void) {
-  if (s_body) {
+  if (s_top_bar) {
     // The theme may have changed (settings page).
     window_set_background_color(s_window, g_theme->bg);
     layer_mark_dirty(s_top_bar);
-    layer_mark_dirty(s_body);
+    scroll_page_refresh(&s_page);
   }
 }
 
@@ -162,7 +207,6 @@ static void window_appear(Window *window) {
 void details_window_push(int event_index) {
   s_index = event_index;
   s_window = window_create();
-  window_set_click_config_provider(s_window, click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
     .appear = window_appear,

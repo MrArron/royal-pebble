@@ -1304,6 +1304,105 @@ test('demo: tomorrow has a starred class and a last chance or only show', functi
   }
 });
 
+// Login data with a booked excursion on the St. Thomas day (made-up stateroom).
+function bookedBundle(order) {
+  var b = makeBundle([['Pool Party', 1, 0, '2027-03-08', '13:00', 60, 0, 0]]);
+  b.mine = {stateroom: '1234', orders: [
+    order || {title: 'Island Snorkel', category: 'pt_shoreX', guests: 2, date: '2027-03-08', time: '09:00',
+              day: 3, port: 'STT', meet: '08:45', end: '11:30', minutes: 150},
+    {title: 'Deluxe Beverage Package', category: 'pt_beverage', guests: 2},
+    {title: 'Outside the cruise', category: 'pt_shoreX', date: '2027-04-01', time: '09:00'}
+  ]};
+  return b;
+}
+
+test('booked orders: timed ones in the cruise, with meet, guests and length', function() {
+  var list = slice.bookedOrders(bookedBundle());
+  assert.strictEqual(list.length, 1);
+  assert.deepStrictEqual(list[0], {title: 'Island Snorkel', date: '2027-03-08', time: '09:00', minutes: 150,
+                                   meetBefore: 15, guests: 2, excursion: true});
+  // No end: minutes; neither: no length. Not an excursion; no meet.
+  var other = slice.bookedOrders(bookedBundle({title: 'Chef Table', category: 'pt_dining', date: '2027-03-08',
+                                               time: '19:00', minutes: 120}))[0];
+  assert.strictEqual(other.minutes, 120);
+  assert.strictEqual(other.meetBefore, 0);
+  assert.strictEqual(other.guests, 0);
+  assert.strictEqual(other.excursion, false);
+  // An end after midnight.
+  assert.strictEqual(slice.bookedOrders(bookedBundle({title: 'Night Tour', date: '2027-03-08', time: '22:00',
+                                                      end: '01:00'}))[0].minutes, 180);
+  assert.deepStrictEqual(slice.bookedOrders(makeBundle([])), []);
+});
+
+test('booked orders: starred, booked and Ashore at the day port, never filtered', function() {
+  var b = bookedBundle();
+  var sail = slice.daysFromIso(b.sailDate);
+  var events = slice.buildEvents(b, {hiddenCats: ['Entertainment']}, {}, 2, sail);
+  assert.strictEqual(events.length, 1);  // the pool party is hidden
+  var e = events[0];
+  assert.strictEqual(e.title, 'Island Snorkel');
+  assert.strictEqual(e.venue, 'St. Thomas');
+  assert.strictEqual(e.start, 2 * 1440 + 540);
+  assert.strictEqual(e.minutes, 150);
+  assert.strictEqual(e.flags, slice.FLAG_STARRED | slice.FLAG_BOOKED);
+  assert.deepStrictEqual(e.booked, {meetBefore: 15, guests: 2, excursion: true});
+  assert.deepStrictEqual(pack.encodeWhere(e.where), [0, 0, 4, 0]);
+  // Other days don't have it.
+  assert.strictEqual(slice.buildEvents(b, {}, {}, 1, sail).length, 0);
+  // Counts as starred for the cruise and tomorrow; never to reserve.
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-03-05', 12, 0)).cruiseStarred, 1);
+  var t = slice.buildTomorrow(b, {}, {}, 1, sail);
+  assert.strictEqual(t.starred, 1);
+  assert.strictEqual(t.first, 'Island Snorkel');
+  assert.strictEqual(t.toReserve, 0);
+});
+
+test('booked list for the settings page: the port as the watch shows it, edits included', function() {
+  var b = bookedBundle();
+  assert.strictEqual(slice.bookedList(b, {})[0].port, 'St. Thomas');
+  var edited = {days: {'2027-03-08': {edit: {port: 'Tortola, BVI'}}}};
+  assert.strictEqual(slice.bookedList(b, edited)[0].port, 'Tortola');
+});
+
+test('booked orders: the reminder is before the meeting time, with no directions', function() {
+  var b = bookedBundle();
+  var alarms = slice.buildAlarms(b, {reminderLead: 15}, {}, at('2027-03-08', 6, 0));
+  var r = alarms.filter(function(a) { return a.kind === slice.ALARM_REMINDER; })[0];
+  assert.strictEqual(r.at, 2 * 1440 + 510);  // 8:30 = meet 8:45 - 15
+  assert.strictEqual(r.ref, 2 * 1440 + 540);
+  assert.strictEqual(r.extra, 150);
+  assert.strictEqual(r.venue, 'St. Thomas');
+  assert.strictEqual(r.from, venues.FROM_NONE);
+  assert.deepStrictEqual(r.booked, {meetBefore: 15, guests: 2, excursion: true});
+});
+
+test('booked orders: packed with three trailing bytes (event and alarm)', function() {
+  var e = {title: 'Tour', venue: 'Port', start: 600, minutes: 90, flags: slice.FLAG_STARRED | slice.FLAG_BOOKED,
+           where: {ashore: true}, booked: {meetBefore: 15, guests: 2, excursion: true}};
+  var bytes = pack.encodeEvent(e);
+  assert.strictEqual(bytes[6], 129);
+  assert.deepStrictEqual(bytes.slice(-3), [15, 2, 1]);
+  assert.strictEqual(bytes.length, 11 + 1 + 4 + 1 + 4 + 3);
+  // Without booked, nothing extra.
+  assert.strictEqual(pack.encodeEvent({title: 'Tour', venue: 'Port', start: 600, flags: 1}).length, 11 + 10);
+  var a = pack.encodeAlarm({at: 570, ref: 600, kind: 1, extra: 90, title: 'Tour', venue: 'Port',
+                            booked: {meetBefore: 0, guests: 3, excursion: false}});
+  assert.strictEqual(a[11], 32);
+  assert.deepStrictEqual(a.slice(-3), [0, 3, 0]);
+});
+
+test('demo: port days have a booked excursion; sea days none', function() {
+  var now = new Date(2027, 2, 7, 9, 0);
+  var port = demo.make(now, 0);
+  var sail = slice.daysFromIso(port.bundle.sailDate);
+  var booked = slice.buildEvents(port.bundle, port.settings, port.stars, 1, sail).filter(function(e) {
+    return e.flags & slice.FLAG_BOOKED;
+  });
+  assert.strictEqual(booked.length, 1);
+  assert.strictEqual(booked[0].venue, 'St. Thomas');
+  assert.strictEqual(demo.make(now, 1).bundle.mine, undefined);
+});
+
 test('cutText keeps whole characters', function() {
   assert.strictEqual(pack.cutText('Broadway Nights', 8), 'Broadway');
   assert.strictEqual(pack.cutText('Café au lait', 4), 'Caf');

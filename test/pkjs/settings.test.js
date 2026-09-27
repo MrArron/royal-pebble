@@ -129,6 +129,17 @@ test('settings page builds, embeds state safely and its script parses', function
   console.log('    page ' + Math.round(html.length / 1024) + ' KB, data URL ' + Math.round(url.length / 1024) + ' KB');
 });
 
+test('settings page with booked orders builds the FROM YOUR BOOKING card code', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
+    orders: [{title: 'Island Snorkel', date: '2027-03-08', time: '09:00', minutes: 150, meetBefore: 15,
+              guests: 2, excursion: true, port: 'St. Thomas'}]};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('id="evOrders"') !== -1);
+  assert.ok(html.indexOf('FROM YOUR BOOKING') !== -1);
+  assert.ok(html.indexOf('"meetBefore":15') !== -1);
+});
+
 test('usage log splits into clipboard-sized parts of whole lines, each with the header', function() {
   var lines = [];
   for (var i = 0; i < 50; i++) {

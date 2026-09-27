@@ -43,7 +43,9 @@ typedef struct {
 _Static_assert(sizeof(UsageEntry) == ENTRY_BYTES, "usage entry size");
 _Static_assert(sizeof(UsageEntry) * ENTRIES_PER_KEY <= PERSIST_DATA_MAX_LENGTH, "usage entries too big");
 
-static UsageEntry s_entries[MAX_ENTRIES];
+// On the heap (usage_init), like the day's events (data.c): 3 KB less towards
+// the SDK's 64 KB limit on code plus static data.
+static UsageEntry *s_entries;
 static UsageMeta s_meta;
 static uint16_t s_dirty;       // entry keys changed since the last save
 static bool s_saving;          // a storage error while saving isn't logged again
@@ -97,10 +99,11 @@ static void save(void) {
 }
 
 void usage_init(void) {
+  s_entries = calloc(MAX_ENTRIES, sizeof(UsageEntry));
   s_opened_at = time(NULL);
   s_battery_at = s_opened_at;
   note_memory();
-  if (persist_get_size(KEY_META) != (int)sizeof(UsageMeta)) {
+  if (!s_entries || persist_get_size(KEY_META) != (int)sizeof(UsageMeta)) {
     return;
   }
   persist_read_data(KEY_META, &s_meta, sizeof(s_meta));
@@ -183,6 +186,9 @@ void usage_send_failed(void) {
 // ---- Entries -------------------------------------------------------------
 
 void usage_add(uint8_t code, uint8_t x, int16_t a, int32_t b, int32_t c) {
+  if (!s_entries) {
+    return;  // no room for the log: the app works without it
+  }
   note_memory();
   if (s_meta.count == MAX_ENTRIES) {
     if (s_inflight) {

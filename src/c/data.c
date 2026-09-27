@@ -11,13 +11,15 @@ static MyInfo s_info;
 // 16 bits). It takes the same RAM either way.
 static Event *s_events;
 static int s_event_count;
-static Alarm s_alarms[MAX_ALARMS];
+// The alerts too (2 KB), for the same reason.
+static Alarm *s_alarms;
 static int s_alarm_count;
 
 void data_init(void) {
   s_events = calloc(MAX_EVENTS, sizeof(Event));
-  if (!s_events) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "No room for %d events", MAX_EVENTS);
+  s_alarms = calloc(MAX_ALARMS, sizeof(Alarm));
+  if (!s_events || !s_alarms) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "No room for %d events and %d alerts", MAX_EVENTS, MAX_ALARMS);
   }
 }
 
@@ -129,6 +131,21 @@ void data_update_reminder(const Event *e) {
       a->from = (a->from & ~ALARM_NOT_RESERVED) | (event_not_reserved(e->flags) ? ALARM_NOT_RESERVED : 0);
     }
   }
+}
+
+int data_event_for_alarm(const Alarm *a) {
+  for (int i = 0; i < s_event_count; i++) {
+    const Event *e = &s_events[i];
+    if (e->start != a->ref) {
+      continue;
+    }
+    char title[ALARM_TITLE_LEN];
+    copy_text(title, sizeof(title), e->title);
+    if (same_text(a->title, title, ALARM_TITLE_LEN)) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 bool event_is_timed(const Event *e) { return e->start != NO_TIME; }

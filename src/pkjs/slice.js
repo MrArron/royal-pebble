@@ -25,6 +25,7 @@ var FLAG_PERSONAL = 8;
 var FLAG_LAST_CHANCE = 16;  // the last performance of a featured show (finalShows)
 var FLAG_ONLY_SHOW = 32;    // a featured show that is on only once
 var FLAG_RESERVED = 64;     // the owner marked it reserved (docs/DESIGN_V1_1.md §5)
+var FLAG_BOOKED = 128;      // a timed order from login data (docs/DESIGN_PHASE3.md §22); star locked
 
 var ALARM_ALL_ABOARD = 0;
 var ALARM_REMINDER = 1;
@@ -541,6 +542,26 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays) {
     add(p.title, p.venue, p.date, p.time, p.minutes, FLAG_PERSONAL);
   });
 
+  // Booked excursions and other timed orders (§22.1): starred and booked, at
+  // the day's port, Ashore. Never filtered out.
+  bookedOrders(bundle).forEach(function(o) {
+    var start = eventStart(sailDays, o.date, o.time);
+    if (start < from || start >= to) {
+      return;
+    }
+    var port = buildDay(bundle, settings, daysFromIso(o.date) - sailDays, sailDays).location;
+    events.push({
+      title: o.title,
+      venue: port,
+      start: start,
+      minutes: o.minutes,
+      flags: FLAG_STARRED | FLAG_BOOKED,
+      where: {ashore: true},
+      booked: {meetBefore: o.meetBefore, guests: o.guests, excursion: o.excursion},
+      key: 'B|' + starKey(o.title, o.date, o.time, port)
+    });
+  });
+
   events.sort(eventSort);
   if (events.length > MAX_EVENTS) {
     // Too many for the watch: drop the earliest timed events (already past, most likely).
@@ -562,6 +583,55 @@ function scheduleEvents(bundle) {
              paid: f.paid !== undefined && !!row[f.paid]};
     e.key = starKey(e.title, e.date, e.time, e.venue);
     return e;
+  });
+}
+
+// Timed orders from login data (`mine.orders`, docs/DATA_FORMAT.md) whose date
+// is in the cruise, as {title, date, time, minutes, meetBefore, guests,
+// excursion}. Packages and credits have no time and are left out. `minutes`
+// comes from `end`, else `minutes`, else 0; `meetBefore` is how many minutes
+// before the start `meet` is (0 none, at most 255); `excursion` for shore
+// excursions (labeled Excursion; any other order is a Booking).
+function bookedOrders(bundle) {
+  var orders = (bundle && bundle.mine && Array.isArray(bundle.mine.orders)) ? bundle.mine.orders : [];
+  var dates = {};
+  (bundle.itinerary || []).forEach(function(it) { dates[it.date] = true; });
+  var out = [];
+  orders.forEach(function(o) {
+    if (!o || typeof o.title !== 'string' || !o.title || !dates[o.date] || !HHMM.test(o.time || '')) {
+      return;
+    }
+    var time = minutesFromHhmm(o.time);
+    var minutes = 0;
+    if (HHMM.test(o.end || '')) {
+      minutes = minutesFromHhmm(o.end) - time;
+      if (minutes <= 0) {
+        minutes += MINUTES_PER_DAY;  // ends after midnight
+      }
+    } else if (typeof o.minutes === 'number' && o.minutes > 0) {
+      minutes = Math.round(o.minutes);
+    }
+    var meetBefore = HHMM.test(o.meet || '') ? time - minutesFromHhmm(o.meet) : 0;
+    out.push({
+      title: o.title,
+      date: o.date,
+      time: o.time,
+      minutes: Math.min(minutes, MINUTES_PER_DAY),
+      meetBefore: meetBefore > 0 && meetBefore <= 255 ? meetBefore : 0,
+      guests: typeof o.guests === 'number' && o.guests > 0 ? Math.min(255, Math.round(o.guests)) : 0,
+      excursion: o.category === 'pt_shoreX'
+    });
+  });
+  return out;
+}
+
+// bookedOrders with `port`, the day's location as the watch shows it (Settings
+// > Days edits included), for the settings page's FROM YOUR BOOKING card.
+function bookedList(bundle, settings) {
+  var sailDays = daysFromIso(bundle.sailDate);
+  return bookedOrders(bundle).map(function(o) {
+    o.port = buildDay(bundle, settings || {}, daysFromIso(o.date) - sailDays, sailDays).location;
+    return o;
   });
 }
 
@@ -776,9 +846,9 @@ function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
 
 // The countdown before the cruise (docs/DESIGN_V1_1.md §8.2): starred events
 // across the whole cruise (keys that still match the schedule, whatever the
-// Filters) plus personal entries.
+// Filters) plus personal entries and booked orders.
 function cruiseStarred(bundle, settings, stars) {
-  var n = ((settings && settings.personal) || []).length;
+  var n = ((settings && settings.personal) || []).length + bookedOrders(bundle).length;
   scheduleEvents(bundle).forEach(function(e) {
     if (stars[e.key]) {
       n++;
@@ -858,6 +928,13 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
       });
     }
     days[d].forEach(function(e) {
+      if (e.booked) {
+        // Before the meeting time when there is one (§22.4); Ashore, no directions.
+        alarms.push({at: e.start - e.booked.meetBefore - lead, ref: e.start, kind: ALARM_REMINDER,
+                     extra: e.minutes, title: e.title, venue: e.venue, where: e.where,
+                     from: venues.FROM_NONE, booked: e.booked});
+        return;
+      }
       var prev = previousStop(stops, e);
       var route = prev ? finder.route(prev.venue, e.venue) : null;
       alarms.push({at: e.start - lead, ref: e.start, kind: ALARM_REMINDER, extra: e.minutes,
@@ -970,6 +1047,9 @@ module.exports = {
   FLAG_LAST_CHANCE: FLAG_LAST_CHANCE,
   FLAG_ONLY_SHOW: FLAG_ONLY_SHOW,
   FLAG_RESERVED: FLAG_RESERVED,
+  FLAG_BOOKED: FLAG_BOOKED,
+  bookedOrders: bookedOrders,
+  bookedList: bookedList,
   ALARM_ALL_ABOARD: ALARM_ALL_ABOARD,
   ALARM_REMINDER: ALARM_REMINDER,
   ALARM_TO_RESERVE: ALARM_TO_RESERVE,
