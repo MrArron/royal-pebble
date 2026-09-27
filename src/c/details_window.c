@@ -156,7 +156,12 @@ static void select_long_click(ClickRecognizerRef recognizer, void *context) {
   // The star is locked on a booked order: cancel it in the Royal app and sync.
   bool locked = (data_event(s_index)->flags & EVENT_BOOKED) != 0;
   usage_press(BUTTON_ID_SELECT, USAGE_LONG | (locked ? USAGE_NOTHING : 0), -1);
-  if (!locked) {
+  if (locked) {
+    return;
+  }
+  if (data_event(s_index)->flags & EVENT_STARRED) {
+    unstar_window_push(s_index, data_day()->kind == DAY_PORT ? BAND_PORT : BAND_SEA, "Event");
+  } else {
     toggle_star(s_index);
   }
 }

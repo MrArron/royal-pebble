@@ -36,6 +36,10 @@ void info_window_refresh(void);
 // "On board?" (docs/DESIGN_PHASE3.md §22.6), from Hold Select on Home.
 void onboard_window_push(void);
 void onboard_window_refresh(void);
+// "Remove star?" (§26) for starred event `event_index`, from Hold Select in
+// Today or event details; shares the "On board?" window. `band` and `name`: the
+// top bar of the screen it opens from. Closes itself if the event goes away.
+void unstar_window_push(int event_index, GColor band, const char *name);
 
 // Ship directory page `ref` (0 = the decks), as sent by the phone. `title`
 // shows in the top bar until the page arrives.
@@ -73,8 +77,9 @@ void notice_window_show(const Notice *notices, int count);
 void notice_window_show_pending(void);
 void notice_window_refresh(void);
 
-// Hold Select anywhere an event is shown: toggle its star with a short buzz,
-// or a double one when the new star clashes. Returns the earliest item it now
+// Hold Select anywhere an event is shown stars it (removing a star asks first,
+// unstar_window_push): toggles the star with a short buzz, or a double one
+// when the new star clashes. Returns the earliest item it now
 // clashes with, or -1.
 int toggle_star(int event_index);
 

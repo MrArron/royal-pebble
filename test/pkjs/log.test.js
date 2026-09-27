@@ -336,7 +336,8 @@ test('watch entries decode and render', function() {
     {at: 1804000120, code: 15, x: 0, a: -8, b: -1, c: 0},
     {at: 1804000121, code: 15, x: 4, a: 0, b: 0, c: 0},
     {at: 1804000122, code: 1, x: 100, a: 60, b: 65536, c: 1},
-    {at: 1804000123, code: 15, x: 2, a: 12, b: 0, c: 2}
+    {at: 1804000123, code: 15, x: 2, a: 12, b: 0, c: 2},
+    {at: 1804000124, code: 3, x: 13, a: 0, b: 3, c: 1440 + 1260}
   ];
   var bytes = [];
   entries.forEach(function(e) { bytes = bytes.concat(pack.encodeLogEntry(e)); });
@@ -368,7 +369,8 @@ test('watch entries decode and render', function() {
     'sync  no morning sync set: E_RANGE (-8)',
     'sync  morning sync with the app open: asked for data',
     'open  opened by the morning sync, battery 60%, phone connected, 64 KB free',
-    'sync  morning sync: phone unreachable after 12 s, closed with Back before it finished'
+    'sync  morning sync: phone unreachable after 12 s, closed with Back before it finished',
+    'screen  Remove star? (D2 21:00): 3 s'
   ]);
   // 01:00 after midnight still belongs to the evening before.
   var late = log.watchEntry({at: 0, code: 3, x: 10, a: 0, b: 5, c: 2880 + 1500}, sail).detail;

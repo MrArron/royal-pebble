@@ -50,6 +50,7 @@ typedef enum {
   SCREEN_ALERT = 10,
   SCREEN_NOTICE = 11,
   SCREEN_ONBOARD = 12,
+  SCREEN_UNSTAR = 13,
 } UsageScreen;
 
 // USAGE_BUTTON's `a`: the button (0 Back, 1 Up, 2 Select, 3 Down) plus these.

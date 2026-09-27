@@ -572,10 +572,12 @@ text.
 plugged in. **Screens:** 1 Home, 2 summary card, 3 Today, 4 event details,
 5 My info, 6 ship directory page, 7 route to a place, 8 route to a restroom,
 9 route to Home's next event, 10 alert, 11 notice (schedule change or `PHONE
-NEEDED`), 12 `On board?`. A screen's **detail**: Home, what its main card shows (below); the
+NEEDED`), 12 `On board?`, 13 `Remove star?`. A screen's **detail**: Home, what its main card shows (below); the
 summary card, 1 for tomorrow's; event details, the event's start; a directory
 page or a route to a place or restroom, its `dir_ref`; a route to an event, its
-start; an alert, its `at`; `On board?`, 1 once confirmed. **Home's card:** 0 loading or no phone, 1 days to
+start; an alert, its `at`; `On board?`, 1 once confirmed; `Remove star?`, the
+event's start (the phone's `unstarred on the watch` entry right after the view
+means Hold Down removed the star; none means Back kept it). **Home's card:** 0 loading or no phone, 1 days to
 sail, 2 connect your phone (a new day with no slice), 3 no cruise today, 4
 all-aboard countdown, 5 NEXT (starred), 6 FEATURED, 7 NOW (in progress), 8
 nothing starred today, 9 terminal arrival (embark day).

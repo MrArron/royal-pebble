@@ -4,10 +4,16 @@
 #include "ui.h"
 #include "usage.h"
 
+// Two confirmations share this window, both confirmed by Hold Down, with Back
+// leaving things unchanged and Up and Select doing nothing.
+//
 // "On board?" (docs/DESIGN_PHASE3.md §22.6), opened by Hold Select on Home:
-// Hold Down sets the flag, Back returns to Home unchanged, Up and Select do
-// nothing. After Hold Down, a short buzz and "On board" for about 2 s (any
-// button closes it early), then Home. The top bar stays Home's.
+// after Hold Down, a short buzz and "On board" for about 2 s (any button
+// closes it early), then Home. The top bar stays Home's.
+//
+// "Remove star?" (§26), opened by Hold Select on a starred event in Today or
+// its details: Hold Down removes the star (toggle_star buzzes) and returns.
+// The top bar stays the screen's it came from.
 
 #define DONE_MS 2000
 // Button heights in the body's coordinates (window minus the top bar).
@@ -19,6 +25,32 @@ static Layer *s_top_bar;
 static Layer *s_body;
 static bool s_done;
 static AppTimer *s_timer;
+// "Remove star?": the event (-1 for "On board?"), and its start and a hash of
+// its title, to notice a new slice moving it while the screen is open.
+static int s_unstar = -1;
+static int32_t s_unstar_start;
+static uint32_t s_unstar_hash;
+static GColor s_band;
+static const char *s_name;
+
+// No strlen on the watch: walks the title to its NUL.
+static uint32_t title_hash(const char *t) {
+  uint32_t h = 5381;
+  for (int i = 0; i < TITLE_LEN && t[i]; i++) {
+    h = h * 33 + (uint8_t)t[i];
+  }
+  return h;
+}
+
+// The event is still where it was, starred and not booked.
+static bool unstar_valid(void) {
+  if (s_unstar < 0 || s_unstar >= data_event_count()) {
+    return false;
+  }
+  Event *e = data_event(s_unstar);
+  return e->start == s_unstar_start && (e->flags & EVENT_STARRED) && !(e->flags & EVENT_BOOKED) &&
+         title_hash(e->title) == s_unstar_hash;
+}
 
 static void draw_text(GContext *ctx, const char *text, const char *font, GColor color, int y,
                       int w, int h, GTextAlignment align) {
@@ -55,6 +87,31 @@ static void draw_ask(GContext *ctx, int w) {
             DOWN_CY, w);
 }
 
+// "Remove star?", the title (up to two lines) and "9:00p · On Air".
+static void draw_unstar(GContext *ctx, int w) {
+  draw_text(ctx, "Remove star?", FONT_KEY_GOTHIC_24_BOLD, g_theme->text, 30, w, 30, GTextAlignmentLeft);
+  draw_divider(ctx, 62, w);
+  if (unstar_valid()) {
+    Event *e = data_event(s_unstar);
+    GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+    GRect box = GRect(PAD, 64, w - 2 * PAD, 44);
+    graphics_context_set_text_color(ctx, g_theme->text);
+    graphics_draw_text(ctx, e->title, font, box, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+    int y = 64 + graphics_text_layout_get_content_size(e->title, font, box, GTextOverflowModeTrailingEllipsis,
+                                                        GTextAlignmentLeft).h + 4;
+    char time_buf[8] = "";
+    if (e->start != NO_TIME) {
+      fmt_clock(time_buf, sizeof(time_buf), e->start);
+    }
+    char buf[8 + VENUE_LEN + 4];
+    snprintf(buf, sizeof(buf), "%s%s%s", time_buf, time_buf[0] && e->venue[0] ? " \xc2\xb7 " : "", e->venue);
+    draw_text(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, y, w, 18, GTextAlignmentLeft);
+  }
+  draw_pill(ctx, "Keep", GColorDarkGray, GColorWhite, true, BACK_CY, w);
+  draw_pill(ctx, "Hold: remove", g_theme->port_accent, theme_is_dark() ? GColorBlack : GColorWhite, false,
+            DOWN_CY, w);
+}
+
 static void draw_done(GContext *ctx, int w, int h) {
   int y = (h - 10 - 112) / 2;
   // A drawn check, about 36 px (text fonts have no ✓).
@@ -76,7 +133,9 @@ static void draw_done(GContext *ctx, int w, int h) {
 
 static void body_update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
-  if (s_done) {
+  if (s_unstar >= 0) {
+    draw_unstar(ctx, b.size.w);
+  } else if (s_done) {
     draw_done(ctx, b.size.w, b.size.h);
   } else {
     draw_ask(ctx, b.size.w);
@@ -115,6 +174,14 @@ static void nothing_click(ClickRecognizerRef recognizer, void *context) {
 
 static void down_long_click(ClickRecognizerRef recognizer, void *context) {
   usage_press(BUTTON_ID_DOWN, USAGE_LONG, -1);
+  if (s_unstar >= 0) {
+    // The refresh that follows sees the star gone and closes the screen.
+    if (unstar_valid()) {
+      toggle_star(s_unstar);
+    }
+    onboard_window_refresh();
+    return;
+  }
   onboard_set(true);
   vibes_short_pulse();
   s_done = true;
@@ -136,7 +203,11 @@ static void ask_click_config(void *context) {
 static void apply_style(void) {
   const Day *day = data_day();
   window_set_background_color(s_window, g_theme->bg);
-  top_bar_set(s_top_bar, day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL, day->location);
+  if (s_unstar >= 0) {
+    top_bar_set(s_top_bar, s_band, BAND_LABEL, s_name);
+  } else {
+    top_bar_set(s_top_bar, day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL, day->location);
+  }
 }
 
 static void window_load(Window *window) {
@@ -150,7 +221,13 @@ static void window_load(Window *window) {
   apply_style();
 }
 
-static void window_appear(Window *window) { usage_screen(SCREEN_ONBOARD, s_done ? 1 : 0); }
+static void window_appear(Window *window) {
+  if (s_unstar >= 0) {
+    usage_screen(SCREEN_UNSTAR, s_unstar_start);
+  } else {
+    usage_screen(SCREEN_ONBOARD, s_done ? 1 : 0);
+  }
+}
 
 static void window_unload(Window *window) {
   if (s_timer) {
@@ -163,9 +240,17 @@ static void window_unload(Window *window) {
   s_top_bar = NULL;
   window_destroy(window);
   s_window = NULL;
+  s_unstar = -1;
 }
 
 void onboard_window_refresh(void) {
+  if (s_unstar >= 0 && s_window && !unstar_valid()) {
+    // Removed, or a new slice moved or changed the event: back to the list.
+    if (window_stack_contains_window(s_window)) {
+      window_stack_remove(s_window, true);
+    }
+    return;
+  }
   if (s_body) {
     apply_style();
     layer_mark_dirty(s_top_bar);
@@ -173,11 +258,7 @@ void onboard_window_refresh(void) {
   }
 }
 
-void onboard_window_push(void) {
-  if (s_window) {
-    return;
-  }
-  s_done = false;
+static void push(void) {
   s_window = window_create();
   window_set_click_config_provider(s_window, ask_click_config);
   window_set_window_handlers(s_window, (WindowHandlers){
@@ -186,4 +267,27 @@ void onboard_window_push(void) {
     .unload = window_unload,
   });
   window_stack_push(s_window, true);
+}
+
+void onboard_window_push(void) {
+  if (s_window) {
+    return;
+  }
+  s_done = false;
+  s_unstar = -1;
+  push();
+}
+
+void unstar_window_push(int event_index, GColor band, const char *name) {
+  if (s_window) {
+    return;
+  }
+  Event *e = data_event(event_index);
+  s_done = false;
+  s_unstar = event_index;
+  s_unstar_start = e->start;
+  s_unstar_hash = title_hash(e->title);
+  s_band = band;
+  s_name = name;
+  push();
 }

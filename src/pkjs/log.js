@@ -17,7 +17,7 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '1.3.6';
+var APP_VERSION = '1.3.7';
 
 var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
@@ -413,7 +413,8 @@ function encodedLength(text) {
 // ---- The watch's entries (docs/WATCH_PROTOCOL.md, Usage log) -------------
 
 var SCREENS = ['', 'Home', 'Summary card', 'Today', 'Event details', 'My info', 'Ship directory',
-               'Route to place', 'Route to restroom', 'Route to next event', 'Alert', 'Notice', 'On board?'];
+               'Route to place', 'Route to restroom', 'Route to next event', 'Alert', 'Notice', 'On board?',
+               'Remove star?'];
 var HOME_CARDS = ['loading or no phone', 'days to sail', 'connect your phone', 'no cruise today',
                   'all-aboard countdown', 'NEXT', 'FEATURED', 'NOW', 'nothing starred today',
                   'terminal arrival'];
@@ -474,7 +475,7 @@ function screenText(screen, detail, sailIso) {
   switch (screen) {
     case 1: return name + ' (' + (HOME_CARDS[detail] || 'card ' + detail) + ')';
     case 2: return name + (detail ? ' (tomorrow)' : ' (today)');
-    case 4: case 9: return name + ' (' + cruiseText(detail, sailIso) + ')';
+    case 4: case 9: case 13: return name + ' (' + cruiseText(detail, sailIso) + ')';
     case 6: case 7: case 8: return name + ' page ' + detail;
     case 10: return name + ' (at ' + cruiseText(detail, sailIso) + ')';
     case 11: return name + ' (' + detail + ')';

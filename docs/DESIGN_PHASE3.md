@@ -23,9 +23,9 @@ Phase 3 adds or changes. One section per item, filled in as each is designed.
 | 23 Port day card | **Done** (phone: #44, watch: #45), tested on the watch 2026-09-27. |
 | 24 Settings page upgrades | **Approved 2026-09-27.** Build from §24 (three PRs, §24.4). |
 | 25 Silent morning sync | No screens needed (§25) |
-| 26 Confirm before removing a star | First draft (§26), review before building |
-| 27 Casino filter | First draft (§27), review before building |
-| 28 Share my plan | First draft (§28), review before building |
+| 26 Confirm before removing a star | **Reviewed 2026-09-27.** Built in 1.3.7. |
+| 27 Casino filter | **Reviewed 2026-09-27.** Build from §27. |
+| 28 Share my plan | **Reviewed 2026-09-27.** Build from §28. |
 
 ---
 
