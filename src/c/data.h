@@ -35,7 +35,18 @@ enum {
   EVENT_LAST_CHANCE = 1 << 4,  // the last performance of a featured show (§8.4)
   EVENT_ONLY_SHOW = 1 << 5,    // a featured show that is on only once
   EVENT_RESERVED = 1 << 6,     // marked reserved (§5); only shown while starred
+  EVENT_BOOKED = 1 << 7,       // a booked order (docs/DESIGN_PHASE3.md §22): starred, star locked
 };
+
+// Booked.kind
+enum { BOOKED_OTHER = 0, BOOKED_EXCURSION = 1 };
+
+// What a booked order adds (EVENT_BOOKED, ALARM_BOOKED).
+typedef struct {
+  uint8_t meet_before;  // minutes from the meeting time to the start; 0 none
+  uint8_t guests;       // 0 not known
+  uint8_t kind;         // BOOKED_
+} Booked;
 
 // Starred, needs a reservation and isn't marked reserved yet (§5).
 static inline bool event_not_reserved(uint8_t flags) {
@@ -64,6 +75,7 @@ typedef struct {
   uint16_t minutes;  // duration; 0 if unknown
   uint8_t flags;
   Where where;
+  Booked booked;     // with EVENT_BOOKED
 } Event;
 
 typedef struct {
@@ -140,12 +152,15 @@ typedef struct {
   char title[ALARM_TITLE_LEN];  // all-aboard: location; reminder, to reserve: event title
   char venue[ALARM_VENUE_LEN];  // the venue's short name
   char from_venue[ALARM_VENUE_LEN];  // FROM_ROUTE: the previous venue's short name
+  Booked booked;  // reminder with ALARM_BOOKED
 } Alarm;
 
 static inline FromKind alarm_from_kind(const Alarm *a) { return (FromKind)((a->from >> 2) & 3); }
 static inline int alarm_from_pos(const Alarm *a) { return a->from & 3; }
 // In Alarm.from: the reminder's event still needs its reservation.
 #define ALARM_NOT_RESERVED (1 << 4)
+// In Alarm.from: the reminder is for a booked order (Alarm.booked is set).
+#define ALARM_BOOKED (1 << 5)
 
 typedef enum {
   NOTICE_MOVED = 0,      // a starred event moved; its star moved with it

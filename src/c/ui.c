@@ -238,20 +238,26 @@ static GFont reserved_font(bool large) {
   return fonts_get_system_font(large ? FONT_KEY_GOTHIC_18_BOLD : FONT_KEY_GOTHIC_14_BOLD);
 }
 
-int reserved_width(bool large) {
-  return check_size(large) + CHECK_GAP + text_size("Reserved", reserved_font(large)).w;
+int checked_width(const char *text, bool large) {
+  return check_size(large) + CHECK_GAP + text_size(text, reserved_font(large)).w;
 }
 
-int draw_reserved(GContext *ctx, bool large, int x, int y, GColor color) {
+int draw_checked(GContext *ctx, const char *text, bool large, int x, int y, GColor color) {
   int size = check_size(large);
   // On the capitals of the text beside it.
   draw_check(ctx, GPoint(x, y + (large ? 7 : 5)), size, color);
   int text_x = x + size + CHECK_GAP;
-  int w = text_size("Reserved", reserved_font(large)).w;
+  int w = text_size(text, reserved_font(large)).w;
   graphics_context_set_text_color(ctx, color);
-  graphics_draw_text(ctx, "Reserved", reserved_font(large), GRect(text_x, y, w + 2, large ? 22 : 18),
+  graphics_draw_text(ctx, text, reserved_font(large), GRect(text_x, y, w + 2, large ? 22 : 18),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
   return text_x + w - x;
+}
+
+int reserved_width(bool large) { return checked_width("Reserved", large); }
+
+int draw_reserved(GContext *ctx, bool large, int x, int y, GColor color) {
+  return draw_checked(ctx, "Reserved", large, x, y, color);
 }
 
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now) {

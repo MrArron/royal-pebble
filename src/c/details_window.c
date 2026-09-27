@@ -6,7 +6,8 @@
 // Event details: title, venue, deck and position, time and duration,
 // reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §5, §8.4).
 // Hold Select toggles the star; Select toggles Reserved on a starred event
-// that needs a reservation.
+// that needs a reservation. A booked order (docs/DESIGN_PHASE3.md §22.3) shows
+// its meeting time, guests and "✓ Booked", and its star is locked.
 
 static Window *s_window;
 static Layer *s_top_bar;
@@ -63,6 +64,27 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   }
   y = draw_line(ctx, when, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD, y, w, 22) + 2;
 
+  bool booked = (e->flags & EVENT_BOOKED) != 0;
+  if (booked) {
+    // "Meet 8:45a · 2 guests", then "✓ Booked".
+    char meet[40] = "";
+    int n = 0;
+    if (e->booked.meet_before && event_is_timed(e)) {
+      char meet_buf[8];
+      fmt_clock(meet_buf, sizeof(meet_buf), e->start - e->booked.meet_before);
+      n = snprintf(meet, sizeof(meet), "Meet %s", meet_buf);
+    }
+    if (e->booked.guests && n >= 0 && n < (int)sizeof(meet)) {
+      snprintf(meet + n, sizeof(meet) - n, "%s%d guest%s", n ? " \xc2\xb7 " : "", e->booked.guests,
+               e->booked.guests == 1 ? "" : "s");
+    }
+    if (meet[0]) {
+      y = draw_line(ctx, meet, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 18) + 2;
+    }
+    draw_checked(ctx, "Booked", true, PAD, y, g_theme->sea_accent);
+    y += 22;
+  }
+
   // "Clashes with 1:00p Trivia · +1 more", on up to two lines.
   int first;
   int clashes = data_clashes_with(s_index, now_cruise(), &first);
@@ -99,7 +121,9 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
     draw_star(ctx, GPoint(PAD + 6, y + 12), g_theme->sea_accent);
     draw_line(ctx, "Starred", FONT_KEY_GOTHIC_18_BOLD, g_theme->sea_accent, PAD + 16, y,
               w - 16, 22);
-    if (track) {
+    if (booked) {
+      draw_line(ctx, "From your booking", FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y + 22, w, 18);
+    } else if (track) {
       draw_line(ctx, (e->flags & EVENT_RESERVED) ? "Select: not reserved" : "Select: mark reserved",
                 FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y + 22, w, 18);
     }
@@ -114,8 +138,20 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
-  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
-  toggle_star(s_index);
+  // The star is locked on a booked order: cancel it in the Royal app and sync.
+  bool locked = (data_event(s_index)->flags & EVENT_BOOKED) != 0;
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (locked ? USAGE_NOTHING : 0), -1);
+  if (!locked) {
+    toggle_star(s_index);
+  }
+}
+
+// "Excursion" or "Booking" for a booked order, else "Event".
+static const char *top_name(const Event *e) {
+  if (!(e->flags & EVENT_BOOKED)) {
+    return "Event";
+  }
+  return e->booked.kind == BOOKED_EXCURSION ? "Excursion" : "Booking";
 }
 
 static void click_config(void *context) {
@@ -130,7 +166,8 @@ static void window_load(Window *window) {
   window_set_background_color(window, g_theme->bg);
 
   s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT),
-                             day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL, "Event");
+                             day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL,
+                             top_name(data_event(s_index)));
   layer_add_child(root, s_top_bar);
   s_body = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
   layer_set_update_proc(s_body, body_update_proc);

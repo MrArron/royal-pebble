@@ -110,12 +110,22 @@ The phone also sends a slice by itself whenever the app starts (`ready`).
 |---|---|
 | 4 | `start`: int32 cruise minutes, −1 for untimed |
 | 2 | `minutes`: uint16 duration, 0 if unknown |
-| 1 | `flags`: 1 starred, 2 featured, 4 reservation needed, 8 personal entry, 16 last chance, 32 only show, 64 reserved (only with 4; kept when unstarred, shown only while starred) |
+| 1 | `flags`: 1 starred, 2 featured, 4 reservation needed, 8 personal entry, 16 last chance, 32 only show, 64 reserved (only with 4; kept when unstarred, shown only while starred), 128 booked (below) |
 | 4 | `where`: where the venue is (below) |
 | 1 | title length `n` (≤ 63) |
 | n | title, UTF-8 |
 | 1 | venue length `m` (≤ 31) |
 | m | venue, UTF-8 |
+| 3 | booked only (flag 128): uint8 minutes from the meeting time to the start (0 none), uint8 guests (0 not known), uint8 kind (1 shore excursion, 0 other booking) |
+
+**Booked** (`docs/DESIGN_PHASE3.md` §22): a timed order from login data
+(`mine.orders`, `slice.bookedOrders`), sent as starred with flag 128 at the
+day's port (the itinerary location, as `day_location` would show it) and
+`where` Ashore. The watch shows `Meet 8:45a · ✓ Booked`, labels its details
+`Excursion` or `Booking` and locks its star (hold Select does nothing and is
+logged as such). It never needs reserving, so it isn't in the to-reserve
+counts or alerts, and the phone never gets star changes for it. Hidden
+categories don't apply.
 
 `where` is worked out on the phone (`venues.whereFinder`: the built-in venue
 table for the ship, the owner's edits from Settings > Cruise > Ship venues, and
@@ -166,11 +176,16 @@ watch with any data, before the cruise too.
 | 4 | `ref`: int32 cruise minutes, the all-aboard time or event start (−1 for an untimed event to reserve) |
 | 2 | `extra`: int16, local offset (all-aboard), duration (reminder) or how many events there are to reserve in all (to reserve) |
 | 1 | `kind`: 0 all-aboard, 1 reminder, 2 to reserve |
-| 1 | `from`: "From" directions (reminders; 0 otherwise), below; plus 16 when the event is starred, needs a reservation and isn't marked reserved (the alert shows `Not reserved`) |
+| 1 | `from`: "From" directions (reminders; 0 otherwise), below; plus 16 when the event is starred, needs a reservation and isn't marked reserved (the alert shows `Not reserved`); plus 32 for a booked order's reminder |
 | 4 | `where`: as in events (reminders; zeros for all-aboard), but relative to the previous venue when `from` is a route |
 | 1 + n | title (location or event title), ≤ 31 bytes |
 | 1 + m | venue (its short name), ≤ 17 bytes |
 | 1 + k | previous venue's short name (route only, else empty), ≤ 17 bytes |
+| 3 | only with `from` bit 32: the booked order's three bytes, as in Packed events |
+
+A booked order's reminder fires `reminder_lead` minutes before its meeting
+time (the start without one), counts down to that time, and has no "From"
+directions; its venue is the port's name.
 
 Texts are cut between UTF-8 characters. They are shorter than in events so alerts
 take less of the watch's storage (they were first sized for a 4 kB cap). The venue table gives long venue names a short name for

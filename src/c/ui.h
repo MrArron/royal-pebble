@@ -62,6 +62,9 @@ void draw_check(GContext *ctx, GPoint top_left, int size, GColor color);
 int draw_reserved(GContext *ctx, bool large, int x, int y, GColor color);
 // The width draw_reserved would take.
 int reserved_width(bool large);
+// The same for any text: "✓ Booked" (docs/DESIGN_PHASE3.md §22).
+int draw_checked(GContext *ctx, const char *text, bool large, int x, int y, GColor color);
+int checked_width(const char *text, bool large);
 // "1 clash" in Gothic 14 bold, port accent. Draws nothing and returns 0 when
 // there are none; otherwise returns the line height.
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);

@@ -133,6 +133,24 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   // the port accent) or just the venue.
   char sub[VENUE_LEN + 20];
   const char *tag = NULL;
+  if ((e->flags & EVENT_BOOKED) && !in_progress) {
+    // "Meet 8:45a · ✓ Booked" (docs/DESIGN_PHASE3.md §22.2).
+    int bx = x;
+    if (e->booked.meet_before) {
+      char meet_buf[8];
+      fmt_clock(meet_buf, sizeof(meet_buf), e->start - e->booked.meet_before);
+      snprintf(sub, sizeof(sub), "Meet %s \xc2\xb7 ", meet_buf);
+      GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+      graphics_context_set_text_color(ctx, muted);
+      graphics_draw_text(ctx, sub, font, GRect(x, 22, b.size.w - x - PAD, 18),
+                         GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+      bx += graphics_text_layout_get_content_size(sub, font, GRect(0, 0, 200, 18),
+                                                  GTextOverflowModeTrailingEllipsis,
+                                                  GTextAlignmentLeft).w + 3;
+    }
+    draw_checked(ctx, "Booked", false, bx, 22, highlighted ? g_theme->cursor_text : g_theme->sea_accent);
+    return;
+  }
   if (in_progress) {
     char end_buf[8];
     fmt_clock(end_buf, sizeof(end_buf), event_end(e));
@@ -190,8 +208,10 @@ static void hide_toast(void *context) {
 }
 
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
-  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (index->row < s_row_count ? 0 : USAGE_NOTHING), index->row);
-  if (index->row >= s_row_count) {
+  // The star is locked on a booked order (docs/DESIGN_PHASE3.md §22.3).
+  bool nothing = index->row >= s_row_count || (data_event(s_rows[index->row])->flags & EVENT_BOOKED);
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (nothing ? USAGE_NOTHING : 0), index->row);
+  if (nothing) {
     return;
   }
   int clash = toggle_star(s_rows[index->row]);

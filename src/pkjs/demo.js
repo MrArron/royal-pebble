@@ -8,6 +8,7 @@
 // lead a reminder buzzes about 2 minutes after switching and the 15-minute
 // all-aboard warning a minute later (close the app to see them launch it). A
 // starred show just before the event gives the reminder "From" directions.
+// Port variants also have a booked excursion from login data (`mine.orders`).
 
 var slice = require('./slice');
 
@@ -164,6 +165,20 @@ function make(now, variant) {
       events: events
     }
   };
+  if (port) {
+    // Login data on port days: a booked excursion an hour out (meet 15 minutes
+    // before) and a package, which never shows (docs/DESIGN_PHASE3.md §22).
+    var exc = base + 60;
+    bundle.mine = {
+      stateroom: '9254',
+      orders: [
+        {title: 'Island Snorkel & Beach Tour', category: 'pt_shoreX', guests: 2, date: today,
+         time: hhmm(exc % (24 * 60)), day: 2, port: 'STT', meet: hhmm((exc - 15) % (24 * 60)),
+         end: hhmm((exc + 150) % (24 * 60)), minutes: 150},
+        {title: 'Deluxe Beverage Package', category: 'pt_beverage', guests: 2}
+      ]
+    };
+  }
 
   var dinner = base + (port ? 150 : 180);
   var settings = {

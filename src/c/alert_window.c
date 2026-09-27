@@ -6,7 +6,9 @@
 // Shown when an alert fires: the top bar says "Reminder" or "All aboard",
 // then "IN 15 MIN", what it's about and, for reminders, where it is
 // (docs/DESIGN_V1_1.md §2). The evening's "To reserve" alert lists tomorrow's
-// starred events that still need a reservation (§5). Opened by a wakeup (app closed) it is the only
+// starred events that still need a reservation (§5). A booked order's
+// reminder counts down to its meeting time (docs/DESIGN_PHASE3.md §22.4).
+// Opened by a wakeup (app closed) it is the only
 // screen the user asked for, so Back leaves the app; Select opens Home.
 
 static Window *s_window;
@@ -115,6 +117,57 @@ static void draw_to_reserve(GContext *ctx, GRect b) {
   }
 }
 
+// A booked order's reminder below its title: "Meet 8:45a", "Starts 9:00a ·
+// ends 11:30a", "Ashore" (or just "9:00a · Ashore" without a meeting time),
+// then "✓ Booked · 2 guests" under a divider. Returns the y below it.
+static int draw_booked(GContext *ctx, const Alarm *a, int y, int w) {
+  GFont f18 = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  GFont f14 = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  char start_buf[8], line[48];
+  fmt_clock(start_buf, sizeof(start_buf), a->ref);
+  if (a->booked.meet_before) {
+    char meet_buf[8];
+    fmt_clock(meet_buf, sizeof(meet_buf), a->ref - a->booked.meet_before);
+    snprintf(line, sizeof(line), "Meet %s", meet_buf);
+    graphics_context_set_text_color(ctx, g_theme->text);
+    graphics_draw_text(ctx, line, f18, GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 22;
+    if (a->extra > 0) {
+      char end_buf[8];
+      fmt_clock(end_buf, sizeof(end_buf), a->ref + a->extra);
+      snprintf(line, sizeof(line), "Starts %s \xc2\xb7 ends %s", start_buf, end_buf);
+    } else {
+      snprintf(line, sizeof(line), "Starts %s", start_buf);
+    }
+    graphics_context_set_text_color(ctx, g_theme->muted);
+    graphics_draw_text(ctx, line, f14, GRect(PAD, y - 2, w, 18), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 16;
+    graphics_context_set_text_color(ctx, g_theme->port_accent);
+    graphics_draw_text(ctx, "Ashore", f18, GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 22;
+  } else {
+    snprintf(line, sizeof(line), "%s \xc2\xb7 Ashore", start_buf);
+    graphics_context_set_text_color(ctx, g_theme->muted);
+    graphics_draw_text(ctx, line, f18, GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 22;
+  }
+  GRect b = layer_get_bounds(s_layer);
+  draw_divider(ctx, y + 3, b.size.w);
+  y += 6;
+  int x = PAD + draw_checked(ctx, "Booked", false, PAD, y, g_theme->sea_accent);
+  if (a->booked.guests) {
+    snprintf(line, sizeof(line), " \xc2\xb7 %d guest%s", a->booked.guests, a->booked.guests == 1 ? "" : "s");
+    graphics_context_set_text_color(ctx, g_theme->sea_accent);
+    graphics_draw_text(ctx, line, f14, GRect(x, y, PAD + w - x, 18), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+  }
+  return y + 18;
+}
+
 static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   if (s_alarm.kind == ALARM_TO_RESERVE) {
@@ -124,13 +177,15 @@ static void update_proc(Layer *layer, GContext *ctx) {
   Alarm *a = &s_alarm;
   int count = s_count;
   bool all_aboard = a->kind == ALARM_ALL_ABOARD;
-  int left = (int)(a->ref - now_cruise());
+  bool booked = !all_aboard && (a->from & ALARM_BOOKED);
+  // A booked order counts down to its meeting time when it has one.
+  int left = (int)(a->ref - (booked ? a->booked.meet_before : 0) - now_cruise());
   int w = b.size.w - 2 * PAD;
   int y = 2;
 
   char when[24];
   if (left <= 0) {
-    strncpy(when, all_aboard ? "NOW" : "STARTING NOW", sizeof(when) - 1);
+    strncpy(when, all_aboard || (booked && a->booked.meet_before) ? "NOW" : "STARTING NOW", sizeof(when) - 1);
     when[sizeof(when) - 1] = 0;
   } else if (left < 60) {
     snprintf(when, sizeof(when), "IN %d MIN", left);
@@ -155,6 +210,19 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_draw_text(ctx, a->title, title_font, title_box, GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   y += size.h + 4;
+
+  if (booked) {
+    y = draw_booked(ctx, a, y, w) + 4;
+    if (count > 1) {
+      char more[24];
+      snprintf(more, sizeof(more), "+ %d more", count - 1);
+      graphics_context_set_text_color(ctx, g_theme->text);
+      graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                         GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                         GTextAlignmentLeft, NULL);
+    }
+    return;
+  }
 
   char ref_buf[8], detail[48];
   fmt_clock(ref_buf, sizeof(ref_buf), a->ref);

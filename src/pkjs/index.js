@@ -524,6 +524,8 @@ function pageState(ships) {
     watchFull: bundle ? savedCutoff(bundle) : null,
     watchStorage: watchStorage(),
     personal: settings.personal || [],
+    // Booked excursions and other timed orders from login data (read-only).
+    orders: bundle ? slice.bookedList(bundle, settings) : [],
     // For Cruise > Ship venues: the built-in table and the owner's edits for
     // this ship (kept per ship code, so they survive re-downloads).
     venues: bundle && bundle.ship && bundle.ship.code ? {

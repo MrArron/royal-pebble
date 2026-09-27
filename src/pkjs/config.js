@@ -144,6 +144,14 @@ var CSS = [
   '.schip.done svg,.resbtn svg{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;',
   'stroke-linejoin:round;flex:none}.resbtn svg{width:16px;height:16px}.schip.done svg{width:14px;height:14px}',
   '.res .textbtn{min-height:40px;padding:0 12px;font-size:14px}.res .note{font-size:12px}',
+  '.fyb{background:var(--primary-container);color:var(--on-primary-container);border-radius:28px;',
+  'padding:14px 20px;margin:0 0 12px}.fyb .muted{color:inherit;opacity:.8}',
+  '.fyb .ev{padding:8px 0;align-items:flex-start}.fyb .ev .tm{color:inherit;font-weight:700}',
+  '.fyb .ev .muted{display:block;font-size:14px}.fyb .note{font-size:12px;margin:4px 0 0}',
+  '.bchip{display:inline-flex;align-items:center;gap:4px;min-height:26px;padding:0 10px;margin-top:4px;',
+  'border-radius:8px;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700}',
+  '.bchip svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;',
+  'stroke-linejoin:round;flex:none}',
   '.booked{background:var(--surface-low);border-radius:28px;padding:12px 20px 8px;margin:0 0 12px}',
   '.booked .mine-head small{color:var(--on-surface-variant)}',
   '.bk{padding:10px 0;border-top:1px solid var(--surface-high)}.bk:first-of-type{border-top:0}',
@@ -367,7 +375,7 @@ var BODY = [
   '<label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/>',
   '<path d="M20 20l-4.5-4.5"/></svg><input type="search" id="evSearch" placeholder="Search events or venues" ',
   'aria-label="Search events or venues" autocomplete="off"></label>',
-  '<div class="daychips" id="evDays"></div><div id="evMine"></div><div id="evBooked"></div><div id="evList"></div>',
+  '<div class="daychips" id="evDays"></div><div id="evOrders"></div><div id="evMine"></div><div id="evBooked"></div><div id="evList"></div>',
   '</section>',
   '<section class="screen" id="me">',
   '<div class="card"><h2>Stateroom</h2>',
@@ -1697,6 +1705,44 @@ function pageMain(S, V) {
     $('evMine').innerHTML = html + '</div>';
   }
 
+  // ---- From your booking (docs/DESIGN_PHASE3.md §22.7): booked excursions and
+  // other timed orders from the sync tool's login data. Read-only: they are
+  // starred on the watch and change only in the Royal app. Shown in the day
+  // view, under Starred and in search results.
+  var orders = S.orders || [];
+
+  function renderOrders() {
+    var q = $('evSearch').value.trim().toLowerCase();
+    var list = orders.filter(function(o) {
+      if (isFinished(o.date, o.time, o.minutes)) {
+        return false;
+      }
+      if (q) {
+        return (o.title + ' ' + o.port).toLowerCase().indexOf(q) !== -1;
+      }
+      return evDay === 'starred' || o.date === evDay;
+    });
+    if (!evDates.length || !list.length) {
+      $('evOrders').innerHTML = '';
+      return;
+    }
+    var withDate = !!q || evDates.indexOf(evDay) === -1;
+    $('evOrders').innerHTML = '<div class="fyb"><div class="mine-head"><small>FROM YOUR BOOKING</small></div>' +
+      list.map(function(o) {
+        var start = dayMinutes(o.time);
+        var line = [withDate ? dayLabel(o.date) : '',
+                    o.meetBefore ? 'Meet ' + shortClock(hhmm((start - o.meetBefore + 1440) % 1440)) : '',
+                    o.minutes ? 'ends ' + shortClock(hhmm((start + o.minutes) % 1440)) : '',
+                    o.guests ? o.guests + (o.guests === 1 ? ' guest' : ' guests') : ''];
+        return '<div class="ev"><span class="tm">' + shortClock(o.time) + '</span><span class="t"><b>' +
+          esc(o.title) + '</b>' + (line.some(Boolean) ? '<span class="muted">' +
+          line.filter(Boolean).map(esc).join(' &middot; ') + '</span>' : '') +
+          '<span class="muted">Ashore &middot; ' + esc(o.port) + '</span>' +
+          '<span class="bchip">' + CHECK_SVG + 'Booked &middot; &starf; on the watch</span></span></div>';
+      }).join('') +
+      '<p class="note">From the sync tool with login. Change it in the Royal app.</p></div>';
+  }
+
   // ---- Booked activities: paid classes and experiences (escape room,
   // FlowRider lessons, tastings) come as many sessions each. Only the ones
   // picked here are starred and marked reserved, and only those reach the
@@ -1888,12 +1934,16 @@ function pageMain(S, V) {
     countToReserve();
     updateClashes();
     renderEvDays();
+    renderOrders();
     renderMine();
     renderBooked();
     renderEvList();
   }
 
-  $('evSearch').addEventListener('input', renderEvList);
+  $('evSearch').addEventListener('input', function() {
+    renderOrders();
+    renderEvList();
+  });
 
   $('evDays').addEventListener('click', function(ev) {
     var b = ev.target.closest('[data-day]');
