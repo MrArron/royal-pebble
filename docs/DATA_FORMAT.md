@@ -89,7 +89,9 @@ text. One compact JSON object, ASCII only.
     is the start; the meeting time is in `info` (`early`, below). All-day
     rentals (beach beds, cabanas, day passes, listed with 0 minutes) keep
     Royal's listed time and `minutes` 0. Older bundles have none, and their
-    consumers simply see no excursions.
+    consumers simply see no excursions. They aren't a Filters category
+    (picked ones are starred, and starred events always show), and their
+    venues, which are ports, aren't ship venues.
   - **Event details** (Phase 4, added without a version bump; a bundle without
     them is valid and every event then has no venue code, age, arrive-early
     time or notes). Each comes from the products listing both producers already
@@ -100,21 +102,33 @@ text. One compact JSON object, ASCII only.
     - `notes`: shared table of `[id, text]`. `id` is Royal's advisement or
       restriction id (`kbyg/general/seapass`), `short` for a product's short
       description when it says more than the title, and `waiver` for Royal's
-      `isWaiverRequired`. `text` is simplified like other text. Left out:
-      "Images are illustrative only", "This activity has a fee" and "Fee
-      applies" (already `paid`), age limits (they go in `age`) and any text over
-      120 characters. A row appears once, however many events use it.
+      `isWaiverRequired` when no other note of the event mentions a waiver or
+      disclaimer. `text` is simplified like other text. Left out: "Images are
+      illustrative only", "This activity has a fee" and "Fee applies" (already
+      `paid`), age limits (they go in `age`), any text over 120 characters and
+      text an event already has. A short description says more than the title
+      when, lowercased and without punctuation (and a plural `s`), it has a
+      parenthesis or a word the title lacks, not counting label and filler
+      words (`Seminar:`, `Game`, `Show`, `Competition`, `the`, `with`, ...). A
+      row appears once, however many events use it.
     - `infos`: shared table of `[age, early, notes]`, one row per distinct
       combination. `age` is `[min, max]` in years (either may be `null`: `[18,
       null]` is 18 and over, `[null, 17]` is 17 and under) or `null`. It comes
-      from Royal's age restrictions, then its age experiences (`ages/age18`),
-      then the over-21 alcohol advisement, then title and venue patterns
-      (`(18+)`, `(Ages 13-17)`, `(17 & Under)`, Adventure Ocean); if several
-      apply, the tightest wins. `early` is minutes to arrive before `time`, or
-      `null`: Royal's `leadTimeInMinutes` when above 0, else a number in an
-      advisement ("Arrive 15 minutes early"), at most 120; for a shore
-      excursion, the start minus Royal's `meetingTime`, at most 240. `notes`
-      holds indexes into `notes`, in Royal's order (may be empty).
+      from Royal's age restrictions ("Minimum 18 years old", "Maximum 17 years
+      old", "13 to 17 years old"), its age experiences (`ages/age18`) and
+      title and venue patterns (`(18+)`, `(18-25)`, `(Ages 13-17)`, `(17 &
+      Under)`, `Adults-Only`); if several apply, the tightest wins. Not an age:
+      "Guests 16 and under must be accompanied", "Fun for all ages", the
+      over-21 alcohol advisement (it's about buying drinks, and sits on beach
+      beds and shop events) and kids' venues (Adventure Ocean Theater holds
+      family events); those that are text stay notes. `early` is minutes to
+      arrive before `time`, or `null` (always for untimed events): Royal's
+      `leadTimeInMinutes` when above 0, else a number in an advisement
+      ("Arrive 15 minutes early", "Sign up at the venue 15 minutes before"),
+      at most 120; for a shore excursion, the start minus Royal's
+      `meetingTime` when that is earlier, at most 240. `notes` holds indexes
+      into `notes`: the short description, then restrictions, advisements
+      and the waiver (may be empty).
     - Event field `info`: index into `infos`, or `null` when the event has none
       of these.
     - Event field `pid`: Royal's `productID`, the same for every session of an
@@ -123,6 +137,8 @@ text. One compact JSON object, ASCII only.
       reschedule (Rules for consumers).
     - Consumers read events by field name, so older consumers ignore `info` and
       `pid`, and new consumers treat missing fields as `null`.
+    - Both producers are checked against one expected schedule made from
+      public products (`test/fixtures`), so they can't drift apart.
 - `mine` — only when fetched with login, so only `cruise_sync.py --login`
   produces it (the phone companion never logs in). Private: it holds the
   stateroom and cabin details. Every field may be missing or `null`; consumers

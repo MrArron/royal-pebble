@@ -136,11 +136,16 @@ medium, because it opens the watch protocol change that items 3 and 6 share.
       "Maximum 17" → `[null, 17]`, "13 to 17 years old" → `[13, 17]`);
     - `experiences[]` age entries (`ages/age18` → `[18, null]`; `ages/funforall` →
       none);
-    - the alcohol advisement `kbyg/general/over21` → `[21, null]`;
     - title and venue patterns: `(18+)`, `Adults (18+)`, `(17 & Under)`,
-      `(Ages 13-17)` (Social100), and kids' venues (Adventure Ocean).
+      `(Ages 13-17)` (Social100), `(18-25)` (Hyperlink), `Adults-Only` (Hideaway
+      Beach).
     - If several apply, keep the tightest. Height, weight and wristband limits go
       to notes (item 6).
+    - **Dropped in PR B (owner, 2026-09-27):** the over-21 alcohol advisement
+      (`kbyg/general/over21`) is a note, not an age: it sits on beach bed rentals,
+      a bubbly offer and a watch store opening. The kids' venue rule is gone too:
+      every Adventure Ocean event on 2026-10-01 was at Adventure Ocean Theater and
+      a family event (Family Movie, Family Bingo tagged "Fun for all ages").
 - **Filters** (settings page, Filters tab, beside the Casino category from
   Phase 3 item 27):
     - **Hide Adult only events (18+ and 21+)**, for a teen's watch. It hides adult
@@ -198,7 +203,9 @@ smallest item and rides along with item 6. Size: small.
 
 - **Producers:** keep `productShortDescription` as a note (id `short`) when it
   isn't the title in other words: after lowercasing and dropping punctuation, it
-  has a word or a parenthesis the title lacks. On 2026-10-01 that keeps "Dance
+  has a word or a parenthesis the title lacks. Label and filler words don't count
+  (`Seminar:`, `Game:`, `Competition`, `the`, ...; list in `docs/DATA_FORMAT.md`),
+  and a plural `s` is ignored. On 2026-10-01 that keeps "Dance
   Fitness with your Cruise Director's Staff ... (Meet by the Car)", "Seminar: Burn
   Fat Fast" and "...Competition: Sign Ups", and drops the 16 that just restate the
   title.
@@ -316,7 +323,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | # | Version | Items | What changes | Tested on |
 | --- | --- | --- | --- | --- |
 | A | none (docs) | all | `DATA_FORMAT.md` fields and the excursions change; `WATCH_PROTOCOL.md` 4 event bytes + 1 alarm byte; mockups in a new `DESIGN_PHASE4.md` | review (done; design approved 2026-09-27) |
-| B | 1.4.0 | data for 1-7 | Both producers write `venueCodes`, `notes`, `infos`, `info`, `pid` and keep SHOREX; shared fixture trimmed from the 2026-10-01 pull | `test_cruise_sync.py`, a producer test in `test/pkjs`, live pull of a sailing within 2 weeks |
+| B | 1.4.0 | data for 1-7 | Both producers write `venueCodes`, `notes`, `infos`, `info`, `pid` and keep SHOREX; shared fixture trimmed from the 2026-10-01 pull. Excursions stay out of Booked activities until G, and out of Filters and Ship venues for good; `settingsClosed` parses before decoding | `test_cruise_sync.py`, `test/pkjs/royal.test.js`, live pull of a sailing within 2 weeks |
 | C | 1.4.1 | 1 | Venue codes in `venues.js`, code-first lookup, blank titles filled, conflicts entries | `venues.test.js`, `slice.test.js` |
 | D | 1.4.2 | 2, 4, 6 (+3 display) | Packed events +4 bytes and the alarm's `early` byte (sent as 0 until F), storage version 9; watch details lines; settings page rows | Node tests, emulator screenshots, then the Pebble Time 2 |
 | E | 1.4.3 | 2 | The two age filters | `slice.test.js`, `settings.test.js` |
@@ -454,12 +461,11 @@ using made-up bookings and cabin numbers.
   through `pebblejs://close#` (1,675 KB in the URL), and every one arrived whole.
   The page's own size is a separate limit of about 1.8 MB (`PROJECT_BRIEF.md`).
   Only the emulator caps results at about 64 KB, so test big pastes on the phone.
-- [ ] **The Pebble app decodes the result itself.** On the phone, `e.response`
-  arrives already URL-decoded. `settingsClosed` in `index.js` tries
-  `decodeURIComponent` first, which throws on most decoded text and falls back
-  to a plain parse. But text holding a valid escape (a note with `%41`, say)
-  would be decoded twice and changed. PR B, which puts Royal's notes in the
-  bundle, should parse the plain text first and decode only when that fails.
+- [x] **The Pebble app decodes the result itself.** On the phone, `e.response`
+  arrives already URL-decoded. `settingsClosed` in `index.js` tried
+  `decodeURIComponent` first, so text holding a valid escape (a note with `%41`,
+  say) would have been decoded twice and changed. Fixed in PR B: it parses the
+  plain text first and decodes only when that fails.
 - [ ] **Watch storage.** 4 more bytes per event and 1 per alarm. Check
   `saved_bytes` against `saved_max` on the busiest day of a 7-night sailing after
   PR D.

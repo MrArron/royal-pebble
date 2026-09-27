@@ -1691,6 +1691,7 @@ function pageMain(S, V, CL, SH) {
         minutes: row[fi.minutes] || 0, featured: !!row[fi.featured], reservation: !!row[fi.reservation],
         paid: fi.paid !== undefined && !!row[fi.paid], price: fi.price !== undefined ? row[fi.price] : null
       };
+      e.excursion = e.cat[0] === 'Shore excursions';  // docs/DATA_FORMAT.md
       e.cat = eventCat(e.title, e.venue, e.cat);  // Casino (slice.js)
       e.key = starKey(e.title, e.date, e.time, e.venue);
       e.search = (e.title + ' ' + e.venue).toLowerCase();
@@ -2020,7 +2021,9 @@ function pageMain(S, V, CL, SH) {
     var byName = {};
     var list = [];
     allEvents.forEach(function(e) {
-      if (!e.paid || (isFinished(e.date, e.time, e.minutes) && !isStarred(e.key))) {
+      // Shore excursion sessions get their own section in Phase 4 PR G
+      // (docs/PHASE4_PLAN.md item 7); until then they stay off the page.
+      if (!e.paid || e.excursion || (isFinished(e.date, e.time, e.minutes) && !isStarred(e.key))) {
         return;
       }
       var id = e.title + '|' + e.venue;
@@ -2407,7 +2410,13 @@ function pageMain(S, V, CL, SH) {
   var vQueue = null;       // review mode: the venues to check, fixed when it starts
   var vFrom = 'venues';    // where Back goes from the edit screen: venues | events
   var vCanon = {};         // schedule venue name -> table name (or itself)
-  var schedVenues = (sched && sched.venues) || [];
+  // Venues of onboard events only: a shore excursion's venue is its port.
+  var schedVenues = [];
+  allEvents.forEach(function(e) {
+    if (!e.excursion && schedVenues.indexOf(e.venue) === -1) {
+      schedVenues.push(e.venue);
+    }
+  });
   schedVenues.forEach(function(n) { vCanon[n] = V.lookup(vTable, n) || n; });
   var PIN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/>' +
     '<circle cx="12" cy="9" r="2.5"/></svg>';
