@@ -1,5 +1,6 @@
 #include "ui.h"
 #include "data.h"
+#include "usage.h"
 
 static const Theme LIGHT = {
   .bg = {GColorWhiteARGB8},
@@ -555,4 +556,118 @@ int draw_hint_right(GContext *ctx, const char *text, int right, int y) {
                      GTextAlignmentLeft, NULL);
   draw_chevron(ctx, g_theme->sea_accent, x + text_w + 4, y);
   return w;
+}
+
+// ---- Scrolling pages ----------------------------------------------------------
+
+#define SCROLL_INDICATOR_H 12
+#define SCROLL_BOTTOM_PAD 6
+
+static void scroll_offset_changed(ScrollLayer *scroll, void *context) {
+  ScrollPage *p = context;
+  int y = scroll_layer_get_content_offset(scroll).y;
+  if (!p->quiet && y != p->scroll_y) {
+    usage_move(-p->scroll_y, -y);  // down makes the offset more negative
+  }
+  p->scroll_y = y;
+}
+
+static void scroll_set_height(ScrollPage *p, int h) {
+  GRect frame = layer_get_frame(scroll_layer_get_layer(p->scroll));
+  if (h < frame.size.h) {
+    h = frame.size.h;
+  }
+  if (h == p->height) {
+    return;
+  }
+  p->height = h;
+  layer_set_frame(p->content, GRect(0, 0, frame.size.w, h));
+  p->quiet = true;
+  scroll_layer_set_content_size(p->scroll, GSize(frame.size.w, h));
+  p->quiet = false;
+  layer_mark_dirty(p->content);
+}
+
+static void scroll_fit_now(void *context) {
+  ScrollPage *p = context;
+  p->fit_timer = NULL;
+  scroll_set_height(p, p->wanted);
+}
+
+void scroll_page_fit(ScrollPage *p, int bottom) {
+  p->wanted = bottom + SCROLL_BOTTOM_PAD;
+  GRect frame = layer_get_frame(scroll_layer_get_layer(p->scroll));
+  int h = p->wanted < frame.size.h ? frame.size.h : p->wanted;
+  // Not while drawing: resize just after.
+  if (h != p->height && !p->fit_timer) {
+    p->fit_timer = app_timer_register(0, scroll_fit_now, p);
+  }
+}
+
+static void scroll_indicators(ScrollPage *p) {
+  ContentIndicator *ci = scroll_layer_get_content_indicator(p->scroll);
+  const ContentIndicatorDirection dirs[2] = {ContentIndicatorDirectionUp, ContentIndicatorDirectionDown};
+  Layer *layers[2] = {p->more_above, p->more_below};
+  for (int i = 0; i < 2; i++) {
+    const ContentIndicatorConfig config = {
+      .layer = layers[i],
+      .times_out = false,
+      .alignment = GAlignCenter,
+      .colors = {.foreground = g_theme->muted, .background = g_theme->bg},
+    };
+    content_indicator_configure_direction(ci, dirs[i], &config);
+  }
+}
+
+void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,
+                        LayerUpdateProc update, ClickConfigProvider clicks) {
+  memset(p, 0, sizeof(*p));
+  p->scroll = scroll_layer_create(frame);
+  scroll_layer_set_shadow_hidden(p->scroll, true);
+  scroll_layer_set_context(p->scroll, p);
+  scroll_layer_set_callbacks(p->scroll, (ScrollLayerCallbacks){.click_config_provider = clicks,
+                                                               .content_offset_changed_handler = scroll_offset_changed});
+  scroll_layer_set_click_config_onto_window(p->scroll, window);
+  p->height = frame.size.h;
+  p->content = layer_create(GRect(0, 0, frame.size.w, frame.size.h));
+  layer_set_update_proc(p->content, update);
+  scroll_layer_add_child(p->scroll, p->content);
+  scroll_layer_set_content_size(p->scroll, frame.size);
+  layer_add_child(root, scroll_layer_get_layer(p->scroll));
+  p->more_above = layer_create(GRect(frame.origin.x, frame.origin.y, frame.size.w, SCROLL_INDICATOR_H));
+  p->more_below = layer_create(GRect(frame.origin.x, frame.origin.y + frame.size.h - SCROLL_INDICATOR_H,
+                                     frame.size.w, SCROLL_INDICATOR_H));
+  layer_add_child(root, p->more_above);
+  layer_add_child(root, p->more_below);
+  scroll_indicators(p);
+}
+
+void scroll_page_top(ScrollPage *p) {
+  if (!p->scroll) {
+    return;
+  }
+  p->quiet = true;
+  scroll_layer_set_content_offset(p->scroll, GPointZero, false);
+  p->quiet = false;
+  p->scroll_y = 0;
+  layer_mark_dirty(p->content);
+}
+
+void scroll_page_refresh(ScrollPage *p) {
+  if (!p->scroll) {
+    return;
+  }
+  scroll_indicators(p);
+  layer_mark_dirty(p->content);
+}
+
+void scroll_page_destroy(ScrollPage *p) {
+  if (p->fit_timer) {
+    app_timer_cancel(p->fit_timer);
+  }
+  layer_destroy(p->more_above);
+  layer_destroy(p->more_below);
+  layer_destroy(p->content);
+  scroll_layer_destroy(p->scroll);
+  memset(p, 0, sizeof(*p));
 }

@@ -48,6 +48,10 @@ void route_window_push_event(const Event *e);
 void route_window_refresh(void);
 
 void details_window_push(int event_index);
+// Draws event `index` as its details page does (title down to the tags, not the
+// star line) at y on a page `width` wide. Returns the y below it. Also used by
+// a booked order's reminder.
+int details_draw_event(GContext *ctx, int index, int width, int y);
 void details_window_refresh(void);
 
 // Alert for the given alert time (cruise minutes). from_wakeup: the app was

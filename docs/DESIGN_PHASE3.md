@@ -106,10 +106,22 @@ From your booking                        Gothic 14 bold, muted
   line reads `From your booking` instead of the Select hints. The same goes for
   hold Select on its Today row. It's removed only by cancelling in the Royal app
   and syncing again.
+- **Scrolls** (owner, 2026-09-26, after the first watch test): the details
+  page scrolls with Up/Down when it doesn't fit, with the muted triangles of
+  place and route pages, instead of losing lines at the bottom. As built, the
+  clash note comes after `✓ Booked`.
 
 ### 22.4 Reminder (`WatchExcReminderLight`)
 
 Fires the usual reminder lead before `meet`, or before `time` without `meet`.
+
+**Changed after the first watch test (owner, 2026-09-26):** the reminder shows
+the same detail as the details page. Under the countdown (`MEET IN 15 MIN`
+when there is a meeting time, else `IN 15 MIN`) it draws the details body:
+title, the port, `Ashore`, `9:00a - 11:30a · 2 h 30 min`, `Meet 8:45a · 2
+guests`, `✓ Booked`, and a clash note, without the star line. It scrolls like
+the details page. The layout below is the first version, kept as the
+fallback for when the event isn't in the watch's day data.
 
 ```
 IN 15 MIN                                sea accent

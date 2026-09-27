@@ -113,6 +113,35 @@ int draw_where_short(GContext *ctx, bool large, GColor color, int x, int y, int 
 // A drawn `›` for a Gothic 14 bold line whose text box starts at y
 // (docs/mockups/gps/NOTES.md). About 4 px wide.
 void draw_chevron(GContext *ctx, GColor color, int x, int y);
+// ---- Scrolling pages ----------------------------------------------------------
+
+// A page whose content scrolls with Up/Down when it doesn't fit, with muted
+// triangles while there's more above or below (as on route and place pages).
+// The content layer's update proc draws, then calls scroll_page_fit with the
+// y where its content ends; the page resizes itself when that changes.
+typedef struct {
+  ScrollLayer *scroll;
+  Layer *content;
+  Layer *more_above;
+  Layer *more_below;
+  AppTimer *fit_timer;
+  int height;    // content height in use
+  int wanted;    // content height the last draw asked for
+  int scroll_y;  // for the usage log
+  bool quiet;    // moving it ourselves: not the user's scroll
+} ScrollPage;
+
+// `frame` is the page below the top bar, in `root`. `clicks` subscribes the
+// window's other buttons (Up and Down scroll).
+void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,
+                        LayerUpdateProc update, ClickConfigProvider clicks);
+void scroll_page_fit(ScrollPage *p, int bottom);
+// Back to the top (new content).
+void scroll_page_top(ScrollPage *p);
+// Follows the theme (indicator colors) and redraws.
+void scroll_page_refresh(ScrollPage *p);
+void scroll_page_destroy(ScrollPage *p);
+
 // A sea-accent button hint with its `›` (Home's `Route ›`), right-aligned so
 // it ends at `right`, on a Gothic 14 bold line at y. Returns its width.
 int draw_hint_right(GContext *ctx, const char *text, int right, int y);

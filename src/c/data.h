@@ -266,6 +266,8 @@ void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const
 void data_set_reminder(const Event *e, bool on);
 // Updates the "Not reserved" mark on the event's reminder, if it has one.
 void data_update_reminder(const Event *e);
+// The event a reminder is for (same start, title as the alert kept it), or -1.
+int data_event_for_alarm(const Alarm *a);
 
 bool event_is_timed(const Event *e);
 bool event_in_progress(const Event *e, int32_t now);
