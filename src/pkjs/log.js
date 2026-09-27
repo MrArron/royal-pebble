@@ -539,7 +539,7 @@ function watchEntry(e, sailIso) {
         return {kind: 'sync', detail: 'morning sync with the app open: asked for data'};
       }
       return {kind: 'sync', detail: 'morning sync: ' + (SYNC_OUTCOMES[x] || 'outcome ' + x) + ' after ' + seconds(a) +
-              (c ? ', app stayed open' : ', app closed')};
+              (c === 2 ? ', closed with Back before it finished' : c ? ', app stayed open' : ', app closed')};
     default:
       return {kind: 'watch', detail: 'entry ' + e.code + ': ' + [x, a, b, c].join(' ')};
   }

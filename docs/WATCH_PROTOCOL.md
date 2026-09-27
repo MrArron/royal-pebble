@@ -596,7 +596,7 @@ nothing starred today, 9 terminal arrival (embark day).
 | 12 | message error | 0 not delivered, 1 phone's message dropped, 2 outbox busy | `AppMessageResult` | `msg_type` (0 unknown) | — |
 | 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short | persistent key | — |
 | 14 | on board (§22.6); the phone writes `onboard set` or `onboard undo` | 1 set, 0 undo | — | ship time (cruise minutes) | — |
-| 15 | morning sync (§25) | 0 set (when it changes), 1 synced, 2 phone unreachable, 3 timed out (phone connected, no slice), 4 fired with the app open | 0 set: the error when none is set; 1-3: seconds until the slice came, or waited | 0 set: when (−1 none) | 1-3: 1 the app stayed open (a notice, or the user left Home) |
+| 15 | morning sync (§25) | 0 set (when it changes), 1 synced, 2 phone unreachable, 3 timed out (phone connected, no slice), 4 fired with the app open | 0 set: the error when none is set; 1-3: seconds until the slice came, or waited | 0 set: when (−1 none) | 1-3: 0 it closed itself, 1 the app stayed open (a notice, or the user left Home), 2 closed with Back before it finished |
 
 Button presses are logged while the phone is connected; a Select that did
 nothing always is. Screen views are always logged, so with the phone away the

@@ -32,21 +32,22 @@ static AppTimer *s_sync_timer;
 
 bool sync_in_progress(void) { return s_syncing; }
 
-// Logs the outcome; returns whether the app should stay open.
-static bool sync_end(void) {
+// Logs the outcome; returns whether the app should stay open. `closing`: the
+// user closed the app before the sync was over.
+static bool sync_end(bool closing) {
   s_syncing = false;
   if (s_sync_outcome == SYNC_SCHEDULED) {
     s_sync_outcome = s_sync_phone ? SYNC_TIMED_OUT : SYNC_NO_PHONE;
     s_sync_secs = (int16_t)(time(NULL) - s_sync_since);
   }
-  bool stay = !home_window_is_top();
-  usage_add(USAGE_SYNC, s_sync_outcome, s_sync_secs, 0, stay ? 1 : 0);
+  bool stay = !closing && !home_window_is_top();
+  usage_add(USAGE_SYNC, s_sync_outcome, s_sync_secs, 0, closing ? 2 : stay ? 1 : 0);
   return stay;
 }
 
 static void sync_close(void *context) {
   s_sync_timer = NULL;
-  if (!sync_end()) {
+  if (!sync_end(false)) {
     window_stack_pop_all(false);
   }
 }
@@ -243,7 +244,7 @@ static void init(void) {
 static void deinit(void) {
   // Closed with Back before the sync was over.
   if (s_syncing) {
-    sync_end();
+    sync_end(true);
   }
   usage_deinit();
   tick_timer_service_unsubscribe();
