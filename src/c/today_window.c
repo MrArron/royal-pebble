@@ -216,6 +216,10 @@ static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) 
   if (nothing) {
     return;
   }
+  if (data_event(s_rows[index->row])->flags & EVENT_STARRED) {
+    unstar_window_push(s_rows[index->row], BAND_SEA, "Today");
+    return;
+  }
   int clash = toggle_star(s_rows[index->row]);
   if (clash >= 0 && s_toast) {
     s_toast_event = clash;

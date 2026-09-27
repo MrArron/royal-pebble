@@ -92,6 +92,7 @@ int toggle_star(int event_index) {
   }
   // Queued until the phone confirms it, so it survives the phone being away.
   stars_record(e, false, on);
+  usage_add(USAGE_STAR, on ? 1 : 0, 0, e->start, clash >= 0 ? 1 : 0);
   stars_send();
   store_save();
   alarms_schedule();
