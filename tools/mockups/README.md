@@ -7,6 +7,8 @@ them.
 - `gen_phase2_watch.py` writes the 18 watch mockups (light and dark).
 - `gen_phase2_phone.py` writes `EventsClash.dc.html`. It copies the bottom nav
   from `docs/mockups/v1.1/EventsReserve.dc.html`.
+- `gen_phase4.py` writes the Phase 4 mockups and a plain `preview.html` in
+  `docs/mockups/phase4/` (`docs/DESIGN_PHASE4.md`).
 - `check_fit.py` renders the `.dc.html` files in headless Chromium with a small
   stand-in for the Claude Design runtime. It saves a PNG of each and prints each
   text line's width in watch pixels (1×), flagging `OVER` (past x = 192, i.e.

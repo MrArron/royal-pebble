@@ -130,6 +130,10 @@ The phone also sends a slice by itself whenever the app starts (`ready`).
 | 2 | `minutes`: uint16 duration, 0 if unknown |
 | 1 | `flags`: 1 starred, 2 featured, 4 reservation needed, 8 personal entry, 16 last chance, 32 only show, 64 reserved (only with 4; kept when unstarred, shown only while starred), 128 booked (below) |
 | 4 | `where`: where the venue is (below) |
+| 1 | `age_min`: uint8 years, 0 = no minimum (Phase 4) |
+| 1 | `age_max`: uint8 years, 0 = no maximum |
+| 1 | `early`: uint8 minutes to arrive (or meet) before the start, 0 = none |
+| 1 | `tags`: what-to-bring notes as bits (below) |
 | 1 | title length `n` (≤ 63) |
 | n | title, UTF-8 |
 | 1 | venue length `m` (≤ 31) |
@@ -160,6 +164,38 @@ ships need no watch change.
 
 A venue that isn't in the table (and has no owner edit), or an event with no
 venue, sends all zeros: the watch leaves the deck lines out.
+
+**Age, arrive-early and tags** (Phase 4, `docs/DESIGN_PHASE4.md`) come from the
+bundle's `infos` row (`docs/DATA_FORMAT.md`); an event without one sends four
+zeros. The phone works all of it out, so the watch only formats numbers:
+
+- `age_min` / `age_max` give `Ages 18+`, `Ages 17 & under` or `Ages 13-17`.
+  Nothing when both are 0. The age filters are applied on the phone, before
+  the slice is built.
+- `early`: `start` − `early` is the time to be there. The watch shows `Meet
+  7:45a` when `where` says Ashore (a picked shore excursion) and `Arrive by
+  7:45p` otherwise. 0 for untimed events and for booked orders, which keep
+  their own meeting byte.
+- `tags` bits, each a fixed text on the watch, joined with ` · `:
+
+| Bit | Watch text |
+|---|---|
+| 1 | Bring SeaPass |
+| 2 | Weather permitting |
+| 4 | Sign up at venue |
+| 8 | Waiver needed |
+| 16 | Athletic shoes |
+| 32 | Swimwear or active wear |
+| 64 | Limited spots, come early |
+| 128 | Meeting spot on phone |
+
+  The phone sets them from the event's notes (`src/pkjs/slice.js`), by Royal's
+  note id first and keywords second (`docs/PHASE4_PLAN.md` item 6). Bit 64 is
+  left off when `early` is set, since `Arrive by` already says it.
+
+The four bytes make every event 4 bytes longer: about 640 bytes more for a
+160-event slice, in the watch's memory and in its saved blob (storage version
+9, below).
 
 Chunks are at most 1500 bytes (watch inbox is 2048), about 20 events each. Events
 are sorted with untimed entries first, then by start and title; at most 160 per
@@ -197,6 +233,7 @@ watch with any data, before the cruise too.
 | 1 | `kind`: 0 all-aboard, 1 reminder, 2 to reserve |
 | 1 | `from`: "From" directions (reminders; 0 otherwise), below; plus 16 when the event is starred, needs a reservation and isn't marked reserved (the alert shows `Not reserved`); plus 32 for a booked order's reminder |
 | 4 | `where`: as in events (reminders; zeros for all-aboard), but relative to the previous venue when `from` is a route |
+| 1 | `early`: uint8, the event's `early` (reminders to starred events and personal entries; 0 otherwise). Phase 4 |
 | 1 + n | title (location or event title), ≤ 31 bytes |
 | 1 + m | venue (its short name), ≤ 17 bytes |
 | 1 + k | previous venue's short name (route only, else empty), ≤ 17 bytes |
@@ -205,6 +242,13 @@ watch with any data, before the cruise too.
 A booked order's reminder fires `reminder_lead` minutes before its meeting
 time (the start without one), counts down to that time, and has no "From"
 directions; its venue is the port's name.
+
+**Arrive-early reminders** (Phase 4, `docs/DESIGN_PHASE4.md` §3) work the same
+way: with `early` set, a reminder fires `reminder_lead` minutes before `ref` −
+`early` and counts down to that time (`ARRIVE IN 15 MIN`, or `MEET IN 15 MIN`
+Ashore). `ref` stays the start, so clash warnings, "From" directions and
+`previousStop` keep using the start. A reminder the watch adds itself (starring
+on the watch) takes `early` from the event's own byte.
 
 Texts are cut between UTF-8 characters. They are shorter than in events so alerts
 take less of the watch's storage (they were first sized for a 4 kB cap). The venue table gives long venue names a short name for
@@ -338,7 +382,9 @@ above, spread over 256-byte values (keys 40 on):
    first start, starred and featured counts, last kind and to-reserve count,
    then the terminal arrival), then the day's status and location, My info's
    six texts, the ship name, and tomorrow's status, location, first and last,
-   then the sail port and the terminal arrival text. (Storage version 8.)
+   then the sail port and the terminal arrival text. (Storage version 8;
+   9 from Phase 4, whose events and alerts carry the new bytes, so a blob
+   saved by an older version is ignored until the phone sends a slice.)
 2. Alerts, then events, each as packed above, in time order.
 
 The blob's budget follows `persist_get_max_size()`: the limit minus 1.5 kB kept
