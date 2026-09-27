@@ -20,7 +20,7 @@ Phase 3 adds or changes. One section per item, filled in as each is designed.
 | Item | Status |
 |---|---|
 | 22 Booked excursions and embark day (+ I'm on board) | **Approved 2026-09-26.** Build from §22. |
-| 23 Port day card | **Designed with the owner 2026-09-26**; one open question (§23.7) |
+| 23 Port day card | **Designed with the owner 2026-09-26**; §23.7 decided. Build from §23. |
 | 24 Settings page upgrades | First draft (§24), review before building |
 | 25 Silent morning sync | No screens needed (§25) |
 | 26 Confirm before removing a star | First draft (§26), review before building |
@@ -240,7 +240,7 @@ Home then shows the **sea-day layout** (the NEXT card) for the rest of the day.
 
 ## 23. Port day card
 
-**Status: designed with the owner, 2026-09-26; one open question (§23.7).**
+**Status: designed with the owner, 2026-09-26; §23.7 decided the same day.**
 Mockups: `Watch23PortCardLight/Dark`, `Watch23WarningLight/Dark`,
 `Watch23TenderLight`, `Phone23DaysTender`. This changes brief item 23 in three
 places, and the brief has been updated to match. Royal's gangway time is now
@@ -343,12 +343,12 @@ sign** `#FF0000` in both themes. `#55AAFF` (sea pale) is new too. All are in
 the Pebble 64-color palette. Add them to the tokens table in `docs/DESIGN.md`
 when this is built.
 
-### 23.7 Open question
+### 23.7 Bar or next-items list (decided)
 
-The bar takes the space of the next-items list on the countdown layout. The
-mockups show the bar without the list (the list is one press away in Today).
-The alternative is a thinner bar under the ship/local line, with the list
-kept. **Ask the owner before building 23.**
+The bar takes the space of the next-items list on the countdown layout.
+**Decided by the owner, 2026-09-26: as the mockups show**, the bar without the
+list (the list is one press away in Today). The alternative, a thinner bar
+under the ship/local line with the list kept, was not taken.
 
 ---
 
