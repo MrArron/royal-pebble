@@ -21,8 +21,11 @@ that the phone stores is described in `DATA_FORMAT.md`.
   dated the evening before). So an event time before 04:00 is after midnight on
   its listed date. A departure before 04:00 or earlier than that day's arrival is
   after midnight too, and so is an all-aboard override before 04:00.
-- **All-aboard** = departure (port-local) − ship offset − buffer (default 30 min,
-  60 at tender ports: any day type containing `TENDER`), unless an exact time (ship time) is set per day. None on debark or sea days.
+- **All-aboard**, in this order: an exact time (ship time) set per day; else
+  Royal's gangway time (`mine.ports[].gangwayUp`, port-local, from login data)
+  − ship offset ± the day's 5-minute steps (`docs/DESIGN_PHASE3.md` §23.1);
+  else departure (port-local) − ship offset − buffer (default 30 min, 60 at
+  tender ports: any day type containing `TENDER`). None on debark or sea days.
   Itinerary edits from Settings > Days (a skipped or added port, changed times)
   are applied to the day before any of this.
 - **Rollover:** at 04:00 the watch sees that the current watch day differs from the
@@ -166,8 +169,9 @@ never parses text.
 
 ## Alerts
 
-The phone sends an alert plan with every slice: all-aboard warnings 60, 30 and 15
-minutes before all-aboard, and a reminder `reminder_lead` minutes (5/15/30,
+The phone sends an alert plan with every slice: all-aboard warnings at the day's
+warning period (30, 60, 90 or 120 minutes; default 30, 60 at tender ports), 30
+and 15 minutes before all-aboard (one buzz at 30 when the period is 30), and a reminder `reminder_lead` minutes (5/15/30,
 default 15) before each starred event and personal entry. It covers today's and
 tomorrow's watch days, so tomorrow's alerts still fire if the phone is away at the
 04:00 rollover.

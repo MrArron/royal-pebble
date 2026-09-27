@@ -301,6 +301,20 @@ test('settings page with an itinerary includes the Days screen', function() {
   assert.ok(html.indexOf('id="catList"') !== -1);
 });
 
+test('Days screen: Royal\'s time, the warning period and the tender notice', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
+    itinerary: [{date: '2027-03-08', type: 'TENDERED', port: 'Grand Cayman', arrive: '07:00', depart: '15:00',
+                 royal: 900}],
+    days: {'2027-03-08': {shift: -15, warn: 90}}, api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('"royal":900') !== -1);
+  assert.ok(html.indexOf('"shift":-15') !== -1 && html.indexOf('"warn":90') !== -1);
+  ['From Royal', 'Warning period', 'Tender port. Boats', 'data-act="shift"'].forEach(function(s) {
+    assert.ok(html.indexOf(s) !== -1, s);
+  });
+});
+
 test('settings page with ship venues embeds the table, edits and venue rules', function() {
   var venues = require('../../src/pkjs/venues');
   var state = {ships: [], status: {}, me: {deck: 'Deck 6'}, theme: 'light', reminderLead: 15,

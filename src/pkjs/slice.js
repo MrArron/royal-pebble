@@ -30,7 +30,7 @@ var FLAG_BOOKED = 128;      // a timed order from login data (docs/DESIGN_PHASE3
 var ALARM_ALL_ABOARD = 0;
 var ALARM_REMINDER = 1;
 var ALARM_TO_RESERVE = 2;              // the evening before: starred events still to reserve
-var ALL_ABOARD_ALERTS = [60, 30, 15];  // minutes before all-aboard
+var ALL_ABOARD_ALERTS = [30, 15];      // minutes before all-aboard, after the warning period's
 var MAX_ALARMS = 24;                   // the watch keeps up to 24
 var MAX_TO_RESERVE = 5;                // to-reserve alerts per evening; `extra` has the full count
 
@@ -195,6 +195,12 @@ function cleanDaySettings(d) {
   if (HHMM.test(d.allAboard || '')) {
     out.allAboard = d.allAboard;
   }
+  if (typeof d.shift === 'number' && d.shift % 5 === 0 && Math.abs(d.shift) <= MAX_SHIFT && d.shift) {
+    out.shift = d.shift;
+  }
+  if (WARN_PERIODS.indexOf(d.warn) !== -1) {
+    out.warn = d.warn;
+  }
   var e = d.edit;
   if (e && typeof e === 'object') {
     var edit = {};
@@ -223,6 +229,34 @@ function defaultBuffer(type) {
   return /TENDER/.test(type || '') ? 60 : 30;
 }
 
+// The warning period (docs/DESIGN_PHASE3.md §23.2): the first all-aboard alert
+// and the start of the watch bar's red section, in minutes before all-aboard.
+// Per day on the Days tab; 30 unless set, 60 at tender ports.
+var WARN_PERIODS = [30, 60, 90, 120];
+
+function warnPeriod(type, perDay) {
+  var v = perDay && perDay.warn;
+  return WARN_PERIODS.indexOf(v) !== -1 ? v : defaultBuffer(type);
+}
+
+// Royal's time moved on the Days tab, in 5-minute steps up to this far.
+var MAX_SHIFT = 120;
+
+// Royal's gangway time for an itinerary day (`mine.ports[].gangwayUp`, from
+// login data), in minutes after the day's midnight, port-local; null without
+// a readable one. It is the day's all-aboard by default (§23.1). Ports are
+// matched by the itinerary's `day`.
+function royalAllAboard(bundle, it) {
+  var ports = bundle && bundle.mine && Array.isArray(bundle.mine.ports) ? bundle.mine.ports : [];
+  for (var i = 0; i < ports.length; i++) {
+    var p = ports[i];
+    if (p && it && typeof it.day === 'number' && p.day === it.day && HHMM.test(p.gangwayUp || '')) {
+      return afterMidnight(minutesFromHhmm(p.gangwayUp), minutesFromHhmm(it.arrive));
+    }
+  }
+  return null;
+}
+
 function buildDay(bundle, settings, dayIndex, sailDays) {
   var date = isoFromDays(sailDays + dayIndex);
   var it = null;
@@ -245,20 +279,26 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
       depart: NO_TIME,
       terminal: NO_TIME,
       terminalText: '',
-      localOffset: 0
+      localOffset: 0,
+      warnPeriod: 30
     };
   }
 
   var perDay = (settings.days && settings.days[date]) || {};
+  var royal = royalAllAboard(bundle, it);
   it = editedDay(it, perDay.edit);
   var offset = perDay.offset || 0;
   var buffer = perDay.buffer || defaultBuffer(it.type);
   var allAboard = NO_TIME;
   if (it.type !== 'DEBARK' && it.type !== 'CRUISING') {
+    // An exact time wins, then Royal's gangway time (moved in 5-minute steps),
+    // then departure minus the buffer. Itinerary and gangway times are
+    // port-local; ship time = local - offset.
     var override = afterMidnight(minutesFromHhmm(perDay.allAboard), null);
     var depart = afterMidnight(minutesFromHhmm(it.depart), minutesFromHhmm(it.arrive));
-    // Itinerary times are port-local; ship time = local - offset.
-    var shipMin = override !== null ? override : (depart !== null ? depart - offset - buffer : null);
+    var shipMin = override !== null ? override
+      : royal !== null ? royal - offset + (perDay.shift || 0)
+      : depart !== null ? depart - offset - buffer : null;
     if (shipMin !== null) {
       allAboard = dayIndex * MINUTES_PER_DAY + shipMin;
     }
@@ -286,7 +326,8 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
     depart: departShip,
     terminal: terminal.at,
     terminalText: terminal.text,
-    localOffset: offset
+    localOffset: offset,
+    warnPeriod: warnPeriod(it.type, perDay)
   };
 }
 
@@ -944,7 +985,7 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
   for (d = today; d <= today + 1; d++) {
     var day = buildDay(bundle, settings, d, sailDays);
     if (day.allAboard !== NO_TIME) {
-      ALL_ABOARD_ALERTS.forEach(function(before) {
+      allAboardAlerts(day.warnPeriod).forEach(function(before) {
         alarms.push({at: day.allAboard - before, ref: day.allAboard, kind: ALARM_ALL_ABOARD,
                      extra: day.localOffset, title: day.location, venue: ''});
       });
@@ -981,6 +1022,12 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
     .slice(0, MAX_ALARMS);
 }
 
+// Minutes before all-aboard to buzz: the warning period, then 30 and 15 (one
+// buzz when the period is 30).
+function allAboardAlerts(period) {
+  return ALL_ABOARD_ALERTS.indexOf(period) === -1 ? [period].concat(ALL_ABOARD_ALERTS) : ALL_ABOARD_ALERTS;
+}
+
 // Alerts from Settings > Me > Test alerts, anchored to when it was tapped: a
 // reminder 2 minutes later, an all-aboard warning a minute after that and a
 // to-reserve alert (two events) a minute after that.
@@ -1014,7 +1061,8 @@ function cutoffWhen(sailDate, cutoff, now) {
 }
 
 // settings: {theme, showFeatured, alwaysHints, hiddenCats,
-//            days: {date: {offset, buffer, allAboard, edit: {type, port, arrive, depart}}},
+//            days: {date: {offset, buffer, allAboard, shift, warn,
+//                          edit: {type, port, arrive, depart}}},
 //            personal: [...], me: {stateroom, deck, stairs, muster, clockNote},
 //            reminderLead, reserveAlertAt (minutes after midnight),
 //            venues: {shipCode: owner's venue edits}}
@@ -1098,6 +1146,10 @@ module.exports = {
   categorySummary: categorySummary,
   hiddenCats: hiddenCats,
   defaultBuffer: defaultBuffer,
+  warnPeriod: warnPeriod,
+  royalAllAboard: royalAllAboard,
+  allAboardAlerts: allAboardAlerts,
+  MAX_SHIFT: MAX_SHIFT,
   daysFromCivil: daysFromCivil,
   civilFromDays: civilFromDays,
   isoFromDays: isoFromDays,
