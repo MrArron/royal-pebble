@@ -39,7 +39,8 @@ enum {
   OLD_ALARM_KEYS = 8,
 };
 
-// Header: int32 sail_days, uint8 bits (1 dark, 2 featured, 4 demo), uint8
+// Header: int32 sail_days, uint8 bits (1 dark, 2 featured, 4 demo, 8 hints,
+// 16-32 the warning period: 30 minutes times one more than these), uint8
 // reminder lead, uint16 slice id, int32 day index, uint8 day kind, int32
 // all-aboard, int16 local offset, int32 cutoff, uint8 alert count, uint8 event
 // count, uint8 cruise starred count; then for the summary int32 arrive and depart, and
@@ -104,7 +105,7 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   const Tomorrow *t = data_tomorrow();
   codec_write_int32(p, meta->sail_days);
   p[4] = (meta->dark_theme ? 1 : 0) | (meta->show_featured ? 2 : 0) | (meta->is_demo ? 4 : 0) |
-         (meta->always_hints ? 8 : 0);
+         (meta->always_hints ? 8 : 0) | ((day->warn_period / 30 - 1) & 3) << 4;
   p[5] = meta->reminder_lead;
   p[6] = (uint8_t)data_slice_id();
   p[7] = (uint8_t)(data_slice_id() >> 8);
@@ -335,6 +336,7 @@ bool store_load(void) {
     .arrive = codec_read_int32(p + 26),
     .depart = codec_read_int32(p + 30),
     .terminal = codec_read_int32(p + 55),
+    .warn_period = (uint8_t)(30 * (((p[4] >> 4) & 3) + 1)),
   };
   Tomorrow tomorrow = {
     .kind = (DayKind)p[34],

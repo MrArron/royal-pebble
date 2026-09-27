@@ -101,9 +101,10 @@ function make(now, variant) {
     {day: 1, date: slice.isoFromDays(sailDays), port: 'Orlando (Port Canaveral), Fl', code: 'PCN',
      type: 'EMBARK', arrive: null, depart: '16:00'},
     port
-      // Arrival at the start of the watch day, before any demo departure.
+      // Arrival 3 hours ago (not before the watch day starts), so the
+      // time-ashore bar has a stretch behind now.
       ? {day: 2, date: today, port: 'St. Thomas, U.S. Virgin Islands', code: 'STT', type: 'DOCKED',
-         arrive: '04:00', depart: depart}
+         arrive: hhmm(Math.max(nowMin - 180, slice.DAY_START) % (24 * 60)), depart: depart}
       : {day: 2, date: today, port: 'Cruising', code: 'CRU', type: 'CRUISING', arrive: null, depart: null},
     {day: 3, date: slice.isoFromDays(sailDays + 2), port: 'Nassau, Bahamas', code: 'NAS',
      type: 'DOCKED', arrive: '07:30', depart: '17:30'},

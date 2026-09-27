@@ -17,6 +17,10 @@ typedef struct {
   GColor cursor_bg;
   GColor cursor_text;
   GColor now_label;
+  // The time-ashore bar (docs/DESIGN_PHASE3.md §23.3, §23.6).
+  GColor sea_pale;
+  GColor warn;
+  GColor warn_pale;
 } Theme;
 
 extern const Theme *g_theme;

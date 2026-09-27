@@ -4,9 +4,10 @@
 #include "ui.h"
 #include "usage.h"
 
-// Home: port day before all-aboard shows the all-aboard countdown (on embark
-// day, the terminal arrival card until the arrival time), then the next two
-// starred events (topped up with the next items); otherwise the next starred
+// Home: port day before all-aboard shows the all-aboard countdown with the
+// time-ashore bar (on embark day, the terminal arrival card, then the next two
+// starred events topped up with the next items, until the arrival time);
+// otherwise the next starred
 // event (or a featured one), then the next two items. Hold Select on the
 // countdown or the arrival card says "I'm on board" (docs/DESIGN_PHASE3.md
 // §22.6), and Home shows the sea-day layout for the rest of the day.
@@ -132,6 +133,9 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
   }
 }
 
+static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int x, int y,
+                      int w, int h);
+
 // "Hold Select: I'm on board" under the countdown and the arrival time (§22.6).
 static int draw_onboard_hint(GContext *ctx, int y, int width) {
   graphics_context_set_text_color(ctx, g_theme->sea_accent);
@@ -139,6 +143,91 @@ static int draw_onboard_hint(GContext *ctx, int y, int width) {
                      GRect(PAD, y, width - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   return y + 16;
+}
+
+// ---- Time-ashore bar (docs/DESIGN_PHASE3.md §23.3-23.4) ---------------------
+
+#define BAR_H 8
+
+// A booked shore excursion with an end, drawn blue on the bar.
+static bool is_excursion(const Event *e) {
+  return (e->flags & EVENT_BOOKED) && e->booked.kind == BOOKED_EXCURSION && event_is_timed(e) &&
+         e->minutes > 0;
+}
+
+// In the last warning-period minutes before all-aboard: red on the bar, and
+// the warning sign beside the countdown.
+static bool in_warning(const Day *day, int32_t t) { return t >= day->all_aboard - day->warn_period; }
+
+// The bar's color at time t: plain, an excursion or the warning window (drawn
+// over an excursion), each paler or gray once t is past now.
+static GColor bar_color(const Day *day, int32_t t, int32_t now) {
+  bool past = t < now;
+  if (in_warning(day, t)) {
+    return past ? g_theme->warn : g_theme->warn_pale;
+  }
+  for (int i = 0; i < data_event_count(); i++) {
+    Event *e = data_event(i);
+    if (is_excursion(e) && e->start <= t && t < event_end(e)) {
+      return past ? g_theme->sea_accent : g_theme->sea_pale;
+    }
+  }
+  return past ? g_theme->port_accent : g_theme->divider;
+}
+
+// From the day's arrival (04:00 without one) to all-aboard, with a now tick,
+// the two times under it and "Excursion back 11:30a" while one is out.
+static int draw_ashore_bar(GContext *ctx, int y, int width, int32_t now) {
+  const Day *day = data_day();
+  int32_t from = day->arrive != NO_TIME && day->arrive < day->all_aboard
+                     ? day->arrive : day->index * MINUTES_PER_DAY + DAY_START;
+  int32_t span = day->all_aboard - from;
+  int w = width - 2 * PAD;
+  for (int x = 0; x < w; x++) {
+    // Rounded ends.
+    int edge = x < w - 1 - x ? x : w - 1 - x;
+    int inset = edge == 0 ? 2 : edge == 1 ? 1 : 0;
+    graphics_context_set_stroke_color(ctx, bar_color(day, from + span * x / w, now));
+    graphics_draw_line(ctx, GPoint(PAD + x, y + inset), GPoint(PAD + x, y + BAR_H - 1 - inset));
+  }
+  int tick = span > 0 ? (int)((now - from) * w / span) : 0;
+  tick = tick < 1 ? 1 : tick > w - 1 ? w - 1 : tick;
+  graphics_context_set_fill_color(ctx, g_theme->text);
+  graphics_fill_rect(ctx, GRect(PAD + tick - 1, y - 2, 2, 12), 0, GCornerNone);
+  y += BAR_H + 1;
+
+  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  char buf[28];
+  fmt_clock(buf, sizeof(buf), from);
+  draw_line(ctx, buf, small, g_theme->muted, PAD, y, w, 18);
+  fmt_clock(buf, sizeof(buf), day->all_aboard);
+  graphics_draw_text(ctx, buf, small, GRect(PAD, y, w, 18), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentRight, NULL);
+  y += 15;
+
+  for (int i = 0; i < data_event_count(); i++) {
+    Event *e = data_event(i);
+    if (is_excursion(e) && event_end(e) > now) {
+      char t[8];
+      fmt_clock(t, sizeof(t), event_end(e));
+      snprintf(buf, sizeof(buf), "Excursion back %s", t);
+      draw_line(ctx, buf, small, g_theme->sea_accent, PAD, y, w, 18);
+      y += 16;
+      break;
+    }
+  }
+  return y + 2;
+}
+
+// A red triangle with a black "!", about the digits' cap height.
+static void draw_warning_sign(GContext *ctx, int x, int y) {
+  bool faded = g_theme == theme_faded();
+  graphics_context_set_stroke_color(ctx, faded ? g_theme->muted : GColorRed);
+  for (int i = 0; i < 28; i++) {
+    int half = i * 31 / 56;
+    graphics_draw_line(ctx, GPoint(x + 15 - half, y + i), GPoint(x + 15 + half, y + i));
+  }
+  draw_bang(ctx, GPoint(x + 14, y + 10), 14, faded ? g_theme->bg : GColorBlack);
 }
 
 static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
@@ -153,10 +242,16 @@ static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
 
   char count_buf[16];
   snprintf(count_buf, sizeof(count_buf), "%d:%02d", left / 60, left % 60);
+  GFont big = fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD);
   graphics_context_set_text_color(ctx, g_theme->text);
-  graphics_draw_text(ctx, count_buf, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
-                     GRect(PAD, y, width - 2 * PAD, 50), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, count_buf, big, GRect(PAD, y, width - 2 * PAD, 50),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  if (in_warning(day, now)) {
+    int count_w = graphics_text_layout_get_content_size(count_buf, big, GRect(0, 0, width, 50),
+                                                        GTextOverflowModeFill,
+                                                        GTextAlignmentLeft).w;
+    draw_warning_sign(ctx, PAD + count_w + 8, y + 12);
+  }
   y += 50;
 
   char ship_buf[8], local_buf[8], both[40];
@@ -167,8 +262,9 @@ static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
   graphics_draw_text(ctx, both, fonts_get_system_font(FONT_KEY_GOTHIC_18),
                      GRect(PAD, y, width - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
-  y += 22;
-  return draw_onboard_hint(ctx, y, width) + 4;
+  y = draw_ashore_bar(ctx, y + 26, width, now);
+  draw_divider(ctx, y, width);
+  return draw_onboard_hint(ctx, y + 4, width) + 4;
 }
 
 // `route`: Select opens the route to this event, so its brief line ends with
@@ -408,9 +504,6 @@ static bool shows_headline(int32_t now) {
 // Hold Select says "I'm on board": on the arrival card or the countdown.
 static bool offers_onboard(int32_t now) { return shows_arrival(now) || shows_countdown(now); }
 
-static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int x, int y,
-                      int w, int h);
-
 // TERMINAL ARRIVAL, the time large with "in 2 h 18 min" (or Royal's text),
 // then all-aboard and the sailing time.
 static int draw_arrival(GContext *ctx, int y, int width, int32_t now) {
@@ -545,7 +638,11 @@ static void draw_body(Layer *layer, GContext *ctx) {
   if (shows_arrival(now)) {
     y = draw_arrival(ctx, y, b.size.w, now);
   } else if (countdown) {
+    // The bar takes the next items' place; they're one press away in Today
+    // (docs/DESIGN_PHASE3.md §23.7).
     y = draw_countdown(ctx, y, b.size.w, now);
+    draw_clash_count(ctx, PAD, y - 4, b.size.w - 2 * PAD, now);
+    return;
   } else {
     bool featured = false;
     skip = find_headline(now, &featured);

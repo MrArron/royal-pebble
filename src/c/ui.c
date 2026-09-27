@@ -12,6 +12,9 @@ static const Theme LIGHT = {
   .cursor_bg = {GColorCobaltBlueARGB8},
   .cursor_text = {GColorWhiteARGB8},
   .now_label = {GColorMidnightGreenARGB8},  // #005555
+  .sea_pale = {GColorPictonBlueARGB8},       // #55AAFF
+  .warn = {GColorDarkCandyAppleRedARGB8},    // #AA0000
+  .warn_pale = {GColorSunsetOrangeARGB8},    // #FF5555
 };
 
 static const Theme DARK = {
@@ -24,6 +27,9 @@ static const Theme DARK = {
   .cursor_bg = {GColorVividCeruleanARGB8},
   .cursor_text = {GColorBlackARGB8},
   .now_label = {GColorMediumAquamarineARGB8},  // #55FFAA
+  .sea_pale = {GColorCobaltBlueARGB8},           // #0055AA
+  .warn = {GColorSunsetOrangeARGB8},             // #FF5555
+  .warn_pale = {GColorDarkCandyAppleRedARGB8},   // #AA0000
 };
 
 // Everything in one quiet gray, for a screen behind Home's button hints (§9.5).
@@ -37,6 +43,9 @@ static const Theme FADED_LIGHT = {
   .cursor_bg = {GColorLightGrayARGB8},
   .cursor_text = {GColorWhiteARGB8},
   .now_label = {GColorLightGrayARGB8},
+  .sea_pale = {GColorLightGrayARGB8},
+  .warn = {GColorLightGrayARGB8},
+  .warn_pale = {GColorLightGrayARGB8},
 };
 
 static const Theme FADED_DARK = {
@@ -49,6 +58,9 @@ static const Theme FADED_DARK = {
   .cursor_bg = {GColorDarkGrayARGB8},
   .cursor_text = {GColorBlackARGB8},
   .now_label = {GColorDarkGrayARGB8},
+  .sea_pale = {GColorDarkGrayARGB8},
+  .warn = {GColorDarkGrayARGB8},
+  .warn_pale = {GColorDarkGrayARGB8},
 };
 
 const Theme *g_theme = &LIGHT;
