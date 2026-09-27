@@ -146,6 +146,8 @@ static void handle_begin(DictionaryIterator *iter, uint16_t slice_id) {
   s_day.local_offset = (int16_t)find_int(iter, MESSAGE_KEY_local_offset);
   s_day.arrive = find_int_or(iter, MESSAGE_KEY_arrive, NO_TIME);
   s_day.depart = find_int_or(iter, MESSAGE_KEY_depart, NO_TIME);
+  s_day.terminal = find_int_or(iter, MESSAGE_KEY_terminal, NO_TIME);
+  find_str(iter, MESSAGE_KEY_terminal_text, s_day.terminal_text, sizeof(s_day.terminal_text));
   find_str(iter, MESSAGE_KEY_day_status, s_day.status, sizeof(s_day.status));
   find_str(iter, MESSAGE_KEY_day_location, s_day.location, sizeof(s_day.location));
   find_str(iter, MESSAGE_KEY_ship_name, s_meta.ship_name, sizeof(s_meta.ship_name));

@@ -87,6 +87,10 @@ typedef struct {
   int32_t arrive;        // cruise minutes, ship time; NO_TIME when there is none
   int32_t depart;        // cruise minutes, ship time; NO_TIME when there is none
   int16_t local_offset;  // local time = ship time + offset (minutes)
+  // Embark day's terminal arrival appointment (docs/DESIGN_PHASE3.md §22.5):
+  // cruise minutes, ship time; or NO_TIME with Royal's text; or neither.
+  int32_t terminal;
+  char terminal_text[24];
 } Day;
 
 // What the show to catch tomorrow is (Tomorrow.last_kind).

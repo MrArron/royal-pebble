@@ -3,9 +3,10 @@
 #include "ui.h"
 #include "usage.h"
 
-// Home: port day before all-aboard shows the all-aboard countdown, then the
-// next two starred events (topped up with the next items); otherwise the next
-// starred event (or a featured one), then the next two items.
+// Home: port day before all-aboard shows the all-aboard countdown (on embark
+// day, the terminal arrival card until the arrival time), then the next two
+// starred events (topped up with the next items); otherwise the next starred
+// event (or a featured one), then the next two items.
 
 static Window *s_window;
 static Layer *s_top_bar;
@@ -355,14 +356,81 @@ static void draw_sail_countdown(GContext *ctx, int width) {
   }
 }
 
+// Is Home showing today's cruise day rather than a message or the days to
+// sail?
+static bool shows_day(int32_t now) {
+  const Day *day = data_day();
+  return data_ready() && !sail_ahead() && cruise_day_index(now) <= day->index && day->kind != DAY_NONE;
+}
+
+// Embark day's terminal arrival card (docs/DESIGN_PHASE3.md §22.5): until the
+// arrival time, or with Royal's text (no time to switch at) until all-aboard.
+static bool shows_arrival(int32_t now) {
+  const Day *day = data_day();
+  if (!shows_day(now) || day->kind != DAY_PORT) {
+    return false;
+  }
+  if (day->terminal != NO_TIME) {
+    return now < day->terminal;
+  }
+  return day->terminal_text[0] && (day->all_aboard == NO_TIME || now < day->all_aboard);
+}
+
 // Is Home showing its sea-day layout (the NEXT card) rather than a message,
-// the days to sail or the all-aboard countdown?
+// the days to sail, the arrival card or the all-aboard countdown?
 static bool shows_headline(int32_t now) {
   const Day *day = data_day();
-  if (!data_ready() || sail_ahead() || cruise_day_index(now) > day->index || day->kind == DAY_NONE) {
+  if (!shows_day(now) || shows_arrival(now)) {
     return false;
   }
   return !(day->kind == DAY_PORT && day->all_aboard != NO_TIME && day->all_aboard > now);
+}
+
+static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int x, int y,
+                      int w, int h);
+
+// TERMINAL ARRIVAL, the time large with "in 2 h 18 min" (or Royal's text),
+// then all-aboard and the sailing time.
+static int draw_arrival(GContext *ctx, int y, int width, int32_t now) {
+  const Day *day = data_day();
+  int w = width - 2 * PAD;
+  GFont medium = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  draw_line(ctx, "TERMINAL ARRIVAL", medium, g_theme->port_accent, PAD, y, w, 22);
+  y += 18;
+  char buf[32];
+  if (day->terminal != NO_TIME) {
+    fmt_clock(buf, sizeof(buf), day->terminal);
+    draw_line(ctx, buf, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD), g_theme->text, PAD, y, w, 50);
+    y += 50;
+    char amount[20];
+    fmt_duration(amount, sizeof(amount), (int)(day->terminal - now));
+    snprintf(buf, sizeof(buf), "in %s", amount);
+    draw_line(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18), g_theme->muted, PAD, y, w, 22);
+    y += 24;
+  } else {
+    draw_line(ctx, day->terminal_text, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), g_theme->text,
+              PAD, y, w, 30);
+    y += 32;
+  }
+  if (day->all_aboard == NO_TIME && day->depart == NO_TIME) {
+    return y;
+  }
+  draw_divider(ctx, y, width);
+  y += 4;
+  char t[8];
+  if (day->all_aboard != NO_TIME) {
+    fmt_clock(t, sizeof(t), day->all_aboard);
+    snprintf(buf, sizeof(buf), "All aboard %s", t);
+    draw_line(ctx, buf, medium, g_theme->text, PAD, y, w, 22);
+    y += 20;
+  }
+  if (day->depart != NO_TIME) {
+    fmt_clock(t, sizeof(t), day->depart);
+    snprintf(buf, sizeof(buf), "Sails %s", t);
+    draw_line(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), g_theme->muted, PAD, y, w, 18);
+    y += 16;
+  }
+  return y + 6;
 }
 
 // A venue on board, so the phone can route to it.
@@ -390,6 +458,9 @@ static int32_t home_card(void) {
   }
   if (data_day()->kind == DAY_NONE) {
     return 3;
+  }
+  if (shows_arrival(now)) {
+    return 9;
   }
   if (!shows_headline(now)) {
     return 4;
@@ -448,7 +519,9 @@ static void draw_body(Layer *layer, GContext *ctx) {
   int skip = -1;
   bool countdown = !shows_headline(now);
 
-  if (countdown) {
+  if (shows_arrival(now)) {
+    y = draw_arrival(ctx, y, b.size.w, now);
+  } else if (countdown) {
     y = draw_countdown(ctx, y, b.size.w, now);
   } else {
     bool featured = false;
