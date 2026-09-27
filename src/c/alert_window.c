@@ -1,5 +1,6 @@
 #include "screens.h"
 #include "data.h"
+#include "onboard.h"
 #include "ui.h"
 #include "usage.h"
 
@@ -378,7 +379,7 @@ void alert_window_push(int32_t at, bool from_wakeup) {
   s_reserve_count = 0;
   for (int i = 0; i < data_alarm_count(); i++) {
     Alarm *a = data_alarm(i);
-    if (a->at == at) {
+    if (a->at == at && !onboard_silences(a)) {
       if (count == 0) {
         s_alarm = *a;
       }

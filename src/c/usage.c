@@ -2,9 +2,10 @@
 #include "codec.h"
 #include "comm.h"
 #include "data.h"
+#include "onboard.h"
 
 // Persistent keys (store.c uses 1-3, 5, 10-13, 20-27 and 40-79; stars.c
-// 30-33; Home's hints 7; the summary 6).
+// 30-33; Home's hints 7; the summary 6; on board 9).
 #define KEY_CLOSED 8       // UsageClosed: when the app last closed, for missed alerts
 #define KEY_META 89
 #define KEY_ENTRIES 90     // 90..102
@@ -297,8 +298,10 @@ void usage_check_missed(int32_t launch_at) {
   int32_t first = NO_TIME, last = NO_TIME;
   for (int i = 0; i < data_alarm_count(); i++) {
     int32_t at = data_alarm(i)->at;
-    // Alerts are sorted; several in the same minute count once.
-    if (at <= closed.closed || at > now || at == launch_at || at == last) {
+    // Alerts are sorted; several in the same minute count once. An all-aboard
+    // warning silenced on board (§22.6) isn't missed.
+    if (at <= closed.closed || at > now || at == launch_at || at == last ||
+        onboard_silences(data_alarm(i))) {
       continue;
     }
     if (missed == 0) {

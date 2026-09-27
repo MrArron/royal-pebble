@@ -19,6 +19,7 @@ enum {
   USAGE_PHONE = 11,
   USAGE_MSG_ERROR = 12,
   USAGE_STORAGE_ERROR = 13,
+  USAGE_ONBOARD = 14,
 };
 
 // Screens, for USAGE_SCREEN and USAGE_BUTTON.
@@ -35,6 +36,7 @@ typedef enum {
   SCREEN_ROUTE_EVENT = 9,
   SCREEN_ALERT = 10,
   SCREEN_NOTICE = 11,
+  SCREEN_ONBOARD = 12,
 } UsageScreen;
 
 // USAGE_BUTTON's `a`: the button (0 Back, 1 Up, 2 Select, 3 Down) plus these.

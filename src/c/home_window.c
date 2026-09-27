@@ -1,12 +1,15 @@
 #include "screens.h"
 #include "data.h"
+#include "onboard.h"
 #include "ui.h"
 #include "usage.h"
 
 // Home: port day before all-aboard shows the all-aboard countdown (on embark
 // day, the terminal arrival card until the arrival time), then the next two
 // starred events (topped up with the next items); otherwise the next starred
-// event (or a featured one), then the next two items.
+// event (or a featured one), then the next two items. Hold Select on the
+// countdown or the arrival card says "I'm on board" (docs/DESIGN_PHASE3.md
+// §22.6), and Home shows the sea-day layout for the rest of the day.
 
 static Window *s_window;
 static Layer *s_top_bar;
@@ -129,6 +132,15 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
   }
 }
 
+// "Hold Select: I'm on board" under the countdown and the arrival time (§22.6).
+static int draw_onboard_hint(GContext *ctx, int y, int width) {
+  graphics_context_set_text_color(ctx, g_theme->sea_accent);
+  graphics_draw_text(ctx, "Hold Select: I'm on board", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                     GRect(PAD, y, width - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentLeft, NULL);
+  return y + 16;
+}
+
 static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
   const Day *day = data_day();
   int left = (int)(day->all_aboard - now);
@@ -155,7 +167,8 @@ static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
   graphics_draw_text(ctx, both, fonts_get_system_font(FONT_KEY_GOTHIC_18),
                      GRect(PAD, y, width - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
-  return y + 26;
+  y += 22;
+  return draw_onboard_hint(ctx, y, width) + 4;
 }
 
 // `route`: Select opens the route to this event, so its brief line ends with
@@ -364,10 +377,11 @@ static bool shows_day(int32_t now) {
 }
 
 // Embark day's terminal arrival card (docs/DESIGN_PHASE3.md §22.5): until the
-// arrival time, or with Royal's text (no time to switch at) until all-aboard.
+// arrival time, or with Royal's text (no time to switch at) until all-aboard;
+// never once the user is on board (§22.6).
 static bool shows_arrival(int32_t now) {
   const Day *day = data_day();
-  if (!shows_day(now) || day->kind != DAY_PORT) {
+  if (!shows_day(now) || day->kind != DAY_PORT || onboard_is_set()) {
     return false;
   }
   if (day->terminal != NO_TIME) {
@@ -376,15 +390,23 @@ static bool shows_arrival(int32_t now) {
   return day->terminal_text[0] && (day->all_aboard == NO_TIME || now < day->all_aboard);
 }
 
+// The all-aboard countdown: a port day until all-aboard, or the day's
+// departure if that comes first, unless the user is on board (§22.6).
+static bool shows_countdown(int32_t now) {
+  const Day *day = data_day();
+  return shows_day(now) && !shows_arrival(now) && day->kind == DAY_PORT &&
+         day->all_aboard != NO_TIME && now < day->all_aboard &&
+         (day->depart == NO_TIME || now < day->depart) && !onboard_is_set();
+}
+
 // Is Home showing its sea-day layout (the NEXT card) rather than a message,
 // the days to sail, the arrival card or the all-aboard countdown?
 static bool shows_headline(int32_t now) {
-  const Day *day = data_day();
-  if (!shows_day(now) || shows_arrival(now)) {
-    return false;
-  }
-  return !(day->kind == DAY_PORT && day->all_aboard != NO_TIME && day->all_aboard > now);
+  return shows_day(now) && !shows_arrival(now) && !shows_countdown(now);
 }
+
+// Hold Select says "I'm on board": on the arrival card or the countdown.
+static bool offers_onboard(int32_t now) { return shows_arrival(now) || shows_countdown(now); }
 
 static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int x, int y,
                       int w, int h);
@@ -406,12 +428,13 @@ static int draw_arrival(GContext *ctx, int y, int width, int32_t now) {
     fmt_duration(amount, sizeof(amount), (int)(day->terminal - now));
     snprintf(buf, sizeof(buf), "in %s", amount);
     draw_line(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18), g_theme->muted, PAD, y, w, 22);
-    y += 24;
+    y += 22;
   } else {
     draw_line(ctx, day->terminal_text, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), g_theme->text,
               PAD, y, w, 30);
-    y += 32;
+    y += 30;
   }
+  y = draw_onboard_hint(ctx, y, width) + 4;
   if (day->all_aboard == NO_TIME && day->depart == NO_TIME) {
     return y;
   }
@@ -541,7 +564,7 @@ static void draw_body(Layer *layer, GContext *ctx) {
 // setting). Any press dismisses them. Raise HINTS_VERSION when an update adds a
 // button to Home, so they show again.
 #define KEY_HINTS 7
-#define HINTS_VERSION 1  // 1: Select routes to the next event
+#define HINTS_VERSION 2  // 1: Select routes to the next event; 2: hold Select, on board
 #define HINT_OPENS 3
 #define HINT_MS 3000
 
@@ -600,8 +623,11 @@ static void hints_update_proc(Layer *layer, GContext *ctx) {
   int w = layer_get_bounds(layer).size.w;
   draw_hint_label(ctx, "My info", GColorBlack, false, 46, w);
   // Select does nothing without a NEXT card on board, so no label then.
-  if (route_target(now_cruise()) >= 0) {
+  int32_t now = now_cruise();
+  if (route_target(now) >= 0) {
     draw_hint_label(ctx, "Route to next", GColorCobaltBlue, false, 114, w);
+  } else if (offers_onboard(now)) {
+    draw_hint_label(ctx, "Hold: on board", GColorCobaltBlue, false, 114, w);
   }
   draw_hint_label(ctx, "Today", GColorBlack, false, 187, w);
   draw_hint_label(ctx, "Exit", GColorDarkGray, true, 46, w);
@@ -682,7 +708,10 @@ static void apply_style(void) {
               counting ? "Home"
               : data_ready() ? day->location
                              : (connection_service_peek_pebble_app_connection() ? "Loading..." : "No phone"));
-  top_bar_set_right(s_top_bar, counting || !data_ready() ? "" : day->status, false, 0);
+  top_bar_set_right(s_top_bar, counting || !data_ready() ? ""
+                               : onboard_is_set() && shows_day(now_cruise()) ? "ON BOARD"
+                                                                             : day->status,
+                    false, 0);
 }
 
 static void up_click(ClickRecognizerRef recognizer, void *context) {
@@ -708,11 +737,20 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
   }
 }
 
+static void select_long_click(ClickRecognizerRef recognizer, void *context) {
+  bool offered = offers_onboard(now_cruise());
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (offered ? 0 : USAGE_NOTHING), -1);
+  if (offered) {
+    onboard_window_push();
+  }
+}
+
 static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_UP, up_click);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click);
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
   window_long_click_subscribe(BUTTON_ID_UP, 700, up_long_click, NULL);
+  window_long_click_subscribe(BUTTON_ID_SELECT, 700, select_long_click, NULL);
 }
 
 static void window_load(Window *window) {

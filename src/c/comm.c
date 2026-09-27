@@ -39,7 +39,6 @@ static CommRoutePageHandler s_on_route_page;
 static CommDirFailedHandler s_on_route_failed;
 static CommPhoneUpHandler s_on_dir_up;
 static CommPhoneUpHandler s_on_route_up;
-static Notice s_notices[MAX_NOTICES];
 
 // The slice being received; committed to data.c on MSG_END.
 static uint16_t s_pending_id;
@@ -106,11 +105,11 @@ static void decode_alarms(int first, const uint8_t *p, int length) {
 }
 
 // Decodes packed notices (docs/WATCH_PROTOCOL.md); returns how many were whole.
-static int decode_notices(const uint8_t *p, int length) {
+static int decode_notices(Notice *notices, const uint8_t *p, int length) {
   const uint8_t *end = p + length;
   int count = 0;
   while (p + 9 <= end && count < MAX_NOTICES) {
-    Notice *n = &s_notices[count];
+    Notice *n = &notices[count];
     n->kind = p[0];
     n->from = codec_read_int32(p + 1);
     n->to = codec_read_int32(p + 5);
@@ -275,13 +274,17 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
   }
   if (msg == MSG_NOTICE) {
     Tuple *bytes = dict_find(iter, MESSAGE_KEY_notices);
-    if (bytes && bytes->type == TUPLE_BYTE_ARRAY) {
-      int count = decode_notices(bytes->value->data, bytes->length);
+    // On the heap only while decoding (the handler copies them): 800 bytes
+    // less towards the SDK's 64 KB limit on code plus static data (data.c).
+    Notice *notices = bytes && bytes->type == TUPLE_BYTE_ARRAY ? malloc(MAX_NOTICES * sizeof(Notice)) : NULL;
+    if (notices) {
+      int count = decode_notices(notices, bytes->value->data, bytes->length);
       APP_LOG(APP_LOG_LEVEL_INFO, "%d of %d schedule change notices", count,
               (int)find_int(iter, MESSAGE_KEY_notice_count));
       if (count > 0 && s_on_notices) {
-        s_on_notices(s_notices, count);
+        s_on_notices(notices, count);
       }
+      free(notices);
     }
     return;
   }

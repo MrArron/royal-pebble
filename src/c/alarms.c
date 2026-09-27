@@ -1,5 +1,6 @@
 #include "alarms.h"
 #include "data.h"
+#include "onboard.h"
 #include "usage.h"
 
 #define MAX_WAKEUPS 8
@@ -27,8 +28,9 @@ void alarms_schedule(void) {
   int32_t last_at = NO_TIME;
   for (int i = 0; i < data_alarm_count() && scheduled < MAX_WAKEUPS; i++) {
     Alarm *a = data_alarm(i);
-    // Alerts are sorted; several in the same minute share one wakeup.
-    if (a->at <= now || a->at == last) {
+    // Alerts are sorted; several in the same minute share one wakeup. On
+    // board, the day's all-aboard warnings are off (§22.6).
+    if (a->at <= now || a->at == last || onboard_silences(a)) {
       continue;
     }
     last = a->at;

@@ -304,7 +304,11 @@ test('watch entries decode and render', function() {
     {at: 1804000109, code: 9, x: 0, a: -7, b: 1440 + 700, c: 0},
     {at: 1804000110, code: 12, x: 0, a: 2, b: 10, c: 0},
     {at: 1804000111, code: 13, x: 1, a: -6, b: 31, c: 0},
-    {at: 1804000112, code: 3, x: 1, a: 0, b: 3, c: 7}
+    {at: 1804000112, code: 3, x: 1, a: 0, b: 3, c: 7},
+    {at: 1804000113, code: 14, x: 1, a: 0, b: 1440 + 880, c: 0},
+    {at: 1804000114, code: 3, x: 12, a: 0, b: 2, c: 1},
+    {at: 1804000115, code: 14, x: 0, a: 0, b: 1440 + 905, c: 0},
+    {at: 1804000116, code: 3, x: 1, a: 0, b: 4, c: 9}
   ];
   var bytes = [];
   entries.forEach(function(e) { bytes = bytes.concat(pack.encodeLogEntry(e)); });
@@ -325,7 +329,11 @@ test('watch entries decode and render', function() {
     'error  wakeup for D2 11:40 not scheduled: E_OUT_OF_RESOURCES (-7)',
     'error  watch message REQUEST (10) not delivered: SEND_TIMEOUT (2)',
     'error  watch storage write failed (star queue, key 31): E_OUT_OF_STORAGE (-6)',
-    'screen  Home (NOW): 3 s'
+    'screen  Home (NOW): 3 s',
+    'onboard  onboard set at D2 14:40',
+    'screen  On board? (confirmed): 2 s',
+    'onboard  onboard undo at D2 15:05',
+    'screen  Home (terminal arrival): 4 s'
   ]);
   // 01:00 after midnight still belongs to the evening before.
   var late = log.watchEntry({at: 0, code: 3, x: 10, a: 0, b: 5, c: 2880 + 1500}, sail).detail;
