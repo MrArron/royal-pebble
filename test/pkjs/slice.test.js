@@ -253,6 +253,43 @@ test('Filters: subcategories, and starred events ignore filters', function() {
   assert.strictEqual(slice.cleanHiddenCats('Shop'), null);
 });
 
+test('Ready to sail: each day load before the 160 trim, and the days saved (§24.2)', function() {
+  var b = makeBundle([
+    ['Scavenger Hunt', 2, 0, '2027-03-07', null, 0, 0, 0],
+    ['Watch Sale', 2, 1, '2027-03-07', '10:00', 60, 0, 0],
+    ['Gem Sale', 2, 1, '2027-03-07', '11:00', 60, 0, 0],
+    ['Late Party', 1, 0, '2027-03-07', '01:00', 60, 0, 0],   // after midnight: still day 2's night
+    ['Ice Show', 0, 0, '2027-03-08', '20:00', 60, 1, 1]
+  ]);
+  var stars = {};
+  stars[slice.starKey('Gem Sale', '2027-03-07', '11:00', 'Promenade')] = true;
+  var settings = {personal: [{title: 'Dinner', venue: '', date: '2027-03-07', time: '18:00', minutes: 90}]};
+  var load = slice.dayLoad(b, settings, stars);
+  assert.deepStrictEqual(load.map(function(d) { return d.date; }),
+                         ['2027-03-06', '2027-03-07', '2027-03-08', '2027-03-09']);
+  // Day 2: the starred sale and the personal entry are fixed; Shop is counted
+  // although hidden by default, so the page can recount as filters change.
+  assert.deepStrictEqual(load[1], {date: '2027-03-07', fixed: 2,
+    cats: [['Entertainment', 'Shows', 2], ['Shop', 'Retail', 1]]});
+  assert.deepStrictEqual(load[2].cats, [['Entertainment', 'Shows', 1]]);
+  assert.strictEqual(load[3].fixed + load[3].cats.length, 0);
+  // Embark day has no events yet and debark day counts as saved.
+  assert.strictEqual(slice.savedDays(b), 3);
+  b.schedule.events.push(['Sail Away', 1, 0, '2027-03-06', '16:00', 60, 0, 0]);
+  assert.strictEqual(slice.savedDays(b), 4);
+
+  // A day past the watch's limit counts in full; the watch gets 160.
+  var busy = [];
+  for (var i = 0; i < 170; i++) {
+    busy.push(['Class ' + i, 1, 0, '2027-03-07', '08:' + (i % 60 < 10 ? '0' : '') + (i % 60), 30, 0, 0]);
+  }
+  b = makeBundle(busy);
+  var day = slice.dayLoad(b, {}, {})[1];
+  assert.strictEqual(day.cats[0][2], 170);
+  var sailDays = slice.daysFromIso(b.sailDate);
+  assert.strictEqual(slice.buildEvents(b, {}, {}, 1, sailDays).length, slice.MAX_EVENTS);
+});
+
 test('packing round-trips and respects chunk size', function() {
   var events = [];
   for (var i = 0; i < 90; i++) {

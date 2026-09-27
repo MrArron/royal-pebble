@@ -49,6 +49,15 @@ var CSS = [
   '.chip{display:inline-block;padding:2px 10px;border-radius:8px;background:var(--warning-container);',
   'color:var(--on-warning-container);font-size:14px;font-weight:600}',
   '.chip.ok{background:var(--secondary-container);color:var(--on-secondary-container);margin-left:6px}',
+  '.rhead{font-size:13px;font-weight:700;letter-spacing:.4px;color:var(--on-surface-variant)}',
+  '.card.ready.done{background:var(--primary-container);color:var(--on-primary-container)}',
+  '.ready.done .rhead,.ready.done .rcheck span{color:inherit;opacity:.8}',
+  '.rcheck{display:flex;gap:12px;align-items:flex-start;margin-top:12px}',
+  '.rcheck svg{width:24px;height:24px;flex:none}.rcheck b{display:block;font-weight:600}',
+  '.rcheck span{display:block;font-size:14px;color:var(--on-surface-variant)}',
+  '.rcheck .tick{fill:none;stroke:var(--primary);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}',
+  '.rcheck.todo{background:var(--warning-container);color:var(--on-warning-container);border-radius:16px;padding:12px}',
+  '.rcheck.todo span{color:inherit}.rcheck.todo svg{fill:currentColor}.rcheck .resbtn{margin-top:8px}',
   '.notice{display:flex;gap:12px;align-items:flex-start;background:var(--warning-container);',
   'color:var(--on-warning-container);border-radius:16px;padding:12px 16px;margin:0 0 8px;font-size:14px}',
   '.notice svg{width:20px;height:20px;flex:none;margin-top:1px;fill:var(--on-warning-container)}',
@@ -633,6 +642,7 @@ function pageMain(S, V, CL) {
       if (id === 'events' && editing === null) {
         renderEvents();  // picks up changes made under Filters
       } else if (id === 'cruise') {
+        renderStatus();  // Ready to sail picks up the Me and Filters tabs
         renderVenueCard();
       }
     });
@@ -660,11 +670,12 @@ function pageMain(S, V, CL) {
         '<div class="row"><span>Activity schedule</span><span>' +
         (c.published ? c.events + ' events' : '<span class="chip">Not published yet</span>') + '</span></div>' +
         '<div class="row"><span>Last sync</span><span>' + esc(c.lastSync) + '</span></div></div>' +
-        '<p class="muted" style="margin-top:8px">' + (c.published ?
-          'All set: Royal Pebble works at sea with no internet.' :
-          'Royal usually publishes it about two weeks before sailing. Download again then, before you sail; ' +
-          'your stars and settings are kept. Once it is downloaded, Royal Pebble works at sea with no ' +
-          'internet.') + '</p></div>';
+        (c.published ? '' : '<p class="muted" style="margin-top:8px">Royal usually publishes it about two ' +
+          'weeks before sailing. Download again then, before you sail; your stars and settings are kept. Once it ' +
+          'is downloaded, Royal Pebble works at sea with no internet.</p>') + '</div>';
+      if (readyShown()) {
+        html += readyCard();
+      }
     }
     if (S.watchFull) {
       var when = dayLabel(S.watchFull.date) + ' ' + shortClock(S.watchFull.time);
@@ -682,6 +693,102 @@ function pageMain(S, V, CL) {
     }
     $('status').innerHTML = html;
   }
+
+  // ---- Ready to sail (docs/DESIGN_PHASE3.md §24.2): three checks under the
+  // cruise card, from the first download until embark day ends (04:00 the next
+  // day). It replaces the old "All set" line.
+  var TICK = '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5 11-11"/></svg>';
+  var BANG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10" y="3" width="4" height="12" rx="2"/>' +
+    '<circle cx="12" cy="19.5" r="2.2"/></svg>';
+
+  function readyShown() {
+    var end = dateObj(S.cruise.sailDate);
+    end.setDate(end.getDate() + 1);
+    end.setHours(4);
+    return (S.pageNow || Date.now()) < end.getTime();
+  }
+
+  // The busiest day's events for the watch, with the categories hidden under
+  // Filters now: {date, n}, or null without days.
+  function busiestDay() {
+    var best = null;
+    (S.dayLoad || []).forEach(function(d) {
+      var n = d.fixed;
+      d.cats.forEach(function(c) {
+        if (hidden.indexOf(c[0]) === -1 && hidden.indexOf(c[0] + ' / ' + c[1]) === -1) {
+          n += c[2];
+        }
+      });
+      if (!best || n > best.n) {
+        best = {date: d.date, n: n};
+      }
+    });
+    return best;
+  }
+
+  // [{ok, title, text, fix, act}]: every day downloaded, stateroom set, fits on the watch.
+  function readyChecks() {
+    var c = S.cruise;
+    var max = S.maxEvents || 160;
+    var list = [];
+    if (c.published && c.savedDays >= c.days) {
+      list.push({ok: true, title: 'Every day downloaded', text: c.days + ' of ' + c.days + ' days, schedule published'});
+    } else {
+      list.push({title: c.published ? 'Some days have no events yet' : 'Schedule not published yet',
+        text: c.published ? 'Royal lists events for ' + c.savedDays + ' of ' + c.days + ' days so far.' :
+          'Royal usually publishes it about two weeks before sailing.',
+        fix: 'Download again', act: 'download'});
+    }
+    var room = $('stateroom').value.trim();
+    if (room && (!MR.cabins || roomCabin())) {
+      list.push({ok: true, title: 'Stateroom set', text: room + (MR.cabins ? ', found on the ship map' : '')});
+    } else {
+      list.push({title: room ? 'Stateroom not on the ship map' : 'Stateroom not set',
+        text: room ? room + " isn't on the " + MR.shipName + ' deck plans. Check the number.' :
+          'The watch needs it for directions from your cabin.',
+        fix: 'Set on Me tab', act: 'me'});
+    }
+    var b = busiestDay();
+    if (b && b.n > max) {
+      list.push({title: 'Too many events on ' + dayLabel(b.date), text: b.n + ' events; the watch keeps ' + max +
+        ' and drops the earliest.', fix: 'Hide categories', act: 'filters'});
+    } else if (S.watchFull) {
+      list.push({title: 'Watch runs out of room', text: 'No room for starred events and alerts from ' +
+        dayLabel(S.watchFull.date) + ' ' + shortClock(S.watchFull.time) + ' on. See below.'});
+    } else {
+      list.push({ok: true, title: 'Fits on the watch',
+        text: b ? 'Busiest day ' + b.n + ' of ' + max + ' events' : 'No events yet'});
+    }
+    return list;
+  }
+
+  function readyCard() {
+    var checks = readyChecks();
+    var left = checks.filter(function(x) { return !x.ok; }).length;
+    return '<div class="card ready' + (left ? '' : ' done') + '"><div class="rhead">READY TO SAIL?</div><h2>' +
+      (left ? left + (left === 1 ? ' thing' : ' things') + ' left before you go offline' :
+        "You're ready to go offline") + '</h2>' + checks.map(function(x) {
+        return '<div class="rcheck' + (x.ok ? '' : ' todo') + '">' + (x.ok ? TICK : BANG) + '<div><b>' +
+          esc(x.title) + '</b><span>' + esc(x.text) + '</span>' +
+          (x.fix ? '<button class="resbtn" data-ready="' + x.act + '">' + x.fix + '</button>' : '') + '</div></div>';
+      }).join('') + '</div>';
+  }
+
+  $('status').addEventListener('click', function(ev) {
+    var act = ev.target.getAttribute && ev.target.getAttribute('data-ready');
+    if (act === 'download') {
+      if ($('download').disabled) {
+        $('download').scrollIntoView();
+      } else {
+        $('download').click();
+      }
+    } else if (act === 'me') {
+      goTo('me');
+      $('stateroom').focus();
+    } else if (act === 'filters') {
+      goTo('filters');
+    }
+  });
 
   // Starred events the last sync moved or cancelled (index.js useBundle).
   function starChangeList() {
@@ -3065,6 +3172,7 @@ function buildPage(state, now) {
   // List sailings from two weeks ago on, so a sailing in progress still shows.
   var oldest = new Date(now.getTime() - 14 * 24 * 3600 * 1000);
   state.oldestSailDate = oldest.getFullYear() + '-' + pad2(oldest.getMonth() + 1) + '-' + pad2(oldest.getDate());
+  state.pageNow = now.getTime();
   state.logCapChars = log.CAP_CHARS;
   state.logPartChars = log.PART_CHARS;
   // Escape '<' and the JS line separators U+2028/U+2029 so the state can't end the

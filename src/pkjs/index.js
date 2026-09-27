@@ -501,6 +501,7 @@ function pageState(ships) {
       nights: Math.max(0, bundle.itinerary.length - 1),
       published: events.length > 0,
       events: events.length,
+      savedDays: slice.savedDays(bundle),
       lastSync: slice.formatSync(bundle.generated)
     };
   }
@@ -527,6 +528,9 @@ function pageState(ships) {
     starChanges: bundle ? load(STORE_STAR_CHANGES, null) : null,
     // Starred events or alerts the watch had no room to save: {date, time}.
     watchFull: bundle ? savedCutoff(bundle) : null,
+    // For Cruise > Ready to sail: each day's events before the watch's limit.
+    dayLoad: bundle ? slice.dayLoad(bundle, settings, load(STORE_STARS, {})) : [],
+    maxEvents: slice.MAX_EVENTS,
     watchStorage: watchStorage(),
     personal: settings.personal || [],
     // Booked excursions and other timed orders from login data (read-only).
