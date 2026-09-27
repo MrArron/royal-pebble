@@ -33,6 +33,10 @@ void today_window_refresh(void);
 void info_window_push(void);
 void info_window_refresh(void);
 
+// "On board?" (docs/DESIGN_PHASE3.md §22.6), from Hold Select on Home.
+void onboard_window_push(void);
+void onboard_window_refresh(void);
+
 // Ship directory page `ref` (0 = the decks), as sent by the phone. `title`
 // shows in the top bar until the page arrives.
 void dir_window_push(int32_t ref, const char *title);

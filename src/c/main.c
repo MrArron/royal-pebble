@@ -27,6 +27,7 @@ static void refresh_all(void) {
   alert_window_refresh();
   notice_window_refresh();
   summary_window_refresh();
+  onboard_window_refresh();
 }
 
 // After each save: tell the phone what didn't fit (for its settings page), and

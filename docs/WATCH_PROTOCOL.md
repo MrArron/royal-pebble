@@ -71,6 +71,12 @@ day and without login data. Home shows the arrival card from 04:00 until
 `terminal` (the text form until all-aboard), and the morning summary adds a
 `Terminal arrival` line when it's a time.
 
+Home's all-aboard countdown runs until `all_aboard` or `depart`, whichever
+comes first. On the arrival card or the countdown, Hold Select says "I'm on
+board" (`docs/DESIGN_PHASE3.md` §22.6); from then until the 04:00 boundary Home
+shows the NEXT card and the top bar's right label reads `ON BOARD`. The phone
+isn't told; see "On board" under Stored on the watch.
+
 **Tomorrow's block** (the evening's tomorrow card, `docs/DESIGN_V1_1.md` §8.1;
 the watch only has today's events, so the phone works it out):
 
@@ -224,6 +230,9 @@ wakeup cookie is the alert's `at`. Starring on the watch adds or removes that
 event's reminder immediately. A launch by a wakeup shows only the alert screen
 (Back returns to the watch face); the alert keeps its own copy because the fresh
 plan the phone sends on launch no longer contains an alert that just fired.
+While the on-board flag is set, all-aboard alerts whose `ref` falls on that
+watch day get no wakeup, don't show when another alert shares their minute,
+and aren't counted as missed; clearing the flag schedules them again.
 
 ## Schedule change notices
 
@@ -362,6 +371,14 @@ showed them. They show on the first 3 opens by the user (not an alert wakeup or
 an install) once Home is on top with its data, and on every such open while
 `button_hints` is 1. A version other than the watch's `HINTS_VERSION` restarts
 the count, so raising it after an update adds a button shows them again.
+Version 2 added `Hold: on board` beside Select on the arrival card and the
+countdown.
+
+**On board** (`src/c/onboard.c`, `docs/DESIGN_PHASE3.md` §22.6) is watch-only,
+in persistent key 9 outside the blob: int32 sail date (days since 1970), int32
+watch day and int32 cruise minute it was set. It counts only while the sail
+date matches and the watch day is the current one, so it ends by itself at
+04:00. Undo (My info's `ON BOARD` row) deletes the key.
 
 ## Morning summary
 
@@ -547,10 +564,10 @@ text.
 plugged in. **Screens:** 1 Home, 2 summary card, 3 Today, 4 event details,
 5 My info, 6 ship directory page, 7 route to a place, 8 route to a restroom,
 9 route to Home's next event, 10 alert, 11 notice (schedule change or `PHONE
-NEEDED`). A screen's **detail**: Home, what its main card shows (below); the
+NEEDED`), 12 `On board?`. A screen's **detail**: Home, what its main card shows (below); the
 summary card, 1 for tomorrow's; event details, the event's start; a directory
 page or a route to a place or restroom, its `dir_ref`; a route to an event, its
-start; an alert, its `at`. **Home's card:** 0 loading or no phone, 1 days to
+start; an alert, its `at`; `On board?`, 1 once confirmed. **Home's card:** 0 loading or no phone, 1 days to
 sail, 2 connect your phone (a new day with no slice), 3 no cruise today, 4
 all-aboard countdown, 5 NEXT (starred), 6 FEATURED, 7 NOW (in progress), 8
 nothing starred today, 9 terminal arrival (embark day).
@@ -570,6 +587,7 @@ nothing starred today, 9 terminal arrival (embark day).
 | 11 | phone connection | 1 connected, 0 lost | — | — | — |
 | 12 | message error | 0 not delivered, 1 phone's message dropped, 2 outbox busy | `AppMessageResult` | `msg_type` (0 unknown) | — |
 | 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short | persistent key | — |
+| 14 | on board (§22.6); the phone writes `onboard set` or `onboard undo` | 1 set, 0 undo | — | ship time (cruise minutes) | — |
 
 Button presses are logged while the phone is connected; a Select that did
 nothing always is. Screen views are always logged, so with the phone away the

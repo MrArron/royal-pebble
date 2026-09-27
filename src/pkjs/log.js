@@ -400,9 +400,10 @@ function encodedLength(text) {
 // ---- The watch's entries (docs/WATCH_PROTOCOL.md, Usage log) -------------
 
 var SCREENS = ['', 'Home', 'Summary card', 'Today', 'Event details', 'My info', 'Ship directory',
-               'Route to place', 'Route to restroom', 'Route to next event', 'Alert', 'Notice'];
+               'Route to place', 'Route to restroom', 'Route to next event', 'Alert', 'Notice', 'On board?'];
 var HOME_CARDS = ['loading or no phone', 'days to sail', 'connect your phone', 'no cruise today',
-                  'all-aboard countdown', 'NEXT', 'FEATURED', 'NOW', 'nothing starred today'];
+                  'all-aboard countdown', 'NEXT', 'FEATURED', 'NOW', 'nothing starred today',
+                  'terminal arrival'];
 var BUTTONS = ['Back', 'Up', 'Select', 'Down'];
 var LAUNCH = ['by the system', 'by you', 'by the phone', 'by an alert', 'by the worker', 'by quick launch',
               'from a timeline pin', 'by a smartstrap'];
@@ -463,6 +464,7 @@ function screenText(screen, detail, sailIso) {
     case 6: case 7: case 8: return name + ' page ' + detail;
     case 10: return name + ' (at ' + cruiseText(detail, sailIso) + ')';
     case 11: return name + ' (' + detail + ')';
+    case 12: return name + (detail ? ' (confirmed)' : '');
     default: return name;
   }
 }
@@ -512,6 +514,8 @@ function watchEntry(e, sailIso) {
     case 13:
       return {kind: 'error', detail: 'watch storage write failed (' + (STORES[x] || x) + ', key ' + b + '): ' +
               named(STATUS, a)};
+    case 14:
+      return {kind: 'onboard', detail: (x ? 'onboard set' : 'onboard undo') + ' at ' + cruiseText(b, sailIso)};
     default:
       return {kind: 'watch', detail: 'entry ' + e.code + ': ' + [x, a, b, c].join(' ')};
   }
