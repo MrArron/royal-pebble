@@ -117,6 +117,37 @@ test('stateroom: a guarantee booking shows as not assigned', function() {
   assert.strictEqual(slice.buildSlice(b, {me: {stateroom: '10301'}}, {}, now).info.stateroom, '10301');
 });
 
+test('My info: booking and cabin table fill empty fields, hand edits win', function() {
+  var b = makeBundle([]);
+  var now = at('2027-03-08', 10, 0);
+  b.mine = {stateroom: '8226', deck: '8', muster: 'B4', orders: []};
+  function info(me) { return slice.buildSlice(b, {me: me}, {}, now).info; }
+  // Nothing saved yet: booking stateroom and muster, deck and stairs from the cabin table.
+  var i = info(undefined);
+  assert.deepStrictEqual([i.stateroom, i.deck, i.stairs, i.muster], ['8226', 'Deck 8', 'Aft stairs, port', 'B4']);
+  // Settings from before the drop-downs (no src): saved text wins, empty falls back.
+  i = info({stateroom: '', deck: '', stairs: 'Fwd stairs', muster: ''});
+  assert.deepStrictEqual([i.deck, i.stairs, i.muster], ['Deck 8', 'Fwd stairs', 'B4']);
+  // Filled-in values follow a newer sync; hand edits stay.
+  i = info({stateroom: '8226', deck: 'Deck 8', stairs: 'Aft stairs, port', muster: 'B2',
+            src: {stateroom: 'booking', deck: 'cabin', stairs: 'map', muster: 'booking'}});
+  assert.strictEqual(i.muster, 'B4');
+  i = info({stateroom: '8226', deck: 'Deck 9', stairs: '', muster: '',
+            src: {stateroom: 'booking', deck: 'edited', muster: 'edited'}});
+  assert.deepStrictEqual([i.deck, i.stairs, i.muster], ['Deck 9', '', 'Not set']);
+  // A typed stateroom that isn't the booking's.
+  i = info({stateroom: '8130', deck: 'Deck 8', stairs: 'Forward stairs, port', muster: 'B4',
+            src: {stateroom: 'edited', deck: 'cabin', stairs: 'map', muster: 'booking'}});
+  assert.deepStrictEqual([i.stateroom, i.deck, i.stairs], ['8130', 'Deck 8', 'Forward stairs, port']);
+  // No map for the ship: the booking's deck, no stairs.
+  b.ship = {code: 'XX', name: 'Test of the Seas'};
+  i = info({});
+  assert.deepStrictEqual([i.deck, i.stairs, i.muster], ['Deck 8', '', 'B4']);
+  b.mine = {};
+  i = info({});
+  assert.deepStrictEqual([i.stateroom, i.deck, i.stairs, i.muster], ['-', '', '', 'Not set']);
+});
+
 test('all-aboard uses depart, buffer and ship offset', function() {
   var b = makeBundle([]);
   var s = slice.buildSlice(b, {}, {}, at('2027-03-08', 10, 0));

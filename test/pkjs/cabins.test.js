@@ -56,6 +56,32 @@ test('stairs: nearest main stairwell on the deck', function() {
   assert.ok(s[0].metres <= s[1].metres);
 });
 
+test('stairName: the elevator bank beside it and the side', function() {
+  assert.deepStrictEqual(cabins.stairNames('HM', 8),
+    ['Forward stairs, port', 'Forward stairs, stbd', 'Aft stairs, port', 'Aft stairs, stbd']);
+  assert.deepStrictEqual(cabins.stairNames('HM', 11).slice(4), ['Far aft stairs, port', 'Far aft stairs, stbd']);
+  assert.deepStrictEqual(cabins.stairNames('HM', 17), [], 'deck 17 has no main stairs in the table');
+  assert.deepStrictEqual(cabins.stairNames('HM', 99), []);
+  assert.deepStrictEqual(cabins.stairNames('XX', 8), []);
+  var near = cabins.stairs('HM', cabins.find('HM', 8226));
+  assert.strictEqual(cabins.stairName('HM', near[0]), 'Aft stairs, port');
+  near = cabins.stairs('HM', cabins.find('HM', 11922));
+  assert.strictEqual(cabins.stairName('HM', near[0]), 'Far aft stairs, port');
+  // Every name fits My info (22 characters), the generic list too.
+  Object.keys(data.decks).forEach(function(d) {
+    cabins.stairNames('HM', d).forEach(function(n) { assert.ok(n.length <= 22, n); });
+  });
+  cabins.GENERIC_STAIRS.forEach(function(n) { assert.ok(n.length <= 22, n); });
+});
+
+test('cabinLib runs on its own, as the settings page uses it', function() {
+  var lib = new Function('return (' + cabins.cabinLib.toString() + ')();')();
+  var t = cabins.table('HM');
+  assert.deepStrictEqual(lib.find(t, 8226), cabins.find('HM', 8226));
+  assert.deepStrictEqual(lib.stairNames(t, 11), cabins.stairNames('HM', 11));
+  assert.strictEqual(lib.find(null, 8226), null);
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {

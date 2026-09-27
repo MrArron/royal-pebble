@@ -16,6 +16,7 @@
 //               added: [{place, deck, pos, side, note}]} (Me > Map check, mapped ships only)}
 
 var venues = require('./venues');
+var cabins = require('./cabins');
 var log = require('./log');
 
 var CSS = [
@@ -58,6 +59,14 @@ var CSS = [
   'textarea{min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}',
   '.help{margin:6px 2px 0;font-size:13px;color:var(--on-surface-variant)}',
   '.help.error{color:var(--error);font-weight:600}.help.ok{color:var(--primary);font-weight:600}',
+  '.flab{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 6px}.flab label{margin:0}',
+  '.fsrc{padding:0 8px;border:1px solid var(--outline);border-radius:8px;font-size:12px;font-weight:600;',
+  'color:var(--on-surface-variant);line-height:22px;white-space:nowrap}',
+  '.fsrc.edit{border-color:var(--warning-container);background:var(--warning-container);color:var(--on-warning-container);',
+  'font-weight:700}',
+  '.fkept{margin:6px 2px 0;font-size:13px;',
+  'color:var(--on-surface-variant)}',
+  '.fkept span{display:block}.fkept button{display:block;background:none;padding:0;min-height:32px;color:var(--primary);font-size:13px;font-weight:600}',
   'button{font:inherit;cursor:pointer;border:0}',
   '.pill{min-height:48px;padding:0 24px;border-radius:999px;font-weight:600;font-size:16px}',
   '.pill.filled{background:var(--primary);color:var(--on-primary)}',
@@ -383,15 +392,20 @@ var BODY = [
   '</section>',
   '<section class="screen" id="me">',
   '<div class="card"><h2>Stateroom</h2>',
-  '<label for="stateroom">Stateroom number</label><input id="stateroom" maxlength="10" inputmode="numeric">',
-  '<label for="deck">Deck</label><input id="deck" maxlength="14" placeholder="Deck 9">',
-  '<label for="stairs">Nearest stairs</label><input id="stairs" maxlength="22" placeholder="Forward stairs">',
+  '<div class="flab"><label for="stateroom">Stateroom number</label><span class="fsrc" id="stateroomSrc" hidden></span></div>',
+  '<input id="stateroom" maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="off">',
+  '<p class="help" id="roomHelp">Digits only.</p><div class="fkept" id="stateroomKept" hidden></div>',
+  '<div class="flab"><label for="deck">Deck</label><span class="fsrc" id="deckSrc" hidden></span></div>',
+  '<select id="deck"></select><div class="fkept" id="deckKept" hidden></div>',
+  '<div class="flab"><label for="stairs">Nearest stairs</label><span class="fsrc" id="stairsSrc" hidden></span></div>',
+  '<select id="stairs"></select><div class="fkept" id="stairsKept" hidden></div>',
   '<label>Walking distances</label><div class="seg" id="units"><button data-v="ft">Feet</button>',
   '<button data-v="m">Metres</button><button data-v="steps">Steps</button></div>',
   '<p class="help">For walking directions in the watch\'s ship directory, from your stateroom. ',
   'A step is about 0.75 m (2.5 ft).</p></div>',
   '<div class="card"><h2>Safety</h2>',
-  '<label for="muster">Muster station</label><input id="muster" maxlength="30" placeholder="B4 - Royal Promenade"></div>',
+  '<div class="flab"><label for="muster">Muster station</label><span class="fsrc" id="musterSrc" hidden></span></div>',
+  '<input id="muster" maxlength="30" placeholder="B4"><div class="fkept" id="musterKept" hidden></div></div>',
   '<div class="card"><h2>Watch</h2>',
   '<label>Theme</label><div class="seg" id="theme"><button data-v="light">Light</button>',
   '<button data-v="dark">Dark</button></div>',
@@ -568,7 +582,7 @@ function splitLog(header, text, max) {
 
 // Runs inside the page. `S` is the state embedded by buildPage(); `V` is
 // venues.js venueLib().
-function pageMain(S, V) {
+function pageMain(S, V, CL) {
   var $ = function(id) { return document.getElementById(id); };
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -2478,9 +2492,153 @@ function pageMain(S, V) {
   });
 
   // ---- Me
+  // Stateroom, Deck, Nearest stairs and Muster fill themselves from the booking,
+  // the cabin table and the ship map; a hand edit is kept and never refilled
+  // (docs/DESIGN_PHASE3.md §24.1). me.src remembers each field's source.
   var me = S.me || {};
-  ['stateroom', 'deck', 'stairs', 'muster', 'clockNote'].forEach(function(id) {
-    $(id).value = me[id] || '';
+  var MR = S.meRef || {decks: [], booking: {}, generic: []};
+  var ME_FIELDS = ['stateroom', 'deck', 'stairs', 'muster'];
+  var SRC_NAME = {booking: 'booking', cabin: 'cabin table', map: 'ship map'};
+  var meEdited = {};
+  $('clockNote').value = me.clockNote || '';
+
+  function deckNo(text) {
+    return V.cabinDeck(text);
+  }
+
+  function roomCabin() {
+    return MR.cabins ? CL.find(MR.cabins, $('stateroom').value) : null;
+  }
+
+  // What would fill a field now: {value, src} or null.
+  function meAuto(f) {
+    var b = MR.booking || {};
+    if (f === 'stateroom') {
+      return b.stateroom ? {value: b.stateroom, src: 'booking'} : null;
+    }
+    if (f === 'muster') {
+      return b.muster ? {value: b.muster, src: 'booking'} : null;
+    }
+    var c = roomCabin();
+    if (f === 'deck') {
+      return c ? {value: 'Deck ' + c.deck, src: 'cabin'} : b.deck ? {value: b.deck, src: 'booking'} : null;
+    }
+    // Stairs: the nearest on the cabin's deck, while that's the deck chosen.
+    var s = c && deckNo($('deck').value) === c.deck ? CL.stairs(MR.cabins, c) : [];
+    return s.length ? {value: CL.stairName(MR.cabins, s[0]), src: 'map'} : null;
+  }
+
+  // The drop-down's choices: the ship's decks (1-18 without a table), and the
+  // chosen deck's stairwells (the generic list without map data).
+  function meNames(f) {
+    if (f === 'deck') {
+      var decks = MR.decks.slice();
+      for (var d = 1; !MR.decks.length && d <= 18; d++) {
+        decks.push(d);
+      }
+      return decks.map(function(n) { return 'Deck ' + n; });
+    }
+    var names = MR.cabins ? CL.stairNames(MR.cabins, deckNo($('deck').value)) : [];
+    return names.length ? names : MR.generic;
+  }
+
+  function meSet(f, v) {
+    if (f !== 'deck' && f !== 'stairs') {
+      $(f).value = v;
+      return;
+    }
+    // A value that isn't in the list (typed before the drop-downs) stays as an extra option.
+    var names = meNames(f).slice();
+    if (v && names.indexOf(v) === -1) {
+      names.push(v);
+    }
+    $(f).innerHTML = '<option value="">Not set</option>' +
+      names.map(function(n) { return '<option>' + esc(n) + '</option>'; }).join('');
+    $(f).value = v;
+  }
+
+  // A field is a hand edit when it differs from what would fill it. An empty
+  // stateroom never is: the booking's fills it again.
+  function meIsEdit(f) {
+    var v = $(f).value.trim();
+    var a = meAuto(f);
+    if (!v) {
+      return f !== 'stateroom' && !!a;
+    }
+    return !(a && v === a.value);
+  }
+
+  // Refill the field unless it's a hand edit (or `keep`), then show its chip and
+  // the "Your change is kept" line.
+  function meShow(f, keep) {
+    var a = meAuto(f);
+    if (!meEdited[f] && !keep) {
+      meSet(f, a ? a.value : '');
+    } else if (f === 'deck' || f === 'stairs') {
+      meSet(f, $(f).value);
+    }
+    var chip = $(f + 'Src');
+    var kept = $(f + 'Kept');
+    chip.hidden = !a || (!meEdited[f] && $(f).value.trim() !== a.value);
+    kept.hidden = !a || !meEdited[f];
+    if (!a) {
+      return;
+    }
+    var name = SRC_NAME[a.src];
+    chip.textContent = meEdited[f] ? 'Edited' : 'From ' + name;
+    chip.className = meEdited[f] ? 'fsrc edit' : 'fsrc';
+    kept.innerHTML = '<span>Your change is kept. ' + esc(name.charAt(0).toUpperCase() + name.slice(1)) +
+      ' says ' + esc(a.value) + '.</span><button type="button" data-f="' + f + '">Use ' + esc(name) + '</button>';
+  }
+
+  function meShowAll(keepRoom) {
+    ME_FIELDS.forEach(function(f) { meShow(f, keepRoom && f === 'stateroom'); });
+    var help = 'Digits only.';
+    if (MR.cabins && $('stateroom').value) {
+      help += roomCabin() ? ' Found on ' + MR.shipName + ': deck and stairs filled in.' :
+        ' Not on the ' + MR.shipName + ' deck plans. Check the number, or pick your deck.';
+    }
+    $('roomHelp').textContent = help;
+  }
+
+  ME_FIELDS.forEach(function(f) {
+    var v = String(me[f] || '').trim();
+    if (f === 'stateroom') {
+      v = v.replace(/[^0-9]/g, '');
+    } else if (f === 'deck' && deckNo(v)) {
+      v = 'Deck ' + deckNo(v);
+    }
+    meSet(f, v);
+    // Settings saved before §24.1 have no sources: a value that differs from
+    // what would fill it counts as a hand edit.
+    meEdited[f] = me.src ? me.src[f] === 'edited' : !!v && meIsEdit(f);
+    meShow(f);
+  });
+  meShowAll();
+
+  $('stateroom').addEventListener('input', function() {
+    var el = $('stateroom');
+    var digits = el.value.replace(/[^0-9]/g, '');
+    if (digits !== el.value) {
+      el.value = digits;
+    }
+    meEdited.stateroom = meIsEdit('stateroom');
+    meShowAll(true);
+  });
+  $('stateroom').addEventListener('change', function() { meShowAll(); });
+  ['deck', 'stairs', 'muster'].forEach(function(f) {
+    $(f).addEventListener(f === 'muster' ? 'input' : 'change', function() {
+      meEdited[f] = meIsEdit(f);
+      meShowAll(true);
+    });
+  });
+  ME_FIELDS.forEach(function(f) {
+    $(f + 'Kept').addEventListener('click', function(e) {
+      if (e.target.getAttribute('data-f')) {
+        meEdited[f] = false;
+        meShowAll();
+      }
+    });
   });
 
   function segment(id, value) {
@@ -2804,9 +2962,15 @@ function pageMain(S, V) {
       units: getUnits(),
       me: {}
     };
-    ['stateroom', 'deck', 'stairs', 'muster', 'clockNote'].forEach(function(id) {
-      r.me[id] = $(id).value.trim();
+    r.me.src = {};
+    ME_FIELDS.forEach(function(f) {
+      r.me[f] = $(f).value.trim();
+      var a = meAuto(f);
+      if (meEdited[f] || a) {
+        r.me.src[f] = meEdited[f] ? 'edited' : a.src;
+      }
     });
+    r.me.clockNote = $('clockNote').value.trim();
     if (fetchedShips) {
       r.ships = fetchedShips;
     }
@@ -2912,13 +3076,47 @@ function buildPage(state, now) {
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<title>Royal Pebble</title><style>' + CSS + '</style></head><body>' + BODY +
     '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';' + mapExport.toString() + ';(' +
-    pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')());</script>' +
+    pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')(), (' +
+    cabins.cabinLib.toString() + ')());</script>' +
     '</body></html>';
+}
+
+// For the Me tab (docs/DESIGN_PHASE3.md §24.1): the ship's cabin table (null
+// without one), its decks for the drop-down ([] = 1-18), the generic stairs
+// list and the booking's stateroom, deck and muster. mapDecks: shipmap.decks().
+function meRef(bundle, mapDecks) {
+  var code = (bundle && bundle.ship && bundle.ship.code) || null;
+  var mine = (bundle && bundle.mine) || {};
+  var table = code ? cabins.table(code) : null;
+  var decks = {};
+  function add(d) {
+    if (d >= 1 && d <= 20) {
+      decks[d] = true;
+    }
+  }
+  (mapDecks || []).forEach(add);
+  if (table) {
+    Object.keys(table.decks).forEach(function(d) { add(+d); });
+  }
+  if (code) {
+    var vt = venues.builtIn(code).venues;
+    Object.keys(vt).forEach(function(k) { vt[k].decks.forEach(add); });
+  }
+  var room = String(mine.stateroom || '').replace(/\D/g, '');
+  var deck = venues.cabinDeck(mine.deck);
+  return {
+    ship: code,
+    shipName: (bundle && bundle.ship && bundle.ship.name) || 'your ship',
+    cabins: table,
+    decks: Object.keys(decks).map(Number).sort(function(a, b) { return a - b; }),
+    generic: cabins.GENERIC_STAIRS,
+    booking: {stateroom: room, deck: deck ? 'Deck ' + deck : '', muster: String(mine.muster || '').trim()}
+  };
 }
 
 function pageUrl(state, now) {
   return 'data:text/html;charset=utf-8,' + encodeURIComponent(buildPage(state, now));
 }
 
-module.exports = {buildPage: buildPage, pageUrl: pageUrl, findClashes: findClashes, splitLog: splitLog,
+module.exports = {buildPage: buildPage, pageUrl: pageUrl, meRef: meRef, findClashes: findClashes, splitLog: splitLog,
                   mapExport: mapExport};

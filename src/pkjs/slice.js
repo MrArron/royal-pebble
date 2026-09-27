@@ -8,6 +8,7 @@
 var pack = require('./pack');
 var venues = require('./venues');
 var routestart = require('./routestart');
+var cabins = require('./cabins');
 
 var DAY_START = 4 * 60;
 var MINUTES_PER_DAY = 24 * 60;
@@ -1074,7 +1075,6 @@ function buildSlice(bundle, settings, stars, now, testAt) {
   var sailDays = daysFromIso(bundle.sailDate);
   var dayIndex = cruiseDayIndex(cruiseMinutes(sailDays, now));
   var me = settings.me || {};
-  var mine = bundle.mine || {};
   var sailDay = buildDay(bundle, settings, 0, sailDays);
 
   return {
@@ -1092,15 +1092,36 @@ function buildSlice(bundle, settings, stars, now, testAt) {
     theme: settings.theme === 'dark' ? 1 : 0,
     showFeatured: settings.showFeatured === false ? 0 : 1,
     buttonHints: settings.alwaysHints === true ? 1 : 0,
-    info: {
-      // Guarantee bookings list "GTY" until a cabin is assigned.
-      stateroom: me.stateroom || (/[0-9]/.test(mine.stateroom || '') ? mine.stateroom : '-'),
-      deck: me.deck || '',
-      stairs: me.stairs || '',
-      muster: me.muster || 'Not set',
-      clockNote: me.clockNote || 'Ship time not confirmed',
-      lastSync: formatSync(bundle.generated)
+    info: myInfo(bundle, me)
+  };
+}
+
+// My info's lines (docs/DESIGN_PHASE3.md §24.1). me.src says where each saved
+// Me field came from: a hand edit ('edited') always wins, a filled-in value
+// follows the latest sync, and an empty field (or settings saved before §24.1,
+// with no src) falls back to the booking and the cabin table.
+function myInfo(bundle, me) {
+  var mine = bundle.mine || {};
+  var src = me.src || {};
+  var ship = bundle.ship && bundle.ship.code;
+  function pick(f, live) {
+    if (src[f] === 'edited') {
+      return me[f] || '';
     }
+    return src[f] ? live || me[f] || '' : me[f] || live || '';
+  }
+  // Guarantee bookings list "GTY" until a cabin is assigned.
+  var room = pick('stateroom', /[0-9]/.test(mine.stateroom || '') ? String(mine.stateroom) : '');
+  var cabin = cabins.find(ship, room);
+  var bookDeck = venues.cabinDeck(mine.deck);
+  var near = cabin && src.deck !== 'edited' ? cabins.stairs(ship, cabin) : [];
+  return {
+    stateroom: room || '-',
+    deck: pick('deck', cabin ? 'Deck ' + cabin.deck : bookDeck ? 'Deck ' + bookDeck : ''),
+    stairs: pick('stairs', near.length ? cabins.stairName(ship, near[0]) : ''),
+    muster: pick('muster', String(mine.muster || '').trim()) || 'Not set',
+    clockNote: me.clockNote || 'Ship time not confirmed',
+    lastSync: formatSync(bundle.generated)
   };
 }
 

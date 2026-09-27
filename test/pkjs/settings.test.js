@@ -129,6 +129,29 @@ test('settings page builds, embeds state safely and its script parses', function
   console.log('    page ' + Math.round(html.length / 1024) + ' KB, data URL ' + Math.round(url.length / 1024) + ' KB');
 });
 
+test('Me tab reference: cabin table, decks and the booking (§24.1)', function() {
+  var b = {ship: {code: 'HM', name: 'Harmony of the Seas'}, mine: {stateroom: '8226', deck: '8', muster: ' B4 '}};
+  var r = config.meRef(b, [3, 4, 5]);
+  assert.strictEqual(r.ship, 'HM');
+  assert.ok(r.cabins && r.cabins.decks['8'], 'cabin table');
+  assert.ok(r.decks.indexOf(5) !== -1 && r.decks.indexOf(17) !== -1, 'map, cabin and venue decks');
+  assert.deepStrictEqual(r.decks, r.decks.slice().sort(function(p, q) { return p - q; }));
+  assert.deepStrictEqual(r.booking, {stateroom: '8226', deck: 'Deck 8', muster: 'B4'});
+  r = config.meRef({ship: {code: 'XX', name: 'Test of the Seas'}, mine: {stateroom: 'GTY'}}, []);
+  assert.strictEqual(r.cabins, null);
+  assert.deepStrictEqual(r.decks, [], 'the page offers 1-18');
+  assert.deepStrictEqual(r.booking, {stateroom: '', deck: '', muster: ''});
+  assert.strictEqual(r.generic.length, 6);
+  r = config.meRef(null, []);
+  assert.strictEqual(r.ship, null);
+  var state = {ships: [], cruise: null, status: {}, me: {stateroom: '8226', stairs: 'Fwd stairs'},
+    meRef: config.meRef(b, []), api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('<select id="deck">') !== -1 && html.indexOf('<select id="stairs">') !== -1);
+  assert.ok(html.indexOf('function cabinLib()') !== -1, 'cabin lookups in the page');
+});
+
 test('settings page with booked orders builds the FROM YOUR BOOKING card code', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
     orders: [{title: 'Island Snorkel', date: '2027-03-08', time: '09:00', minutes: 150, meetBefore: 15,

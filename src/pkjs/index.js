@@ -540,6 +540,8 @@ function pageState(ships) {
     } : null,
     status: load(STORE_STATUS, {}),
     me: settings.me || {},
+    // For Me: what fills Deck, Nearest stairs and Muster (§24.1).
+    meRef: config.meRef(bundle, bundle && bundle.ship ? shipmap.decks(bundle.ship.code) : []),
     theme: settings.theme || 'light',
     reminderLead: settings.reminderLead || 15,
     reserveAlertAt: slice.reserveAlertAt(settings),
