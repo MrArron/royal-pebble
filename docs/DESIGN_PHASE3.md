@@ -21,7 +21,7 @@ Phase 3 adds or changes. One section per item, filled in as each is designed.
 |---|---|
 | 22 Booked excursions and embark day (+ I'm on board) | **Approved 2026-09-26.** Build from §22. |
 | 23 Port day card | **Done** (phone: #44, watch: #45), tested on the watch 2026-09-27. |
-| 24 Settings page upgrades | First draft (§24), review before building |
+| 24 Settings page upgrades | **Approved 2026-09-27.** Build from §24 (three PRs, §24.4). |
 | 25 Silent morning sync | No screens needed (§25) |
 | 26 Confirm before removing a star | First draft (§26), review before building |
 | 27 Casino filter | First draft (§27), review before building |
@@ -397,31 +397,84 @@ under the ship/local line with the list kept, was not taken.
 
 ## 24. Settings page upgrades
 
-**Status: first draft, not reviewed.** Mockups: `Phone24Me`, `Phone24Ready`,
-`Phone24Search`. Review with the owner before building.
+**Status: approved by the owner, 2026-09-27.** Mockups: `Phone24Me` (updated
+in the review: stairs drop-down and `Use ship map` link), `Phone24Ready`,
+`Phone24Search`. Where a mockup and this text differ, the text wins.
 
-- **Me tab** (`Phone24Me`):
-  - The stateroom box has `inputmode="numeric"` and takes digits only. A number
-    found in the ship's cabin table fills **Deck** (now a drop-down: the ship's
-    decks from the venue table, or 1-18 without one) and **Nearest stairs**,
-    each with a small outlined chip, `From cabin table` / `From ship map`.
-  - Muster station and deck are prefilled from the booking (`mine`) when empty,
-    with `From booking`.
-  - A field changed by hand shows the existing `Edited` warning-container chip
-    and a line like `Your change is kept. Ship map says Fore stairs.`. It's
-    never refilled.
-- **Ready to sail** (`Phone24Ready`, Cruise tab): a card with three rows, each
-  a ✓ (primary) or a warning-container row with a fix button:
-  - every cruise day downloaded (`8 of 8 days, schedule published`);
-  - stateroom set;
-  - fits on the watch (`Busiest day 142 of 160 events`).
-  The title reads `N thing(s) left before you go offline`. When all three pass,
+What already existed before the review: the Events tab search already covers
+every day and the booked orders (one list with the date on each row, first
+150). Directions already fall back to the booking's stateroom when the Me tab's
+box is empty, but the page didn't show it. Deck, Nearest stairs and Muster were
+free text.
+
+### 24.1 Me tab (`Phone24Me`)
+
+- **Stateroom:** `inputmode="numeric"`, digits only. Prefilled from the booking
+  (`mine.stateroom`) when empty, with a `From booking` chip.
+- **Deck** becomes a drop-down. A stateroom found in the ship's cabin table
+  (`cabins.find`) sets it, with `From cabin table`. Otherwise the booking's
+  `mine.deck` sets it, with `From booking`. The options are the ship's decks
+  from the ship map / venue table, or 1-18 for a ship without one. The user can
+  pick another deck by hand.
+- **Nearest stairs** becomes a drop-down too. The stateroom's closest stairwell
+  on its deck (`cabins.stairs`) sets it, with `From ship map`. The options are
+  the stairwells on that deck, named after the elevator bank beside them and
+  the side, and short enough for My info (22 characters):
+  `Forward stairs, port`, `Forward stairs, stbd`, `Aft stairs, port`,
+  `Aft stairs, stbd`, plus `Far aft stairs, port/stbd` where a deck has them
+  (Harmony deck 11). A ship without map data gets the generic list:
+  `Forward`, `Midship` and `Aft stairs`, each with port and stbd, and no
+  auto-fill.
+- **Muster station:** prefilled from the booking (`mine.muster`, a short code
+  like `B4`) when empty, with `From booking`. The watch's My info shows it
+  instead of `Not set`.
+- **Hand edits:** a field the user changed shows the `Edited`
+  warning-container chip, a line like `Your change is kept. Ship map says
+  Forward stairs, port.`, and a `Use ship map` (or `Use booking`, `Use cabin
+  table`) text button that puts the filled-in value back. An edited field is
+  never refilled by itself, not even after a new stateroom number or a new
+  sync.
+- A field keeps its source so the chip survives a reload (stored with the Me
+  settings; the build PR decides the shape).
+
+### 24.2 Ready to sail (`Phone24Ready`, Cruise tab)
+
+- A card under the cruise card, with three rows. Each is a ✓ (primary) or a
+  warning-container row with a fix button:
+  - **Every day downloaded:** every cruise day saved and the schedule
+    published (`8 of 8 days, schedule published`). Fix: `Download again`.
+  - **Stateroom set:** typed or from the booking, and found on the ship map
+    where the ship has one. Fix: `Set on Me tab`.
+  - **Fits on the watch:** the busiest day is within the watch's 160-event
+    limit (`Busiest day 142 of 160 events`), and starred events and alerts
+    don't run out of room (today's `Open Royal Pebble before …` warning).
+    Fix: `Hide categories` (Filters tab) for the event limit.
+- The title reads `N thing(s) left before you go offline`. When all three pass,
   the card becomes a primary container reading `You're ready to go offline`.
-- **Search events** (`Phone24Search`): a search field at the top of the Events
-  tab searches every day. It shows `14 events on 6 days`, with results grouped
-  under day headers (`DAY 3 · ST. THOMAS · MON MAR 8`) and the usual star
-  buttons. Booked items (§22.7) are found too. Clearing the field goes back to
-  the day view.
+- It **replaces** the cruise card's `All set: Royal Pebble works at sea with no
+  internet` line, so there's one verdict. The not-published text stays on the
+  cruise card.
+- It shows from the first download until embark day ends, then goes away.
+  Muster station is not a check.
+
+### 24.3 Search events (`Phone24Search`)
+
+- The existing search field keeps searching every day. Results now start with
+  a count line (`14 events on 6 days`) and are grouped under day headers
+  (`DAY 3 · ST. THOMAS · MON MAR 8`), with the usual star buttons. Booked
+  orders (§22.7) go under their day instead of a separate block.
+- **New:** personal entries (My entries) are found too, by title and place.
+- Events in categories hidden under Filters are still found, now marked
+  `Hidden on watch`.
+- Finished events stay out, as today. Clearing the field goes back to the day
+  view.
+
+### 24.4 Build plan
+
+One PR per part, each bumping Y: 24.1 Me tab (sets **1.3.3**; touches
+`config.js`, `slice.js` for My info's muster and stairs, and the Me settings
+shape), 24.2 Ready to sail, 24.3 Search. All phone side; the watch only shows
+what it's sent.
 
 ## 25. Silent morning sync
 

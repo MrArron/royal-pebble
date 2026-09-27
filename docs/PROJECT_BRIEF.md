@@ -371,13 +371,14 @@ back-to-the-ship idea under Later.
     - Stateroom: the number box takes digits only. A number in the ship's
       cabin table (Harmony: 2,855 cabins) fills in Deck and Nearest stairs
       (the closest stairwell on the ship map); a field the owner changes by
-      hand keeps the change. Deck becomes a drop-down: the ship's decks from
-      the venue table, or 1-18 for a ship without one.
-    - Deck and muster station prefilled from the booking (`mine`) when empty.
+      hand keeps the change. Deck and Nearest stairs become drop-downs
+      (design: `docs/DESIGN_PHASE3.md` §24).
+    - Stateroom, deck and muster station prefilled from the booking (`mine`)
+      when empty.
     - A **Ready to sail** check: every cruise day downloaded, stateroom set,
       everything fits on the watch, then "you're ready to go offline" (users
       must sync before departure).
-    - **Search events.**
+    - **Search events:** grouped by day, and finds personal entries too.
 25. **Silent morning sync** (owner's idea, 2026-09-24): a wakeup every night
     between 04:00 and 05:00 ship time (about 04:30, not exactly on the day
     boundary) that opens the app with no vibration, gets the new day's slice
