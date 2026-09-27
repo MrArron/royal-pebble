@@ -573,7 +573,7 @@ First 10:00a Zumba                      Gothic 14 bold, muted
   docked or all-aboard lines. The space goes to the first two starred items.
 - **Embark day:** `DAY 1 · EMBARK`, the port, `Sails 4:00p`, `All aboard 3:30p`.
 - **Debark day:** `LAST DAY · DEBARK`, the port, and `Arrive 6:00a`. No
-  all-aboard. The phase 4 debark checklist can hang off this later.
+  all-aboard. The Phase 6 debark checklist can hang off this later.
 - **Nothing starred:** `Nothing starred yet` plus the number of featured events
   when the featured switch is on (`6 featured today`).
 - **Port times in ship time:** port times are shown in ship time, like the
@@ -917,7 +917,8 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
 
 ### 9.6 Voice (concept, later)
 
-`WatchVoice*`. Now Phase 4 in the brief (2026-09-26): nothing here is built
+`WatchVoice*`. Now Phase 5 in the brief (Phase 4 from 2026-09-26 to 09-27):
+nothing here is built
 until that phase's scope session, which includes the airplane-mode dictation
 test in `docs/FUTURE_VOICE_QUERIES.md` on the owner's phone.
 
@@ -1017,7 +1018,7 @@ For the build PRs:
 8. **Button hints:** first 3 opens (and after an update adds a button), with an
    Always show toggle in the phone's Help section.
 9. **Help section** in the phone settings (voice commands, controls, notes).
-10. **Voice:** designed as a concept; Phase 4 in the brief since 2026-09-26,
+10. **Voice:** designed as a concept; Phase 5 in the brief (Phase 4 from 2026-09-26 to 09-27),
     starting with a scope session (companion app or current setup) that
     includes the dictation test.
 11. **Route start (2026-09-26):** the 15-minute rule, not "the last starred

@@ -43,7 +43,8 @@ with a request in a session, ask before changing direction.
 ## Data sources
 
 Unofficial, undocumented Royal Caribbean web endpoints (learned from
-jdeath/CheckRoyalCaribbeanPrice, MIT). No login in the phone app. Keep request
+jdeath/CheckRoyalCaribbeanPrice, MIT). No login in the phone app yet (Phase 4 item 38
+looks into an optional one). Keep request
 volume low (a sync or two, not polling). See `docs/DATA_FORMAT.md` for the bundle
 format and `tools/cruise-sync/cruise_sync.py` as the reference implementation of
 every request.
@@ -415,9 +416,41 @@ back-to-the-ship idea under Later.
     values where they differ, but never unstars or deletes anything of the
     receiver's. Nothing is saved until Apply or Accept all. Also works as a backup
     of the owner's own choices. Needs a new section in `docs/DATA_FORMAT.md`.
-    Meet-ups and checklists come along once Phase 5 builds them.
+    Meet-ups and checklists come along once Phase 6 builds them.
 
-### Phase 4: Voice
+### Phase 4: Event data
+
+Added by the owner on 2026-09-27, after a probe of Royal's products listing showed
+data we don't keep yet. Plan, findings and PR order: `docs/PHASE4_PLAN.md`.
+Versions start at 1.4.0. Items are in build order after a docs PR and a data PR
+(both producers write the new fields first).
+
+32. **Venue codes.** Match event venues by Royal's location code before the name;
+    fills venues Royal leaves blank. Code/name disagreements go to
+    `tools/shipmap/conflicts-HM.json`.
+33. **Age limits and age filters.** `Ages 18+` / `Ages 13-17` on event details and
+    the settings page, and two Filters: hide adults-only events (18+ and 21+) and
+    hide teen and kids-only events. Starred and booked events always go.
+34. **Arrive-early times.** `Arrive by 7:45p` on details, and a starred event's
+    reminder counts down to that time.
+35. **Event notes.** What to bring and wear, waivers, sign-ups and meeting spots:
+    full text on the settings page, up to eight short tags on the watch's event
+    details.
+36. **Stable ids for re-sync.** Royal's product id helps a star follow a
+    rescheduled event. Only if the ids hold steady between pulls (check on
+    2026-09-30).
+37. **Shore excursions.** Selectable on the settings page like Booked activities,
+    with the meeting time on the watch; the sync tool takes booked excursions'
+    meeting times from the public listing.
+38. **Advanced download with your Royal login** (optional track): the settings
+    page takes the email and password for one download, the phone script signs in
+    to Royal and fetches the booking details; nothing is saved. Only if a probe on
+    the owner's phone shows Royal accepts it.
+39. **Sync tool updates.** `cruise_sync.py` writes every new field in the same PRs
+    as the phone (shared test fixture) and gets a `--dump-products` option for
+    re-checking Royal's data.
+
+### Phase 5: Voice
 
 29. **Scope session first.** Before any voice work, decide whether voice is
     better built with a native Android companion app or within the current
@@ -436,7 +469,7 @@ back-to-the-ship idea under Later.
     `docs/FUTURE_VOICE_QUERIES.md` and `docs/DESIGN_V1_1.md` section 9.6; the
     exact list of voice features comes out of the scope session.
 
-### Phase 5: Planning
+### Phase 6: Planning
 
 16. **Meet-up points.** A personal entry that points at a directory place, with a
     reminder.
@@ -472,12 +505,12 @@ build on the venue table's decks, fore/mid/aft and entrance lists, plus a map of
 the stair and elevator banks per ship.
 
 **Native Android companion app** (asked 2026-09-26; decided to stay on PebbleKit
-JS until after the sailing, unless the Phase 4 scope session chooses it): voice
+JS until after the sailing, unless the Phase 5 scope session chooses it): voice
 dictation goes through the Pebble app either way, copy-in-parts covers the usage
 log export, and it would be a large rebuild with unconfirmed support for
 third-party PebbleKit Android apps in the new Pebble app. The two cheap probes
 (dictation in airplane mode, and whether the Pebble app accepts a PebbleKit
-Android companion) are now part of the Phase 4 scope session.
+Android companion) are now part of the Phase 5 scope session.
 
 ### Future concepts (no timeline)
 
@@ -499,8 +532,9 @@ only the next reminder scheduled so star reminders keep their wakeup slots.
 
 ### Out of scope
 
-Logging in from the phone app, live data onboard, messaging between phones,
-app glances, a watch face.
+Live data onboard, messaging between phones, app glances, a watch face.
+(Logging in from the phone app moved to Phase 4 item 38 on 2026-09-27, as an
+optional track that goes ahead only if the phone probe passes.)
 
 ## Edge cases to handle from the start
 
@@ -529,8 +563,9 @@ publication.
   Revisit only if timed orders turn out to carry usable times: the password
   would pass through the Pebble app's settings-page return, and the phone can't
   mimic a browser if Royal blocks it. Until then the Windows tool is the login
-  path. (Excursion orders do carry times, as of Sept 2026, so this is now the
-  owner's call; unchanged until decided.)
+  path. (Excursion orders do carry times, as of Sept 2026. On 2026-09-27 the
+  owner chose to look into it: Phase 4 item 38, gated on a probe on the phone;
+  `docs/PHASE4_PLAN.md`.)
 
 ## Testing
 

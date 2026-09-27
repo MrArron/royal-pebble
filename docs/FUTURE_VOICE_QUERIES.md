@@ -1,6 +1,6 @@
-# Offline voice questions (v1.1 Phase 4)
+# Offline voice questions (v1.1 Phase 5)
 
-Status: researched 2026-09-24; scheduled as v1.1 Phase 4 on 2026-09-26
+Status: researched 2026-09-24; scheduled as v1.1 Phase 4 on 2026-09-26, Phase 5 since 2026-09-27
 (`docs/PROJECT_BRIEF.md`). The phase starts with a scope session that decides
 between a native Android companion app and the current setup, using the tests
 below.
