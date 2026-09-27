@@ -2,6 +2,7 @@
 #include "codec.h"
 #include "comm.h"
 #include "data.h"
+#include "fetch.h"
 #include "ui.h"
 #include "usage.h"
 
@@ -13,11 +14,6 @@
 
 #define MAX_DEPTH 5
 #define MAX_ROWS 40
-#define REPLY_TIMEOUT_MS 8000
-#define SEND_RETRY_MS 500
-#define SEND_TRIES 4
-// The phone script takes 10-16 s to start after the app opens (owner's logs).
-#define SCRIPT_WAIT_MS 25000
 
 #define HEADER_H 22
 #define ITEM_H 30
@@ -26,19 +22,13 @@
 #define MESSAGE_H 84
 #define INDICATOR_H 12
 
-typedef enum { STATE_LOADING, STATE_READY, STATE_NO_PHONE } State;
-
 typedef struct {
   Window *window;
   Layer *top_bar;
   MenuLayer *menu;
   int32_t ref;
   char title[24];  // shown until the page arrives
-  State state;
-  int tries;
-  bool waiting;  // loading, until the phone script is up
-  bool waited;   // this request has waited once already
-  AppTimer *timer;
+  Fetch fetch;
   bool has_where;
   Where where;
   bool has_gps;
@@ -89,78 +79,28 @@ static int first_selectable(const View *v) {
 
 // ---- Asking the phone --------------------------------------------------------
 
-static void set_state(View *v, State state) {
-  v->state = state;
+static void state_changed(void *owner) {
+  View *v = owner;
   if (v->menu) {
     menu_layer_reload_data(v->menu);
   }
 }
 
-static void cancel_timer(View *v) {
-  if (v->timer) {
-    app_timer_cancel(v->timer);
-    v->timer = NULL;
-  }
-}
-
-static void timed_out(void *context) {
-  View *v = context;
-  v->timer = NULL;
-  v->waiting = false;
-  if (v->state == STATE_LOADING) {
-    set_state(v, STATE_NO_PHONE);
-  }
-}
-
-// The outbox may be busy with star changes or a SAVED report: try again shortly.
-static void send_request(void *context) {
-  View *v = context;
-  v->timer = NULL;
-  if (!connection_service_peek_pebble_app_connection()) {
-    set_state(v, STATE_NO_PHONE);
-  } else if (comm_request_dir(v->ref)) {
-    v->timer = app_timer_register(REPLY_TIMEOUT_MS, timed_out, v);
-  } else if (++v->tries < SEND_TRIES) {
-    v->timer = app_timer_register(SEND_RETRY_MS, send_request, v);
-  } else {
-    set_state(v, STATE_NO_PHONE);
-  }
-}
-
-static void request(View *v) {
-  cancel_timer(v);
-  v->tries = 0;
-  v->waiting = v->waited = false;
-  set_state(v, STATE_LOADING);
-  send_request(v);
-}
+static bool send_request(void *owner) { return comm_request_dir(((View *)owner)->ref); }
 
 // Muted triangles under the top bar and at the bottom while a place page has
 // more above or below (docs/mockups/gps/NOTES.md). The menu's scroll layer
 // keeps them up to date.
 static void set_indicators(View *v) {
-  ContentIndicator *ci = scroll_layer_get_content_indicator(menu_layer_get_scroll_layer(v->menu));
-  const ContentIndicatorDirection dirs[2] = {ContentIndicatorDirectionUp, ContentIndicatorDirectionDown};
-  Layer *layers[2] = {v->more_above, v->more_below};
-  for (int i = 0; i < 2; i++) {
-    const ContentIndicatorConfig config = {
-      .layer = layers[i],
-      .times_out = false,
-      .alignment = GAlignCenter,
-      .colors = {.foreground = g_theme->muted, .background = g_theme->bg},
-    };
-    content_indicator_configure_direction(ci, dirs[i], &config);
-  }
+  set_scroll_indicators(menu_layer_get_scroll_layer(v->menu), v->more_above, v->more_below);
   v->indicators_on = true;
 }
 
 static void page_received(const DirPageMsg *page) {
   View *v = top_view();
-  if (!v || v->state == STATE_READY || page->ref != v->ref) {
+  if (!v || v->fetch.state == FETCH_READY || page->ref != v->ref) {
     return;
   }
-  cancel_timer(v);
-  v->waiting = false;
   // Count the whole rows, then keep exactly those.
   const uint8_t *end = page->rows ? page->rows + page->rows_length : NULL;
   const uint8_t *p = page->rows;
@@ -190,44 +130,25 @@ static void page_received(const DirPageMsg *page) {
   }
   top_bar_set(v->top_bar, BAND_INFO, BAND_LABEL, page->title);
   top_bar_set_right(v->top_bar, page->label, page->has_rel, page->rel);
-  set_state(v, STATE_READY);
+  fetch_done(&v->fetch);
   menu_layer_set_selected_index(v->menu, MenuIndex(0, first_selectable(v)), MenuRowAlignNone, false);
 }
 
-// A request sent before the phone script is up (right after the app opens)
-// waits for it, still loading, and goes again when the phone first speaks.
 static void request_failed(bool script_down) {
   View *v = top_view();
-  if (!v || v->state != STATE_LOADING) {
-    return;
-  }
-  cancel_timer(v);
-  if (script_down && !v->waited) {
-    v->waiting = v->waited = true;
-    v->timer = app_timer_register(SCRIPT_WAIT_MS, timed_out, v);
-  } else {
-    v->waiting = false;
-    set_state(v, STATE_NO_PHONE);
+  if (v) {
+    fetch_failed(&v->fetch, script_down);
   }
 }
 
 static void phone_up(void) {
   View *v = top_view();
-  if (v && v->waiting && v->state == STATE_LOADING) {
-    cancel_timer(v);
-    v->waiting = false;
-    v->tries = 0;
-    v->timer = app_timer_register(SEND_RETRY_MS, send_request, v);
+  if (v) {
+    fetch_phone_up(&v->fetch);
   }
 }
 
 // ---- Drawing -----------------------------------------------------------------
-
-static int text_height(const char *text, GFont font, int w, int max_h) {
-  return graphics_text_layout_get_content_size(text, font, GRect(0, 0, w, max_h),
-                                               GTextOverflowModeTrailingEllipsis,
-                                               GTextAlignmentLeft).h;
-}
 
 #define NO_CABIN_HINT "Add your stateroom on the phone for walking directions"
 
@@ -447,7 +368,7 @@ static void draw_message(GContext *ctx, const View *v, GRect b) {
   GColor muted = g_theme->muted;
   graphics_context_set_fill_color(ctx, g_theme->bg);
   graphics_fill_rect(ctx, b, 0, GCornerNone);
-  if (v->state == STATE_LOADING) {
+  if (v->fetch.state == FETCH_LOADING) {
     graphics_context_set_text_color(ctx, muted);
     graphics_draw_text(ctx, "Loading...", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                        GRect(PAD, 20, w - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
@@ -466,12 +387,12 @@ static void draw_message(GContext *ctx, const View *v, GRect b) {
 
 static uint16_t get_num_rows(MenuLayer *menu, uint16_t section, void *context) {
   View *v = context;
-  return v->state == STATE_READY && v->row_count > 0 ? v->row_count : 1;
+  return v->fetch.state == FETCH_READY && v->row_count > 0 ? v->row_count : 1;
 }
 
 static int16_t get_cell_height(MenuLayer *menu, MenuIndex *index, void *context) {
   View *v = context;
-  if (v->state != STATE_READY || index->row >= v->row_count) {
+  if (v->fetch.state != FETCH_READY || index->row >= v->row_count) {
     return MESSAGE_H;
   }
   const DirRow *r = &v->rows[index->row];
@@ -492,7 +413,7 @@ static int16_t get_separator_height(MenuLayer *menu, MenuIndex *index, void *con
 // separator's index is the row below it.
 static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, void *context) {
   View *v = context;
-  if (v->state == STATE_READY && index->row > 0 && index->row < v->row_count &&
+  if (v->fetch.state == FETCH_READY && index->row > 0 && index->row < v->row_count &&
       selectable(v, &v->rows[index->row]) && selectable(v, &v->rows[index->row - 1])) {
     draw_divider(ctx, 0, layer_get_bounds(cell).size.w);
   }
@@ -504,7 +425,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   bool highlighted = menu_cell_layer_is_highlighted(cell);
   GColor text = highlighted ? g_theme->cursor_text : g_theme->text;
   GColor muted = highlighted ? g_theme->cursor_text : g_theme->muted;
-  if (v->state != STATE_READY || index->row >= v->row_count) {
+  if (v->fetch.state != FETCH_READY || index->row >= v->row_count) {
     draw_message(ctx, v, layer_get_bounds(cell));
     return;
   }
@@ -553,7 +474,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
 
 // The cursor skips headers and a place's heading.
 static void skip_unselectable(View *v, MenuIndex *new_index, MenuIndex old_index) {
-  if (v->state != STATE_READY) {
+  if (v->fetch.state != FETCH_READY) {
     return;
   }
   int step = new_index->row >= old_index.row ? 1 : -1;
@@ -575,10 +496,10 @@ static void selection_will_change(MenuLayer *menu, MenuIndex *new_index, MenuInd
 static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
   View *v = context;
   uint8_t nothing = USAGE_NOTHING;
-  if (v->state == STATE_NO_PHONE) {
+  if (v->fetch.state == FETCH_NO_PHONE) {
     nothing = 0;
-    request(v);
-  } else if (v->state == STATE_READY && index->row < v->row_count) {
+    fetch_start(&v->fetch);
+  } else if (v->fetch.state == FETCH_READY && index->row < v->row_count) {
     const DirRow *r = &v->rows[index->row];
     if (r->kind == DIR_ROW_ITEM && r->ref != 0) {
       nothing = 0;
@@ -598,7 +519,7 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
 // On a place page's heading: the route to its closest restroom.
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
   View *v = context;
-  bool rest = v->state == STATE_READY && index->row < v->row_count &&
+  bool rest = v->fetch.state == FETCH_READY && index->row < v->row_count &&
               v->rows[index->row].kind == DIR_ROW_PLACE && has_rest_route(v);
   usage_press(BUTTON_ID_SELECT, USAGE_LONG | (rest ? 0 : USAGE_NOTHING), index->row);
   if (rest) {
@@ -637,12 +558,12 @@ static void window_load(Window *window) {
   v->more_below = layer_create(GRect(0, b.size.h - INDICATOR_H, b.size.w, INDICATOR_H));
   layer_add_child(root, v->more_above);
   layer_add_child(root, v->more_below);
-  request(v);
+  fetch_start(&v->fetch);
 }
 
 static void window_unload(Window *window) {
   View *v = window_get_user_data(window);
-  cancel_timer(v);
+  fetch_cancel(&v->fetch);
   menu_layer_destroy(v->menu);
   layer_destroy(v->more_above);
   layer_destroy(v->more_below);
@@ -680,6 +601,7 @@ void dir_window_push(int32_t ref, const char *title) {
   memset(v, 0, sizeof(View));
   v->ref = ref;
   strncpy(v->title, title, sizeof(v->title) - 1);
+  v->fetch = (Fetch){.send = send_request, .changed = state_changed, .owner = v};
   v->window = window_create();
   window_set_user_data(v->window, v);
   window_set_window_handlers(v->window, (WindowHandlers){

@@ -113,7 +113,14 @@ int draw_where_short(GContext *ctx, bool large, GColor color, int x, int y, int 
 // A drawn `›` for a Gothic 14 bold line whose text box starts at y
 // (docs/mockups/gps/NOTES.md). About 4 px wide.
 void draw_chevron(GContext *ctx, GColor color, int x, int y);
+// Height of `text` wrapped to `w` (at most max_h), left-aligned with trailing
+// ellipsis.
+int text_height(const char *text, GFont font, int w, int max_h);
 // ---- Scrolling pages ----------------------------------------------------------
+
+// Muted triangles in `above` and `below` while `scroll` has more above or below
+// (route and place pages). Call again when the theme changes.
+void set_scroll_indicators(ScrollLayer *scroll, Layer *above, Layer *below);
 
 // A page whose content scrolls with Up/Down when it doesn't fit, with muted
 // triangles while there's more above or below (as on route and place pages).
