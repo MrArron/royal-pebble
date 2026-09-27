@@ -141,11 +141,11 @@ medium, because it opens the watch protocol change that items 3 and 6 share.
       `(Ages 13-17)` (Social100), and kids' venues (Adventure Ocean).
     - If several apply, keep the tightest. Height, weight and wristband limits go
       to notes (item 6).
-- **Filters** (settings page, Filters tab, beside the Casino filter from Phase 3
-  item 27):
+- **Filters** (settings page, Filters tab, beside the Casino category from
+  Phase 3 item 27):
     - **Hide adults-only events (18+ and 21+)**, for a teen's watch. It hides adult
       parties, drinking events and adult game shows. Casino games are covered by
-      the Casino filter, and turning both on hides everything a teen can't join.
+      the Casino category, and turning both on hides everything a teen can't join.
     - **Hide teen and kids-only events** (any event whose `age` has a maximum of
       17 or under), for adults cruising without kids.
     - Both are off by default and work like hidden categories. They apply to
