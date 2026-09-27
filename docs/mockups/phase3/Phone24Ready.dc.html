@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings page – Ready to sail check</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,600;8..144,700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<span style="font-size: 24px; font-weight: 600">Cruise</span>
+<button type="button" style="height: 40px; padding: 0 20px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Save</button>
+</div>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="background: #E9EFEE; border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: 20px; font-weight: 600">Harmony of the Seas</div>
+<div style="font-size: 14px; color: #3F4948">Sat Mar 6 · 7 nights · sails in 3 days</div>
+<div style="font-size: 14px; color: #3F4948">Last sync today 9:12a</div>
+</div>
+<div style="background: #E9EFEE; border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948">READY TO SAIL?</div>
+<div style="font-size: 18px; font-weight: 600">1 thing left before you go offline</div>
+</div>
+<div style="display: flex; gap: 12px; align-items: flex-start">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#006A6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M4 12l5 5 11-11"></path></svg>
+<div><div style="font-size: 16px; font-weight: 600">Every day downloaded</div><div style="font-size: 14px; color: #3F4948">8 of 8 days, schedule published</div></div>
+</div>
+<div style="display: flex; gap: 12px; align-items: flex-start">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#006A6A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M4 12l5 5 11-11"></path></svg>
+<div><div style="font-size: 16px; font-weight: 600">Fits on the watch</div><div style="font-size: 14px; color: #3F4948">Busiest day 142 of 160 events</div></div>
+</div>
+<div style="display: flex; gap: 12px; align-items: flex-start; background: #FFDDB5; color: #2A1700; border-radius: 16px; padding: 12px">
+<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0"><rect x="10" y="3" width="4" height="12" rx="2" fill="#2A1700"></rect><circle cx="12" cy="19.5" r="2.2" fill="#2A1700"></circle></svg>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 8px"><div><div style="font-size: 16px; font-weight: 600">Stateroom not set</div><div style="font-size: 14px">The watch needs it for directions from your cabin.</div></div>
+<a href="Phone24Me.dc.html" style="align-self: flex-start; height: 40px; padding: 0 18px; border-radius: 20px; background: #CCE8E7; color: #051F1F; font-size: 14px; font-weight: 600; line-height: 40px; text-decoration: none">Set on Me tab</a></div>
+</div>
+<div style="font-size: 13px; color: #3F4948">When all three are ticked, this card turns teal: “You're ready to go offline.”</div>
+</div>
+</div>
+<div style="height: 80px; flex-shrink: 0; background: #E9EFEE; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; text-align: center; font-size: 12px; font-weight: 600; color: #3F4948">
+<span style="color: #002020"><span style="display: inline-block; padding: 4px 16px; border-radius: 16px; background: #CCE8E7">Cruise</span></span><span>Days</span><span>Filters</span><span>Events</span><span>Me</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

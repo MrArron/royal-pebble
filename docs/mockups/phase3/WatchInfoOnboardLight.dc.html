@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Watch – My info with the on-board undo row, light</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 400px; height: 456px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #000000; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; display: flex; flex-direction: column">
+<div style="height: 44px; flex-shrink: 0; background: #555555; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; position: relative">
+<span style="position: absolute; left: 50%; transform: translateX(-50%); color: #FFFFFF; font-size: 28px; font-weight: 700">2:45p</span>
+<span style="color: #FFFFFF; font-size: 28px; font-weight: 700">My info</span>
+</div>
+<div style="display: flex; flex-direction: column">
+<div style="background: #0055AA; color: #FFFFFF; padding: 8px 14px 10px; display: flex; flex-direction: column">
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #FFFFFF">ON BOARD</div>
+<div style="font-size: 34px; line-height: 40px; font-weight: 700">Since 2:40p</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700">Select: back ashore</div>
+</div>
+<div style="padding: 8px 14px 10px; display: flex; flex-direction: column; border-bottom: 2px solid #AAAAAA">
+<div style="font-size: 34px; line-height: 40px; font-weight: 700">Today's summary</div>
+</div>
+<div style="padding: 8px 14px 10px; display: flex; flex-direction: column; border-bottom: 2px solid #AAAAAA">
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">STATEROOM</div>
+<div style="font-size: 48px; line-height: 52px; font-weight: 700">[ROOM #]</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">Deck 6 · Fore stairs</div>
+</div>
+<div style="padding: 8px 14px 10px; display: flex; flex-direction: column">
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">MUSTER STATION</div>
+<div style="font-size: 34px; line-height: 40px; font-weight: 700">B4</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":456}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

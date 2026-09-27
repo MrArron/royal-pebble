@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Watch – port day card with time-ashore bar, dark</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 400px; height: 456px; box-sizing: border-box; overflow: hidden; background: #000000; color: #FFFFFF; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; display: flex; flex-direction: column">
+<div style="height: 44px; flex-shrink: 0; background: #005555; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; position: relative">
+<span style="position: absolute; left: 50%; transform: translateX(-50%); color: #FFFFFF; font-size: 28px; font-weight: 700">10:05a</span>
+<span style="color: #FFFFFF; font-size: 28px; font-weight: 700">CocoCay</span>
+<span style="color: #AAFFFF; font-size: 26px; font-weight: 700; font-variant: small-caps">docked</span>
+</div>
+<div style="padding: 6px 14px 0; display: flex; flex-direction: column; gap: 0">
+<div style="font-size: 34px; line-height: 38px; font-weight: 700; color: #FFAA00">ALL ABOARD IN</div>
+<div style="font-size: 84px; line-height: 96px; font-weight: 700;">6:25</div>
+<div style="font-size: 34px; line-height: 40px; font-weight: 400; color: #AAAAAA">4:30p ship · 4:30p local</div>
+<div style="position: relative; height: 28px; margin-top: 10px">
+<div style="position: absolute; left: 0; right: 0; top: 6px; height: 16px; border-radius: 8px; background: #555555; overflow: hidden"><div style="position: absolute; left: 0; top: 0; width: 119px; height: 16px; background: #FFAA00"></div><div style="position: absolute; left: 79px; top: 0; width: 40px; height: 16px; background: #00AAFF"></div><div style="position: absolute; left: 119px; top: 0; width: 57px; height: 16px; background: #0055AA"></div><div style="position: absolute; left: 353px; top: 0; width: 19px; height: 16px; background: #AA0000"></div></div>
+<div style="position: absolute; left: 117px; top: 2px; width: 4px; height: 24px; background: #FFFFFF; border-radius: 2px"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 26px; line-height: 30px; font-weight: 700; color: #AAAAAA"><span>7:00a</span><span>4:30p</span></div>
+<div style="font-size: 26px; line-height: 32px; font-weight: 700; color: #00AAFF; margin-top: 4px">Excursion back 11:30a</div>
+<div style="height: 2px; background: #555555; margin: 8px 0 6px"></div>
+<div style="font-size: 26px; line-height: 32px; font-weight: 700; color: #00AAFF">Hold Select: I'm on board</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":456}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

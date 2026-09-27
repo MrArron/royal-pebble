@@ -351,13 +351,19 @@ back-to-the-ship idea under Later.
     `docs/DATA_FORMAT.md`), but only in bundles from `cruise_sync.py --login`;
     without it, nothing changes. Check that a later download on the phone
     doesn't lose it.
-23. **Port day card.** On the port countdown: a time-ashore bar from arrival to
-    all-aboard; a booked excursion's end time next to all-aboard; Royal's
-    gangway time as the suggested all-aboard (`mine.ports`; shown only as a
-    suggestion until what `gangwayUp` means is checked on board); and a
-    tender-day warning with a larger suggested buffer (tender ports already get
-    a 60-minute all-aboard buffer on the settings page; the watch warning is
-    new). The tender warning is the first part to slip.
+    Added in design (2026-09-26): **I'm on board**. On embark and port days,
+    hold Select on Home and confirm to end the day's countdown and all-aboard
+    alerts; Home goes back to the sea-day layout (`docs/DESIGN_PHASE3.md` §22.6).
+23. **Port day card.** Royal's gangway time (`mine.ports`) is the day's
+    all-aboard by default, shifted in 5-minute steps on the Days tab if needed
+    (days without it keep departure minus the buffer). A per-day warning
+    period (default 30 min, 60 at tender ports) sets the first all-aboard alert.
+    On the port countdown: a time-ashore bar from arrival to all-aboard whose
+    colors change at now (booked excursion in blue, the warning window in
+    red), the excursion's end time, and a red warning sign beside the countdown
+    in the warning window. Tender ports get a notice on the phone's Days tab,
+    not on the watch. Designed with the owner on 2026-09-26
+    (`docs/DESIGN_PHASE3.md` §23).
 24. **Settings page upgrades.**
     - Stateroom: the number box takes digits only. A number in the ship's
       cabin table (Harmony: 2,855 cabins) fills in Deck and Nearest stairs

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings page – search events across days</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,600;8..144,700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<span style="font-size: 24px; font-weight: 600">Events</span>
+<button type="button" style="height: 40px; padding: 0 20px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Save</button>
+</div>
+<div style="padding: 0 16px 8px; flex-shrink: 0">
+<label for="q" style="position: absolute; left: -9999px">Search events</label>
+<div style="height: 52px; border-radius: 26px; background: #E3E9E9; display: flex; align-items: center; gap: 10px; padding: 0 16px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F4948" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<input id="q" value="trivia" style="flex-grow: 1; border: 0; background: transparent; font: inherit; font-size: 17px; color: #161D1D; min-width: 0">
+<button type="button" aria-label="Clear search" style="width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3F4948" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<div style="font-size: 13px; color: #3F4948; padding: 8px 4px 0">14 events on 6 days · all days</div>
+</div>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948; padding: 6px 4px 0">DAY 2 · SEA DAY · SUN MAR 7</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 10px 8px 10px 16px; display: flex; align-items: center; gap: 12px"><div style="width: 52px; flex-shrink: 0; font-size: 14px; font-weight: 700">11:30a</div><div style="flex-grow: 1; min-width: 0"><div style="font-size: 16px; font-weight: 600">Adults Only Trivia</div><div style="font-size: 14px; color: #3F4948">Studio B</div></div><button type="button" aria-label="Unstar Adults Only Trivia" style="width: 48px; height: 48px; flex-shrink: 0; border: 0; border-radius: 24px; background: #006A6A; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6l-6.2 3.5 1.4-7L2 9.3l7-.8z" fill="#FFFFFF"></path></svg></button></div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 10px 8px 10px 16px; display: flex; align-items: center; gap: 12px"><div style="width: 52px; flex-shrink: 0; font-size: 14px; font-weight: 700">4:00p</div><div style="flex-grow: 1; min-width: 0"><div style="font-size: 16px; font-weight: 600">Name That Tune Trivia</div><div style="font-size: 14px; color: #3F4948">On Air</div></div><button type="button" aria-label="Star Name That Tune Trivia" style="width: 48px; height: 48px; flex-shrink: 0; border: 0; border-radius: 24px; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6l-6.2 3.5 1.4-7L2 9.3l7-.8z" fill="none" stroke="#3F4948" stroke-width="1.8" stroke-linejoin="round"></path></svg></button></div>
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948; padding: 6px 4px 0">DAY 3 · ST. THOMAS · MON MAR 8</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 10px 8px 10px 16px; display: flex; align-items: center; gap: 12px"><div style="width: 52px; flex-shrink: 0; font-size: 14px; font-weight: 700">8:00p</div><div style="flex-grow: 1; min-width: 0"><div style="font-size: 16px; font-weight: 600">Movie Trivia</div><div style="font-size: 14px; color: #3F4948">Playmakers</div></div><button type="button" aria-label="Star Movie Trivia" style="width: 48px; height: 48px; flex-shrink: 0; border: 0; border-radius: 24px; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6l-6.2 3.5 1.4-7L2 9.3l7-.8z" fill="none" stroke="#3F4948" stroke-width="1.8" stroke-linejoin="round"></path></svg></button></div>
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948; padding: 6px 4px 0">DAY 4 · SEA DAY · TUE MAR 9</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 10px 8px 10px 16px; display: flex; align-items: center; gap: 12px"><div style="width: 52px; flex-shrink: 0; font-size: 14px; font-weight: 700">10:00a</div><div style="flex-grow: 1; min-width: 0"><div style="font-size: 16px; font-weight: 600">Harmony Trivia</div><div style="font-size: 14px; color: #3F4948">Studio B</div></div><button type="button" aria-label="Star Harmony Trivia" style="width: 48px; height: 48px; flex-shrink: 0; border: 0; border-radius: 24px; background: transparent; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6l-6.2 3.5 1.4-7L2 9.3l7-.8z" fill="none" stroke="#3F4948" stroke-width="1.8" stroke-linejoin="round"></path></svg></button></div>
+</div>
+<div style="height: 80px; flex-shrink: 0; background: #E9EFEE; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; text-align: center; font-size: 12px; font-weight: 600; color: #3F4948">
+<span>Cruise</span><span>Days</span><span>Filters</span><span style="color: #002020"><span style="display: inline-block; padding: 4px 16px; border-radius: 16px; background: #CCE8E7">Events</span></span><span>Me</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

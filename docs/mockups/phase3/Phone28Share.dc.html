@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings page – Share my plan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,600;8..144,700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<span style="font-size: 24px; font-weight: 600">Cruise</span>
+<button type="button" style="height: 40px; padding: 0 20px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Save</button>
+</div>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="background: #9CF1F0; color: #002020; border-radius: 28px; padding: 16px 18px; font-size: 16px; font-weight: 600">You're ready to go offline</div>
+<div style="background: #E9EFEE; border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948">SHARE MY PLAN</div>
+<div style="font-size: 14px; color: #3F4948">Send your plan to a travel companion as text. They import it on their phone. Also a backup of your choices.</div>
+</div>
+<div style="background: #FFFFFF; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 14px">
+<div><b>14</b> starred events</div>
+<div><b>3</b> personal entries</div>
+<div><b>2</b> days with all-aboard or ship-time changes</div>
+<div><b>1</b> itinerary edit · <b>2</b> venue fixes</div>
+</div>
+<label style="display: flex; align-items: flex-start; gap: 12px; min-height: 44px; font-size: 15px"><input type="checkbox" style="width: 20px; height: 20px; margin: 2px 0 0; accent-color: #006A6A; flex-shrink: 0"><span>Include cabin details (we share a cabin)<br><span style="font-size: 13px; color: #3F4948">Stateroom, deck, stairs and muster station</span></span></label>
+<div style="display: flex; gap: 8px">
+<button type="button" style="height: 48px; padding: 0 22px; border: 0; border-radius: 24px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Share plan</button>
+<a href="Phone28Import.dc.html" style="height: 48px; padding: 0 22px; border-radius: 24px; background: #CCE8E7; color: #051F1F; font-size: 15px; font-weight: 600; line-height: 48px; text-decoration: none">Import plan</a>
+</div>
+</div>
+</div>
+<div style="height: 80px; flex-shrink: 0; background: #E9EFEE; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; text-align: center; font-size: 12px; font-weight: 600; color: #3F4948">
+<span style="color: #002020"><span style="display: inline-block; padding: 4px 16px; border-radius: 16px; background: #CCE8E7">Cruise</span></span><span>Days</span><span>Filters</span><span>Events</span><span>Me</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

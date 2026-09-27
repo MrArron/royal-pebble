@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Watch – port day card in the all-aboard warning window, light</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 400px; height: 456px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #000000; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif; display: flex; flex-direction: column">
+<div style="height: 44px; flex-shrink: 0; background: #005555; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; position: relative">
+<span style="position: absolute; left: 50%; transform: translateX(-50%); color: #FFFFFF; font-size: 28px; font-weight: 700">4:10p</span>
+<span style="color: #FFFFFF; font-size: 28px; font-weight: 700">CocoCay</span>
+<span style="color: #AAFFFF; font-size: 26px; font-weight: 700; font-variant: small-caps">docked</span>
+</div>
+<div style="padding: 6px 14px 0; display: flex; flex-direction: column; gap: 0">
+<div style="font-size: 34px; line-height: 38px; font-weight: 700; color: #AA5500">ALL ABOARD IN</div>
+<div style="display: flex; align-items: center; gap: 16px; height: 96px">
+<span style="font-size: 84px; line-height: 96px; font-weight: 700">0:20</span>
+<svg width="68" height="62" viewBox="0 0 24 22" aria-label="All-aboard warning" role="img" style="flex-shrink: 0; margin-top: 4px"><path d="M12 1.2L23 20.8H1z" fill="#FF0000" stroke="#FF0000" stroke-width="1.6" stroke-linejoin="round"></path><rect x="10.6" y="7" width="2.8" height="8" rx="1.4" fill="#000000"></rect><circle cx="12" cy="17.6" r="1.6" fill="#000000"></circle></svg>
+</div>
+<div style="font-size: 34px; line-height: 40px; font-weight: 400; color: #555555">4:30p ship · 4:30p local</div>
+<div style="position: relative; height: 28px; margin-top: 10px">
+<div style="position: absolute; left: 0; right: 0; top: 6px; height: 16px; border-radius: 8px; background: #AAAAAA; overflow: hidden"><div style="position: absolute; left: 0; top: 0; width: 359px; height: 16px; background: #AA5500"></div><div style="position: absolute; left: 79px; top: 0; width: 97px; height: 16px; background: #0055AA"></div><div style="position: absolute; left: 353px; top: 0; width: 6px; height: 16px; background: #AA0000"></div><div style="position: absolute; left: 359px; top: 0; width: 13px; height: 16px; background: #FF5555"></div></div>
+<div style="position: absolute; left: 357px; top: 2px; width: 4px; height: 24px; background: #000000; border-radius: 2px"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 26px; line-height: 30px; font-weight: 700; color: #555555"><span>7:00a</span><span>4:30p</span></div>
+<div style="height: 2px; background: #AAAAAA; margin: 8px 0 6px"></div>
+<div style="font-size: 26px; line-height: 32px; font-weight: 700; color: #0055AA">Hold Select: I'm on board</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":400,"height":456}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings page – Days tab, tender day warning period</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,600;8..144,700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<span style="font-size: 24px; font-weight: 600">Days</span>
+<button type="button" style="height: 40px; padding: 0 20px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Save</button>
+</div>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="background: #EFF5F4; border-radius: 20px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center"><div><div style="font-size: 16px; font-weight: 600">Day 3 · At sea</div><div style="font-size: 14px; color: #3F4948">Mon Mar 8</div></div></div>
+<div style="background: #E9EFEE; border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+<div><div style="font-size: 18px; font-weight: 600">Day 4 · Grand Cayman</div><div style="font-size: 14px; color: #3F4948">Tue Mar 9 · docked 7:00a - 3:00p local</div></div>
+<span style="height: 26px; padding: 0 10px; border: 1px solid #6F7979; border-radius: 8px; font-size: 12px; font-weight: 700; color: #3F4948; line-height: 24px; flex-shrink: 0">Tender</span>
+</div>
+<div style="display: flex; gap: 12px; align-items: flex-start; background: #FFDDB5; color: #2A1700; border-radius: 16px; padding: 12px 14px">
+<svg width="22" height="20" viewBox="0 0 24 22" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M12 1.2L23 20.8H1z" fill="#2A1700"></path><rect x="10.6" y="7" width="2.8" height="8" rx="1.4" fill="#FFDDB5"></rect><circle cx="12" cy="17.6" r="1.6" fill="#FFDDB5"></circle></svg>
+<div style="font-size: 14px; line-height: 20px"><b>Tender port.</b> Boats back to the ship can have long lines, so the warning period is 60 minutes today. Make it longer if you like.</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 13px; font-weight: 600; color: #3F4948">Ship time vs local</div>
+<div style="display: flex; align-items: center; gap: 10px"><button type="button" aria-label="Less" style="width: 44px; height: 44px; border: 1px solid #6F7979; border-radius: 22px; background: transparent; font: inherit; font-size: 20px">−</button><span style="font-size: 16px; font-weight: 600; min-width: 90px; text-align: center">+1 h</span><button type="button" aria-label="More" style="width: 44px; height: 44px; border: 1px solid #6F7979; border-radius: 22px; background: transparent; font: inherit; font-size: 20px">+</button></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between; align-items: center"><div style="font-size: 13px; font-weight: 600; color: #3F4948">All aboard</div><span style="height: 24px; padding: 0 8px; border: 1px solid #6F7979; border-radius: 8px; font-size: 12px; font-weight: 600; color: #3F4948; line-height: 22px">From Royal</span></div>
+<div style="display: flex; align-items: center; gap: 10px"><button type="button" aria-label="5 minutes earlier" style="width: 44px; height: 44px; border: 1px solid #6F7979; border-radius: 22px; background: transparent; font: inherit; font-size: 20px">−</button><span style="font-size: 16px; font-weight: 600; min-width: 120px; text-align: center">Royal's time</span><button type="button" aria-label="5 minutes later" style="width: 44px; height: 44px; border: 1px solid #6F7979; border-radius: 22px; background: transparent; font: inherit; font-size: 20px">+</button></div>
+<div style="font-size: 14px; color: #3F4948">All aboard <b style="color: #161D1D">3:00p ship</b> · 2:00p local</div>
+<div style="font-size: 12px; line-height: 17px; color: #3F4948">Royal's gangway time. Move it in 5-minute steps (−15 min gives you 2:45p). Days without a Royal time use a buffer before departure instead.</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-size: 13px; font-weight: 600; color: #3F4948">Warning period</div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px">
+<button type="button" style="height: 40px; border: 0; border-radius: 20px 4px 4px 20px; background: #E3E9E9; font: inherit; font-size: 14px; font-weight: 600; color: #161D1D">30</button>
+<button type="button" style="height: 40px; border: 0; border-radius: 4px; background: #006A6A; font: inherit; font-size: 14px; font-weight: 600; color: #FFFFFF">✓ 60</button>
+<button type="button" style="height: 40px; border: 0; border-radius: 4px; background: #E3E9E9; font: inherit; font-size: 14px; font-weight: 600; color: #161D1D">90</button>
+<button type="button" style="height: 40px; border: 0; border-radius: 4px 20px 20px 4px; background: #E3E9E9; font: inherit; font-size: 14px; font-weight: 600; color: #161D1D">120</button>
+</div>
+<div style="font-size: 13px; line-height: 19px; color: #3F4948">Minutes before all-aboard. The first alert buzzes at <b style="color: #161D1D">2:00p ship</b>, and the watch's bar turns red from then.</div>
+</div>
+</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 14px 18px"><div style="font-size: 16px; font-weight: 600">Day 5 · Cozumel</div><div style="font-size: 14px; color: #3F4948">Wed Mar 10</div></div>
+</div>
+<div style="height: 80px; flex-shrink: 0; background: #E9EFEE; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; text-align: center; font-size: 12px; font-weight: 600; color: #3F4948">
+<span>Cruise</span><span style="color: #002020"><span style="display: inline-block; padding: 4px 16px; border-radius: 16px; background: #CCE8E7">Days</span></span><span>Filters</span><span>Events</span><span>Me</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

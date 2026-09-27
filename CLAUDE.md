@@ -8,6 +8,8 @@ Read before making changes:
 - `docs/PROJECT_BRIEF.md` — scope, architecture, decisions, open questions
 - `docs/DESIGN.md` — watch and settings-page designs, color tokens
 - `docs/DESIGN_V1_1.md` — v1.1 designs (venues, wayfinding, Mark reserved)
+- `docs/DESIGN_PHASE3.md` — Phase 3 designs (booked excursions, embark day, I'm on
+  board; later items as drafts)
 - `docs/DATA_FORMAT.md` — the cruise data bundle (v1)
 - `docs/ROYAL_LOGIN_DATA.md` — what a Royal login can see (sync tool only) and
   ideas for using it
