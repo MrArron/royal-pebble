@@ -44,4 +44,22 @@ function parse(text) {
   return error ? {error: error} : {bundle: bundle};
 }
 
-module.exports = {validate: validate, parse: parse};
+// True when both bundles are for the same ship and sail date.
+function sameSailing(a, b) {
+  return !!(a && b && a.sailDate === b.sailDate && a.ship && b.ship &&
+            a.ship.code === b.ship.code);
+}
+
+// The phone never logs in, so its downloads have no `mine`. When `bundle` is
+// the same sailing as `old` and has no `mine` of its own, it takes the old one
+// (stateroom, orders, arrival, ports). A bundle with its own `mine` replaces
+// it. Returns true when `mine` was kept.
+function keepMine(old, bundle) {
+  if (!bundle || bundle.mine || !old || !old.mine || !sameSailing(old, bundle)) {
+    return false;
+  }
+  bundle.mine = old.mine;
+  return true;
+}
+
+module.exports = {validate: validate, parse: parse, sameSailing: sameSailing, keepMine: keepMine};

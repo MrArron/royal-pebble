@@ -77,7 +77,9 @@ text. One compact JSON object, ASCII only.
   produces it (the phone companion never logs in). Private: it holds the
   stateroom and cabin details. Every field may be missing or `null`; consumers
   must not require any of them. What each field is based on, and what is still
-  unverified, is in `docs/ROYAL_LOGIN_DATA.md`.
+  unverified, is in `docs/ROYAL_LOGIN_DATA.md`. A new bundle for the same ship
+  and sail date without `mine` (a phone download) keeps the saved bundle's
+  `mine`; one with its own `mine` replaces it.
   - `stateroom` is `null` until a cabin is assigned (Royal lists guarantee
     bookings as "GTY"); consumers also treat a value without digits as unassigned.
   - `deck`, `muster`: the booking's deck number and muster station as Royal

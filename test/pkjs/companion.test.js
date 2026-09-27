@@ -218,6 +218,40 @@ test('a big page that never came back makes the next one smaller', function() {
   assert.strictEqual(JSON.parse(c.store.settingsPage).shrink, 1);
 });
 
+// savedCruise() with the schedule fields a pasted bundle needs.
+function usableCruise() {
+  var b = savedCruise();
+  b.schedule.fields = ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation'];
+  return b;
+}
+
+function paste(c, bundle) {
+  c.handlers.webviewclosed({response: encodeURIComponent(JSON.stringify({action: 'save', bundle: bundle}))});
+  return JSON.parse(c.store.bundle);
+}
+
+test('login data (mine) is kept when the same sailing comes again without it', function() {
+  var old = usableCruise();
+  old.mine = {stateroom: '1234', arrival: '11:30',
+              orders: [{title: 'Beach Day', category: 'pt_shoreX', date: old.sailDate, time: '09:00', day: 1}]};
+  var c = companion({bundle: JSON.stringify(old)});
+  var saved = paste(c, usableCruise());
+  assert.deepStrictEqual(saved.mine, old.mine);
+  assert.ok(has(c.log(), /^bundle  pasted: ship HM, same sailing, .*, login data kept$/), c.log().join('\n'));
+
+  // A bundle with its own mine replaces it.
+  var fresh = usableCruise();
+  fresh.mine = {stateroom: '5678', arrival: null};
+  assert.deepStrictEqual(paste(c, fresh).mine, fresh.mine);
+
+  // Another sailing doesn't take it.
+  var other = usableCruise();
+  other.sailDate = '2030-01-05';
+  other.itinerary[0].date = other.sailDate;
+  assert.strictEqual(paste(c, other).mine, undefined);
+  assert.ok(!has(c.log(), /new sailing.*login data kept/));
+});
+
 test('script errors in a handler are logged, then thrown', function() {
   var c = companion();
   global.Pebble.openURL = function() { throw new Error('boom'); };

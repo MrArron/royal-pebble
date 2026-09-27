@@ -641,8 +641,9 @@ function useBundle(bundle, how) {
   // Stars of rescheduled events follow them; cancelled ones are dropped. The
   // user hears about both on the watch and the settings page.
   var old = load(STORE_BUNDLE, null);
-  var sameSailing = old && old.sailDate === bundle.sailDate && old.ship && bundle.ship &&
-    old.ship.code === bundle.ship.code;
+  var sameSailing = bundleLib.sameSailing(old, bundle);
+  // A phone download has no login data; keep the old bundle's for the same sailing.
+  var keptMine = bundleLib.keepMine(old, bundle);
   var settings = load(STORE_SETTINGS, {});
   var r = slice.reconcileStars(old, bundle, load(STORE_STARS, {}), settings, new Date(),
                                load(STORE_STAR_TIMES, {}));
@@ -675,7 +676,8 @@ function useBundle(bundle, how) {
   // Counts only, no contents.
   usage.add('bundle', how + ': ship ' + bundle.ship.code + ', ' + (sameSailing ? 'same sailing' : 'new sailing') +
             ', ' + bundle.itinerary.length + ' days, ' + bundle.schedule.events.length + ' events, ' +
-            Math.round(text.length / 1024) + ' KB, ' + r.changes.length + ' starred events moved or cancelled');
+            Math.round(text.length / 1024) + ' KB, ' + r.changes.length + ' starred events moved or cancelled' +
+            (keptMine ? ', login data kept' : ''));
 }
 
 function settingsClosed(text) {
