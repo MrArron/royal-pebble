@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings page - Filters with the two age switches</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,600;8..144,700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<span style="font-size: 24px; font-weight: 600">Filters</span>
+<button type="button" style="height: 40px; padding: 0 20px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Save</button>
+</div>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948; padding: 4px 4px 0">AGES</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px"><div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 600">Hide Adult only events</div><div style="font-size: 14px; color: #3F4948">18+ and 21+ · 31 events</div></div><button type="button" role="switch" aria-checked="false" aria-label="Hide Adult only events" style="width: 52px; height: 32px; flex-shrink: 0; border: 2px solid #6F7979; box-sizing: border-box; border-radius: 16px; background: #E3E9E9; position: relative"><span style="position: absolute; left: 6px; top: 6px; width: 16px; height: 16px; border-radius: 8px; background: #6F7979"></span></button></div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px"><div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 600">Hide Teen and Kid only events</div><div style="font-size: 14px; color: #3F4948">17 and under · 14 events</div></div><button type="button" role="switch" aria-checked="true" aria-label="Hide Teen and Kid only events" style="width: 52px; height: 32px; flex-shrink: 0; border: 0; border-radius: 16px; background: #006A6A; position: relative"><span style="position: absolute; right: 4px; top: 4px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></button></div>
+<div style="font-size: 13px; line-height: 19px; color: #3F4948; padding: 0 4px">Events you star always show. Events with no age listed never hide. Casino games are in the Casino category below.</div>
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948; padding: 4px 4px 0">CATEGORIES</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px"><div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 600">Entertainment</div><div style="font-size: 14px; color: #3F4948">112 events</div></div><button type="button" role="switch" aria-checked="true" aria-label="Entertainment" style="width: 52px; height: 32px; flex-shrink: 0; border: 0; border-radius: 16px; background: #006A6A; position: relative"><span style="position: absolute; right: 4px; top: 4px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></button></div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px"><div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 600">Activities</div><div style="font-size: 14px; color: #3F4948">86 events</div></div><button type="button" role="switch" aria-checked="true" aria-label="Activities" style="width: 52px; height: 32px; flex-shrink: 0; border: 0; border-radius: 16px; background: #006A6A; position: relative"><span style="position: absolute; right: 4px; top: 4px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></button></div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px"><div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 600">Casino</div><div style="font-size: 14px; color: #3F4948">Casino Royale and casino games · 18 events</div></div><button type="button" role="switch" aria-checked="true" aria-label="Casino" style="width: 52px; height: 32px; flex-shrink: 0; border: 0; border-radius: 16px; background: #006A6A; position: relative"><span style="position: absolute; right: 4px; top: 4px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF"></span></button></div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 18px; display: flex; align-items: center; gap: 12px"><div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 600">Shop</div><div style="font-size: 14px; color: #3F4948">Hidden · 40 events</div></div><button type="button" role="switch" aria-checked="false" aria-label="Shop" style="width: 52px; height: 32px; flex-shrink: 0; border: 2px solid #6F7979; box-sizing: border-box; border-radius: 16px; background: #E3E9E9; position: relative"><span style="position: absolute; left: 6px; top: 6px; width: 16px; height: 16px; border-radius: 8px; background: #6F7979"></span></button></div>
+</div>
+<div style="height: 80px; flex-shrink: 0; background: #E9EFEE; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; text-align: center; font-size: 12px; font-weight: 600; color: #3F4948">
+<span>Cruise</span><span>Days</span><span style="color: #002020"><span style="display: inline-block; padding: 4px 16px; border-radius: 16px; background: #CCE8E7">Filters</span></span><span>Events</span><span>Me</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

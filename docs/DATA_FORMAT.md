@@ -23,9 +23,16 @@ text. One compact JSON object, ASCII only.
     "published": true,
     "cats": [["Entertainment", "Music & Dance"], ["Shop", "Retail"], ["Activities", "Sports & Recreation"]],
     "venues": ["Royal Promenade", "Sports Court", "Regalia Watches"],
-    "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation", "paid", "price"],
+    "venueCodes": ["PROM", "SPORTCRT", null],
+    "notes": [["kbyg/general/seapass", "Bring your SeaPass card"],
+              ["kbyg/general/WEATHER", "Weather permitting"]],
+    "infos": [[[18, null], 15, [0]], [null, null, [1]]],
+    "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation", "paid", "price",
+               "info", "pid"],
     "events": [
-      ["Big Band Music With the Harmony of the Seas Orchestra", 0, 0, "2026-10-03", "17:45", 45, 0, 0]
+      ["Big Band Music With the Harmony of the Seas Orchestra", 0, 0, "2026-10-03", "17:45", 45, 0, 0, 0, null,
+       null, "HM-BIGBAND"],
+      ["Sports Court Open Play", 1, 2, "2026-10-04", "09:00", 120, 0, 0, 0, null, 1, "HM-SPORTCRT"]
     ]
   },
   "mine": {
@@ -64,15 +71,58 @@ text. One compact JSON object, ASCII only.
     Sorted by date, time, title; duplicates removed.
   - Which of Royal's products become events: the free activities
     (`NON_REVENUE_SCHEDULABLE`, never marked reservation-required), the shows you
-    reserve (`ENTERTAINMENT`: free, featured, reservation required) and the paid
+    reserve (`ENTERTAINMENT`: free, featured, reservation required), the paid
     classes and experiences (`ACTIVITIES`: escape room, FlowRider lessons,
-    tastings). Spa, dining and shore excursions are left out: they are booking
-    slots, not events. So are NextCruise sales appointments (by title), about 22
-    slots a day that would push busy days past the watch's 160 events.
+    tastings) and the shore excursions (`SHOREX`, below). Spa and dining are left
+    out: they are booking slots, not events. So are NextCruise sales appointments
+    (by title), about 22 slots a day that would push busy days past the watch's
+    160 events.
   - Paid (`ACTIVITIES`) events come as many sessions each (27 of the escape
     room on one sailing). Consumers show them only once the user picks a
-    session (the settings page's Booked activities, which stars it and marks
-    it reserved); the other sessions stay off the watch and out of the lists. Checked on a live Harmony sailing, 2026-09-25.
+    session (the settings page's Booked activities and excursions, which stars
+    it and marks it reserved); the other sessions stay off the watch and out of
+    the lists. Checked on a live Harmony sailing, 2026-09-25.
+  - **Shore excursions** (`SHOREX`, added in Phase 4 without a version bump):
+    one event per session, `paid` 1, category `["Shore excursions", ""]`,
+    `venue` the excursion's own location from Royal (often empty). They follow
+    the paid rule above: nothing shows until the user picks a session. `time`
+    is the start; the meeting time is in `info` (`early`, below). All-day
+    rentals (beach beds, cabanas, day passes, listed with 0 minutes) keep
+    Royal's listed time and `minutes` 0. Older bundles have none, and their
+    consumers simply see no excursions.
+  - **Event details** (Phase 4, added without a version bump; a bundle without
+    them is valid and every event then has no venue code, age, arrive-early
+    time or notes). Each comes from the products listing both producers already
+    download (`docs/PHASE4_PLAN.md` items 1-7):
+    - `venueCodes`: beside `venues`, Royal's `locationCode` for each venue, or
+      `null`. Venues are indexed by name and code together, so a blank title
+      with a code (the wine tasting: `""`, `VINT`) is its own entry.
+    - `notes`: shared table of `[id, text]`. `id` is Royal's advisement or
+      restriction id (`kbyg/general/seapass`), `short` for a product's short
+      description when it says more than the title, and `waiver` for Royal's
+      `isWaiverRequired`. `text` is simplified like other text. Left out:
+      "Images are illustrative only", "This activity has a fee" and "Fee
+      applies" (already `paid`), age limits (they go in `age`) and any text over
+      120 characters. A row appears once, however many events use it.
+    - `infos`: shared table of `[age, early, notes]`, one row per distinct
+      combination. `age` is `[min, max]` in years (either may be `null`: `[18,
+      null]` is 18 and over, `[null, 17]` is 17 and under) or `null`. It comes
+      from Royal's age restrictions, then its age experiences (`ages/age18`),
+      then the over-21 alcohol advisement, then title and venue patterns
+      (`(18+)`, `(Ages 13-17)`, `(17 & Under)`, Adventure Ocean); if several
+      apply, the tightest wins. `early` is minutes to arrive before `time`, or
+      `null`: Royal's `leadTimeInMinutes` when above 0, else a number in an
+      advisement ("Arrive 15 minutes early"), at most 120; for a shore
+      excursion, the start minus Royal's `meetingTime`, at most 240. `notes`
+      holds indexes into `notes`, in Royal's order (may be empty).
+    - Event field `info`: index into `infos`, or `null` when the event has none
+      of these.
+    - Event field `pid`: Royal's `productID`, the same for every session of an
+      activity (session ids embed the start time, so they change when a session
+      moves), or `null`. Used only to follow a starred event through a
+      reschedule (Rules for consumers).
+    - Consumers read events by field name, so older consumers ignore `info` and
+      `pid`, and new consumers treat missing fields as `null`.
 - `mine` — only when fetched with login, so only `cruise_sync.py --login`
   produces it (the phone companion never logs in). Private: it holds the
   stateroom and cabin details. Every field may be missing or `null`; consumers
@@ -119,7 +169,10 @@ text. One compact JSON object, ASCII only.
   - key still in the new schedule: nothing to do;
   - exactly one event that is new in this schedule, with the same title
     (ignoring case and outer spaces) on the same watch day: rescheduled, the star
-    moves to it, so its reminder follows;
+    moves to it, so its reminder follows. When both schedules have `pid` (Phase
+    4, only once product ids are shown to stay the same between pulls), match on
+    the old event's `pid` instead of the title, so a reworded title still
+    follows its star and two products with the same title aren't confused;
   - several such events (a show that runs twice): don't guess; drop the star and
     tell the user to check the times;
   - none: cancelled; drop the star.

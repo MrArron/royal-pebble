@@ -12,6 +12,8 @@ Read before making changes:
   board; later items as drafts)
 - `docs/PHASE4_PLAN.md` — Phase 4 plan (event data: venue codes, ages and age
   filters, arrive-early times, notes, shore excursions, optional phone login)
+- `docs/DESIGN_PHASE4.md` — Phase 4 designs (ages, arrive-early, notes and tags,
+  shore excursions)
 - `docs/DATA_FORMAT.md` — the cruise data bundle (v1)
 - `docs/ROYAL_LOGIN_DATA.md` — what a Royal login can see (sync tool only) and
   ideas for using it

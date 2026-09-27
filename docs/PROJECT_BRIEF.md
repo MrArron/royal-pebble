@@ -429,8 +429,8 @@ Versions start at 1.4.0. Items are in build order after a docs PR and a data PR
     fills venues Royal leaves blank. Code/name disagreements go to
     `tools/shipmap/conflicts-HM.json`.
 33. **Age limits and age filters.** `Ages 18+` / `Ages 13-17` on event details and
-    the settings page, and two Filters: hide adults-only events (18+ and 21+) and
-    hide teen and kids-only events. Starred and booked events always go.
+    the settings page, and two Filters: **Hide Adult only events** (18+ and 21+) and
+    **Hide Teen and Kid only events**. Starred and booked events always go.
 34. **Arrive-early times.** `Arrive by 7:45p` on details, and a starred event's
     reminder counts down to that time.
 35. **Event notes.** What to bring and wear, waivers, sign-ups and meeting spots:
