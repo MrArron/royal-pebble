@@ -479,6 +479,12 @@ free text.
   `Hidden on watch`.
 - Finished events stay out, as today. Clearing the field goes back to the day
   view.
+- Built (1.3.5): while searching, the day chips, the FROM YOUR BOOKING card
+  and Booked activities step aside, as in the mockup; a clear button (×) sits
+  in the field. The count covers events, orders and entries together, and the
+  first 150 are shown. Tapping a found entry opens its form above the results.
+  `Hidden on watch` is a chip on any unstarred event in a hidden category.
+  Search also works before Royal publishes the schedule (entries and orders).
 
 ### 24.4 Build plan
 

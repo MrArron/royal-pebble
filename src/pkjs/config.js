@@ -141,6 +141,15 @@ var CSS = [
   'stroke-linecap:round}',
   '.search input{border:0;background:transparent;padding:0;min-height:0;height:48px;flex:1}',
   '.search input:focus{outline:none}',
+  '#evSearch::-webkit-search-cancel-button{display:none}',
+  '.sclear{width:44px;height:44px;flex:none;margin-right:-10px;background:transparent;display:flex;',
+  'align-items:center;justify-content:center}.search .sclear svg{width:18px;height:18px;stroke-width:2.4}',
+  '.sres{padding-top:8px}.scount{margin:0 4px 4px;font-size:13px;color:var(--on-surface-variant)}',
+  '.dhead{margin:0 4px;padding:10px 0 6px;font-size:13px;font-weight:700;letter-spacing:.4px;',
+  'color:var(--on-surface-variant)}',
+  '.ev-list button.ev{width:100%;background:none;color:inherit;text-align:left;min-height:56px}',
+  '.ev-list .t>.muted{display:block}.ev-list .t>.bchip{margin-right:6px}',
+  '.bchip.pe{background:var(--tertiary-container);color:var(--on-tertiary-container)}',
   '.daychips{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:10px 16px 12px}',
   '.daychips .fchip{flex:none}',
   '.mine{background:var(--tertiary-container);color:var(--on-tertiary-container);border-radius:28px;',
@@ -252,7 +261,7 @@ var CSS = [
   '.fstat .textbtn{flex:none;white-space:nowrap;padding:0 4px}',
   '.schip{min-height:28px;padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;line-height:1.3}',
   '.schip.edited{background:var(--warning-container);color:var(--on-warning-container)}',
-  '.schip.check,.schip.final{box-shadow:inset 0 0 0 1px var(--outline);color:var(--on-surface-variant)}',
+  '.schip.check,.schip.final,.schip.hid{box-shadow:inset 0 0 0 1px var(--outline);color:var(--on-surface-variant)}',
   '.wprev{background:#161D1D;color:#FFFFFF;border-radius:28px;padding:16px 20px;margin:0 0 12px}',
   '.wprev small{display:block;font-size:12px;font-weight:600;color:#9CF1F0;letter-spacing:.5px;margin-bottom:4px}',
   '.wprev b,.wprev span{display:block;font-family:"Roboto Condensed","Arial Narrow",sans-serif;font-weight:700}',
@@ -396,7 +405,9 @@ var BODY = [
   '<section class="screen" id="events">',
   '<label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/>',
   '<path d="M20 20l-4.5-4.5"/></svg><input type="search" id="evSearch" placeholder="Search events or venues" ',
-  'aria-label="Search events or venues" autocomplete="off"></label>',
+  'aria-label="Search events or venues" autocomplete="off"><button class="sclear" id="evClear" ',
+  'aria-label="Clear search" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/>',
+  '</svg></button></label>',
   '<div class="daychips" id="evDays"></div><div id="evOrders"></div><div id="evMine"></div><div id="evBooked"></div><div id="evList"></div>',
   '</section>',
   '<section class="screen" id="me">',
@@ -1791,9 +1802,12 @@ function pageMain(S, V, CL) {
   }
 
   // Outlined "Last chance" / "Only show" chip (§8.4), then the clash chip.
+  // Search finds events in hidden categories too (docs/DESIGN_PHASE3.md
+  // §24.3); unless starred, they're marked.
   function eventTags(e) {
     var fin = finals[e.key];
     var html = (fin ? '<span class="schip final">' + (fin === 2 ? 'Only show' : 'Last chance') + '</span>' : '') +
+      (hiddenOnWatch(e) && !isStarred(e.key) ? '<span class="schip hid">Hidden on watch</span>' : '') +
       clashChip(clashes.byKey[e.key]);
     return html ? '<span class="tags">' + html + '</span>' : '';
   }
@@ -1838,6 +1852,9 @@ function pageMain(S, V, CL) {
   }
 
   function renderEvDays() {
+    var q = !!searchText();
+    $('evDays').hidden = q;
+    $('evClear').hidden = !q;
     var lead = evDates.length ? [['starred', '&starf; Starred']] : [];
     if (toReserve || evDay === 'reserve') {
       lead.push(['reserve', 'To reserve &middot; ' + toReserve]);
@@ -1879,9 +1896,23 @@ function pageMain(S, V, CL) {
       (editing >= 0 ? '<button class="textbtn" data-act="peDelete">Delete entry</button>' : '') + '</div>';
   }
 
+  function searchText() {
+    return $('evSearch').value.trim().toLowerCase();
+  }
+
+  // A My entries row, a button that opens the entry's form.
+  function entryRow(p, i, withDate, chip) {
+    return '<button class="ev" data-act="peEdit" data-i="' + i + '"><span class="tm">' + shortClock(p.time) +
+      '</span><span class="t"><b>' + esc(p.title) + '</b><span class="muted">' +
+      [withDate ? esc(dayLabel(p.date)) : '', esc(p.venue), p.minutes ? p.minutes + ' min' : ''].filter(Boolean)
+        .join(' &middot; ') + '</span>' + (chip ? '<span class="bchip pe">My entry</span>' : '') +
+      clashTag(clashes.byEntry[i]) + '</span></button>';
+  }
+
   function renderMine() {
-    // Personal entries never need reserving, so the To reserve list leaves them out.
-    if (!evDates.length || evDay === 'reserve') {
+    // Personal entries never need reserving, so the To reserve list leaves them
+    // out. While searching they're in the results; only an open form stays here.
+    if (!evDates.length || evDay === 'reserve' || (searchText() && editing === null)) {
       $('evMine').innerHTML = '';
       return;
     }
@@ -1897,11 +1928,7 @@ function pageMain(S, V, CL) {
         return a.p.date < b.p.date ? -1 : a.p.date > b.p.date ? 1 : dayMinutes(a.p.time) - dayMinutes(b.p.time);
       });
       html += list.length ? list.map(function(x) {
-        return '<button class="ev" data-act="peEdit" data-i="' + x.i + '"><span class="tm">' + shortClock(x.p.time) +
-          '</span><span class="t"><b>' + esc(x.p.title) + '</b><span class="muted">' +
-          [evDates.indexOf(evDay) === -1 ? esc(dayLabel(x.p.date)) : '', esc(x.p.venue),
-           x.p.minutes ? x.p.minutes + ' min' : ''].filter(Boolean).join(' &middot; ') + '</span>' +
-          clashTag(clashes.byEntry[x.i]) + '</span></button>';
+        return entryRow(x.p, x.i, evDates.indexOf(evDay) === -1, false);
       }).join('') : '<p class="muted">Dinner reservations, shows you booked, meet-ups. They show on the watch ' +
         'with a reminder.</p>';
     }
@@ -1914,35 +1941,31 @@ function pageMain(S, V, CL) {
   // view, under Starred and in search results.
   var orders = S.orders || [];
 
+  function orderRow(o, withDate) {
+    var start = dayMinutes(o.time);
+    var line = [withDate ? dayLabel(o.date) : '',
+                o.meetBefore ? 'Meet ' + shortClock(hhmm((start - o.meetBefore + 1440) % 1440)) : '',
+                o.minutes ? 'ends ' + shortClock(hhmm((start + o.minutes) % 1440)) : '',
+                o.guests ? o.guests + (o.guests === 1 ? ' guest' : ' guests') : ''];
+    return '<div class="ev"><span class="tm">' + shortClock(o.time) + '</span><span class="t"><b>' +
+      esc(o.title) + '</b>' + (line.some(Boolean) ? '<span class="muted">' +
+      line.filter(Boolean).map(esc).join(' &middot; ') + '</span>' : '') +
+      '<span class="muted">Ashore &middot; ' + esc(o.port) + '</span>' +
+      '<span class="bchip">' + CHECK_SVG + 'Booked &middot; &starf; on the watch</span></span></div>';
+  }
+
+  // While searching, orders are in the results under their day (§24.3).
   function renderOrders() {
-    var q = $('evSearch').value.trim().toLowerCase();
-    var list = orders.filter(function(o) {
-      if (isFinished(o.date, o.time, o.minutes)) {
-        return false;
-      }
-      if (q) {
-        return (o.title + ' ' + o.port).toLowerCase().indexOf(q) !== -1;
-      }
-      return evDay === 'starred' || o.date === evDay;
+    var list = searchText() ? [] : orders.filter(function(o) {
+      return !isFinished(o.date, o.time, o.minutes) && (evDay === 'starred' || o.date === evDay);
     });
     if (!evDates.length || !list.length) {
       $('evOrders').innerHTML = '';
       return;
     }
-    var withDate = !!q || evDates.indexOf(evDay) === -1;
+    var withDate = evDates.indexOf(evDay) === -1;
     $('evOrders').innerHTML = '<div class="fyb"><div class="mine-head"><small>FROM YOUR BOOKING</small></div>' +
-      list.map(function(o) {
-        var start = dayMinutes(o.time);
-        var line = [withDate ? dayLabel(o.date) : '',
-                    o.meetBefore ? 'Meet ' + shortClock(hhmm((start - o.meetBefore + 1440) % 1440)) : '',
-                    o.minutes ? 'ends ' + shortClock(hhmm((start + o.minutes) % 1440)) : '',
-                    o.guests ? o.guests + (o.guests === 1 ? ' guest' : ' guests') : ''];
-        return '<div class="ev"><span class="tm">' + shortClock(o.time) + '</span><span class="t"><b>' +
-          esc(o.title) + '</b>' + (line.some(Boolean) ? '<span class="muted">' +
-          line.filter(Boolean).map(esc).join(' &middot; ') + '</span>' : '') +
-          '<span class="muted">Ashore &middot; ' + esc(o.port) + '</span>' +
-          '<span class="bchip">' + CHECK_SVG + 'Booked &middot; &starf; on the watch</span></span></div>';
-      }).join('') +
+      list.map(function(o) { return orderRow(o, withDate); }).join('') +
       '<p class="note">From the sync tool with login. Change it in the Royal app.</p></div>';
   }
 
@@ -1988,7 +2011,8 @@ function pageMain(S, V, CL) {
   }
 
   function renderBooked() {
-    var products = evDates.length && (evDay === 'starred' || evDates.indexOf(evDay) !== -1) ? paidProducts() : [];
+    var products = evDates.length && !searchText() && (evDay === 'starred' || evDates.indexOf(evDay) !== -1) ?
+      paidProducts() : [];
     if (!products.length) {
       $('evBooked').innerHTML = '';
       return;
@@ -2053,14 +2077,93 @@ function pageMain(S, V, CL) {
     renderEvents();
   });
 
+  // "DAY 3 · ST. THOMAS · MON MAR 8" over a day's search results.
+  function dayHead(date) {
+    var n = -1;
+    itinerary.forEach(function(d, i) {
+      if (d.date === date) {
+        n = i;
+      }
+    });
+    var dt = dateObj(date);
+    var bits = [DAYS[dt.getDay()] + ' ' + MONTHS[dt.getMonth()] + ' ' + dt.getDate()];
+    if (n !== -1) {
+      var it = effective(itinerary[n]);
+      bits.unshift('Day ' + (n + 1), it.type === 'CRUISING' ? 'Sea day' : shortPort(it.port) || typeName(it.type));
+    }
+    return bits.map(function(b) { return esc(b.toUpperCase()); }).join(' &middot; ');
+  }
+
+  // Search (docs/DESIGN_PHASE3.md §24.3): every day's events, the booked
+  // orders and My entries, grouped under day headers. Events in hidden
+  // categories are found too (marked in eventTags).
+  function searchResults(q) {
+    // A venue's name also finds events listed under its other names.
+    var qVenue = VS ? V.lookup(vTable, q) : null;
+    var items = [];
+    allEvents.forEach(function(e) {
+      if (e.finished === undefined) {
+        e.finished = isFinished(e.date, e.time, e.minutes);
+      }
+      // Paid sessions only once booked (Booked activities).
+      if (e.finished || (e.paid && !isStarred(e.key))) {
+        return;
+      }
+      if (e.search.indexOf(q) !== -1 || (qVenue !== null && vCanon[e.venue] === qVenue)) {
+        items.push({date: e.date, time: e.time, ev: e});
+      }
+    });
+    orders.forEach(function(o) {
+      if (!isFinished(o.date, o.time, o.minutes) && (o.title + ' ' + o.port).toLowerCase().indexOf(q) !== -1) {
+        items.push({date: o.date, time: o.time, order: o});
+      }
+    });
+    personal.forEach(function(p, i) {
+      if (!isFinished(p.date, p.time, p.minutes) && (p.title + ' ' + p.venue).toLowerCase().indexOf(q) !== -1) {
+        items.push({date: p.date, time: p.time, entry: p, i: i});
+      }
+    });
+    if (!items.length) {
+      return '<div class="card"><p class="muted">No events match.</p></div>';
+    }
+    items.sort(function(a, b) {
+      return a.date < b.date ? -1 : a.date > b.date ? 1 : dayMinutes(a.time) - dayMinutes(b.time);
+    });
+    var dates = [];
+    items.forEach(function(x) {
+      if (dates.indexOf(x.date) === -1) {
+        dates.push(x.date);
+      }
+    });
+    var html = '<p class="scount">' + items.length + (items.length === 1 ? ' event' : ' events') + ' on ' +
+      dates.length + (dates.length === 1 ? ' day' : ' days') + ' &middot; all days</p>';
+    var cur = null;
+    var shown = items.slice(0, 150);
+    shown.forEach(function(x) {
+      if (x.date !== cur) {
+        html += (cur === null ? '' : '</div>') + '<div class="dhead">' + dayHead(x.date) + '</div><div class="ev-list">';
+        cur = x.date;
+      }
+      html += x.ev ? eventRow(x.ev, false) : x.order ? orderRow(x.order, false) : entryRow(x.entry, x.i, false, true);
+    });
+    html += '</div>';
+    if (items.length > shown.length) {
+      html += '<p class="help">Showing the first ' + shown.length + ' of ' + items.length + '. Type more to narrow ' +
+        'it down.</p>';
+    }
+    return html;
+  }
+
   function renderEvList() {
-    var q = $('evSearch').value.trim().toLowerCase();
+    var q = searchText();
     var html = '';
     if (cruiseOver) {
       html = '<div class="card"><h2>Your cruise has ended</h2><p class="muted">Past days are hidden.</p></div>';
     } else if (!evDates.length) {
       html = '<div class="card hero"><h2>No cruise data yet</h2><p>Download your sailing on the Cruise screen to ' +
         'browse and star events.</p></div>';
+    } else if (q) {
+      html = '<div class="sres">' + searchResults(q) + '</div>';
     } else if (!allEvents.length) {
       html = '<div class="card"><h2>Schedule not published yet</h2><p class="muted">Royal usually publishes it ' +
         'about two weeks before sailing. Download again then. You can add your own entries now.</p></div>';
@@ -2072,19 +2175,13 @@ function pageMain(S, V, CL) {
         if (e.finished === undefined) {
           e.finished = isFinished(e.date, e.time, e.minutes);
         }
-        if (e.finished && e.date === evDay && !q) {
+        if (e.finished && e.date === evDay) {
           finishedCount++;
         }
         // Paid sessions only once booked (Booked activities).
         return !e.finished && (!e.paid || isStarred(e.key));
       });
-      if (q) {
-        // A venue's name also finds events listed under its other names.
-        var qVenue = VS ? V.lookup(vTable, q) : null;
-        list = upcoming.filter(function(e) {
-          return e.search.indexOf(q) !== -1 || (qVenue !== null && vCanon[e.venue] === qVenue);
-        });
-      } else if (evDay === 'starred') {
+      if (evDay === 'starred') {
         list = upcoming.filter(function(e) { return isStarred(e.key); });
       } else if (evDay === 'reserve') {
         // Marked rows stay until the next visit, so a mark can be undone.
@@ -2106,9 +2203,8 @@ function pageMain(S, V, CL) {
       }
       var shown = list.slice(0, 150);
       html = shown.length ? '<div class="ev-list">' + shown.map(function(e) {
-        return eventRow(e, !!q || evDates.indexOf(evDay) === -1);
-      }).join('') + '</div>' : '<div class="card"><p class="muted">' + (q ? 'No events match.' :
-        evDay === 'clashes' ? 'No clashes left.' :
+        return eventRow(e, evDates.indexOf(evDay) === -1);
+      }).join('') + '</div>' : '<div class="card"><p class="muted">' + (evDay === 'clashes' ? 'No clashes left.' :
         evDay === 'reserve' ? 'Every starred event that needs a reservation is marked reserved.' : evDay === 'starred' ? 'Nothing starred coming up. Tap the star next to an event, here or on the watch ' +
           '(hold Select).' : 'No events this day.') + '</p></div>';
       if (list.length > shown.length) {
@@ -2118,7 +2214,7 @@ function pageMain(S, V, CL) {
         html += '<p class="help">' + hiddenCount + ' more in categories hidden under Filters.</p>';
       }
       var lost = starChangeList().filter(function(c) { return c.kind !== 'moved'; });
-      if (evDay === 'starred' && !q && lost.length) {
+      if (evDay === 'starred' && lost.length) {
         html = '<div class="card warn"><h2>Changed since your last sync</h2>' + lost.map(function(c) {
           return '<div class="chg"><b>' + esc(c.title) + '</b><span>' + esc(starChangeText(c)) + '</span></div>';
         }).join('') + '</div>' + html;
@@ -2143,9 +2239,23 @@ function pageMain(S, V, CL) {
     renderEvList();
   }
 
+  // Searching hides the day chips (§24.3); clearing the field goes back to the
+  // day view. An open entry form is left alone so nothing typed is lost.
   $('evSearch').addEventListener('input', function() {
+    renderEvDays();
     renderOrders();
+    if (editing === null) {
+      renderMine();
+    }
+    renderBooked();
     renderEvList();
+  });
+
+  $('evClear').addEventListener('click', function(ev) {
+    ev.preventDefault();
+    $('evSearch').value = '';
+    renderEvents();
+    $('evSearch').focus();
   });
 
   $('evDays').addEventListener('click', function(ev) {
@@ -2159,6 +2269,14 @@ function pageMain(S, V, CL) {
   });
 
   $('evList').addEventListener('click', function(ev) {
+    var pb = ev.target.closest('[data-act=peEdit]');
+    if (pb) {
+      editing = +pb.getAttribute('data-i');
+      renderMine();
+      $('evMine').scrollIntoView();
+      $('peTitle').focus();
+      return;
+    }
     var vb = ev.target.closest('[data-act=venue]');
     if (vb) {
       openVenue(vCanon[vb.getAttribute('data-venue')] || vb.getAttribute('data-venue'), 'events', null);
@@ -2544,7 +2662,7 @@ function pageMain(S, V, CL) {
       case 'events':
         goTo('events');
         $('evSearch').value = v.name;
-        renderEvList();
+        renderEvents();
         return;
       default:
         return;

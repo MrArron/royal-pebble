@@ -407,6 +407,18 @@ test('Ready to sail card replaces the All set line, with the load and the page t
   assert.ok(html.indexOf('"dayLoad":[{"date":"2027-03-07"') !== -1, 'load embedded');
 });
 
+test('Events search: count line, day headers, My entries and Hidden on watch (§24.3)', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
+    personal: [{title: 'Trivia with friends', venue: 'Pub', date: '2027-03-07', time: '15:00', minutes: 0}]};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('id="evClear"') !== -1, 'clear button');
+  assert.ok(html.indexOf('&middot; all days') !== -1, 'count line');
+  assert.ok(html.indexOf('class="dhead"') !== -1, 'day headers');
+  assert.ok(html.indexOf('Hidden on watch') !== -1, 'hidden chip');
+  assert.ok(html.indexOf('>My entry<') !== -1, 'entry chip');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {
