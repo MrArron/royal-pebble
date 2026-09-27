@@ -17,7 +17,7 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '1.3.5';
+var APP_VERSION = '1.3.6';
 
 var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
@@ -422,6 +422,7 @@ var LAUNCH = ['by the system', 'by you', 'by the phone', 'by an alert', 'by the 
               'from a timeline pin', 'by a smartstrap'];
 var ALERT_KINDS = ['all-aboard warning', 'reminder', 'to-reserve alert'];
 var STORES = ['schedule', 'star queue', 'usage log', 'other'];
+var SYNC_OUTCOMES = {1: 'synced', 2: 'phone unreachable', 3: 'timed out, phone connected but no data'};
 var MSG_TYPES = {10: 'REQUEST', 12: 'DEMO_NEXT', 13: 'STAR_CHANGES', 14: 'SAVED', 15: 'DIR_REQUEST',
                  16: 'ROUTE_REQUEST', 18: 'LOG'};
 var APP_MSG = {2: 'SEND_TIMEOUT', 4: 'SEND_REJECTED', 8: 'NOT_CONNECTED', 16: 'APP_NOT_RUNNING',
@@ -488,7 +489,7 @@ function watchEntry(e, sailIso) {
   var x = e.x, a = e.a, b = e.b, c = e.c;
   switch (e.code) {
     case 1:
-      return {kind: 'open', detail: 'opened ' + (LAUNCH[x] || 'launch reason ' + x) + ', ' + battery(a) + ', ' +
+      return {kind: 'open', detail: 'opened ' + (x === 100 ? 'by the morning sync' : LAUNCH[x] || 'launch reason ' + x) + ', ' + battery(a) + ', ' +
               (c & 1 ? 'phone connected' : 'phone away') + (c & 2 ? ', schedule from watch storage' : '') +
               ', ' + kb(b) + ' free'};
     case 2:
@@ -529,6 +530,16 @@ function watchEntry(e, sailIso) {
               named(STATUS, a)};
     case 14:
       return {kind: 'onboard', detail: (x ? 'onboard set' : 'onboard undo') + ' at ' + cruiseText(b, sailIso)};
+    case 15:
+      if (x === 0) {
+        return {kind: 'sync', detail: b !== -1 ? 'morning sync set for ' + cruiseText(b, sailIso) :
+                'no morning sync set' + (a ? ': ' + named(STATUS, a) : '')};
+      }
+      if (x === 4) {
+        return {kind: 'sync', detail: 'morning sync with the app open: asked for data'};
+      }
+      return {kind: 'sync', detail: 'morning sync: ' + (SYNC_OUTCOMES[x] || 'outcome ' + x) + ' after ' + seconds(a) +
+              (c ? ', app stayed open' : ', app closed')};
     default:
       return {kind: 'watch', detail: 'entry ' + e.code + ': ' + [x, a, b, c].join(' ')};
   }

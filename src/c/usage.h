@@ -20,7 +20,20 @@ enum {
   USAGE_MSG_ERROR = 12,
   USAGE_STORAGE_ERROR = 13,
   USAGE_ONBOARD = 14,
+  USAGE_SYNC = 15,
 };
+
+// USAGE_SYNC's `x`: the morning sync (docs/DESIGN_PHASE3.md §25).
+enum {
+  SYNC_SCHEDULED = 0,    // b: when (NO_TIME none), a: the error when none
+  SYNC_DONE = 1,         // a: seconds; c: 1 the app stayed open
+  SYNC_NO_PHONE = 2,     // the phone never connected
+  SYNC_TIMED_OUT = 3,    // connected, but no slice came
+  SYNC_WHILE_OPEN = 4,   // fired with the app open: asked for a slice
+};
+
+// USAGE_OPEN's `x` for a launch by the morning sync's wakeup.
+#define USAGE_LAUNCH_SYNC 100
 
 // Screens, for USAGE_SCREEN and USAGE_BUTTON.
 typedef enum {

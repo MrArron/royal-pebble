@@ -17,6 +17,40 @@
 // Watch day we last asked the phone about, so a rollover asks only once.
 static int32_t s_requested_day = INT32_MIN;
 
+// Morning sync (docs/DESIGN_PHASE3.md §25): opened by its wakeup, the app shows
+// Home without a buzz, takes the slice the phone sends when the app starts, and
+// closes. It stays open when a notice came or the user left Home.
+#define SYNC_WAIT_MS 60000
+// After the slice: time for notices, the storage report and the usage log.
+#define SYNC_LINGER_MS 5000
+static bool s_syncing;
+static bool s_sync_phone;      // the phone was connected while waiting
+static uint8_t s_sync_outcome; // SYNC_SCHEDULED until the slice comes
+static time_t s_sync_since;
+static int16_t s_sync_secs;    // until the slice came, or the wait
+static AppTimer *s_sync_timer;
+
+bool sync_in_progress(void) { return s_syncing; }
+
+// Logs the outcome; returns whether the app should stay open.
+static bool sync_end(void) {
+  s_syncing = false;
+  if (s_sync_outcome == SYNC_SCHEDULED) {
+    s_sync_outcome = s_sync_phone ? SYNC_TIMED_OUT : SYNC_NO_PHONE;
+    s_sync_secs = (int16_t)(time(NULL) - s_sync_since);
+  }
+  bool stay = !home_window_is_top();
+  usage_add(USAGE_SYNC, s_sync_outcome, s_sync_secs, 0, stay ? 1 : 0);
+  return stay;
+}
+
+static void sync_close(void *context) {
+  s_sync_timer = NULL;
+  if (!sync_end()) {
+    window_stack_pop_all(false);
+  }
+}
+
 static void refresh_all(void) {
   home_window_refresh();
   today_window_refresh();
@@ -105,6 +139,11 @@ static void slice_received(void) {
   summary_check();
   stars_send();
   after_save();
+  if (s_syncing && s_sync_outcome == SYNC_SCHEDULED) {
+    s_sync_outcome = SYNC_DONE;
+    s_sync_secs = (int16_t)(time(NULL) - s_sync_since);
+    app_timer_reschedule(s_sync_timer, SYNC_LINGER_MS);
+  }
 }
 
 static void notices_received(const Notice *notices, int count) {
@@ -115,6 +154,7 @@ static void notices_received(const Notice *notices, int count) {
 static void app_connection_handler(bool connected) {
   usage_connection(connected);
   if (connected) {
+    s_sync_phone = true;
     stars_send();
   }
 }
@@ -135,6 +175,13 @@ static void log_alert_fired(int32_t at, bool opened_app) {
 }
 
 static void wakeup_handler(WakeupId id, int32_t cookie) {
+  if (cookie == SYNC_COOKIE) {
+    // Already open: the phone is likely near, so just ask it.
+    usage_add(USAGE_SYNC, SYNC_WHILE_OPEN, 0, 0, 0);
+    comm_request_slice();
+    alarms_schedule();
+    return;
+  }
   log_alert_fired(cookie, false);
   alert_window_push(cookie, false);
   alarms_schedule();
@@ -168,13 +215,19 @@ static void init(void) {
   WakeupId id;
   int32_t cookie;
   AppLaunchReason reason = launch_reason();
-  bool by_alert = reason == APP_LAUNCH_WAKEUP && wakeup_get_launch_event(&id, &cookie);
-  usage_opened(reason, stored);
+  bool by_wakeup = reason == APP_LAUNCH_WAKEUP && wakeup_get_launch_event(&id, &cookie);
+  bool by_alert = by_wakeup && cookie != SYNC_COOKIE;
+  usage_opened(by_wakeup && !by_alert ? (AppLaunchReason)USAGE_LAUNCH_SYNC : reason, stored);
   usage_check_missed(by_alert ? cookie : NO_TIME);
   home_window_push();
   if (by_alert) {
     log_alert_fired(cookie, true);
     alert_window_push(cookie, true);
+  } else if (by_wakeup) {
+    s_syncing = true;
+    s_sync_phone = connection_service_peek_pebble_app_connection();
+    s_sync_since = time(NULL);
+    s_sync_timer = app_timer_register(SYNC_WAIT_MS, sync_close, NULL);
   }
   // Only an open by the user uses up the day's summary, not an alert.
   summary_set_user_open(reason == APP_LAUNCH_USER || reason == APP_LAUNCH_QUICK_LAUNCH);
@@ -188,6 +241,10 @@ static void init(void) {
 }
 
 static void deinit(void) {
+  // Closed with Back before the sync was over.
+  if (s_syncing) {
+    sync_end();
+  }
   usage_deinit();
   tick_timer_service_unsubscribe();
   connection_service_unsubscribe();

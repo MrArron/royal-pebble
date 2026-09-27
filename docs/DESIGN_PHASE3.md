@@ -500,6 +500,29 @@ sync (`4:31a today`). The usage log records the outcome (brief). The sync wakeup
 shares slots with reminders and the all-aboard alerts, which now vary by
 warning period (§23.2).
 
+Built (1.3.6):
+
+- One of the 8 wakeup slots is kept for the sync; alerts get the other 7
+  (every launch schedules the next 7, as before). It's set for 04:30 ship
+  time, or 5 minutes later at a time while an alert is within a minute of it,
+  up to 04:55. When another app holds that minute (`E_RANGE`), it tries 5
+  minutes later too. With no free time, that morning has no sync.
+- It's set for mornings in the cruise: embark day (from the evening before)
+  through debark day. A watch whose slice is older than tomorrow keeps setting
+  it for up to 7 days, then stops until the phone is back.
+- Every schedule (each launch, slice, star change and alert) sets it again, so
+  the chain carries on after it fires.
+- The launch shows Home with no buzz. The phone sends the slice when the app
+  starts, as on any open. 5 seconds after it arrives (for notices, the
+  storage report and the usage log), the app closes. With no slice after 60
+  seconds it closes too: `timed out` if the phone was connected, `phone
+  unreachable` if not.
+- It stays open (no buzz) when a notice arrived, so the notice is there in the
+  morning (owner, 2026-09-27), or when the user left Home. Back on Home closes
+  it as usual.
+- Fired with the app already open, it only asks the phone for a slice.
+- Morning summary: a sync launch doesn't use it up (§8.1 in `DESIGN_V1_1.md`).
+
 ## 26. Confirm before removing a star
 
 **Status: first draft, not reviewed.** Mockups: `Watch26RemoveStarLight/Dark`.
