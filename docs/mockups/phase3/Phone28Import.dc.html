@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings page – import plan review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,600;8..144,700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<span style="font-size: 24px; font-weight: 600">Import plan</span>
+</div>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="background: #E9EFEE; border-radius: 28px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 15px"><b>9 differences</b> · same ship and sail date</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<button type="button" style="height: 40px; padding: 0 18px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">Accept all</button>
+<button type="button" style="height: 40px; padding: 0 18px; border: 0; border-radius: 20px; background: #CCE8E7; color: #051F1F; font: inherit; font-size: 14px; font-weight: 700">Review each</button>
+<button type="button" style="height: 40px; padding: 0 14px; border: 0; border-radius: 20px; background: transparent; color: #006A6A; font: inherit; font-size: 14px; font-weight: 600">Reject import</button>
+</div>
+<div style="font-size: 12px; color: #3F4948">Accept all adds their stars and uses their settings where they differ. It never unstars or deletes anything of yours.</div>
+</div>
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948; padding: 2px 4px 0">STARS</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div><div style="font-size: 15px; font-weight: 600">Hairspray</div><div style="font-size: 13px; color: #3F4948">Day 3 · 7:00p · They starred it</div></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px"><button type="button" style="height: 40px; border: 0; border-radius: 20px 4px 4px 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">✓ Add star</button><button type="button" style="height: 40px; border: 0; border-radius: 4px 20px 20px 4px; background: #E3E9E9; color: #161D1D; font: inherit; font-size: 14px; font-weight: 600">Skip</button></div>
+</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div><div style="font-size: 15px; font-weight: 600">Adults Only Comedy</div><div style="font-size: 13px; color: #3F4948">Day 4 · 9:00p · Only you starred it</div></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px"><button type="button" style="height: 40px; border: 0; border-radius: 20px 4px 4px 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">✓ Keep mine</button><button type="button" style="height: 40px; border: 0; border-radius: 4px 20px 20px 4px; background: #E3E9E9; color: #161D1D; font: inherit; font-size: 14px; font-weight: 600">Unstar</button></div>
+</div>
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948; padding: 2px 4px 0">DAY SETTINGS</div>
+<div style="background: #EFF5F4; border-radius: 20px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+<div><div style="font-size: 15px; font-weight: 600">All aboard, Day 5 · Cozumel</div><div style="font-size: 13px; color: #3F4948">Theirs 4:00p · yours 4:30p</div></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px"><button type="button" style="height: 40px; border: 0; border-radius: 20px 4px 4px 20px; background: #E3E9E9; color: #161D1D; font: inherit; font-size: 14px; font-weight: 600">Use theirs</button><button type="button" style="height: 40px; border: 0; border-radius: 4px 20px 20px 4px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">✓ Keep mine</button></div>
+</div>
+<div style="font-size: 13px; color: #3F4948; padding: 0 4px">6 more below</div>
+</div>
+<div style="flex-shrink: 0; padding: 12px 16px 20px; display: flex; gap: 8px; background: #E9EFEE">
+<button type="button" style="flex-grow: 1; height: 48px; border: 0; border-radius: 24px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Apply</button>
+<button type="button" style="height: 48px; padding: 0 22px; border: 0; border-radius: 24px; background: transparent; color: #006A6A; font: inherit; font-size: 15px; font-weight: 600">Cancel</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

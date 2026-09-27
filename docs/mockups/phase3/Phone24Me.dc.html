@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings page – Me tab with cabin fill</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400;8..144,600;8..144,700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #F4FBFA; color: #161D1D; font-family: 'Roboto Flex', system-ui, sans-serif; display: flex; flex-direction: column">
+<div style="height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px">
+<span style="font-size: 24px; font-weight: 600">Me</span>
+<button type="button" style="height: 40px; padding: 0 20px; border: 0; border-radius: 20px; background: #006A6A; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 600">Save</button>
+</div>
+<div style="flex-grow: 1; overflow: hidden; padding: 0 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="background: #E9EFEE; border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+<div style="font-size: 13px; font-weight: 700; letter-spacing: 0.4px; color: #3F4948">YOUR CABIN</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<label for="room" style="font-size: 13px; font-weight: 600; color: #3F4948">Stateroom</label>
+<input id="room" inputmode="numeric" value="6123" style="height: 52px; box-sizing: border-box; border: 2px solid #006A6A; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 20px; font-weight: 600; background: #FFFFFF; color: #161D1D">
+<div style="font-size: 12px; color: #3F4948">Digits only. Found on Harmony: deck and stairs filled in.</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; align-items: center"><label for="deck" style="font-size: 13px; font-weight: 600; color: #3F4948">Deck</label><span style="height: 24px; padding: 0 8px; border: 1px solid #6F7979; border-radius: 8px; font-size: 12px; font-weight: 600; color: #3F4948; line-height: 22px">From cabin table</span></div>
+<select id="deck" style="height: 52px; box-sizing: border-box; border: 1px solid #6F7979; border-radius: 12px; padding: 0 12px; font: inherit; font-size: 17px; background: #FFFFFF; color: #161D1D"><option>Deck 6</option></select>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; align-items: center"><label for="stairs" style="font-size: 13px; font-weight: 600; color: #3F4948">Nearest stairs</label><span style="height: 24px; padding: 0 8px; border-radius: 8px; background: #FFDDB5; color: #2A1700; font-size: 12px; font-weight: 700; line-height: 24px">Edited</span></div>
+<input id="stairs" value="Aft stairs" style="height: 52px; box-sizing: border-box; border: 1px solid #6F7979; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 17px; background: #FFFFFF; color: #161D1D">
+<div style="font-size: 12px; color: #3F4948">Your change is kept. Ship map says Fore stairs.</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; justify-content: space-between; align-items: center"><label for="muster" style="font-size: 13px; font-weight: 600; color: #3F4948">Muster station</label><span style="height: 24px; padding: 0 8px; border: 1px solid #6F7979; border-radius: 8px; font-size: 12px; font-weight: 600; color: #3F4948; line-height: 22px">From booking</span></div>
+<input id="muster" value="B4" style="height: 52px; box-sizing: border-box; border: 1px solid #6F7979; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 17px; background: #FFFFFF; color: #161D1D">
+</div>
+</div>
+<div style="background: #EFF5F4; border-radius: 28px; padding: 16px 18px; font-size: 14px; color: #3F4948">Walking distance, theme, reminders and Help follow as before.</div>
+</div>
+<div style="height: 80px; flex-shrink: 0; background: #E9EFEE; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; text-align: center; font-size: 12px; font-weight: 600; color: #3F4948">
+<span>Cruise</span><span>Days</span><span>Filters</span><span>Events</span><span style="color: #002020"><span style="display: inline-block; padding: 4px 16px; border-radius: 16px; background: #CCE8E7">Me</span></span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
