@@ -100,6 +100,9 @@ typedef struct {
   // cruise minutes, ship time; or NO_TIME with Royal's text; or neither.
   int32_t terminal;
   char terminal_text[24];
+  // Minutes before all-aboard of the first alert and the bar's red section
+  // (docs/DESIGN_PHASE3.md §23.2): 30, 60, 90 or 120.
+  uint8_t warn_period;
 } Day;
 
 // What the show to catch tomorrow is (Tomorrow.last_kind).

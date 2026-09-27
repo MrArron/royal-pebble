@@ -41,13 +41,20 @@ small `SHIP TIME` label. Band color by context, same in both themes:
 | sea accent ("NEXT" label, star) | `#0055AA` | `#00AAFF` |
 | list cursor background / text | `#0055AA` / `#FFFFFF` | `#00AAFF` / `#000000` |
 | NOW label | `#005555` | `#55FFAA` |
+| sea pale (time-ashore bar: excursion ahead) | `#55AAFF` | `#0055AA` |
+| warning red (bar: warning window passed) | `#AA0000` | `#FF5555` |
+| warning red pale (bar: warning window ahead) | `#FF5555` | `#AA0000` |
+| warning sign (beside the countdown) | `#FF0000` | `#FF0000` |
+
+The last four came with the port day card (`docs/DESIGN_PHASE3.md` §23.6).
 
 ### Screens
 
 - **Home, port day:** `ALL ABOARD IN` (port accent) → huge `2:13` → `1:00p ship ·
   2:00p local` (muted) → divider → next two items (`5:30p  Dinner · Main Dining`):
   upcoming starred events and personal entries first, topped up with the next
-  events, shown in time order.
+  events, shown in time order. Since Phase 3 the time-ashore bar takes the
+  next items' place (`docs/DESIGN_PHASE3.md` §23.3).
 - **Home, sea day:** star + `NEXT · IN 20 MIN` (sea accent) → event title large
   (wraps to two lines) → `12:00p · On Air` (muted) → `Deck 4 Aft · ↓2` (muted)
   with `Route ›` (sea accent) at its right end → divider → next two items.

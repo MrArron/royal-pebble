@@ -43,7 +43,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 
 | `msg_type` | Name | Other keys |
 |---|---|---|
-| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `terminal`, `terminal_text` (embark day's terminal arrival, below), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `button_hints` (0/1: Home's button hints at every open), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
+| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `terminal`, `terminal_text` (embark day's terminal arrival, below), `warn_period` (minutes before `all_aboard` of the first all-aboard alert and the bar's red section: 30, 60, 90 or 120; 30 when missing), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `button_hints` (0/1: Home's button hints at every open), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
 | 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_clock`, `info_sync` (display strings) |
 | 3 | EVENTS | `event_first` (index of the first event in this chunk), `events` (bytes, below) |
 | 5 | ALARMS | `alarm_first`, `alarms` (bytes, below) |
@@ -330,7 +330,8 @@ The watch saves what it needs without the phone after every slice and star chang
 above, spread over 256-byte values (keys 40 on):
 
 1. Header (59 bytes: sail date, settings bits (1 dark theme, 2 featured, 4
-   demo, 8 always show button hints), reminder lead, slice id, day
+   demo, 8 always show button hints, 16-32 the warning period as 30 minutes
+   times one more than their value, so older blobs read 30), reminder lead, slice id, day
    index and kind, all-aboard, local offset, cutoff, alert and event counts,
    the cruise's starred count, then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
    first start, starred and featured counts, last kind and to-reserve count,
@@ -607,9 +608,10 @@ didn't open the app are missed.
 Until real cruise data is saved in settings, the phone builds a demo bundle
 around the current time (`src/pkjs/demo.js`) and sends it like real data. Hold Up
 on the watch's Home for the next demo variant (port/sea × light/dark, then an
-embark day with a terminal arrival under an hour out). The dark
+embark day with a terminal arrival under an hour out). Port days arrive 3
+hours before the demo starts, so the time-ashore bar has a past stretch. The dark
 port day is an alert test: a starred event 17 minutes out and all-aboard 18
-minutes out, so a reminder buzzes about 2 minutes after switching and an
+minutes out (inside the warning period, so Home shows the warning sign), so a reminder buzzes about 2 minutes after switching and an
 all-aboard warning a minute later. A starred show at Royal Theater ends 7
 minutes before that event, so the reminder shows "From" directions. The demo's variant and start time are kept for
 12 hours so alert launches don't move it.
