@@ -42,6 +42,27 @@ test('APP_VERSION matches package.json', function() {
   assert.strictEqual(log.APP_VERSION, require('../../package.json').version);
 });
 
+test('the first run of a new version is logged once, with the old version', function() {
+  var storage = memStorage();
+  var l = makeTestLog(storage, '2027-03-06');
+  l.noteVersion();
+  l.noteVersion();
+  var p = l.pageState('H');
+  assert.strictEqual(p.count, 1);
+  assert.ok(/version  first run of \d+\.\d+\.\d+$/.test(p.text), p.text);
+  l.flush();
+
+  // A later build finds the older version saved.
+  var saved = JSON.parse(storage.data[log.STORE_LOG]);
+  saved.version = '1.2.9';
+  storage.data[log.STORE_LOG] = JSON.stringify(saved);
+  var l2 = makeTestLog(storage, '2027-03-06');
+  l2.noteVersion();
+  var lines = l2.pageState('H').text.split('\n');
+  assert.strictEqual(lines.length, 2);
+  assert.ok(/first run of \d+\.\d+\.\d+, was 1\.2\.9$/.test(lines[1]), lines[1]);
+});
+
 test('an entry renders with the timestamp, cruise day and ship time', function() {
   var l = makeTestLog(memStorage(), '2027-03-06');
   l.add('setting', 'theme: "light" -> "dark"');

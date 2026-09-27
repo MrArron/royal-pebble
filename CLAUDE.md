@@ -119,3 +119,11 @@ Read before making changes:
 
 Small, focused PRs. In the description say what changed, how it was tested (and on
 what: emulator, watch, live data), and anything left unverified.
+
+**App version `1.X.Y`:** X is the v1.1 phase in progress (Phase 3 = `1.3.0`), Y
+counts PRs within it. Every PR that changes the app (watch or phone code) bumps Y;
+a new phase sets X and resets Y to 0; docs-only PRs leave it alone. Change
+`package.json` `version` and `APP_VERSION` in `src/pkjs/log.js` together (a test
+checks). The usage log records "version  first run of ..." when a new version
+first starts, so a shared log shows where the build under test begins. The watch
+firmware keeps only `1.X`; the full number lives on the phone side.

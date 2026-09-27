@@ -828,6 +828,7 @@ Pebble.addEventListener('webviewclosed', guard('webviewclosed', function(e) {
 Pebble.addEventListener('ready', guard('ready', function() {
   console.log('Cruise Watch companion ready, phone time ' + new Date().toString());
   var w = watchInfo();
+  usage.noteVersion();
   usage.add('phone', 'companion started (watch app open, phone connected); watch ' +
             ((w && (w.model || w.platform)) || 'unknown') + (w && w.firmware ? ' firmware ' + w.firmware.major + '.' +
             w.firmware.minor + '.' + w.firmware.patch : '') + ', log ' + usage.count() + ' entries, ' +

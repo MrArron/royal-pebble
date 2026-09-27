@@ -17,9 +17,9 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '0.1.0';
+var APP_VERSION = '1.3.0';
 
-var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped}
+var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
 
 // Log text kept (rendered line lengths), oldest entries dropped first. The phone
@@ -153,6 +153,18 @@ function makeLog(storage, opts) {
     st.entries.splice(i, 0, e);
     st.chars += renderEntry(e).length + 1;
     trim(CAP_CHARS);
+    queueSave();
+  }
+
+  // Logs the first run of a new app version (a new build installed), so the
+  // log shows where each build's entries start. Call when the companion starts.
+  function noteVersion() {
+    var st = state();
+    if (st.version === APP_VERSION) {
+      return;
+    }
+    add('version', 'first run of ' + APP_VERSION + (st.version ? ', was ' + st.version : ''));
+    st.version = APP_VERSION;
     queueSave();
   }
 
@@ -377,6 +389,7 @@ function makeLog(storage, opts) {
   return {
     add: add,
     flush: flush,
+    noteVersion: noteVersion,
     applySettings: applySettings,
     pageState: pageState,
     isOn: function() { return state().on; },

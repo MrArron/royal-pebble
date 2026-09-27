@@ -258,6 +258,9 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
 - **Log header** on export: app and bundle versions, watch firmware, phone
   platform, ship code, a device label set on the Me tab (two people, two
   watches: each phone keeps its own log).
+- **Version marker (owner, 2026-09-27):** the first start of a new app version
+  logs "first run of 1.X.Y, was ...", so a log that spans several test builds
+  shows where the build under test begins. The version scheme is in `CLAUDE.md`.
 - **Titles and cabin details are included** (stateroom, muster station, spoken
   cabin numbers; owner, 2026-09-26), on condition that none of it ever reaches
   the GitHub repo. The log is personal cruise data: never commit it, any export
