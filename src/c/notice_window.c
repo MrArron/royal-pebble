@@ -208,8 +208,10 @@ void notice_window_show_pending(void) {
   }
   s_pending = false;
   static const uint32_t segments[] = {150, 100, 150, 100, 150};
-  vibes_enqueue_custom_pattern((VibePattern){.durations = segments,
-                                             .num_segments = ARRAY_LENGTH(segments)});
+  if (!sync_in_progress()) {
+    vibes_enqueue_custom_pattern((VibePattern){.durations = segments,
+                                               .num_segments = ARRAY_LENGTH(segments)});
+  }
   if (s_window) {
     window_set_background_color(s_window, g_theme->bg);
     layer_mark_dirty(s_layer);

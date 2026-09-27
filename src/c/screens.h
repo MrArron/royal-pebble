@@ -83,5 +83,9 @@ int toggle_star(int event_index);
 // does nothing) for other events.
 bool toggle_reserved(int event_index);
 
+// The silent morning sync is running (docs/DESIGN_PHASE3.md §25): notices show
+// without a buzz, and keep the app open.
+bool sync_in_progress(void);
+
 // Demo data only: asks the phone for the next demo (port/sea, light/dark).
 void demo_next(void);
