@@ -63,14 +63,33 @@ LOGIN_CLIENT = ("Basic ZzlTMDIzdDc0NDczWlVrOTA5Rk42OEYwYjRONjdQU09oOTJvMDR2TDBCU
                 "NjY4NDZrUFF2MTc1MDk3NW9vZEg1TTh6QzZUYTdtMzBrSDJRNzhsMldtVTUwRkNncXBQMTN3NzczNzdrN0lC")
 TIMEOUT = 30
 PAGE = 200
+# Largest bundle pasted into the settings page on a real phone (Android,
+# docs/PHASE4_PLAN.md "Paste-in size"); all arrived whole.
+PASTE_TESTED = 1024 * 1024
 # Product types kept for the schedule (docs/DATA_FORMAT.md): the free activities,
-# plus the shows you reserve (ENTERTAINMENT) and the paid classes and experiences
-# (ACTIVITIES), which come through with "reservation" set. Spa, dining and shore
-# excursions are booking slots, not events. Keep in step with src/pkjs/royal.js.
-SCHEDULE_TYPES = ("NON_REVENUE_SCHEDULABLE", "ENTERTAINMENT", "ACTIVITIES")
+# plus the shows you reserve (ENTERTAINMENT), the paid classes and experiences
+# (ACTIVITIES), which come through with "reservation" set, and the shore
+# excursions (SHOREX, paid). Spa and dining are booking slots, not events.
+# Everything from here to fetch_schedule: keep in step with src/pkjs/royal.js.
+SCHEDULE_TYPES = ("NON_REVENUE_SCHEDULABLE", "ENTERTAINMENT", "ACTIVITIES", "SHOREX")
+PAID_TYPES = ("ACTIVITIES", "SHOREX")
+EXCURSION_CAT = ["Shore excursions", ""]
 # Left out by title: NextCruise sales appointments (about 22 slots a day) would
 # push busy days past the watch's 160 events.
 SKIP_TITLES = re.compile(r"nextcruise", re.I)
+# Event details (docs/DATA_FORMAT.md, docs/PHASE4_PLAN.md items 2-7).
+# Notes left out: boilerplate, the fee (already `paid`) and long legal text.
+NOTE_SKIP = re.compile(r"(images are illustrative|this activity has a fee|fee applies)", re.I)
+NOTE_MAX = 120
+EARLY_MAX = 120   # arrive-early minutes from lead time or advisement text
+MEET_MAX = 240    # a shore excursion's meeting time before its start
+# Arrive-by wordings with a number. "Doors open 45 minutes prior" and "seats
+# released 10 minutes prior" are facts, not arrive-by times, so they stay notes.
+EARLY_TEXT = (re.compile(r"\barrive (\d+) minutes? early\b", re.I),
+              re.compile(r"\bsign up (?:at the venue )?(\d+) minutes? before\b", re.I))
+# Words a short description may add and still only restate the title.
+SHORT_FILLER = {"a", "an", "and", "at", "by", "competition", "for", "game", "in", "of", "on", "seminar", "show",
+                "the", "to", "with", "your"}
 
 
 class SyncError(Exception):
@@ -182,58 +201,209 @@ def product_price(p: dict):
     return int(v) if v == int(v) else v
 
 
+def restriction_age(text):
+    """Royal's age restriction wording -> [min, max] years, or None when it isn't
+    a limit ("Guests 16 and under must be accompanied" is a note)."""
+    s = clean(text).lower()
+    m = re.fullmatch(r"minimum (\d+) years? old", s)
+    if m:
+        return [int(m.group(1)), None]
+    m = re.fullmatch(r"maximum (\d+) years? old", s)
+    if m:
+        return [None, int(m.group(1))]
+    m = re.fullmatch(r"(\d+) to (\d+) years? old", s)
+    return [int(m.group(1)), int(m.group(2))] if m else None
+
+
+def text_age(text):
+    """Age patterns in a title or venue name: (18+), (13-17), (Ages 13-17),
+    (17 & Under), Adults-Only."""
+    s = clean(text).lower()
+    m = re.search(r"\((?:ages )?(\d+)\s*-\s*(\d+)\)", s)
+    if m:
+        return [int(m.group(1)), int(m.group(2))]
+    m = re.search(r"\((\d+)\+\)", s)
+    if m:
+        return [int(m.group(1)), None]
+    m = re.search(r"\((\d+) & under\)", s)
+    if m:
+        return [None, int(m.group(1))]
+    return [18, None] if re.search(r"\badults?[- ]only\b", s) else None
+
+
+def age_of(p: dict, title: str, venue: str):
+    """[min, max] years (either may be None) or None. From Royal's age
+    restrictions, its age experiences (ages/age18), then title and venue
+    patterns; if several apply, the tightest wins."""
+    found = [restriction_age(r.get("restrictionDisplayText")) for r in p.get("restrictions") or []
+             if r.get("restrictionType") == "age"]
+    for e in p.get("experiences") or []:
+        m = re.fullmatch(r"ages/age(\d+)", e.get("experienceID") or "")
+        if m:
+            found.append([int(m.group(1)), None])
+    found += [text_age(title), text_age(venue)]
+    lows = [a[0] for a in found if a and a[0] is not None]
+    highs = [a[1] for a in found if a and a[1] is not None]
+    if not lows and not highs:
+        return None
+    return [max(lows) if lows else None, min(highs) if highs else None]
+
+
+def clock_minutes(hhmm4):
+    """'0745' -> 465, or None."""
+    if not hhmm4 or not re.fullmatch(r"\d{4}", hhmm4):
+        return None
+    return int(hhmm4[0:2]) * 60 + int(hhmm4[2:4])
+
+
+def early_of(p: dict, o: dict):
+    """Minutes to arrive before an offering's start, or None. A shore excursion
+    uses its meeting time; others Royal's lead time, then a number in an
+    advisement."""
+    start = clock_minutes(o.get("offeringTime"))
+    if not start:  # untimed (00:00) or missing
+        return None
+    if (p.get("productType") or {}).get("productType") == "SHOREX":
+        meet = clock_minutes(o.get("meetingTime"))
+        return min(start - meet, MEET_MAX) if meet is not None and meet < start else None
+    lead = (p.get("productDuration") or {}).get("leadTimeInMinutes")
+    if isinstance(lead, (int, float)) and not isinstance(lead, bool) and lead == int(lead) and lead > 0:
+        return min(int(lead), EARLY_MAX)
+    for a in p.get("advisements") or []:
+        for pattern in EARLY_TEXT:
+            m = pattern.search(clean(a.get("advisementTitle")))
+            if m and int(m.group(1)) > 0:
+                return min(int(m.group(1)), EARLY_MAX)
+    return None
+
+
+def _words(text):
+    return {w[:-1] if len(w) > 3 and w.endswith("s") else w for w in re.findall(r"[a-z0-9]+", text.lower())}
+
+
+def says_more(short: str, title: str) -> bool:
+    """A short description worth keeping: after lowercasing and dropping
+    punctuation it has a word (beyond filler like "Seminar:") or a parenthesis
+    that the title lacks."""
+    return bool(_words(short) - _words(title) - SHORT_FILLER) or ("(" in short and "(" not in title)
+
+
+def notes_of(p: dict, title: str) -> list:
+    """[id, text] notes for a product: a short description that says more than
+    the title, restrictions that aren't age limits, advisements and the waiver
+    flag. Boilerplate, long text and repeated text are left out."""
+    out = []
+
+    def add(id_, text):
+        text = clean(text)
+        if text and len(text) <= NOTE_MAX and not NOTE_SKIP.match(text) \
+                and all(t.lower() != text.lower() for _, t in out):
+            out.append([clean(id_), text])
+
+    short = clean(p.get("productShortDescription"))
+    if short and says_more(short, title):
+        add("short", short)
+    for r in p.get("restrictions") or []:
+        if r.get("restrictionType") != "age" or restriction_age(r.get("restrictionDisplayText")) is None:
+            add(r.get("restrictionID"), r.get("restrictionDisplayText"))
+    for a in p.get("advisements") or []:
+        add(a.get("advisementID"), a.get("advisementTitle"))
+    if p.get("isWaiverRequired") and not any(re.search(r"waiver|disclaimer", t, re.I) for _, t in out):
+        add("waiver", "Signed waiver required")
+    return out
+
+
+def new_schedule_acc() -> dict:
+    return {"cats": [], "venues": [], "notes": [], "infos": [], "events": [], "seen": set()}
+
+
+def _index(table, value):
+    if value not in table:
+        table.append(value)
+    return table.index(value)
+
+
+def add_products(acc: dict, products: list) -> None:
+    """Adds one page of Royal's products to `acc` (new_schedule_acc)."""
+    for p in products:
+        kind = (p.get("productType") or {}).get("productType")
+        if kind not in SCHEDULE_TYPES or SKIP_TITLES.search(p.get("productTitle") or ""):
+            continue
+        parent, child = "Other", ""
+        pcs = p.get("productCategory") or []
+        if kind == "SHOREX":
+            parent, child = EXCURSION_CAT
+        elif pcs:
+            parent = clean(pcs[0].get("categoryName")).capitalize() or "Other"
+            kids = pcs[0].get("childCategory") or []
+            if kids:
+                items = kids[0].get("items")
+                items = items[0] if isinstance(items, list) and items else items
+                child = clean((items or {}).get("categoryName"))
+        cat = _index(acc["cats"], [parent, child])
+        loc = p.get("productLocation") or {}
+        venue_name = clean(loc.get("locationTitle"))
+        # By name and code, so a blank title with a code (VINT) is its own venue.
+        venue = _index(acc["venues"], [venue_name, loc.get("locationCode") or None])
+        title = clean(p.get("productTitle"))
+        minutes = (p.get("productDuration") or {}).get("durationInMinutes") or 0
+        # Paid classes, experiences and shore excursions: only the sessions the
+        # owner picks on the settings page reach the watch (docs/DATA_FORMAT.md).
+        paid = 1 if kind in PAID_TYPES else 0
+        price = product_price(p)
+        age = age_of(p, title, venue_name)
+        notes = [_index(acc["notes"], n) for n in notes_of(p, title)]
+        pid = clean(p.get("productID")) or None
+        for o in p.get("offering") or []:
+            d, t = o.get("offeringDate"), o.get("offeringTime")
+            if not d or len(d) != 8:
+                continue
+            date = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
+            time_ = f"{t[0:2]}:{t[2:4]}" if t and len(t) == 4 and t != "0000" else None  # 00:00 = untimed
+            key = (title, date, time_, venue)
+            if key in acc["seen"]:
+                continue
+            acc["seen"].add(key)
+            early = early_of(p, o)
+            info = _index(acc["infos"], [age, early, notes]) if age or early is not None or notes else None
+            acc["events"].append([title, venue, cat, date, time_,
+                                  int(o.get("offeringDurationInMinutes") or minutes),
+                                  1 if (p.get("isFeatured") or o.get("isFeatured")) else 0,
+                                  1 if p.get("isReservationRequired") else 0, paid, price, info, pid])
+
+
+def finish_schedule(acc: dict) -> dict:
+    events = sorted(acc["events"], key=lambda e: (e[3], e[4] or "", e[0]))
+    return {"published": bool(events), "cats": acc["cats"],
+            "venues": [v[0] for v in acc["venues"]], "venueCodes": [v[1] for v in acc["venues"]],
+            "notes": acc["notes"], "infos": acc["infos"],
+            "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation", "paid",
+                       "price", "info", "pid"],
+            "events": events}
+
+
+def schedule_summary(schedule: dict) -> str:
+    """'212 events (53 shore excursion sessions): 23 with age limits, 8 arrive
+    early, 95 with notes'."""
+    f = {name: i for i, name in enumerate(schedule["fields"])}
+    events, infos = schedule["events"], schedule.get("infos") or []
+    excursion = [i for i, c in enumerate(schedule["cats"]) if c == EXCURSION_CAT]
+    rows = [infos[e[f["info"]]] for e in events if e[f["info"]] is not None]
+    return (f"{len(events)} events ({sum(e[f['cat']] in excursion for e in events)} shore excursion sessions): "
+            f"{sum(1 for r in rows if r[0])} with age limits, {sum(1 for r in rows if r[1] is not None)} arrive early, "
+            f"{sum(1 for r in rows if r[2])} with notes")
+
+
 def fetch_schedule(sess, code: str, date8: str) -> dict:
-    cats, venues, events, seen = [], [], [], set()
-
-    def index(table, value):
-        if value not in table:
-            table.append(value)
-        return table.index(value)
-
+    acc = new_schedule_acc()
     for offset in range(0, 20000, PAGE):
         payload = get_json(sess, "GET", f"{API}/en/royal/web/v3/products",
                            params={"sailingID": code + date8, "limit": str(PAGE), "offset": str(offset)}).get("payload") or {}
         products = payload.get("products") or []
-        for p in products:
-            if ((p.get("productType") or {}).get("productType")) not in SCHEDULE_TYPES                     or SKIP_TITLES.search(p.get("productTitle") or ""):
-                continue
-            parent, child = "Other", ""
-            pcs = p.get("productCategory") or []
-            if pcs:
-                parent = clean(pcs[0].get("categoryName")).capitalize() or "Other"
-                kids = pcs[0].get("childCategory") or []
-                if kids:
-                    items = kids[0].get("items")
-                    items = items[0] if isinstance(items, list) and items else items
-                    child = clean((items or {}).get("categoryName"))
-            cat = index(cats, [parent, child])
-            venue = index(venues, clean((p.get("productLocation") or {}).get("locationTitle")))
-            title = clean(p.get("productTitle"))
-            minutes = (p.get("productDuration") or {}).get("durationInMinutes") or 0
-            # Paid classes and experiences: only the sessions the owner picks on the
-            # settings page reach the watch (docs/DATA_FORMAT.md).
-            paid = 1 if (p.get("productType") or {}).get("productType") == "ACTIVITIES" else 0
-            price = product_price(p)
-            for o in p.get("offering") or []:
-                d, t = o.get("offeringDate"), o.get("offeringTime")
-                if not d or len(d) != 8:
-                    continue
-                date = f"{d[0:4]}-{d[4:6]}-{d[6:8]}"
-                time_ = f"{t[0:2]}:{t[2:4]}" if t and len(t) == 4 and t != "0000" else None  # 00:00 = untimed
-                key = (title, date, time_, venue)
-                if key in seen:
-                    continue
-                seen.add(key)
-                events.append([title, venue, cat, date, time_, int(o.get("offeringDurationInMinutes") or minutes),
-                               1 if (p.get("isFeatured") or o.get("isFeatured")) else 0,
-                               1 if p.get("isReservationRequired") else 0, paid, price])
+        add_products(acc, products)
         if len(products) < PAGE:
             break
-    events.sort(key=lambda e: (e[3], e[4] or "", e[0]))
-    return {"published": bool(events), "cats": cats, "venues": venues,
-            "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation", "paid",
-                       "price"],
-            "events": events}
+    return finish_schedule(acc)
 
 
 # ---------------------------------------------------------------- logged-in data
@@ -478,7 +648,7 @@ def main(argv=None) -> int:
     print(f"  Itinerary: {len(itinerary)} days")
     schedule = fetch_schedule(sess, ship["shipCode"], date8)
     if schedule["published"]:
-        print(f"  Activity schedule: {len(schedule['events'])} events")
+        print(f"  Activity schedule: {schedule_summary(schedule)}")
     else:
         print("  Activity schedule: not published yet (usually about two weeks before sailing)")
 
@@ -509,6 +679,9 @@ def main(argv=None) -> int:
     text = json.dumps(bundle, separators=(",", ":"), ensure_ascii=True)
     out.write_text(text, encoding="utf-8")
     print(f"\nSaved {out.resolve()} ({len(text) / 1024:.0f} KB)")
+    if len(text) > PASTE_TESTED:
+        print("  Note: this is larger than any paste tested on a phone (1 MB). If pasting fails, "
+              "use the phone app's Download instead.")
     if "mine" in bundle:
         print("  Note: this file includes your stateroom. Don't post it publicly.")
     if not args.no_clipboard and copy_to_clipboard(out.resolve()):

@@ -252,6 +252,18 @@ test('login data (mine) is kept when the same sailing comes again without it', f
   assert.ok(!has(c.log(), /new sailing.*login data kept/));
 });
 
+test('a result the Pebble app already decoded is read as it is', function() {
+  // Android hands the result over decoded: a note holding "%41" must stay.
+  var b = usableCruise();
+  b.schedule.notes = [['kbyg/x', 'Save 50%41 today']];
+  var c = companion();
+  c.handlers.webviewclosed({response: JSON.stringify({action: 'save', bundle: b})});
+  assert.deepStrictEqual(JSON.parse(c.store.bundle).schedule.notes, b.schedule.notes);
+  // An encoded result (the emulator) still works.
+  b.schedule.notes = [['kbyg/x', 'Plain']];
+  assert.deepStrictEqual(paste(c, b).schedule.notes, b.schedule.notes);
+});
+
 test('script errors in a handler are logged, then thrown', function() {
   var c = companion();
   global.Pebble.openURL = function() { throw new Error('boom'); };

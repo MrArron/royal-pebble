@@ -45,7 +45,7 @@ test('itinerary parsing drops placeholder times', function() {
 });
 
 test('schedule parsing matches the sync tool rules', function() {
-  var acc = {cats: [], venues: [], events: [], seen: {}};
+  var acc = royal.newScheduleAcc();
   var n = royal.addProducts(acc, {payload: {products: [
     {productType: {productType: 'NON_REVENUE_SCHEDULABLE'}, productTitle: 'Ice Show®',
      productCategory: [{categoryName: 'ENTERTAINMENT', childCategory: [{items: [{categoryName: 'Shows'}]}]}],
@@ -80,14 +80,14 @@ test('schedule parsing matches the sync tool rules', function() {
   assert.deepStrictEqual(sched.cats, [['Entertainment', 'Shows'], ['Entertainment', ''], ['Activities', '']]);
   assert.deepStrictEqual(sched.venues, ['Studio B', 'AquaTheater', 'FlowRider']);
   assert.deepStrictEqual(sched.events, [
-    ['FlowRider Group Lesson', 2, 2, '2027-03-07', '09:00', 0, 0, 1, 1, 74],   // paid, with its price
-    ['Bingo', 0, 2, '2027-03-07', '10:00', 0, 0, 0, 0, null],
-    ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 1, 1, 0, null],
-    ['The Fine Line', 1, 1, '2027-03-07', '22:00', 50, 1, 1, 0, null],
-    ['Ice Show', 0, 0, '2027-03-08', null, 30, 1, 1, 0, null]
+    ['FlowRider Group Lesson', 2, 2, '2027-03-07', '09:00', 0, 0, 1, 1, 74, null, null],   // paid, with its price
+    ['Bingo', 0, 2, '2027-03-07', '10:00', 0, 0, 0, 0, null, null, null],
+    ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 1, 1, 0, null, null, null],
+    ['The Fine Line', 1, 1, '2027-03-07', '22:00', 50, 1, 1, 0, null, null, null],
+    ['Ice Show', 0, 0, '2027-03-08', null, 30, 1, 1, 0, null, null, null]
   ]);
-  assert.deepStrictEqual(sched.fields.slice(-2), ['paid', 'price']);
-  assert.strictEqual(royal.finishSchedule({cats: [], venues: [], events: [], seen: {}}).published, false);
+  assert.deepStrictEqual(sched.fields.slice(-4), ['paid', 'price', 'info', 'pid']);
+  assert.strictEqual(royal.finishSchedule(royal.newScheduleAcc()).published, false);
 });
 
 test('a downloaded bundle validates and slices', function() {

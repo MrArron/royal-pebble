@@ -33,6 +33,13 @@ you'll get the itinerary only, so run the tool again once the schedule appears.
 Once the full data (itinerary and schedule) is pasted in, Royal Pebble works at sea
 with no internet.
 
+**What's in the file:** the itinerary, and every activity, show, paid class and
+shore excursion session Royal lists, with each one's venue, age limits (such as
+18+ or teens 13-17), how early to arrive, and Royal's notes (bring your SeaPass,
+weather permitting, waiver needed and so on). The window prints a summary such as
+`262 events (53 shore excursion sessions): 26 with age limits, 73 arrive early,
+127 with notes`. It's the same data the phone's own Download gets.
+
 ### Include your booking (optional)
 
 Double-click **`sync-with-login.bat`** instead. After picking your sailing, it asks

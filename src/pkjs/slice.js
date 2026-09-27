@@ -14,6 +14,7 @@ var DAY_START = 4 * 60;
 var MINUTES_PER_DAY = 24 * 60;
 var MAX_EVENTS = 160;
 var NO_TIME = -1;
+var EXCURSIONS = 'Shore excursions';  // the category of Royal's shore excursion sessions
 
 var DAY_PORT = 0;
 var DAY_SEA = 1;
@@ -391,7 +392,9 @@ function categorySummary(bundle) {
   var byName = {};
   (sched.events || []).forEach(function(row) {
     var cat = eventCat(row[f.title], (sched.venues || [])[row[f.venue]], (sched.cats || [])[row[f.cat]] || []);
-    if (!cat || !cat[0]) {
+    // Shore excursions show only once picked, and picked ones are starred, so
+    // hiding them would do nothing (docs/DATA_FORMAT.md).
+    if (!cat || !cat[0] || cat[0] === EXCURSIONS) {
       return;
     }
     var c = byName[cat[0]] = byName[cat[0]] || {name: cat[0], n: 0, subs: {}};

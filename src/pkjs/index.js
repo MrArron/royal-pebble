@@ -695,11 +695,15 @@ function useBundle(bundle, how) {
 
 function settingsClosed(text) {
   var r;
+  // The Pebble app on Android hands the result over already URL-decoded
+  // (docs/PHASE4_PLAN.md), so read it as it is first: decoding again would
+  // change text holding a valid escape (a note with "%41"). Decode only when
+  // it doesn't parse.
   try {
-    r = JSON.parse(decodeURIComponent(text));
+    r = JSON.parse(text);
   } catch (e) {
     try {
-      r = JSON.parse(text);
+      r = JSON.parse(decodeURIComponent(text));
     } catch (e2) {
       console.log('Settings: could not read the result');
       usage.add('error', 'settings page result unreadable (' + text.length + ' chars)');
@@ -820,7 +824,7 @@ function settingsClosed(text) {
         save(STORE_STATUS, {error: err, at: nowStamp()});
         return;
       }
-      usage.add('download', 'done in ' + (Date.now() - started) + ' ms');
+      usage.add('download', 'done in ' + (Date.now() - started) + ' ms: ' + royal.scheduleSummary(bundle.schedule));
       useBundle(bundle, 'downloaded');
       sendSlice();
     });

@@ -243,6 +243,9 @@ test('Filters: subcategories, and starred events ignore filters', function() {
   assert.deepStrictEqual(titles(s), ['Scavenger Hunt', 'Watch Sale', 'Parade', 'Ice Show']);
   assert.strictEqual(s.alarms.filter(function(a) { return a.title === 'Watch Sale'; }).length, 1);
 
+  // Shore excursions show only once picked, so Filters leaves them out.
+  b.schedule.cats.push(['Shore excursions', '']);
+  b.schedule.events.push(['Kayak Adventure', 1, 3, '2027-03-07', '09:00', 90, 0, 1]);
   assert.deepStrictEqual(slice.categorySummary(b), [
     {name: 'Entertainment', n: 3, subs: [{name: '', n: 1}, {name: 'Shows', n: 2}]},
     {name: 'Shop', n: 1, subs: [{name: 'Retail', n: 1}]}

@@ -1,17 +1,23 @@
-"""Offline tests for the logged-in part of cruise_sync.py (no network).
+"""Offline tests for cruise_sync.py (no network).
 
 Run: py tools/cruise-sync/test_cruise_sync.py   (or python3 on Linux/WSL)
 
-Replies are trimmed copies of the shapes Royal returned in September 2026
-(docs/ROYAL_LOGIN_DATA.md), with made-up names, cabins and codes.
+Logged-in replies are trimmed copies of the shapes Royal returned in September
+2026 (docs/ROYAL_LOGIN_DATA.md), with made-up names, cabins and codes. The
+schedule fixture in test/fixtures is public products trimmed from a live
+Harmony pull; test/pkjs/royal.test.js checks the phone's producer against the
+same expected schedule.
 """
 
+import json
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cruise_sync as cs  # noqa: E402
+
+FIXTURES = Path(__file__).resolve().parents[2] / "test" / "fixtures"
 
 AUTH = {"Access-Token": "t", "account-id": "ACC1", "vds-id": "ACC1"}
 SHIP, DATE8 = "HM", "20270306"
@@ -128,6 +134,135 @@ class FetchMineTest(unittest.TestCase):
             REPLIES["/v1/profileBookings/enriched/ACC1"]["payload"]["profileBookings"][1]["stateroomNumber"] = "1234"
         with self.assertRaises(cs.SyncError):
             cs.fetch_mine(FakeSession(), AUTH, SHIP, "20270307")
+
+
+def product(**extra):
+    p = {"productType": {"productType": "NON_REVENUE_SCHEDULABLE"}, "productTitle": "Trivia", "productID": "P1",
+         "productLocation": {"locationCode": "ONAIR", "locationTitle": "On Air"},
+         "offering": [{"offeringDate": "20261002", "offeringTime": "1400", "offeringDurationInMinutes": "45"}]}
+    p.update(extra)
+    return p
+
+
+def schedule(products, page=None):
+    acc = cs.new_schedule_acc()
+    page = page or len(products)
+    for i in range(0, len(products), page):
+        cs.add_products(acc, products[i:i + page])
+    return cs.finish_schedule(acc)
+
+
+class ScheduleTest(unittest.TestCase):
+    """Keep in step with test/pkjs/royal.test.js."""
+
+    def test_shared_fixture(self):
+        products = json.loads((FIXTURES / "products-HM-sample.json").read_text(encoding="utf-8"))
+        expected = json.loads((FIXTURES / "expected-schedule.json").read_text(encoding="utf-8"))
+        self.assertEqual(schedule(products), expected)
+        self.assertEqual(schedule(products, 7), expected)
+        self.assertEqual(cs.schedule_summary(expected),
+                         "51 events (9 shore excursion sessions): 18 with age limits, 23 arrive early, 25 with notes")
+
+    def test_restriction_age(self):
+        self.assertEqual(cs.restriction_age("Minimum 18 years old"), [18, None])
+        self.assertEqual(cs.restriction_age("Maximum 17 years old"), [None, 17])
+        self.assertEqual(cs.restriction_age("13 to 17 years old"), [13, 17])
+        self.assertIsNone(cs.restriction_age("Guests 16 and under must be accompanied by a parent or guardian"))
+        self.assertIsNone(cs.restriction_age("Children 12 years old and under must be  supervised by parent"))
+
+    def test_text_age(self):
+        for text, want in (("After-Party With Resident DJ (18+)", [18, None]), ("Karaoke: Teens (13-17)", [13, 17]),
+                           ("Social100 (Ages 13-17)", [13, 17]), ("Junior Cruisers Curfew (17 & Under)", [None, 17]),
+                           ("Hideaway Beach (Adults-Only) — Day Pass", [18, None]),
+                           ('Family Movie: "Shrek" (PG)', None), ("Adventure Ocean Theater", None), ("", None)):
+            self.assertEqual(cs.text_age(text), want, text)
+
+    def test_age_of(self):
+        teen = product(restrictions=[{"restrictionType": "age", "restrictionDisplayText": "Minimum 13 years old"},
+                                     {"restrictionType": "age", "restrictionDisplayText": "Maximum 17 years old"}])
+        self.assertEqual(cs.age_of(teen, "Teen Open House (13-17)", "Social100 (Ages 13-17)"), [13, 17])
+        self.assertEqual(cs.age_of(product(experiences=[{"experienceID": "ages/age18"}]), "Quest", ""), [18, None])
+        adult = product(restrictions=[{"restrictionType": "age", "restrictionDisplayText": "Minimum 18 years old"}])
+        self.assertEqual(cs.age_of(adult, "Show (21+)", ""), [21, None])
+        family = product(experiences=[{"experienceID": "ages/funforall"}], advisements=[
+            {"advisementID": "kbyg/general/over21", "advisementTitle": "Guests purchasing alcohol must be of legal age"}])
+        self.assertIsNone(cs.age_of(family, "Family Bingo", "Adventure Ocean Theater"))
+
+    def test_early_of(self):
+        o = {"offeringTime": "2000"}
+        a15 = [{"advisementTitle": "Arrive 15 minutes early"}]
+        self.assertEqual(cs.early_of(product(productDuration={"leadTimeInMinutes": 10}, advisements=a15), o), 10)
+        self.assertEqual(cs.early_of(product(productDuration={"leadTimeInMinutes": 0}, advisements=a15), o), 15)
+        self.assertEqual(cs.early_of(product(productDuration={"leadTimeInMinutes": 200}), o), 120)
+        self.assertEqual(cs.early_of(product(advisements=[{"advisementTitle": "Sign up at the venue 15 minutes "
+                                                                              "before the activity starts"}]), o), 15)
+        self.assertIsNone(cs.early_of(product(advisements=[
+            {"advisementTitle": "Doors are open for guests with reservations 45 minutes prior to show time."},
+            {"advisementTitle": "Early arrival is recommended"}]), o))
+        self.assertIsNone(cs.early_of(product(productDuration={"leadTimeInMinutes": 10}), {"offeringTime": "0000"}))
+
+    def test_early_of_excursion(self):
+        p = product(productType={"productType": "SHOREX"}, productDuration={"leadTimeInMinutes": 30})
+        self.assertEqual(cs.early_of(p, {"offeringTime": "0900", "meetingTime": "0845"}), 15)
+        self.assertEqual(cs.early_of(p, {"offeringTime": "1400", "meetingTime": "0700"}), 240)
+        for meet in ("0900", None):
+            self.assertIsNone(cs.early_of(p, {"offeringTime": "0900", "meetingTime": meet}))
+        self.assertIsNone(cs.early_of(p, {"offeringTime": "0000", "meetingTime": "2345"}))
+
+    def test_notes_of(self):
+        notes = cs.notes_of(product(
+            productShortDescription="Trivia",
+            restrictions=[{"restrictionType": "age", "restrictionID": "age/min",
+                           "restrictionDisplayText": "Minimum 18 years old"},
+                          {"restrictionType": "age", "restrictionID": "age/13guardian",
+                           "restrictionDisplayText": "Children 12 years old and under must be  supervised"}],
+            advisements=[{"advisementID": "kbyg/general/IMAGEILLUS", "advisementTitle": "Images are illustrative only"},
+                         {"advisementID": "kbyg/general/FEE", "advisementTitle": "This activity has a fee"},
+                         {"advisementID": "kbyg/fee-applies", "advisementTitle": "Fee applies"},
+                         {"advisementID": "legal", "advisementTitle": "x" * 121},
+                         {"advisementID": "kbyg/Children12",
+                          "advisementTitle": "Children 12 years old and under must be supervised"},
+                         {"advisementID": "kbyg/seapass", "advisementTitle": "Please bring your SeaPass®"}],
+            isWaiverRequired=True), "Trivia")
+        self.assertEqual(notes, [["age/13guardian", "Children 12 years old and under must be supervised"],
+                                 ["kbyg/seapass", "Please bring your SeaPass"],
+                                 ["waiver", "Signed waiver required"]])
+        disclaimer = [["kbyg/flowrdr/WARNDISCLAIM", "Signed warning disclaimer required"]]
+        self.assertEqual(cs.notes_of(product(advisements=[
+            {"advisementID": disclaimer[0][0], "advisementTitle": disclaimer[0][1]}], isWaiverRequired=True),
+            "Trivia"), disclaimer)
+
+    def test_short_descriptions(self):
+        def kept(title, text):
+            return len(cs.notes_of(product(productShortDescription=text), title)) == 1
+        self.assertTrue(kept("Dance Fitness", "Dance Fitness with your Cruise Director's Staff (Meet by the Car)"))
+        self.assertTrue(kept("Effective Fat Burning", "Seminar: Burn Fat Fast"))
+        self.assertTrue(kept("World’s Sexiest Man Competition: Adults (18+)", "World's Sexiest Man Competition:Sign Ups"))
+        for title, text in (("Celebrity Heads", "Game: Celebrity Heads"),
+                            ("Game Show: The Crazy Quest- Adults (18+)", "Adult Game Show: The Quest"),
+                            ("Guess the Weight of the Sculpture", "Guess the Weight of the Sculpture Competition"),
+                            ("Knockout Basketball Competition", "Basketball Knockout Competition"),
+                            ("Pure-Form Pilates", "Pure Form Pilates")):
+            self.assertFalse(kept(title, text), text)
+
+    def test_old_shaped_product(self):
+        s = schedule([product(productID=None, productLocation={"locationTitle": "On Air"})])
+        self.assertEqual((s["venues"], s["venueCodes"], s["notes"], s["infos"]), (["On Air"], [None], [], []))
+        self.assertEqual(s["events"][0][10:], [None, None])
+
+    def test_venue_codes_and_excursions(self):
+        s = schedule([
+            product(productLocation={"locationCode": "VINT", "locationTitle": None}),
+            product(productTitle="Bingo", productLocation={"locationCode": None, "locationTitle": ""}),
+            product(productTitle="Kayak", productType={"productType": "SHOREX"},
+                    productCategory=[{"categoryName": "shorex", "childCategory": [{"items": {"categoryName": "PCC"}}]}],
+                    productLocation={"locationCode": "PCC", "locationTitle": "Perfect Day CocoCay"},
+                    offering=[{"offeringDate": "20261002", "offeringTime": "0900", "meetingTime": "0845"}])])
+        self.assertEqual(s["venues"], ["", "", "Perfect Day CocoCay"])
+        self.assertEqual(s["venueCodes"], ["VINT", None, "PCC"])
+        self.assertEqual(s["cats"][s["events"][0][2]], ["Shore excursions", ""])
+        self.assertEqual(s["events"][0][8:11], [1, None, 0])
+        self.assertEqual(s["infos"][0], [None, 15, []])
 
 
 if __name__ == "__main__":
