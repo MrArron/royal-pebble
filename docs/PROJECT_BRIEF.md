@@ -227,7 +227,7 @@ branch and PR; once the sailing gets close, it goes ahead of remaining feature w
 
 - **Where:** the log lives in the phone companion's storage. The watch reports its
   events to the phone in a new watch → phone message and queues them in its own
-  storage while the phone is away (about 200 entries). Every entry has a real
+  storage while the phone is away (up to 800 entries). Every entry has a real
   timestamp and the ship time. Fully offline.
 - **Detail:** while the phone is connected, every button press is logged. Screen
   views with time on screen and a scroll count per screen are logged all the
