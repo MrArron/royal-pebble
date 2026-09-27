@@ -139,3 +139,58 @@ text. One compact JSON object, ASCII only.
   `arrive`.
 - Text has been simplified to ASCII (straight quotes, no ® ™ ℠).
 - Bump `v` for any breaking change and update both producers.
+
+## Shared plan (Share my plan) — v1
+
+Not part of the bundle: the text the settings page's **Share plan** copies
+(`docs/DESIGN_PHASE3.md` §28) and **Import plan** reads on another phone. Only
+the phone companion produces it (`src/pkjs/share.js`); the sync tool doesn't.
+It holds the user's own choices, so treat it like a bundle: no shared plans
+in the repo, and made-up cabin numbers in tests.
+
+The message has three lines:
+
+```
+Royal Pebble plan · Harmony · sails 3 Oct 2026 · 14 stars
+To import it, open Royal Pebble's settings, tap Import plan under Share my plan and paste this whole message.
+RPPLAN1:<base64>:END
+```
+
+The first two are for people and ignored on import. `RPPLAN` is followed by the
+format version (`1`), a colon, the plan as UTF-8 JSON in standard base64, and
+`:END`. Import finds `RPPLAN` anywhere in the pasted text and drops whitespace
+inside the code, since chat apps may wrap long lines. A missing `:END` means
+the paste was cut short. A version above the reader's asks the user to update.
+
+```json
+{
+  "v": 1,
+  "ship": "HM",
+  "sail": "2026-10-03",
+  "stars": ["Hairspray|2026-10-05|19:00|Royal Theater", "R|Hairspray|2026-10-05|19:00|Royal Theater"],
+  "personal": [{"title": "Dinner", "venue": "Chops Grille", "date": "2026-10-04", "time": "19:30", "minutes": 90}],
+  "days": {"2026-10-07": {"allAboard": "16:00", "warn": 60}, "2026-10-08": {"edit": {"type": "CRUISING"}}},
+  "venues": {"Chops Grille": {"decks": [8], "position": "aft"}},
+  "cabin": {"stateroom": "1234", "deck": "Deck 12", "stairs": "Forward stairs", "muster": "A1"}
+}
+```
+
+| Field | Content |
+|---|---|
+| `v` | Plan format version, `1`. |
+| `ship`, `sail` | Ship code and sail date. Import only works onto the same sailing. |
+| `stars` | Sorted star keys (`title\|date\|time\|venue`, as in the bundle rules above). A Reserved mark (`R\|` + key) is included only while its event is starred. |
+| `personal` | Personal entries, as the phone stores them. Left out when empty. |
+| `days` | Per-day settings by date, only the fields set: `allAboard`, `shift`, `buffer`, `warn`, `offset`, `edit` (the same values as the phone's day settings). Left out when empty. |
+| `venues` | The sender's venue fixes for this ship, as the phone stores them. Left out when empty. |
+| `cabin` | Only when "Include cabin details" is ticked, and only the fields that are set. |
+
+On import the receiver's page compares the plan with its own state
+(`share.js` `diff`): stars differ both ways; personal entries, day-setting
+fields, venue fixes and cabin fields are listed only where the sender has a
+value that differs. **Accept all** takes the sender's side of every
+difference except stars only the receiver has. It never unstars or removes
+anything. The phone cleans every imported value the same way as any other
+settings page result (`cleanPersonal`, `cleanDaySettings`, `cleanOverrides`).
+There is no split into parts: even a very full plan stays far below the
+384 KB the usage log's parts use.

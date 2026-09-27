@@ -18,6 +18,7 @@
 var venues = require('./venues');
 var slice = require('./slice');
 var cabins = require('./cabins');
+var share = require('./share');
 var log = require('./log');
 
 var CSS = [
@@ -272,7 +273,8 @@ var CSS = [
   '.wprev .note{font-family:inherit;font-weight:400;font-size:13px}',
   '.editbar{display:none;position:fixed;left:0;right:0;bottom:0;align-items:center;justify-content:space-between;',
   'gap:8px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--surface-container)}',
-  'body.editing nav{display:none}body.editing .editbar{display:flex}',
+  'body.editing nav{display:none}body.editing #vBar{display:flex}',
+  'body.importing nav{display:none}body.importing #pBar{display:flex}',
   '.pill.big{min-height:56px;padding:0 22px;border-radius:28px;display:flex;align-items:center;gap:8px}',
   '.pill.big svg{width:20px;height:20px;stroke-width:2.4}',
   '.vlink{background:none;padding:0;font:inherit;color:var(--primary);font-weight:600;text-align:left}',
@@ -292,7 +294,17 @@ var CSS = [
   '.mc .src{margin:8px 0 0;font-size:14px}.mc .src b{font-weight:600}',
   '.mc .seg.ans button{font-size:13px;padding:0 4px}',
   '.mcw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.mcw select{width:auto;min-width:96px}',
-  '.mcw .seg.small{margin:0}'
+  '.mcw .seg.small{margin:0}',
+  '.shead{font-size:13px;font-weight:700;letter-spacing:.4px;color:var(--on-surface-variant)}',
+  '.sbox{background:var(--surface);border-radius:16px;padding:12px 14px;margin-top:14px;font-size:14px}',
+  '.sbox div{margin:2px 0}',
+  '.check{display:flex;align-items:flex-start;gap:12px;min-height:44px;margin:14px 0 0;font-size:15px;font-weight:400;',
+  'color:var(--on-surface)}.check input{width:20px;height:20px;min-height:0;margin:2px 0 0;padding:0;flex:none;',
+  'accent-color:var(--primary)}.check small{display:block;font-size:13px;color:var(--on-surface-variant)}',
+  '.irow{padding:12px 0;border-top:1px solid rgba(0,0,0,.08)}.irow b{display:block;font-weight:600}',
+  '.irow>span{display:block;font-size:14px;color:var(--on-surface-variant);margin-bottom:8px}',
+  '.irow .seg.small button[aria-pressed=true]:before{content:"\\2713  "}',
+  '.igroup{margin:18px 0 0}'
 ].join('');
 
 var BACK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
@@ -377,6 +389,15 @@ var BODY = [
   '<main>',
   '<section class="screen active" id="cruise">',
   '<div id="status"></div>',
+  '<div class="card" id="shareCard" hidden><div class="shead">SHARE MY PLAN</div>',
+  '<p class="muted">Send your plan to a travel companion as text. They import it on their phone. ',
+  'Also a backup of your choices.</p>',
+  '<div class="sbox" id="shareCounts"></div>',
+  '<label class="check"><input type="checkbox" id="shareCabin"><span>Include cabin details (we share a cabin)',
+  '<small>Stateroom, deck, stairs and muster station</small></span></label>',
+  '<div class="actions"><button class="pill filled" id="shareCopy">Share plan</button>',
+  '<button class="pill tonal" id="shareImport">Import plan</button></div>',
+  '<p class="help" id="shareCopied" role="status"></p></div>',
   '<div class="card"><h2>Download your sailing</h2>',
   '<p class="muted">Download before you sail, while you have internet. Royal usually publishes the ',
   'activity schedule about two weeks before sailing; download again then. Once your sailing and its ',
@@ -487,9 +508,18 @@ var BODY = [
   '<button data-v="area">Area</button><button data-v="deck">Deck</button></div></div></div>',
   '<div id="vList"></div></section>',
   '<section class="screen" id="venueEdit"><div id="vEdit"></div></section>',
+  '<section class="screen" id="plan">',
+  '<div class="card"><h2>Paste their plan</h2>',
+  '<p class="muted">Paste the whole message you were sent. Nothing changes until you choose below.</p>',
+  '<label for="planPaste">Their message</label>',
+  '<textarea id="planPaste" placeholder="Royal Pebble plan &middot; ..." spellcheck="false" autocapitalize="off" ',
+  'autocomplete="off"></textarea><p class="help" id="planHelp" role="status"></p></div>',
+  '<div id="planSum"></div><div id="planList"></div></section>',
   '</main>',
   '<button class="fab" id="vFab" hidden></button>',
-  '<div class="editbar"><button class="textbtn pad" id="vResetAll">Reset all to built-in</button>',
+  '<div class="editbar" id="pBar"><button class="textbtn pad" id="planCancel">Cancel</button>',
+  '<button class="pill filled big" id="planApply">Apply</button></div>',
+  '<div class="editbar" id="vBar"><button class="textbtn pad" id="vResetAll">Reset all to built-in</button>',
   '<button class="pill filled big" id="vNext"></button></div>',
   '<nav><button class="active" data-screen="cruise"><span class="ind"><svg viewBox="0 0 24 24"><path d="M20 21c-1.4 0-2.8-.5-4-1.3',
   '-2.4 1.7-5.6 1.7-8 0-1.2.8-2.6 1.3-4 1.3H2v2h2c1.4 0 2.7-.3 4-1 2.5 1.3 5.5 1.3 8 0 1.3.7 2.6 1 4 1h2v-2h-2zM3.9 19H4',
@@ -605,7 +635,7 @@ function splitLog(header, text, max) {
 
 // Runs inside the page. `S` is the state embedded by buildPage(); `V` is
 // venues.js venueLib().
-function pageMain(S, V, CL) {
+function pageMain(S, V, CL, SH) {
   var $ = function(id) { return document.getElementById(id); };
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -643,7 +673,8 @@ function pageMain(S, V, CL) {
     });
     $('title').textContent = title;
     $('subtitle').textContent = sub || '';
-    $('back').hidden = id !== 'venues' && id !== 'venueEdit' && id !== 'help';
+    $('back').hidden = id !== 'venues' && id !== 'venueEdit' && id !== 'help' && id !== 'plan';
+    document.body.classList.remove('importing');
     document.body.classList.toggle('editing', id === 'venueEdit');
     $('vFab').hidden = true;  // renderVenues() shows it
     window.scrollTo(0, 0);
@@ -658,6 +689,7 @@ function pageMain(S, V, CL) {
       } else if (id === 'cruise') {
         renderStatus();  // Ready to sail picks up the Me and Filters tabs
         renderVenueCard();
+        renderShare();
       }
     });
   });
@@ -3186,6 +3218,305 @@ function pageMain(S, V, CL) {
     return {ship: MC.ship, clear: mcClear, notes: notes, added: mcAdded.filter(Boolean).map(pick)};
   }
 
+  // ---- Cruise > Share my plan (docs/DESIGN_PHASE3.md §28). The Pebble app's
+  // WebView can't open Android's share sheet (probe, 2026-09-26), so Share plan
+  // copies the text and Import plan takes it pasted. Import changes this page's
+  // state like any other edit and saves it with Apply or Accept all.
+  var imported = null;   // counts for the usage log, once a plan is applied
+  var planItems = [];    // share.js diff() items of the pasted plan
+  var planChoices = [];  // 'theirs' or 'mine' per item, for Review each
+
+  function myPlan() {
+    var stars = {};
+    Object.keys(savedStars).concat(Object.keys(starChanges)).forEach(function(k) {
+      if (isStarred(k)) {
+        stars[k] = true;
+      }
+    });
+    var cabin = {};
+    ME_FIELDS.forEach(function(f) { cabin[f] = $(f).value.trim(); });
+    return {ship: S.cruise.shipCode, sailDate: S.cruise.sailDate, stars: stars, personal: personal, days: days,
+            venues: VS ? vOver : {}, cabin: cabin};
+  }
+
+  function plural(n, one, many) {
+    return '<b>' + n + '</b> ' + (n === 1 ? one : many);
+  }
+
+  function renderShare() {
+    $('shareCard').hidden = !S.cruise;
+    if (!S.cruise) {
+      return;
+    }
+    var c = SH.counts(SH.build(myPlan(), false));
+    $('shareCounts').innerHTML = '<div>' + plural(c.stars, 'starred event', 'starred events') + '</div>' +
+      '<div>' + plural(c.personal, 'personal entry', 'personal entries') + '</div>' +
+      '<div>' + plural(c.daySettings, 'day with all-aboard or ship-time changes',
+                       'days with all-aboard or ship-time changes') + '</div>' +
+      '<div>' + plural(c.itinerary, 'itinerary edit', 'itinerary edits') + ' &middot; ' +
+      plural(c.venues, 'venue fix', 'venue fixes') + '</div>';
+  }
+
+  function sailText(iso) {
+    var d = dateObj(iso);
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  $('shareCopy').addEventListener('click', function() {
+    var ship = S.cruise.shipName.replace(/ of the Seas$/i, '');
+    var text = SH.encode(SH.build(myPlan(), $('shareCabin').checked), ship + ' · sails ' + sailText(S.cruise.sailDate));
+    var ok = copyText(text);
+    $('shareCopied').className = ok ? 'help ok' : 'help error';
+    $('shareCopied').textContent = ok ? 'Plan copied (' + kb(text.length) + '). Paste it into a message to your ' +
+      'travel companion, or keep it in a note as a backup.' : 'Copying didn\'t work. Try again.';
+  });
+
+  $('shareImport').addEventListener('click', function() {
+    show('plan', 'Import plan');
+    $('planPaste').value = '';
+    readPlan();
+  });
+
+  function dayOf(date) {
+    for (var i = 0; i < itinerary.length; i++) {
+      if (itinerary[i].date === date) {
+        return {n: i + 1, port: itinerary[i].port || ''};
+      }
+    }
+    return null;
+  }
+
+  function dayText(date, withPort) {
+    var d = dayOf(date);
+    return d ? 'Day ' + d.n + (withPort && d.port ? ' · ' + d.port : '') : dayLabel(date);
+  }
+
+  function minutesText(m) {
+    return m + ' min';
+  }
+
+  var DAY_NAMES = {allAboard: 'All aboard', shift: 'All-aboard shift', buffer: 'All aboard before departure',
+                   warn: 'Warning period', offset: 'Local time', edit: 'Itinerary'};
+  var CABIN_NAMES = {stateroom: 'Stateroom', deck: 'Deck', stairs: 'Nearest stairs', muster: 'Muster station'};
+
+  function dayValue(f, v) {
+    if (v === null || v === undefined) {
+      return 'not set';
+    }
+    if (f === 'allAboard') {
+      return shortClock(v);
+    }
+    if (f === 'shift') {
+      return (v > 0 ? '+' : '') + minutesText(v);
+    }
+    if (f === 'buffer' || f === 'warn') {
+      return minutesText(v);
+    }
+    if (f === 'offset') {
+      return offsetText(v).replace('&minus;', '-');
+    }
+    var parts = [];
+    if (v.type) {
+      parts.push(TYPE_NAMES[v.type] || v.type);
+    }
+    if (v.port) {
+      parts.push(v.port);
+    }
+    if (v.arrive || v.depart) {
+      parts.push((v.arrive ? shortClock(v.arrive) : '-') + ' to ' + (v.depart ? shortClock(v.depart) : '-'));
+    }
+    return parts.join(', ') || 'Royal\'s';
+  }
+
+  function venueValue(o) {
+    if (!o) {
+      return 'built-in';
+    }
+    var parts = [];
+    if (o.decks && o.decks.length) {
+      parts.push('Deck ' + o.decks.join(', '));
+    }
+    if (o.position) {
+      parts.push(o.position);
+    }
+    if (o.neighborhood) {
+      parts.push(o.neighborhood);
+    }
+    return parts.join(', ') || (o.confirmed ? 'checked' : 'built-in');
+  }
+
+  // Each row: {title, sub, options: [[choice, label], [choice, label]]}.
+  function planRow(it) {
+    if (it.group === 'stars') {
+      var e = it.event.split('|');
+      var what = it.reserved ? (it.theirsOnly ? 'They marked it reserved' : 'Only you marked it reserved') :
+        (it.theirsOnly ? 'They starred it' : 'Only you starred it');
+      return {title: e[0], sub: dayText(e[1]) + ' · ' + shortClock(e[2]) + ' · ' + what,
+              options: it.theirsOnly ? [['theirs', it.reserved ? 'Add mark' : 'Add star'], ['mine', 'Skip']] :
+                [['mine', 'Keep mine'], ['theirs', it.reserved ? 'Unmark' : 'Unstar']]};
+    }
+    if (it.group === 'personal') {
+      var p = it.entry;
+      return {title: p.title, sub: dayText(p.date) + ' · ' + shortClock(p.time) + (p.venue ? ' · ' + p.venue : '') +
+              ' · Their entry', options: [['theirs', 'Add'], ['mine', 'Skip']]};
+    }
+    var theirs;
+    var yours;
+    var title;
+    if (it.group === 'days') {
+      title = DAY_NAMES[it.field] + ', ' + dayText(it.date, true);
+      theirs = dayValue(it.field, it.theirs);
+      yours = dayValue(it.field, it.mine);
+    } else if (it.group === 'venues') {
+      title = it.name;
+      theirs = venueValue(it.theirs);
+      yours = venueValue(it.mine);
+    } else {
+      title = CABIN_NAMES[it.field];
+      theirs = it.theirs;
+      yours = it.mine || 'not set';
+    }
+    return {title: title, sub: 'Theirs ' + theirs + ' · yours ' + yours,
+            options: [['theirs', 'Use theirs'], ['mine', 'Keep mine']]};
+  }
+
+  var GROUP_NAMES = {stars: 'STARS', personal: 'PERSONAL ENTRIES', days: 'DAY SETTINGS', venues: 'VENUE FIXES',
+                     cabin: 'CABIN DETAILS'};
+
+  function shipText(code) {
+    var found = (S.ships || []).filter(function(sh) { return sh.code === code; })[0];
+    return found ? found.name : code;
+  }
+
+  // Reads the pasted message and shows the summary (or what's wrong with it).
+  function readPlan() {
+    planItems = [];
+    $('planSum').innerHTML = '';
+    $('planList').innerHTML = '';
+    document.body.classList.remove('importing');
+    var text = $('planPaste').value;
+    $('planHelp').className = 'help';
+    $('planHelp').textContent = '';
+    if (!text.trim()) {
+      return;
+    }
+    var r = SH.decode(text);
+    if (r.error) {
+      $('planHelp').className = 'help error';
+      $('planHelp').textContent = r.error;
+      return;
+    }
+    var plan = r.plan;
+    if (plan.ship !== S.cruise.shipCode || plan.sail !== S.cruise.sailDate) {
+      $('planHelp').className = 'help error';
+      $('planHelp').textContent = 'This plan is for ' + shipText(plan.ship) + ' sailing ' + sailText(plan.sail) +
+        '. Yours is ' + S.cruise.shipName + ' sailing ' + sailText(S.cruise.sailDate) +
+        '. A plan only imports onto the same sailing.';
+      return;
+    }
+    planItems = SH.diff(SH.build(myPlan(), true), plan);
+    planChoices = planItems.map(function(it) { return it.def; });
+    if (!planItems.length) {
+      $('planSum').innerHTML = '<div class="card hero"><h2>Nothing to import</h2><p>Your plan already has ' +
+        'everything in theirs.</p></div>';
+      return;
+    }
+    $('planSum').innerHTML = '<div class="card"><h2>' + planItems.length + (planItems.length === 1 ?
+      ' difference' : ' differences') + '</h2><p class="muted">Same ship and sail date</p>' +
+      '<div class="actions"><button class="pill filled" id="planAll">Accept all</button>' +
+      '<button class="pill tonal" id="planEach">Review each</button>' +
+      '<button class="textbtn" id="planReject">Reject import</button></div>' +
+      '<p class="help">Accept all adds their stars and uses their settings where they differ. It never ' +
+      'unstars or deletes anything of yours.</p></div>';
+    $('planAll').addEventListener('click', function() {
+      applyPlan(planItems.map(function(it) { return it.def; }));
+    });
+    $('planEach').addEventListener('click', function() {
+      renderPlanList();
+      document.body.classList.add('importing');
+      $('planList').scrollIntoView({block: 'start'});
+    });
+    $('planReject').addEventListener('click', function() {
+      $('planPaste').value = '';
+      goTo('cruise');
+    });
+  }
+
+  function renderPlanList() {
+    var html = '';
+    var group = null;
+    planItems.forEach(function(it, i) {
+      if (it.group !== group) {
+        html += (group ? '</div>' : '') + '<div class="card igroup"><div class="shead">' + GROUP_NAMES[it.group] +
+          '</div>';
+        group = it.group;
+      }
+      var row = planRow(it);
+      html += '<div class="irow"><b>' + esc(row.title) + '</b><span>' + esc(row.sub) + '</span>' +
+        '<div class="seg small">' + row.options.map(function(o) {
+          return '<button data-i="' + i + '" data-c="' + o[0] + '" aria-pressed="' + (planChoices[i] === o[0]) + '">' +
+            esc(o[1]) + '</button>';
+        }).join('') + '</div></div>';
+    });
+    $('planList').innerHTML = html + (group ? '</div>' : '');
+  }
+
+  $('planPaste').addEventListener('input', readPlan);
+  $('planList').addEventListener('click', function(ev) {
+    var b = ev.target.closest('[data-i]');
+    if (b) {
+      planChoices[+b.getAttribute('data-i')] = b.getAttribute('data-c');
+      renderPlanList();
+    }
+  });
+  $('planCancel').addEventListener('click', function() {
+    $('planList').innerHTML = '';
+    document.body.classList.remove('importing');
+    window.scrollTo(0, 0);
+  });
+  $('planApply').addEventListener('click', function() {
+    applyPlan(planChoices);
+  });
+
+  // Makes the chosen changes on this page, then saves it.
+  function applyPlan(choices) {
+    var ch = SH.changes(planItems, choices);
+    var n = {stars: 0, unstarred: 0, personal: ch.personal.length, days: 0, venues: 0, cabin: 0};
+    Object.keys(ch.stars).forEach(function(k) {
+      setMark(k, ch.stars[k]);
+      n[ch.stars[k] ? 'stars' : 'unstarred']++;
+    });
+    ch.personal.forEach(function(p) {
+      personal.push({title: String(p.title).slice(0, 63), venue: String(p.venue || '').slice(0, 31), date: p.date,
+                     time: p.time || null, minutes: p.minutes || 0});
+    });
+    Object.keys(ch.days).forEach(function(date) {
+      if (days[date]) {
+        Object.keys(ch.days[date]).forEach(function(f) {
+          days[date][f] = ch.days[date][f];
+          n.days++;
+        });
+      }
+    });
+    if (VS) {
+      Object.keys(ch.venues).forEach(function(name) {
+        vOver[name] = ch.venues[name];
+        vChanged = true;
+        n.venues++;
+      });
+    }
+    SH.CABIN_FIELDS.forEach(function(f) {
+      if (ch.cabin.hasOwnProperty(f)) {
+        meSet(f, ch.cabin[f]);
+        meEdited[f] = meIsEdit(f);
+        n.cabin++;
+      }
+    });
+    n.of = planItems.length;
+    imported = n;
+    close('save');
+  }
+
   // ---- Save / Download
   function result(action) {
     var r = {
@@ -3224,6 +3555,9 @@ function pageMain(S, V, CL) {
     }
     if (evDates.length) {
       r.personal = personal;
+    }
+    if (imported) {
+      r.imported = imported;
     }
     if (VS && vChanged) {
       r.venues = {ship: VS.ship, overrides: vOver};
@@ -3277,6 +3611,7 @@ function pageMain(S, V, CL) {
 
   renderStatus();
   renderVenueCard();
+  renderShare();
   renderDays();
   renderCats();
   renderEvents();
@@ -3313,7 +3648,7 @@ function buildPage(state, now) {
     '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';' + mapExport.toString() + ';' +
     slice.isCasino.toString() + ';' + slice.eventCat.toString() + ';(' +
     pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')(), (' +
-    cabins.cabinLib.toString() + ')());</script>' +
+    cabins.cabinLib.toString() + ')(), (' + share.shareLib.toString() + ')());</script>' +
     '</body></html>';
 }
 

@@ -707,6 +707,13 @@ function settingsClosed(text) {
     }
   }
   usage.add('settings', 'page closed: ' + (r.action || 'save') + ', result ' + Math.round(text.length / 1024) + ' KB');
+  // Share my plan: counts only (docs/DESIGN_PHASE3.md §28).
+  var imp = r.imported;
+  if (imp && typeof imp === 'object') {
+    usage.add('settings', 'plan imported: ' + (imp.of | 0) + ' differences; ' + (imp.stars | 0) + ' stars added, ' +
+              (imp.unstarred | 0) + ' unstarred, ' + (imp.personal | 0) + ' personal entries, ' + (imp.days | 0) +
+              ' day settings, ' + (imp.venues | 0) + ' venue fixes, ' + (imp.cabin | 0) + ' cabin details');
+  }
   usage.applySettings(r.usage);
   usage.applyMapNotes(r.mapCheck).forEach(function(d) { usage.add('map', 'note ' + d); });
 
