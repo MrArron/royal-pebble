@@ -20,7 +20,7 @@ Phase 3 adds or changes. One section per item, filled in as each is designed.
 | Item | Status |
 |---|---|
 | 22 Booked excursions and embark day (+ I'm on board) | **Approved 2026-09-26.** Build from §22. |
-| 23 Port day card | **Built** (phone: #44, watch: #45), waiting on the watch test. |
+| 23 Port day card | **Done** (phone: #44, watch: #45), tested on the watch 2026-09-27. |
 | 24 Settings page upgrades | First draft (§24), review before building |
 | 25 Silent morning sync | No screens needed (§25) |
 | 26 Confirm before removing a star | First draft (§26), review before building |
