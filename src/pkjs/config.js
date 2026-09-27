@@ -5,7 +5,7 @@
 // The page returns its result through `return_to` (the emulator tooling adds
 // it) or the phone app's pebblejs://close# URL:
 //   {action: 'save' | 'download' | 'test', me, theme, reminderLead, reserveAlertAt,
-//    days: {date: {offset, buffer, allAboard, edit} | null}, showFeatured, alwaysHints, hiddenCats,
+//    days: {date: {offset, buffer, allAboard, shift, warn, edit} | null}, showFeatured, alwaysHints, hiddenCats,
 //    shipSides: {ship, all, decks, confirmed} (Help > Port and starboard, mapped ships only),
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
 //    each was made), personal: [{title, venue, date, time, minutes}],
@@ -47,6 +47,10 @@ var CSS = [
   '.chg{padding:8px 0;border-top:1px solid rgba(0,0,0,.08)}.chg b{display:block}.chg span{font-size:14px}',
   '.chip{display:inline-block;padding:2px 10px;border-radius:8px;background:var(--warning-container);',
   'color:var(--on-warning-container);font-size:14px;font-weight:600}',
+  '.chip.ok{background:var(--secondary-container);color:var(--on-secondary-container);margin-left:6px}',
+  '.notice{display:flex;gap:12px;align-items:flex-start;background:var(--warning-container);',
+  'color:var(--on-warning-container);border-radius:16px;padding:12px 16px;margin:0 0 8px;font-size:14px}',
+  '.notice svg{width:20px;height:20px;flex:none;margin-top:1px;fill:var(--on-warning-container)}',
   'label{display:block;margin:14px 0 6px;font-size:14px;font-weight:600;color:var(--on-surface-variant)}',
   'input,select,textarea{width:100%;font:inherit;color:var(--on-surface);background:var(--surface);',
   'border:1px solid var(--outline);border-radius:12px;padding:12px 14px;min-height:48px}',
@@ -955,6 +959,14 @@ function pageMain(S, V) {
     return /TENDER/.test(type || '') ? 60 : 30;
   }
 
+  // Same as slice.js warnPeriod (docs/DESIGN_PHASE3.md §23.2).
+  var WARN_PERIODS = [30, 60, 90, 120];
+  function warnPeriodOf(d) {
+    var v = days[d.date].warn;
+    return WARN_PERIODS.indexOf(v) !== -1 ? v : defaultBuffer(effective(d).type);
+  }
+  var MAX_SHIFT = 120;
+
   // Royal's day with this page's edits applied.
   function effective(d) {
     var e = days[d.date].edit || {};
@@ -965,17 +977,22 @@ function pageMain(S, V) {
     return out;
   }
 
-  // {ship: all-aboard in ship time, depart: local, exact}, minutes from the day's
-  // midnight; null where there is none.
+  // {ship: all-aboard in ship time, depart: local, exact, royal}, minutes from
+  // the day's midnight; null where there is none. `royal`: the day has Royal's
+  // gangway time (§23.1), which comes before the buffer.
   function allAboardOf(d) {
     var set = days[d.date];
     var it = effective(d);
     var depart = afterMidnight(mins(it.depart), mins(it.arrive));
+    var royal = typeof d.royal === 'number';
     if (it.type === 'DEBARK' || it.type === 'CRUISING') {
       return {ship: null, depart: depart};
     }
     if (set.allAboard != null) {
-      return {ship: afterMidnight(mins(set.allAboard), null), depart: depart, exact: true};
+      return {ship: afterMidnight(mins(set.allAboard), null), depart: depart, exact: true, royal: royal};
+    }
+    if (royal) {
+      return {ship: d.royal - (set.offset || 0) + (set.shift || 0), depart: depart, royal: true};
     }
     var buffer = set.buffer || defaultBuffer(it.type);
     return {ship: depart === null ? null : depart - (set.offset || 0) - buffer, depart: depart};
@@ -999,6 +1016,12 @@ function pageMain(S, V) {
     }
     if (set.buffer === defaultBuffer(effective(d).type)) {
       delete set.buffer;
+    }
+    if (!set.shift) {
+      delete set.shift;
+    }
+    if (set.warn === defaultBuffer(effective(d).type)) {
+      delete set.warn;
     }
     if (set.edit) {
       Object.keys(set.edit).forEach(function(k) {
@@ -1054,6 +1077,14 @@ function pageMain(S, V) {
     }).join('') + '</div>';
   }
 
+  function shiftText(m) {
+    return m ? (m > 0 ? '+' : '&minus;') + Math.abs(m) + ' min' : 'Royal\'s time';
+  }
+
+  function isTender(d) {
+    return /TENDER/.test(effective(d).type || '');
+  }
+
   function dayBody(d, i) {
     var set = days[d.date];
     var it = effective(d);
@@ -1061,6 +1092,15 @@ function pageMain(S, V) {
     var html = '';
     var aa = allAboardOf(d);
     var offset = set.offset || 0;
+    var hasAboard = it.type !== 'CRUISING' && it.type !== 'DEBARK';
+    var period = warnPeriodOf(d);
+
+    if (hasAboard && isTender(d)) {
+      html += '<div class="notice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 1.5 21h21z"/>' +
+        '<path d="M11 10h2v5h-2zm0 7h2v2h-2z" fill="var(--warning-container)"/></svg><span>Tender port. Boats ' +
+        'back to the ship can have long lines, so the warning period is ' + period + ' minutes today. Make it ' +
+        'longer if you like.</span></div>';
+    }
 
     if (it.type !== 'CRUISING') {
       html += '<label>Local time vs ship time</label><div class="stepper">' +
@@ -1072,11 +1112,28 @@ function pageMain(S, V) {
         'Royal lists port times in local time; the watch counts down in ship time.</p>';
     }
 
-    if (it.type !== 'CRUISING' && it.type !== 'DEBARK') {
+    if (hasAboard && aa.royal) {
+      // Royal's gangway time, moved in 5-minute steps (§23.1).
+      html += '<label>All aboard <span class="chip ok">From Royal</span></label>';
+      if (aa.exact) {
+        html += '<label for="' + id + 'aa">All-aboard time (ship time)</label>' +
+          '<input type="time" id="' + id + 'aa" data-f="allAboard" value="' + esc(set.allAboard || '') + '">' +
+          '<button class="textbtn" data-act="royal">Use Royal\'s time</button>';
+      } else {
+        html += '<div class="stepper">' +
+          '<button data-act="shift" data-v="-5" aria-label="5 minutes earlier">&minus;</button>' +
+          '<output>' + shiftText(set.shift || 0) + '</output>' +
+          '<button data-act="shift" data-v="5" aria-label="5 minutes later">+</button></div>';
+      }
+    } else if (hasAboard) {
       html += '<label>All aboard</label>' +
         seg('aboard', [['30', '30 min'], ['45', '45 min'], ['60', '60 min'], ['exact', 'Exact']],
             aa.exact ? 'exact' : String(set.buffer || defaultBuffer(it.type)));
-      if (aa.exact) {
+    }
+    if (hasAboard) {
+      if (aa.royal) {
+        // Royal's help goes under the result below.
+      } else if (aa.exact) {
         html += '<label for="' + id + 'aa">All-aboard time (ship time)</label>' +
           '<input type="time" id="' + id + 'aa" data-f="allAboard" value="' + esc(set.allAboard || '') + '">';
       } else {
@@ -1093,6 +1150,17 @@ function pageMain(S, V) {
           'No departure time, so no countdown. Add one ' + (showEdit[d.date] ? 'below' : 'under Change itinerary') +
           ', or pick Exact.') + '</p>';
       }
+      if (aa.royal && !aa.exact) {
+        html += '<p class="help">Royal\'s gangway time. Move it in 5-minute steps if the ship says otherwise. ' +
+          'Days without a Royal time use a buffer before departure instead.</p>' +
+          '<button class="textbtn" data-act="exact">Type an exact time</button>';
+      }
+
+      html += '<label>Warning period</label>' +
+        seg('warn', WARN_PERIODS.map(function(p) { return [String(p), String(p)]; }), String(period)) +
+        '<p class="help">Minutes before all-aboard. ' + (aa.ship !== null ? 'The first alert buzzes at ' +
+          clock(aa.ship - period) + ' ship, and the watch\'s bar turns red from then.' :
+          'The first alert buzzes then, and the watch\'s bar turns red.') + '</p>';
     }
 
     html += '<div class="edit">';
@@ -1155,6 +1223,7 @@ function pageMain(S, V) {
       return '<div class="day' + (open ? ' open' : '') + '" data-date="' + esc(d.date) + '">' +
         '<button class="day-head" data-act="toggle" aria-expanded="' + open + '"><span class="t"><b>' + dayTitle(d) +
         '</b><span class="muted">' + daySummary(d) + '</span></span>' +
+        (isTender(d) ? '<span class="chip">Tender</span>' : '') +
         (isEdited(d.date) ? '<span class="chip">Edited</span>' : '') +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 16.6 13.2 12 8.6 7.4 10 6l6 6-6 6z"/></svg>' +
         '</button>' + (open ? '<div class="day-body">' + dayBody(d, i) + '</div>' : '') + '</div>';
@@ -1192,6 +1261,19 @@ function pageMain(S, V) {
         break;
       case 'offset':
         set.offset = Math.max(-720, Math.min(720, (set.offset || 0) + (+v)));
+        break;
+      case 'shift':
+        set.shift = Math.max(-MAX_SHIFT, Math.min(MAX_SHIFT, (set.shift || 0) + (+v)));
+        break;
+      case 'exact':
+        var ex = allAboardOf(d);
+        set.allAboard = ex.ship !== null ? hhmm(ex.ship) : '';
+        break;
+      case 'royal':
+        delete set.allAboard;
+        break;
+      case 'warn':
+        set.warn = +v;
         break;
       case 'aboard':
         if (v === 'exact') {

@@ -89,8 +89,10 @@ text. One compact JSON object, ASCII only.
   - `embarkTimeZone`: the embarkation port's time zone name, e.g.
     `America/New_York`.
   - `ports[]`: port days with extra details, by itinerary `day`. `gangwayDown`,
-    `gangwayUp`: `HH:MM`, or Royal's text when it isn't a readable time (the
-    meaning of both is unverified; not a replacement for `depart` yet). `lat`,
+    `gangwayUp`: `HH:MM`, or Royal's text when it isn't a readable time
+    (port-local like the itinerary). A readable `gangwayUp` is the day's
+    all-aboard by default (`docs/DESIGN_PHASE3.md` §23.1); its meaning is
+    still to be checked on board. `lat`,
     `lon`: approximate port coordinates (a point of interest near the port).
     Each field is present only when Royal lists it; days without any are left out.
   - `orders[]`: purchased add-ons, not cancelled, sorted by `date` and `time`

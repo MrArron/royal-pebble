@@ -506,9 +506,11 @@ function pageState(ships) {
   return {
     ships: ships,
     cruise: cruise,
-    // For Settings > Days: Royal's itinerary and the per-day settings.
+    // For Settings > Days: Royal's itinerary and the per-day settings. `royal`
+    // is Royal's gangway time (port-local minutes, from login data) or null.
     itinerary: bundle ? bundle.itinerary.map(function(d) {
-      return {date: d.date, type: d.type, port: d.port, arrive: d.arrive, depart: d.depart};
+      return {date: d.date, type: d.type, port: d.port, arrive: d.arrive, depart: d.depart,
+              royal: slice.royalAllAboard(bundle, d)};
     }) : [],
     days: settings.days || {},
     // For Settings > Filters.

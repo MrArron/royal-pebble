@@ -349,7 +349,8 @@ test('alert plan: all-aboard warnings and reminders for today and tomorrow', fun
   stars[slice.starKey('Ice Show', '2027-03-07', '20:00', 'Studio B')] = true;
   stars[slice.starKey('Morning Yoga', '2027-03-08', '09:00', 'Promenade')] = true;
   stars[slice.starKey('Late Show', '2027-03-08', '00:30', 'Boardwalk')] = true;
-  var settings = {reminderLead: 30, days: {'2027-03-08': {offset: 60}},
+  // A 60-minute warning period: all-aboard alerts at 60, 30 and 15 minutes.
+  var settings = {reminderLead: 30, days: {'2027-03-08': {offset: 60, warn: 60}},
                   personal: [{title: 'Dinner', venue: 'Main Dining', date: '2027-03-07', time: '18:00', minutes: 90}]};
   // Sea day (day 2), 17:00. Tomorrow is St. Thomas: depart 17:00 local = 16:00 ship, all-aboard 15:30.
   var alarms = slice.buildAlarms(b, settings, stars, at('2027-03-07', 17, 0));
@@ -375,7 +376,7 @@ test('alert plan skips past alerts and crosses midnight', function() {
   it[2].depart = '00:45';  // after midnight: all-aboard 00:15 on the -1th
   var b = makeBundle([], it);
   var alarms = slice.buildAlarms(b, {}, {}, at('2027-03-08', 23, 50));
-  // 60 and 30 min warnings (23:15, 23:45) have passed; 15 min (00:00) is left.
+  // The 30 min warning (23:45) has passed; 15 min (00:00) is left.
   assert.deepStrictEqual(alarms.map(function(a) { return a.at; }), [3 * 1440]);
   assert.strictEqual(alarms[0].ref, 3 * 1440 + 15);
 });
@@ -641,6 +642,66 @@ test('tender ports default to 60 minutes before departure', function() {
   assert.strictEqual(s.day.allAboard, 2 * 1440 + 17 * 60 - 60);
 });
 
+test("Royal's gangway time is the all-aboard, moved in 5-minute steps", function() {
+  var b = makeBundle([]);
+  b.mine = {ports: [{day: 3, code: 'STT', gangwayDown: '07:30', gangwayUp: '16:20'}]};
+  var s = slice.buildSlice(b, {}, {}, at('2027-03-08', 10, 0));
+  assert.strictEqual(s.day.allAboard, 2 * 1440 + 16 * 60 + 20);
+  // Port-local like the itinerary: an hour ahead of the ship is 15:20 ship.
+  s = slice.buildSlice(b, {days: {'2027-03-08': {offset: 60}}}, {}, at('2027-03-08', 10, 0));
+  assert.strictEqual(s.day.allAboard, 2 * 1440 + 15 * 60 + 20);
+  // Moved 15 minutes earlier; the buffer doesn't apply to Royal's time.
+  s = slice.buildSlice(b, {days: {'2027-03-08': {shift: -15, buffer: 60}}}, {}, at('2027-03-08', 10, 0));
+  assert.strictEqual(s.day.allAboard, 2 * 1440 + 16 * 60 + 5);
+  // An exact time still wins.
+  s = slice.buildSlice(b, {days: {'2027-03-08': {allAboard: '16:45', shift: -15}}}, {}, at('2027-03-08', 10, 0));
+  assert.strictEqual(s.day.allAboard, 2 * 1440 + 16 * 60 + 45);
+  // Royal's text (not a time), or no entry for the day: departure minus the buffer.
+  b.mine.ports[0].gangwayUp = 'See daily planner';
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-03-08', 10, 0)).day.allAboard, 2 * 1440 + 17 * 60 - 30);
+  b.mine.ports[0] = {day: 2, gangwayUp: '16:00'};
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-03-08', 10, 0)).day.allAboard, 2 * 1440 + 17 * 60 - 30);
+  // A port skipped in Settings > Days has none.
+  b.mine.ports[0] = {day: 3, gangwayUp: '16:20'};
+  s = slice.buildSlice(b, {days: {'2027-03-08': {edit: {type: 'CRUISING'}}}}, {}, at('2027-03-08', 10, 0));
+  assert.strictEqual(s.day.allAboard, slice.NO_TIME);
+});
+
+test("Royal's gangway time after midnight", function() {
+  var it = makeBundle().itinerary;
+  it[2].arrive = '18:00';
+  it[2].depart = '02:00';
+  var b = makeBundle([], it);
+  b.mine = {ports: [{day: 3, gangwayUp: '01:30'}]};
+  var s = slice.buildSlice(b, {}, {}, at('2027-03-08', 22, 0));
+  assert.strictEqual(s.day.allAboard, 3 * 1440 + 90);
+  // Moved back across midnight.
+  s = slice.buildSlice(b, {days: {'2027-03-08': {shift: -120}}}, {}, at('2027-03-08', 22, 0));
+  assert.strictEqual(s.day.allAboard, 2 * 1440 + 23 * 60 + 30);
+});
+
+test('warning period: the first all-aboard alert', function() {
+  var b = makeBundle([]);
+  var aboard = function(settings) {
+    return slice.buildAlarms(b, settings, {}, at('2027-03-08', 6, 0))
+      .filter(function(a) { return a.kind === slice.ALARM_ALL_ABOARD; })
+      .map(function(a) { return a.ref - a.at; });
+  };
+  // All-aboard 16:30. 30 by default: one buzz at 30, then 15.
+  assert.deepStrictEqual(aboard({}), [30, 15]);
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-03-08', 6, 0)).day.warnPeriod, 30);
+  assert.deepStrictEqual(aboard({days: {'2027-03-08': {warn: 120}}}), [120, 30, 15]);
+  assert.deepStrictEqual(aboard({days: {'2027-03-08': {warn: 90}}}), [90, 30, 15]);
+  // Tender ports: 60 unless set.
+  var tender = {days: {'2027-03-08': {edit: {type: 'TENDERED'}}}};
+  assert.deepStrictEqual(aboard(tender), [60, 30, 15]);
+  assert.strictEqual(slice.buildSlice(b, tender, {}, at('2027-03-08', 6, 0)).day.warnPeriod, 60);
+  tender.days['2027-03-08'].warn = 30;
+  assert.deepStrictEqual(aboard(tender), [30, 15]);
+  // Sea days keep the default (they have no all-aboard).
+  assert.strictEqual(slice.buildSlice(b, {}, {}, at('2027-03-07', 6, 0)).day.warnPeriod, 30);
+});
+
 test('Events page results: personal entries and star changes', function() {
   var clean = slice.cleanPersonal;
   assert.strictEqual(clean(null), null);
@@ -682,6 +743,12 @@ test('day settings from the page are checked', function() {
   assert.deepStrictEqual(clean({edit: {type: '<b>', port: 'Labadee', arrive: '08:00'}}),
                          {edit: {port: 'Labadee', arrive: '08:00'}});
   assert.strictEqual(clean({edit: {}}), null);
+  // Royal's time moved in 5-minute steps, and the warning period.
+  assert.deepStrictEqual(clean({shift: -15, warn: 90}), {shift: -15, warn: 90});
+  assert.deepStrictEqual(clean({shift: 120, warn: 60}), {shift: 120, warn: 60});
+  assert.strictEqual(clean({shift: 7, warn: 45}), null);
+  assert.strictEqual(clean({shift: 125, warn: '60'}), null);
+  assert.strictEqual(clean({shift: 0}), null);
 });
 
 function keyOf(row) {
