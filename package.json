@@ -84,7 +84,9 @@
       "route_venue",
       "button_hints",
       "log_entries",
-      "log_dropped"
+      "log_dropped",
+      "terminal",
+      "terminal_text"
     ],
     "resources": {
       "media": []

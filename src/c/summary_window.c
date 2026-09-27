@@ -85,17 +85,18 @@ typedef struct {
   int32_t depart;
   int32_t all_aboard;
   int16_t local_offset;  // today only; tomorrow's isn't sent
+  int32_t terminal;      // today only: embark day's terminal arrival (§22.5)
 } CardDay;
 
 static CardDay card_day(void) {
   const Day *d = data_day();
   if (!s_tomorrow) {
     return (CardDay){d->index, d->kind, d->status, d->location, d->arrive, d->depart,
-                     d->all_aboard, d->local_offset};
+                     d->all_aboard, d->local_offset, d->terminal};
   }
   const Tomorrow *t = data_tomorrow();
   return (CardDay){d->index + 1, t->kind, t->status, t->location, t->arrive, t->depart,
-                   t->all_aboard, 0};
+                   t->all_aboard, 0, NO_TIME};
 }
 
 // Draws one line and returns the y below it.
@@ -141,7 +142,8 @@ static void fmt_port_times(char *buf, size_t size, const CardDay *day) {
   }
 }
 
-// The top half: label, place, port times, port time offset and all-aboard.
+// The top half: label, place, port times, port time offset, the terminal
+// arrival (embark day) and all-aboard.
 static int draw_day(GContext *ctx, const CardDay *day, int y, int w) {
   char buf[48];
   fmt_day_label(buf, sizeof(buf), day);
@@ -161,6 +163,12 @@ static int draw_day(GContext *ctx, const CardDay *day, int y, int w) {
     fmt_duration(amount, sizeof(amount), off < 0 ? -off : off);
     snprintf(buf, sizeof(buf), "Port time %c%s", off < 0 ? '-' : '+', amount);
     y = line(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 16);
+  }
+  if (day->terminal != NO_TIME) {
+    char t[8];
+    fmt_clock(t, sizeof(t), day->terminal);
+    snprintf(buf, sizeof(buf), "Terminal arrival %s", t);
+    y = line(ctx, buf, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD, y - 2, w, 22);
   }
   if (day->all_aboard != NO_TIME) {
     char t[8];

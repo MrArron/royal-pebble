@@ -230,6 +230,8 @@ function sendSlice() {
     local_offset: sl.day.localOffset,
     arrive: sl.day.arrive,
     depart: sl.day.depart,
+    terminal: sl.day.terminal,
+    terminal_text: pack.cutText(sl.day.terminalText, 23),
     ship_name: pack.cutText(sl.shipName, 31),
     sail_port: pack.cutText(sl.sailPort, 31),
     cruise_starred: Math.min(sl.cruiseStarred, 255),

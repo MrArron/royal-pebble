@@ -40,7 +40,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 
 | `msg_type` | Name | Other keys |
 |---|---|---|
-| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `button_hints` (0/1: Home's button hints at every open), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
+| 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `terminal`, `terminal_text` (embark day's terminal arrival, below), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `button_hints` (0/1: Home's button hints at every open), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
 | 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_clock`, `info_sync` (display strings) |
 | 3 | EVENTS | `event_first` (index of the first event in this chunk), `events` (bytes, below) |
 | 5 | ALARMS | `alarm_first`, `alarms` (bytes, below) |
@@ -61,6 +61,15 @@ schedule, whatever the Filters, plus personal entries.
 (minus the day's offset), for the morning summary; a departure after midnight
 is a larger number, as for all-aboard. None on sea days, no arrival on the
 embark day and no departure on the debark day.
+
+`terminal` is the embark day's terminal arrival appointment from login data
+(`mine.arrival`, `docs/DESIGN_PHASE3.md` §22.5) in cruise minutes, ship time
+(Royal's port time minus the day's offset), or −1. When Royal's value isn't
+an `HH:MM` time, `terminal` is −1 and `terminal_text` has the text (≤ 23
+bytes); otherwise `terminal_text` is empty. Both are empty on every other
+day and without login data. Home shows the arrival card from 04:00 until
+`terminal` (the text form until all-aboard), and the morning summary adds a
+`Terminal arrival` line when it's a time.
 
 **Tomorrow's block** (the evening's tomorrow card, `docs/DESIGN_V1_1.md` §8.1;
 the watch only has today's events, so the phone works it out):
@@ -307,14 +316,14 @@ The watch saves what it needs without the phone after every slice and star chang
 (`src/c/store.c`), and loads it at launch. It is one blob in the packed layouts
 above, spread over 256-byte values (keys 40 on):
 
-1. Header (55 bytes: sail date, settings bits (1 dark theme, 2 featured, 4
+1. Header (59 bytes: sail date, settings bits (1 dark theme, 2 featured, 4
    demo, 8 always show button hints), reminder lead, slice id, day
    index and kind, all-aboard, local offset, cutoff, alert and event counts,
    the cruise's starred count, then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
-   first start, starred and featured counts, last kind and to-reserve count),
-   then the day's status and location, My info's six texts, the ship name, and
-   tomorrow's status, location, first and last, then the sail port. (Storage
-   version 7.)
+   first start, starred and featured counts, last kind and to-reserve count,
+   then the terminal arrival), then the day's status and location, My info's
+   six texts, the ship name, and tomorrow's status, location, first and last,
+   then the sail port and the terminal arrival text. (Storage version 8.)
 2. Alerts, then events, each as packed above, in time order.
 
 The blob's budget follows `persist_get_max_size()`: the limit minus 1.5 kB kept
@@ -544,7 +553,7 @@ page or a route to a place or restroom, its `dir_ref`; a route to an event, its
 start; an alert, its `at`. **Home's card:** 0 loading or no phone, 1 days to
 sail, 2 connect your phone (a new day with no slice), 3 no cruise today, 4
 all-aboard countdown, 5 NEXT (starred), 6 FEATURED, 7 NOW (in progress), 8
-nothing starred today.
+nothing starred today, 9 terminal arrival (embark day).
 
 | `code` | Entry | `x` | `a` | `b` | `c` |
 |---|---|---|---|---|---|
@@ -573,7 +582,8 @@ didn't open the app are missed.
 
 Until real cruise data is saved in settings, the phone builds a demo bundle
 around the current time (`src/pkjs/demo.js`) and sends it like real data. Hold Up
-on the watch's Home for the next demo variant (port/sea × light/dark). The dark
+on the watch's Home for the next demo variant (port/sea × light/dark, then an
+embark day with a terminal arrival under an hour out). The dark
 port day is an alert test: a starred event 17 minutes out and all-aboard 18
 minutes out, so a reminder buzzes about 2 minutes after switching and an
 all-aboard warning a minute later. A starred show at Royal Theater ends 7

@@ -277,7 +277,18 @@ test('demo builds valid bundles for every variant, around midnight too', functio
       var d = demo.make(now, v);
       assert.strictEqual(bundleLib.validate(d.bundle), null);
       var s = slice.buildSlice(d.bundle, d.settings, d.stars, now);
-      assert.strictEqual(s.dayIndex, 1, 'demo today is cruise day 2 at ' + hm);
+      var nowMin = slice.cruiseMinutes(slice.daysFromIso(d.bundle.sailDate), now);
+      if (v === 4) {
+        // Embark: today is the sail date, the arrival under an hour out.
+        assert.strictEqual(s.dayIndex, 0, 'demo embark is cruise day 1 at ' + hm);
+        assert.strictEqual(s.day.status, 'EMBARK');
+        if (hm[0] >= 4 && hm[0] !== 23) {
+          assert.ok(s.day.terminal > nowMin && s.day.terminal <= nowMin + 50, 'arrival at ' + hm);
+        }
+      } else {
+        assert.strictEqual(s.dayIndex, 1, 'demo today is cruise day 2 at ' + hm);
+        assert.strictEqual(s.day.terminal, slice.NO_TIME);
+      }
       assert.strictEqual(s.day.kind, v % 2 === 0 ? slice.DAY_PORT : slice.DAY_SEA);
       if (v === 2 && hm[0] !== 3) {
         // Alert test: reminder in 2 minutes, all-aboard warning in 3 (not near
@@ -297,6 +308,35 @@ test('demo builds valid bundles for every variant, around midnight too', functio
       assert.ok(!s.events.some(function(e) { return /Sale|Blowout/.test(e.title); }), 'Shop hidden');
     }
   });
+});
+
+test('terminal arrival: embark day only, a time in ship time or Royal text', function() {
+  var b = makeBundle();
+  b.mine = {stateroom: '1234', arrival: '11:30', orders: []};
+  var s = slice.buildSlice(b, {}, {}, at('2027-03-06', 9, 12));
+  assert.strictEqual(s.day.terminal, 11 * 60 + 30);
+  assert.strictEqual(s.day.terminalText, '');
+  // Port time to ship time, like the itinerary.
+  s = slice.buildSlice(b, {days: {'2027-03-06': {offset: 60}}}, {}, at('2027-03-06', 9, 12));
+  assert.strictEqual(s.day.terminal, 10 * 60 + 30);
+  // Not on other days.
+  s = slice.buildSlice(b, {}, {}, at('2027-03-08', 9, 0));
+  assert.strictEqual(s.day.terminal, slice.NO_TIME);
+  assert.strictEqual(s.day.terminalText, '');
+  // Royal's text when it isn't a time.
+  b.mine.arrival = ' Between 11 and noon ';
+  s = slice.buildSlice(b, {}, {}, at('2027-03-06', 9, 12));
+  assert.strictEqual(s.day.terminal, slice.NO_TIME);
+  assert.strictEqual(s.day.terminalText, 'Between 11 and noon');
+  // None before check-in, or without login data.
+  [null, '', undefined].forEach(function(v) {
+    b.mine.arrival = v;
+    s = slice.buildSlice(b, {}, {}, at('2027-03-06', 9, 12));
+    assert.deepStrictEqual([s.day.terminal, s.day.terminalText], [slice.NO_TIME, '']);
+  });
+  delete b.mine;
+  s = slice.buildSlice(b, {}, {}, at('2027-03-06', 9, 12));
+  assert.deepStrictEqual([s.day.terminal, s.day.terminalText], [slice.NO_TIME, '']);
 });
 
 test('alert plan: all-aboard warnings and reminders for today and tomorrow', function() {
@@ -1297,7 +1337,7 @@ test('demo: tomorrow has a starred class and a last chance or only show', functi
     var now = at('2026-09-23', 21, 0);
     var d = demo.make(now, v);
     var t = slice.buildSlice(d.bundle, d.settings, d.stars, now).tomorrow;
-    assert.strictEqual(t.location, 'Nassau');
+    assert.strictEqual(t.location, v === 4 ? 'At Sea' : 'Nassau');  // 4: embark, then a sea day
     assert.strictEqual(t.first, 'Sunrise Pilates');
     assert.deepStrictEqual([t.last, t.lastKind],
                            ['Mamma Mia!', v % 2 === 1 ? slice.FINAL_LAST_CHANCE : slice.FINAL_ONLY_SHOW]);

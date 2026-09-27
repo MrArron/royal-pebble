@@ -243,6 +243,8 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
       allAboard: NO_TIME,
       arrive: NO_TIME,
       depart: NO_TIME,
+      terminal: NO_TIME,
+      terminalText: '',
       localOffset: 0
     };
   }
@@ -273,6 +275,7 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
     departShip = dep === null ? NO_TIME : dayIndex * MINUTES_PER_DAY + dep - offset;
   }
 
+  var terminal = terminalArrival(bundle, it, dayIndex, offset);
   return {
     date: date,
     kind: it.type === 'CRUISING' ? DAY_SEA : DAY_PORT,
@@ -281,8 +284,27 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
     allAboard: allAboard,
     arrive: arrive,
     depart: departShip,
+    terminal: terminal.at,
+    terminalText: terminal.text,
     localOffset: offset
   };
+}
+
+// Embark day's terminal arrival appointment from login data (`mine.arrival`,
+// docs/DESIGN_PHASE3.md §22.5): {at: cruise minutes in ship time, text: ''}
+// for an `HH:MM`, {at: NO_TIME, text: Royal's text} otherwise, and neither
+// on other days or without one. Royal gives it in port time like the
+// itinerary.
+function terminalArrival(bundle, it, dayIndex, offset) {
+  var arrival = bundle.mine && bundle.mine.arrival;
+  if (it.type !== 'EMBARK' || typeof arrival !== 'string' || !arrival.trim()) {
+    return {at: NO_TIME, text: ''};
+  }
+  arrival = arrival.trim();
+  if (HHMM.test(arrival)) {
+    return {at: dayIndex * MINUTES_PER_DAY + minutesFromHhmm(arrival) - offset, text: ''};
+  }
+  return {at: NO_TIME, text: arrival};
 }
 
 // Settings > Filters: hidden categories as "Category" or "Category / Subcategory".

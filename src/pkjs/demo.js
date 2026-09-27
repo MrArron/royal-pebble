@@ -3,7 +3,8 @@
 // the same slice and messaging code as real data.
 //
 // Variants (hold Up on the watch's Home): 0 port/light, 1 sea/light,
-// 2 port/dark "alert test", 3 sea/dark. The alert test puts a starred event
+// 2 port/dark "alert test", 3 sea/dark, 4 embark/light (today is the sail
+// date, with a terminal arrival under an hour out). The alert test puts a starred event
 // 17 minutes out and all-aboard 18 minutes out, so with the default 15-minute
 // lead a reminder buzzes about 2 minutes after switching and the 15-minute
 // all-aboard warning a minute later (close the app to see them launch it). A
@@ -70,6 +71,7 @@ function hhmm(min) {
 // Returns {bundle, settings, stars} for the demo at `now`.
 function make(now, variant) {
   var port = variant % 2 === 0;
+  var embark = variant === 4;
   // The demo's "today" is the watch day containing now (days start at 04:00).
   var nowDays = slice.daysFromCivil(now.getFullYear(), now.getMonth() + 1, now.getDate());
   var nowMin = now.getHours() * 60 + now.getMinutes();
@@ -77,7 +79,7 @@ function make(now, variant) {
     nowDays -= 1;
     nowMin += 24 * 60;
   }
-  var sailDays = nowDays - 1;
+  var sailDays = embark ? nowDays : nowDays - 1;
   var today = slice.isoFromDays(nowDays);
 
   // All-aboard 2:13 from now. Late in the evening the departure falls after
@@ -88,7 +90,14 @@ function make(now, variant) {
   var departMin = nowMin + (alertTest ? 18 : 133) + 30;
   var depart = departMin < 24 * 60 + slice.DAY_START ? hhmm(departMin % (24 * 60)) : null;
 
-  var itinerary = [
+  var itinerary = embark ? [
+    {day: 1, date: today, port: 'Galveston, Texas', code: 'GAL', type: 'EMBARK', arrive: null,
+     depart: depart},
+    {day: 2, date: slice.isoFromDays(sailDays + 1), port: 'Cruising', code: 'CRU', type: 'CRUISING',
+     arrive: null, depart: null},
+    {day: 3, date: slice.isoFromDays(sailDays + 2), port: 'Galveston, Texas', code: 'GAL',
+     type: 'DEBARK', arrive: '06:00', depart: null}
+  ] : [
     {day: 1, date: slice.isoFromDays(sailDays), port: 'Orlando (Port Canaveral), Fl', code: 'PCN',
      type: 'EMBARK', arrive: null, depart: '16:00'},
     port
@@ -165,7 +174,12 @@ function make(now, variant) {
       events: events
     }
   };
-  if (port) {
+  if (embark) {
+    // Login data on the embark day: the terminal arrival appointment, on the
+    // quarter hour (docs/DESIGN_PHASE3.md §22.5).
+    var arrival = nowMin + 50 - (nowMin + 50) % 15;
+    bundle.mine = {stateroom: '9254', arrival: hhmm(arrival % (24 * 60)), orders: []};
+  } else if (port) {
     // Login data on port days: a booked excursion an hour out (meet 15 minutes
     // before) and a package, which never shows (docs/DESIGN_PHASE3.md §22).
     var exc = base + 60;
@@ -182,7 +196,7 @@ function make(now, variant) {
 
   var dinner = base + (port ? 150 : 180);
   var settings = {
-    theme: variant >= 2 ? 'dark' : 'light',
+    theme: variant === 2 || variant === 3 ? 'dark' : 'light',
     showFeatured: true,
     days: {},
     personal: [{
@@ -196,4 +210,4 @@ function make(now, variant) {
   return {bundle: bundle, settings: settings, stars: stars};
 }
 
-module.exports = {make: make, VARIANTS: 4};
+module.exports = {make: make, VARIANTS: 5};
