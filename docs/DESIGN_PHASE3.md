@@ -24,7 +24,7 @@ Phase 3 adds or changes. One section per item, filled in as each is designed.
 | 24 Settings page upgrades | **Approved 2026-09-27.** Build from §24 (three PRs, §24.4). |
 | 25 Silent morning sync | No screens needed (§25) |
 | 26 Confirm before removing a star | **Reviewed 2026-09-27.** Built in 1.3.7. |
-| 27 Casino filter | **Reviewed 2026-09-27.** Build from §27. |
+| 27 Casino filter | **Reviewed 2026-09-27.** Built in 1.3.8 as a Casino category (§27). |
 | 28 Share my plan | **Reviewed 2026-09-27.** Build from §28. |
 
 ---
@@ -568,6 +568,36 @@ Review decisions (owner, 2026-09-27):
 - A starred casino event keeps showing while the switch is on, the same as
   hidden categories today: a star always reaches the watch.
 - The switch is off by default.
+
+Changed while building (owner, 2026-09-27): **Casino is a category** in the
+Filters list, like Entertainment or Fitness, not a card of its own. The
+`Phone27Casino` mockup's card is not built. So:
+
+- The phone moves every casino event out of Royal's category into `Casino`
+  (no subcategories). It shows, hides and counts like any category, is in the
+  Ready to sail count, the Events tab's `Hidden on watch` chip and the place
+  pages' event lists, and a star still overrides it. It's shown by default
+  (Shop stays the only category hidden by default).
+- Its row reads `Casino Royale and casino games · 18 events`. The note under
+  the list adds: `Casino has Casino Royale and casino games (slots, blackjack,
+  poker, roulette, craps, tournaments); bingo and raffles keep their own
+  categories.`
+
+Matching (`isCasino()` and `eventCat()` in `src/pkjs/slice.js`, shared with
+the settings page). Royal already lists casino events under their own
+subcategory, `Entertainment / Casino`: on a Harmony sailing checked on
+2026-09-27 it held exactly the 18 events at Casino Royale, casino raffles and
+drawings included. An event is a casino event when:
+
+- its venue names a casino (`Casino Royale`, `Casino Royale Non-Smoking`,
+  `Expanded Casino`), or its subcategory is `Casino`, whatever its title; or
+- its title is about a casino game (`casino`, `slot tournament`, `slot
+  machine`, `blackjack`, `poker`, `roulette`, `craps`, `hold'em`, `baccarat`),
+  unless it mentions bingo or a raffle.
+
+Bingo and raffles elsewhere (Royal Bingo, spa and shop raffles) never match.
+Someone who had hidden `Entertainment / Casino` before 1.3.8 sees those events
+again until they hide Casino.
 
 ## 28. Share my plan
 

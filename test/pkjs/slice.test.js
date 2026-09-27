@@ -253,6 +253,67 @@ test('Filters: subcategories, and starred events ignore filters', function() {
   assert.strictEqual(slice.cleanHiddenCats('Shop'), null);
 });
 
+test('Casino category: venue, Royal\'s Casino subcategory and casino game titles (§27)', function() {
+  var yes = [
+    ['Welcome Raffle', 'Casino Royale', ['Entertainment', 'Casino']],   // a raffle at the casino counts
+    ['Lucky Draw', 'Casino Royale Non-Smoking', ['Activities', '']],
+    ['Big Wheel', 'Expanded Casino', []],
+    ['Tournament', '', ['Entertainment', 'Casino']],
+    ['Texas Hold\'em Tournament', 'Sky Lounge', ['Activities', 'Games & Competitions']],
+    ['Texas Hold\u2019em Cash Game', '', []],
+    ['Blackjack Lessons', 'Pub', []],
+    ['Slot Tournament', '', []],
+    ['Casino Night Party', 'Boleros', ['Activities', 'Events']],
+    ['Poker Night', '', []], ['Roulette 101', '', []], ['Craps Class', '', []]
+  ];
+  var no = [
+    ['Cash Prize Bingo, Cards on Sale', 'Royal Theater', ['Activities', 'Games & Competitions']],
+    ['Casino Bingo', 'On Air', []],
+    ['Spa Tour & Raffle', 'Fitness Center', ['Spa', 'Events']],
+    ['Shuffleboard Tournament', 'Sports Court', ['Activities', 'Sports & Recreation']],
+    ['Game Show: Millionaire', 'On Air', ['Activities', 'Games & Competitions']],
+    ['Book a Time Slot', 'FlowRider', []],
+    ['Pokeball Hunt', '', []], ['Crapshoot Comedy', '', []],
+    ['Trivia', undefined, undefined]
+  ];
+  yes.forEach(function(c) { assert.deepStrictEqual(slice.eventCat(c[0], c[1], c[2]), ['Casino', ''], c[0]); });
+  no.forEach(function(c) { assert.ok(!slice.isCasino(c[0], c[1], c[2]), c[0]); });
+  assert.deepStrictEqual(slice.eventCat('Bingo', 'On Air', ['Activities', 'Games']), ['Activities', 'Games']);
+
+  var b = makeBundle([
+    ['Poker Tournament', 1, 0, '2027-03-07', '10:00', 60, 0, 0],
+    ['Slot Tournament', 3, 2, '2027-03-07', '11:00', 60, 0, 0],
+    ['Hot Seat Drawing', 3, 2, '2027-03-07', '21:00', 15, 0, 0],
+    ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 0, 0],
+    ['Bingo', 1, 0, '2027-03-07', '15:00', 60, 0, 0],
+    ['Blackjack Class', 1, 3, '2027-03-07', '16:00', 60, 0, 0]
+  ]);
+  b.schedule.venues.push('Casino Royale');
+  b.schedule.cats.push(['Entertainment', 'Casino'], []);
+  var titles = function(s) { return s.events.map(function(e) { return e.title; }); };
+  var now = at('2027-03-07', 9, 0);
+  // Casino takes its events out of Royal's categories (Entertainment / Casino
+  // is gone), whatever category Royal gave them.
+  assert.deepStrictEqual(slice.categorySummary(b), [
+    {name: 'Casino', n: 4, subs: [{name: '', n: 4}]},
+    {name: 'Entertainment', n: 2, subs: [{name: 'Shows', n: 2}]}
+  ]);
+  assert.deepStrictEqual(titles(slice.buildSlice(b, {}, {}, now)),
+    ['Poker Tournament', 'Slot Tournament', 'Bingo', 'Blackjack Class', 'Ice Show', 'Hot Seat Drawing']);
+
+  // Hidden: casino events leave Today and the lists; a starred one stays, and
+  // so do personal entries.
+  var stars = {};
+  stars[slice.starKey('Hot Seat Drawing', '2027-03-07', '21:00', 'Casino Royale')] = true;
+  var settings = {hiddenCats: ['Casino'], personal: [{title: 'Poker with friends', venue: '', date: '2027-03-07',
+                                                      time: '17:00', minutes: 60}]};
+  assert.deepStrictEqual(titles(slice.buildSlice(b, settings, stars, now)),
+    ['Bingo', 'Poker with friends', 'Ice Show', 'Hot Seat Drawing']);
+  var day = slice.dayLoad(b, settings, stars)[1];
+  assert.strictEqual(day.fixed, 2);
+  assert.deepStrictEqual(day.cats, [['Casino', '', 3], ['Entertainment', 'Shows', 2]]);
+});
+
 test('Ready to sail: each day load before the 160 trim, and the days saved (§24.2)', function() {
   var b = makeBundle([
     ['Scavenger Hunt', 2, 0, '2027-03-07', null, 0, 0, 0],

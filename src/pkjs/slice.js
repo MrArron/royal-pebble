@@ -361,14 +361,36 @@ function isHidden(hidden, cat) {
   return hidden.indexOf(cat[0]) !== -1 || hidden.indexOf(cat[0] + ' / ' + (cat[1] || '')) !== -1;
 }
 
+// Casino events get a category of their own, Casino, in place of Royal's
+// (docs/DESIGN_PHASE3.md §27), so Filters shows and hides them like the
+// others. Royal lists them at Casino Royale (or its Non-Smoking and Expanded
+// rooms) under Entertainment / Casino, raffles and drawings there included.
+// Elsewhere a title about casino games matches; bingo and raffles don't.
+// The settings page gets these two functions as text, so they must not use
+// anything outside them but each other.
+function isCasino(title, venue, cat) {
+  if (/casino/i.test(venue || '') || (cat && cat[1] === 'Casino')) {
+    return true;
+  }
+  title = title || '';
+  return !/bingo|raffle/i.test(title) &&
+    /\b(casino|slot (tournament|machine)s?|blackjack|poker|roulette|craps|hold.?em|baccarat)\b/i.test(title);
+}
+
+// An event's category as Filters sees it: [category, subcategory].
+function eventCat(title, venue, cat) {
+  return isCasino(title, venue, cat) ? ['Casino', ''] : cat;
+}
+
 // Categories in a bundle's schedule with event counts, for Settings > Filters:
 // [{name, n, subs: [{name, n}]}] sorted by name; '' is a missing subcategory.
 function categorySummary(bundle) {
   var sched = (bundle && bundle.schedule) || {};
-  var ci = (sched.fields || []).indexOf('cat');
+  var f = {};
+  (sched.fields || []).forEach(function(name, i) { f[name] = i; });
   var byName = {};
   (sched.events || []).forEach(function(row) {
-    var cat = (sched.cats || [])[row[ci]];
+    var cat = eventCat(row[f.title], (sched.venues || [])[row[f.venue]], (sched.cats || [])[row[f.cat]] || []);
     if (!cat || !cat[0]) {
       return;
     }
@@ -599,7 +621,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var f = {};
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
   (sched.events || []).forEach(function(row) {
-    var cat = (sched.cats || [])[row[f.cat]] || [];
+    var cat = eventCat(row[f.title], (sched.venues || [])[row[f.venue]], (sched.cats || [])[row[f.cat]] || []);
     var flags = (row[f.featured] ? FLAG_FEATURED : 0) | (row[f.reservation] ? FLAG_RESERVATION : 0);
     var fin = finals[starKey(row[f.title], row[f.date], row[f.time], (sched.venues || [])[row[f.venue]])];
     flags |= fin === FINAL_LAST_CHANCE ? FLAG_LAST_CHANCE : fin === FINAL_ONLY_SHOW ? FLAG_ONLY_SHOW : 0;
@@ -1211,6 +1233,8 @@ module.exports = {
   pruneStarTimes: pruneStarTimes,
   categorySummary: categorySummary,
   hiddenCats: hiddenCats,
+  isCasino: isCasino,
+  eventCat: eventCat,
   defaultBuffer: defaultBuffer,
   warnPeriod: warnPeriod,
   royalAllAboard: royalAllAboard,

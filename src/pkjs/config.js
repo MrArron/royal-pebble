@@ -16,6 +16,7 @@
 //               added: [{place, deck, pos, side, note}]} (Me > Map check, mapped ships only)}
 
 var venues = require('./venues');
+var slice = require('./slice');
 var cabins = require('./cabins');
 var log = require('./log');
 
@@ -400,7 +401,9 @@ var BODY = [
   '<span class="muted">Show on the watch\'s home when nothing starred is next</span></span>',
   '<button class="switch" role="switch" id="featured" aria-label="Royal\'s featured events"></button></div>',
   '<div id="catList"></div>',
-  '<p class="help">Hidden categories stay off the watch\'s lists. Events you star always show.</p>',
+  '<p class="help">Hidden categories stay off the watch\'s lists. Events you star always show. Casino has ',
+  'Casino Royale and casino games (slots, blackjack, poker, roulette, craps, tournaments); bingo and raffles ',
+  'keep their own categories.</p>',
   '</section>',
   '<section class="screen" id="events">',
   '<label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/>',
@@ -1528,6 +1531,11 @@ function pageMain(S, V, CL) {
   }
 
   function catSummary(c) {
+    if (c.name === 'Casino') {
+      // Matched on the phone (slice.js isCasino), docs/DESIGN_PHASE3.md §27.
+      return (hidden.indexOf(c.name) !== -1 ? 'Hidden &middot; ' : '') + 'Casino Royale and casino games &middot; ' +
+        c.n + (c.n === 1 ? ' event' : ' events');
+    }
     if (hidden.indexOf(c.name) !== -1) {
       return 'Hidden' + (c.name === 'Shop' ? ' &middot; mostly promotions' : '') + ' &middot; ' + c.n + ' events';
     }
@@ -1651,6 +1659,7 @@ function pageMain(S, V, CL) {
         minutes: row[fi.minutes] || 0, featured: !!row[fi.featured], reservation: !!row[fi.reservation],
         paid: fi.paid !== undefined && !!row[fi.paid], price: fi.price !== undefined ? row[fi.price] : null
       };
+      e.cat = eventCat(e.title, e.venue, e.cat);  // Casino (slice.js)
       e.key = starKey(e.title, e.date, e.time, e.venue);
       e.search = (e.title + ' ' + e.venue).toLowerCase();
       evByKey[e.key] = e;
@@ -3301,7 +3310,8 @@ function buildPage(state, now) {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<title>Royal Pebble</title><style>' + CSS + '</style></head><body>' + BODY +
-    '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';' + mapExport.toString() + ';(' +
+    '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';' + mapExport.toString() + ';' +
+    slice.isCasino.toString() + ';' + slice.eventCat.toString() + ';(' +
     pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')(), (' +
     cabins.cabinLib.toString() + ')());</script>' +
     '</body></html>';

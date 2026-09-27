@@ -407,6 +407,16 @@ test('Ready to sail card replaces the All set line, with the load and the page t
   assert.ok(html.indexOf('"dayLoad":[{"date":"2027-03-07"') !== -1, 'load embedded');
 });
 
+test('Filters: the Casino category uses the shared matcher (§27)', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
+    categories: [{name: 'Casino', n: 18, subs: [{name: '', n: 18}]}], hiddenCats: ['Casino']};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  new Function(pageScript(html));
+  assert.ok(html.indexOf('function isCasino(') !== -1, 'matcher embedded');
+  assert.ok(html.indexOf('function eventCat(') !== -1, 'category embedded');
+  assert.ok(html.indexOf('bingo and raffles') !== -1, 'Filters note');
+});
+
 test('Events search: count line, day headers, My entries and Hidden on watch (§24.3)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
     personal: [{title: 'Trivia with friends', venue: 'Pub', date: '2027-03-07', time: '15:00', minutes: 0}]};
