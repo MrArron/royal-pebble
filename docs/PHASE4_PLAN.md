@@ -351,7 +351,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | H | 1.4.8 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes (a first re-pull on 2026-09-28: all 207 shared titles kept their ids) |
 | K | none (PC tool only) | checks | `--dump-products` (Windows sync tool section); the report compares product ids by title with an earlier dump of the same sailing | `test_cruise_sync.py`, one live run (done 2026-09-27: 326 products, 55 venue codes) |
 | — | throwaway | login | Phone sign-in probe (not merged): passed 2026-09-27 | the owner's phone |
-| I+J | 1.4.7 | login | One PR (owner, 2026-09-28): `DATA_FORMAT.md`, the page design (`DESIGN_PHASE4.md` §7) and text; Advanced download block, `royal.fetchMine`, log guards | Node tests with made-up bookings (shared fixture), then the owner's real account on the phone |
+| I+J | 1.4.7 | login | One PR (owner, 2026-09-28): `DATA_FORMAT.md`, the page design (`DESIGN_PHASE4.md` §7) and text; Advanced download (expands in the Download card), `royal.fetchMine`, log guards | Node tests with made-up bookings (shared fixture), then the owner's real account on the phone |
 
 - **B comes first:** the new fields must exist in both producers before anything
   reads them. B alone changes nothing a user sees; excursion sessions stay hidden

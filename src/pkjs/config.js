@@ -422,11 +422,12 @@ var BODY = [
   '<p class="help" id="sailHelp"></p>',
   '<button class="pill filled wide" id="download">Download</button>',
   '<p class="help">The page closes and your phone downloads in the background. ',
-  'Your watch updates when it is done.</p></div>',
-  '<details class="card" id="loginCard"><summary><h2>Advanced download</h2></summary>',
+  'Your watch updates when it is done.</p>',
+  '<button class="pill tonal wide" id="loginToggle" aria-expanded="false" aria-controls="loginBox">',
+  'Advanced download with your Royal login</button>',
+  '<div id="loginBox" hidden>',
   '<p class="muted">Advanced download using your Royal login to pull your bookings/information automatically: ',
-  'stateroom, deck, muster station, terminal time, booked excursions and purchases. Uses the ship and ',
-  'sailing picked above.</p>',
+  'stateroom, deck, muster station, terminal time, booked excursions and purchases.</p>',
   '<label for="rcEmail">Royal Caribbean email</label>',
   '<input id="rcEmail" type="email" autocomplete="off" autocapitalize="off" spellcheck="false">',
   '<label for="rcPassword">Password</label>',
@@ -439,7 +440,7 @@ var BODY = [
   'back your booking details; those are saved on this phone and your watch like the rest of your cruise ',
   'data. You\'ll type your login again next time you sync if you wish to keep your data synced with ',
   'Royal\'s. This uses Royal\'s website sign-in, which Royal could change without notice; if it stops ',
-  'working, use the Windows sync tool.</p></details>',
+  'working, use the Windows sync tool.</p></div></div>',
   '<div id="venueCard"></div>',
   '<details class="card" id="backup"><summary><h2>Backup: paste cruise data</h2></summary>',
   '<p class="muted">If Download doesn\'t work, run <code>sync.bat</code> from <code>tools/cruise-sync</code> ',
@@ -1044,6 +1045,15 @@ function pageMain(S, V, CL, SH) {
   $('ship').addEventListener('change', loadSailings);
   $('sailing').addEventListener('change', updateDownload);
   $('sailDate').addEventListener('input', updateDownload);
+  $('loginToggle').addEventListener('click', function() {
+    var open = $('loginBox').hidden;
+    $('loginBox').hidden = !open;
+    $('loginToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+    $('loginToggle').textContent = open ? 'Hide the Royal login' : 'Advanced download with your Royal login';
+    if (open) {
+      $('rcEmail').focus();
+    }
+  });
   $('rcEmail').addEventListener('input', updateDownload);
   $('rcPassword').addEventListener('input', updateDownload);
 

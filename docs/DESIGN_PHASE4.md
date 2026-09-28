@@ -223,14 +223,20 @@ end (`9:00a`), like any event of unknown length.
 
 ### 7.1 Settings page, Cruise tab
 
-A collapsed card right under **Download your sailing**, above Backup:
+Part of the **Download your sailing** card, so the ship and sailing picked there
+are the ones the login downloads. Under Download and its help line, a tonal
+button expands the login fields in place (owner, 2026-09-28: a separate card made
+it easy to forget to pick the sailing):
 
 ```
-Advanced download                                    v
+  Ship / Sailing ...
+  [               Download               ]       filled pill
+  The page closes and your phone downloads ...   help
+  [ Advanced download with your Royal login ]    tonal pill
+  -- tapped: the fields open below, the button reads "Hide the Royal login" --
   Advanced download using your Royal login to pull your
   bookings/information automatically: stateroom, deck, muster
-  station, terminal time, booked excursions and purchases. Uses
-  the ship and sailing picked above.
+  station, terminal time, booked excursions and purchases.
   Royal Caribbean email   [                              ]
   Password                [••••••••                      ]
   [          Download with login          ]      filled pill
@@ -240,6 +246,8 @@ Advanced download                                    v
   told")                                       help text
 ```
 
+- The fields start hidden each time the page opens; opening them puts the cursor
+  in the email field.
 - The button is off until a sailing is picked above and both fields are filled;
   the help line says which is missing.
 - The fields are plain inputs with autocomplete off (no password manager offer,
