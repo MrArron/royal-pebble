@@ -120,7 +120,9 @@ Read before making changes:
   stores it in a 16-bit field; the watch has 128 KB, the rest is heap). After
   `pebble build`, run `python3 tools/watch_size.py` (fails over a 62 KB budget)
   and put its first lines in the PR description. Big buffers go on the heap,
-  allocated while their screen is open. See `docs/PHASE5_PLAN.md`.
+  allocated while their screen is open. See `docs/PHASE5_PLAN.md`. The build
+  uses link-time optimisation (`wscript`); keep its `-Wl,-u,__pbl_app_info`,
+  or LTO drops the app header and installs fail.
 - Watch C code: don't use `strtol()` or `strlen()`; both faulted on real Pebble
   Time 2 hardware. The emulator won't catch this.
 

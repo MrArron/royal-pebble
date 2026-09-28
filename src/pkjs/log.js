@@ -17,7 +17,7 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '1.5.0';
+var APP_VERSION = '1.5.1';
 
 var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
