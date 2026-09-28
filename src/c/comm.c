@@ -40,13 +40,11 @@ static CommDirFailedHandler s_on_route_failed;
 static CommPhoneUpHandler s_on_dir_up;
 static CommPhoneUpHandler s_on_route_up;
 
-// The slice being received; committed to data.c on MSG_END.
+// The slice being received; committed to data.c on MSG_END. Its header is on
+// the heap only while a slice is coming in (500 bytes off the 64 KB limit on
+// code plus static data).
 static uint16_t s_pending_id;
-static bool s_pending;
-static SliceMeta s_meta;
-static Day s_day;
-static Tomorrow s_tomorrow;
-static MyInfo s_info;
+static SliceHead *s_pending;
 static int s_event_count;
 static int s_events_received;
 static int s_alarm_count;
@@ -125,62 +123,72 @@ static int decode_notices(Notice *notices, const uint8_t *p, int length) {
 }
 
 static void handle_begin(DictionaryIterator *iter, uint16_t slice_id) {
-  s_pending = true;
+  if (!s_pending) {
+    s_pending = malloc(sizeof(SliceHead));
+    if (!s_pending) {
+      return;
+    }
+  }
+  // Starts from the current header: fields a message leaves out keep their
+  // value, as they did when these were static.
+  SliceHead *h = s_pending;
+  *h = *data_head();
   s_pending_id = slice_id;
   s_events_received = 0;
   s_alarms_received = 0;
 
   int32_t sail = find_int(iter, MESSAGE_KEY_sail_date);  // YYYYMMDD
-  s_meta.sail_days = days_from_civil(sail / 10000, (sail / 100) % 100, sail % 100);
-  s_meta.dark_theme = find_int(iter, MESSAGE_KEY_theme) != 0;
-  s_meta.show_featured = find_int(iter, MESSAGE_KEY_show_featured) != 0;
-  s_meta.is_demo = find_int(iter, MESSAGE_KEY_is_demo) != 0;
-  s_meta.always_hints = find_int(iter, MESSAGE_KEY_button_hints) != 0;
-  s_meta.from_storage = false;
-  s_meta.reminder_lead = (uint8_t)find_int(iter, MESSAGE_KEY_reminder_lead);
+  h->meta.sail_days = days_from_civil(sail / 10000, (sail / 100) % 100, sail % 100);
+  h->meta.dark_theme = find_int(iter, MESSAGE_KEY_theme) != 0;
+  h->meta.show_featured = find_int(iter, MESSAGE_KEY_show_featured) != 0;
+  h->meta.is_demo = find_int(iter, MESSAGE_KEY_is_demo) != 0;
+  h->meta.always_hints = find_int(iter, MESSAGE_KEY_button_hints) != 0;
+  h->meta.from_storage = false;
+  h->meta.reminder_lead = (uint8_t)find_int(iter, MESSAGE_KEY_reminder_lead);
 
-  s_day.index = find_int(iter, MESSAGE_KEY_day_index);
-  s_day.kind = (DayKind)find_int(iter, MESSAGE_KEY_day_kind);
-  s_day.all_aboard = find_int(iter, MESSAGE_KEY_all_aboard);
-  s_day.local_offset = (int16_t)find_int(iter, MESSAGE_KEY_local_offset);
-  s_day.arrive = find_int_or(iter, MESSAGE_KEY_arrive, NO_TIME);
-  s_day.depart = find_int_or(iter, MESSAGE_KEY_depart, NO_TIME);
-  s_day.terminal = find_int_or(iter, MESSAGE_KEY_terminal, NO_TIME);
-  find_str(iter, MESSAGE_KEY_terminal_text, s_day.terminal_text, sizeof(s_day.terminal_text));
-  s_day.warn_period = (uint8_t)find_int_or(iter, MESSAGE_KEY_warn_period, 30);
-  find_str(iter, MESSAGE_KEY_day_status, s_day.status, sizeof(s_day.status));
-  find_str(iter, MESSAGE_KEY_day_location, s_day.location, sizeof(s_day.location));
-  find_str(iter, MESSAGE_KEY_ship_name, s_meta.ship_name, sizeof(s_meta.ship_name));
-  find_str(iter, MESSAGE_KEY_sail_port, s_meta.sail_port, sizeof(s_meta.sail_port));
-  s_meta.cruise_starred = (uint8_t)find_int(iter, MESSAGE_KEY_cruise_starred);
+  h->day.index = find_int(iter, MESSAGE_KEY_day_index);
+  h->day.kind = (DayKind)find_int(iter, MESSAGE_KEY_day_kind);
+  h->day.all_aboard = find_int(iter, MESSAGE_KEY_all_aboard);
+  h->day.local_offset = (int16_t)find_int(iter, MESSAGE_KEY_local_offset);
+  h->day.arrive = find_int_or(iter, MESSAGE_KEY_arrive, NO_TIME);
+  h->day.depart = find_int_or(iter, MESSAGE_KEY_depart, NO_TIME);
+  h->day.terminal = find_int_or(iter, MESSAGE_KEY_terminal, NO_TIME);
+  find_str(iter, MESSAGE_KEY_terminal_text, h->day.terminal_text, sizeof(h->day.terminal_text));
+  h->day.warn_period = (uint8_t)find_int_or(iter, MESSAGE_KEY_warn_period, 30);
+  find_str(iter, MESSAGE_KEY_day_status, h->day.status, sizeof(h->day.status));
+  find_str(iter, MESSAGE_KEY_day_location, h->day.location, sizeof(h->day.location));
+  find_str(iter, MESSAGE_KEY_ship_name, h->meta.ship_name, sizeof(h->meta.ship_name));
+  find_str(iter, MESSAGE_KEY_sail_port, h->meta.sail_port, sizeof(h->meta.sail_port));
+  h->meta.cruise_starred = (uint8_t)find_int(iter, MESSAGE_KEY_cruise_starred);
 
   // Tomorrow's card (an older phone sends none: DAY_NONE).
-  s_tomorrow.kind = (DayKind)find_int_or(iter, MESSAGE_KEY_tmr_kind, DAY_NONE);
-  find_str(iter, MESSAGE_KEY_tmr_status, s_tomorrow.status, sizeof(s_tomorrow.status));
-  find_str(iter, MESSAGE_KEY_tmr_location, s_tomorrow.location, sizeof(s_tomorrow.location));
-  s_tomorrow.arrive = find_int_or(iter, MESSAGE_KEY_tmr_arrive, NO_TIME);
-  s_tomorrow.depart = find_int_or(iter, MESSAGE_KEY_tmr_depart, NO_TIME);
-  s_tomorrow.all_aboard = find_int_or(iter, MESSAGE_KEY_tmr_all_aboard, NO_TIME);
-  s_tomorrow.starred = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_starred);
-  s_tomorrow.featured = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_featured);
-  find_str(iter, MESSAGE_KEY_tmr_first, s_tomorrow.first, sizeof(s_tomorrow.first));
-  s_tomorrow.first_start = find_int_or(iter, MESSAGE_KEY_tmr_first_start, NO_TIME);
-  find_str(iter, MESSAGE_KEY_tmr_last, s_tomorrow.last, sizeof(s_tomorrow.last));
-  s_tomorrow.last_kind = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_last_kind);
-  s_tomorrow.to_reserve = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_to_reserve);
+  h->tomorrow.kind = (DayKind)find_int_or(iter, MESSAGE_KEY_tmr_kind, DAY_NONE);
+  find_str(iter, MESSAGE_KEY_tmr_status, h->tomorrow.status, sizeof(h->tomorrow.status));
+  find_str(iter, MESSAGE_KEY_tmr_location, h->tomorrow.location, sizeof(h->tomorrow.location));
+  h->tomorrow.arrive = find_int_or(iter, MESSAGE_KEY_tmr_arrive, NO_TIME);
+  h->tomorrow.depart = find_int_or(iter, MESSAGE_KEY_tmr_depart, NO_TIME);
+  h->tomorrow.all_aboard = find_int_or(iter, MESSAGE_KEY_tmr_all_aboard, NO_TIME);
+  h->tomorrow.starred = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_starred);
+  h->tomorrow.featured = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_featured);
+  find_str(iter, MESSAGE_KEY_tmr_first, h->tomorrow.first, sizeof(h->tomorrow.first));
+  h->tomorrow.first_start = find_int_or(iter, MESSAGE_KEY_tmr_first_start, NO_TIME);
+  find_str(iter, MESSAGE_KEY_tmr_last, h->tomorrow.last, sizeof(h->tomorrow.last));
+  h->tomorrow.last_kind = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_last_kind);
+  h->tomorrow.to_reserve = (uint8_t)find_int(iter, MESSAGE_KEY_tmr_to_reserve);
 
   s_event_count = find_int(iter, MESSAGE_KEY_event_count);
   s_alarm_count = find_int(iter, MESSAGE_KEY_alarm_count);
 }
 
 static void handle_info(DictionaryIterator *iter) {
-  find_str(iter, MESSAGE_KEY_info_stateroom, s_info.stateroom, sizeof(s_info.stateroom));
-  find_str(iter, MESSAGE_KEY_info_deck, s_info.deck, sizeof(s_info.deck));
-  find_str(iter, MESSAGE_KEY_info_stairs, s_info.stairs, sizeof(s_info.stairs));
-  find_str(iter, MESSAGE_KEY_info_muster, s_info.muster, sizeof(s_info.muster));
-  find_str(iter, MESSAGE_KEY_info_dining, s_info.dining, sizeof(s_info.dining));
-  find_str(iter, MESSAGE_KEY_info_clock, s_info.clock_note, sizeof(s_info.clock_note));
-  find_str(iter, MESSAGE_KEY_info_sync, s_info.last_sync, sizeof(s_info.last_sync));
+  SliceHead *h = s_pending;
+  find_str(iter, MESSAGE_KEY_info_stateroom, h->info.stateroom, sizeof(h->info.stateroom));
+  find_str(iter, MESSAGE_KEY_info_deck, h->info.deck, sizeof(h->info.deck));
+  find_str(iter, MESSAGE_KEY_info_stairs, h->info.stairs, sizeof(h->info.stairs));
+  find_str(iter, MESSAGE_KEY_info_muster, h->info.muster, sizeof(h->info.muster));
+  find_str(iter, MESSAGE_KEY_info_dining, h->info.dining, sizeof(h->info.dining));
+  find_str(iter, MESSAGE_KEY_info_clock, h->info.clock_note, sizeof(h->info.clock_note));
+  find_str(iter, MESSAGE_KEY_info_sync, h->info.last_sync, sizeof(h->info.last_sync));
 }
 
 static void handle_dir_page(DictionaryIterator *iter) {
@@ -318,8 +326,9 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
         APP_LOG(APP_LOG_LEVEL_WARNING, "Slice %d: expected %d events, %d alerts; got %d, %d",
                 slice_id, s_event_count, s_alarm_count, s_events_received, s_alarms_received);
       }
-      data_commit(slice_id, &s_meta, &s_day, &s_tomorrow, &s_info, count, alarms);
-      s_pending = false;
+      data_commit(slice_id, s_pending, count, alarms);
+      free(s_pending);
+      s_pending = NULL;
       if (s_on_slice) {
         s_on_slice();
       }

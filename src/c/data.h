@@ -267,13 +267,23 @@ typedef struct {
   char sail_port[32];      // "Galveston"; "" when not known
 } SliceMeta;
 
-// Allocates the events; call before anything else.
+// A slice's header parts, together so comm.c and data.c can keep them on the
+// heap (SliceHead is about 500 bytes).
+typedef struct {
+  SliceMeta meta;
+  Day day;
+  Tomorrow tomorrow;
+  MyInfo info;
+} SliceHead;
+
+// Allocates the header, events and alerts; call before anything else.
 void data_init(void);
 bool data_ready(void);
 const Day *data_day(void);
 const Tomorrow *data_tomorrow(void);
 const MyInfo *data_my_info(void);
 const SliceMeta *data_meta(void);
+const SliceHead *data_head(void);
 uint16_t data_slice_id(void);
 int data_event_count(void);
 Event *data_event(int index);
@@ -282,8 +292,7 @@ Alarm *data_alarm(int index);
 
 // Replaces the slice (called when a complete slice has arrived from the phone
 // or was loaded from storage).
-void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const Tomorrow *tomorrow,
-                 const MyInfo *info, int event_count, int alarm_count);
+void data_commit(uint16_t slice_id, const SliceHead *head, int event_count, int alarm_count);
 
 // Adds or removes the reminder for a starred event (kept sorted by time).
 void data_set_reminder(const Event *e, bool on);

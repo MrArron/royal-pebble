@@ -202,8 +202,8 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 static void init(void) {
+  data_init();  // first: everything else reads the slice header
   usage_init();
-  data_init();
   stars_init();
   bool stored = store_load();
   if (stored) {

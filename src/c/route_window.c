@@ -37,18 +37,23 @@ static Layer *s_more_below;
 static int32_t s_ref;
 static bool s_rest;
 static int32_t s_start;          // the event's start (Home's NEXT), else NO_TIME
-static char s_venue[VENUE_LEN];  // the event's venue, as the phone is asked
 static Fetch s_fetch;
 
 static uint8_t s_flags;         // 1: shown less (not drawn differently yet)
 static int8_t s_small_decks;
-static char s_title[TEXT_LEN];   // the destination
-static char s_header[GPS_LEN];   // "FROM YOUR CABIN", "CLOSEST TO ROYAL THEATER"
-static char s_lead[LEAD_LEN];    // "Same area · your deck", or a message
-static char s_big[GPS_LEN];      // a restroom's "Deck 5 · Fore"
-static char s_small[TEXT_LEN];   // "100 m in all", "Same deck as Royal Theater"
-static char s_event[TITLE_LEN + 8];  // "12:00p Name That Tune Trivia" (event routes)
-static Step *s_steps;  // on the heap while open: static data must stay under 64 KB
+// The screen's texts and steps, on the heap while it's open (static data must
+// stay under 64 KB: docs/PHASE5_PLAN.md).
+typedef struct {
+  char venue[VENUE_LEN];  // the event's venue, as the phone is asked
+  char title[TEXT_LEN];   // the destination
+  char header[GPS_LEN];   // "FROM YOUR CABIN", "CLOSEST TO ROYAL THEATER"
+  char lead[LEAD_LEN];    // "Same area · your deck", or a message
+  char big[GPS_LEN];      // a restroom's "Deck 5 · Fore"
+  char small[TEXT_LEN];   // "100 m in all", "Same deck as Royal Theater"
+  char event[TITLE_LEN + 8];  // "12:00p Name That Tune Trivia" (event routes)
+  Step steps[STEPS_MAX];
+} Route;
+static Route *s_r;
 static int s_count;
 
 // ---- Layout ------------------------------------------------------------------
@@ -134,14 +139,14 @@ static int layout(GContext *ctx, int w) {
   GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
   int tw = w - 2 * PAD;
   int y = 2;
-  int h = text_height(s_title, name_font, tw, 58);
+  int h = text_height(s_r->title, name_font, tw, 58);
   if (ctx) {
-    draw_text(ctx, s_title, name_font, g_theme->text, GRect(PAD, y - 4, tw, h + 4), GTextAlignmentLeft);
+    draw_text(ctx, s_r->title, name_font, g_theme->text, GRect(PAD, y - 4, tw, h + 4), GTextAlignmentLeft);
   }
   y += h + 2;
-  if (s_header[0]) {
+  if (s_r->header[0]) {
     if (ctx) {
-      draw_text(ctx, s_header, small, g_theme->muted, GRect(PAD, y - 2, tw, 18), GTextAlignmentLeft);
+      draw_text(ctx, s_r->header, small, g_theme->muted, GRect(PAD, y - 2, tw, 18), GTextAlignmentLeft);
     }
     y += 18;
   }
@@ -166,47 +171,47 @@ static int layout(GContext *ctx, int w) {
     return y + 60;
   }
 
-  if (s_lead[0]) {
-    h = text_height(s_lead, large, tw, 66);
+  if (s_r->lead[0]) {
+    h = text_height(s_r->lead, large, tw, 66);
     if (ctx) {
-      draw_text(ctx, s_lead, large, g_theme->text, GRect(PAD, y - 4, tw, h + 4), GTextAlignmentLeft);
+      draw_text(ctx, s_r->lead, large, g_theme->text, GRect(PAD, y - 4, tw, h + 4), GTextAlignmentLeft);
     }
     y += h + 2;
   }
   int step_x = PAD + GLYPH_W + GLYPH_GAP;
   int step_w = w - step_x - PAD;
   for (int i = 0; i < s_count; i++) {
-    h = text_height(s_steps[i].text, large, step_w, 44);
+    h = text_height(s_r->steps[i].text, large, step_w, 44);
     if (ctx) {
-      draw_glyph(ctx, s_steps[i].glyph, PAD, y - 4);
-      draw_text(ctx, s_steps[i].text, large, g_theme->text, GRect(step_x, y - 4, step_w, h + 4), GTextAlignmentLeft);
+      draw_glyph(ctx, s_r->steps[i].glyph, PAD, y - 4);
+      draw_text(ctx, s_r->steps[i].text, large, g_theme->text, GRect(step_x, y - 4, step_w, h + 4), GTextAlignmentLeft);
     }
     y += h + 2;
   }
-  if (s_big[0] || s_small[0] || s_event[0]) {
+  if (s_r->big[0] || s_r->small[0] || s_r->event[0]) {
     y += 2;
     if (ctx) {
       draw_divider(ctx, y, w);
     }
     y += 5;
-    if (s_big[0]) {
+    if (s_r->big[0]) {
       if (ctx) {
-        draw_text(ctx, s_big, large, g_theme->text, GRect(PAD, y - 4, tw, 22), GTextAlignmentLeft);
+        draw_text(ctx, s_r->big, large, g_theme->text, GRect(PAD, y - 4, tw, 22), GTextAlignmentLeft);
       }
       y += 20;
     }
-    if (s_small[0]) {
+    if (s_r->small[0]) {
       if (ctx) {
         char text[56];
-        fmt_decks(text, sizeof(text), s_small_decks, s_small);
+        fmt_decks(text, sizeof(text), s_small_decks, s_r->small);
         draw_arrow_line(ctx, false, g_theme->muted, PAD, y - 2, tw, "", s_small_decks, text);
       }
       y += 18;
     }
-    if (s_event[0]) {
-      h = text_height(s_event, small, tw, 34);
+    if (s_r->event[0]) {
+      h = text_height(s_r->event, small, tw, 34);
       if (ctx) {
-        draw_text(ctx, s_event, small, g_theme->muted, GRect(PAD, y - 2, tw, h + 2), GTextAlignmentLeft);
+        draw_text(ctx, s_r->event, small, g_theme->muted, GRect(PAD, y - 2, tw, h + 2), GTextAlignmentLeft);
       }
       y += h;
     }
@@ -251,7 +256,7 @@ static void relayout(void) {
 static void state_changed(void *owner) { relayout(); }
 
 static bool send_request(void *owner) {
-  return s_start != NO_TIME ? comm_request_event_route(s_start, s_venue) : comm_request_route(s_ref, s_rest);
+  return s_start != NO_TIME ? comm_request_event_route(s_start, s_r->venue) : comm_request_route(s_ref, s_rest);
 }
 
 // uint8 flags, int8 decks, five texts, uint8 count, then each step's uint8
@@ -266,17 +271,17 @@ static void page_received(const RoutePageMsg *page) {
   s_flags = p[0];
   s_small_decks = (int8_t)p[1];
   p += 2;
-  if (!codec_read_str(&p, end, s_title, sizeof(s_title)) ||
-      !codec_read_str(&p, end, s_header, sizeof(s_header)) ||
-      !codec_read_str(&p, end, s_lead, sizeof(s_lead)) ||
-      !codec_read_str(&p, end, s_big, sizeof(s_big)) ||
-      !codec_read_str(&p, end, s_small, sizeof(s_small))) {
+  if (!codec_read_str(&p, end, s_r->title, sizeof(s_r->title)) ||
+      !codec_read_str(&p, end, s_r->header, sizeof(s_r->header)) ||
+      !codec_read_str(&p, end, s_r->lead, sizeof(s_r->lead)) ||
+      !codec_read_str(&p, end, s_r->big, sizeof(s_r->big)) ||
+      !codec_read_str(&p, end, s_r->small, sizeof(s_r->small))) {
     return;
   }
   int count = p < end ? *p++ : 0;
   s_count = 0;
-  while (s_steps && s_count < count && s_count < STEPS_MAX && p < end) {
-    Step *st = &s_steps[s_count];
+  while (s_count < count && s_count < STEPS_MAX && p < end) {
+    Step *st = &s_r->steps[s_count];
     st->glyph = *p++;
     if (!codec_read_str(&p, end, st->text, sizeof(st->text))) {
       break;
@@ -345,12 +350,20 @@ static void window_unload(Window *window) {
   top_bar_destroy(s_top_bar);
   window_destroy(window);
   s_window = NULL;
-  free(s_steps);
-  s_steps = NULL;
+  free(s_r);
+  s_r = NULL;
   s_count = 0;
 }
 
 static void push(int32_t ref, bool rest, const char *title, const char *header);
+
+// Allocates the texts; false when there's no memory (the screen doesn't open).
+static bool alloc_route(void) {
+  if (!s_r) {
+    s_r = calloc(1, sizeof(Route));
+  }
+  return s_r != NULL;
+}
 
 static void window_appear(Window *window) {
   if (s_start != NO_TIME) {
@@ -361,23 +374,22 @@ static void window_appear(Window *window) {
 }
 
 void route_window_push(int32_t ref, bool rest, const char *title, const char *header) {
-  if (s_window) {
+  if (s_window || !alloc_route()) {
     return;
   }
   s_start = NO_TIME;
-  s_venue[0] = s_event[0] = '\0';
   push(ref, rest, title, header);
 }
 
 void route_window_push_event(const Event *e) {
-  if (s_window) {
+  if (s_window || !alloc_route()) {
     return;
   }
   s_start = e->start;
-  snprintf(s_venue, sizeof(s_venue), "%s", e->venue);
+  snprintf(s_r->venue, sizeof(s_r->venue), "%s", e->venue);
   char time_buf[8];
   fmt_clock(time_buf, sizeof(time_buf), e->start);
-  snprintf(s_event, sizeof(s_event), "%s %s", time_buf, e->title);
+  snprintf(s_r->event, sizeof(s_r->event), "%s %s", time_buf, e->title);
   push(0, false, e->venue, "");
 }
 
@@ -388,13 +400,9 @@ static void push(int32_t ref, bool rest, const char *title, const char *header) 
   s_count = 0;
   s_flags = 0;
   s_small_decks = 0;
-  s_lead[0] = s_big[0] = s_small[0] = '\0';
-  snprintf(s_title, sizeof(s_title), "%s", title);
-  snprintf(s_header, sizeof(s_header), "%s", header);
-  s_steps = malloc(STEPS_MAX * sizeof(Step));
-  if (!s_steps) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for route steps");
-  }
+  s_r->lead[0] = s_r->big[0] = s_r->small[0] = '\0';
+  snprintf(s_r->title, sizeof(s_r->title), "%s", title);
+  snprintf(s_r->header, sizeof(s_r->header), "%s", header);
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,

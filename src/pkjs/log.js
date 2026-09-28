@@ -17,7 +17,7 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '1.4.8';
+var APP_VERSION = '1.5.0';
 
 var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
@@ -527,6 +527,9 @@ function watchEntry(e, sailIso) {
               'watch message ' + named(MSG_TYPES, b) + (x === 2 ? ' not sent, outbox busy' :
                                                        ' not delivered: ' + named(APP_MSG, a))};
     case 13:
+      if (a === -5) {
+        return {kind: 'error', detail: 'watch had no memory for its ' + (STORES[x] || x) + ' storage buffer (' + c + ' bytes)'};
+      }
       return {kind: 'error', detail: 'watch storage write failed (' + (STORES[x] || x) + ', key ' + b + '): ' +
               named(STATUS, a)};
     case 14:

@@ -116,6 +116,11 @@ Read before making changes:
 - When editing files with Claude's tools, escape sequences typed in tool input
   (backslash-u-2028, backslash-b) can arrive as raw control characters. Build them
   in code (`String.fromCharCode`) or check the file for control characters after.
+- Watch size: code + data + static buffers must stay under 65,535 bytes (the SDK
+  stores it in a 16-bit field; the watch has 128 KB, the rest is heap). After
+  `pebble build`, run `python3 tools/watch_size.py` (fails over a 62 KB budget)
+  and put its first lines in the PR description. Big buffers go on the heap,
+  allocated while their screen is open. See `docs/PHASE5_PLAN.md`.
 - Watch C code: don't use `strtol()` or `strlen()`; both faulted on real Pebble
   Time 2 hardware. The emulator won't catch this.
 

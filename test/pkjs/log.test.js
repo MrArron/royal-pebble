@@ -376,6 +376,8 @@ test('watch entries decode and render', function() {
   var late = log.watchEntry({at: 0, code: 3, x: 10, a: 0, b: 5, c: 2880 + 1500}, sail).detail;
   assert.strictEqual(late, 'Alert (at D3 01:00): 5 s');
   assert.strictEqual(log.watchEntry({at: 0, code: 10, x: 0, a: 55, b: 0, c: 0}, null).detail, 'battery 55%');
+  assert.strictEqual(log.watchEntry({at: 0, code: 13, x: 0, a: -5, b: 0, c: 10432}, null).detail,
+                     'watch had no memory for its schedule storage buffer (10432 bytes)');
   assert.strictEqual(log.watchEntry({at: 0, code: 3, x: 9, a: 0, b: 1, c: 900}, null).detail,
                      'Route to next event (cruise minute 900): 1 s');
 });

@@ -12,8 +12,6 @@
 // About 12.8 KB of heap: room for a long day away from the phone. It isn't
 // part of the 64 KB limit on code plus static data.
 #define MAX_ENTRIES 800
-// The queue's size before PR 42; its saved queue can wrap at this slot.
-#define OLD_MAX_ENTRIES 200
 #define ENTRIES_PER_KEY 16
 #define ENTRY_KEYS ((MAX_ENTRIES + ENTRIES_PER_KEY - 1) / ENTRIES_PER_KEY)
 
@@ -42,7 +40,6 @@ typedef struct {
   int16_t unused;
 } UsageMeta;
 
-#define OLD_META_SIZE 8
 
 typedef struct {
   int32_t sail_days;
@@ -114,34 +111,22 @@ void usage_init(void) {
   note_memory();
   s_meta.capacity = MAX_ENTRIES;
   int size = persist_get_size(KEY_META);
-  if (!s_entries || (size != (int)sizeof(UsageMeta) && size != OLD_META_SIZE)) {
+  // A log from before 1.4 (200 entries, 8-byte meta) is dropped, not converted.
+  if (!s_entries || size != (int)sizeof(UsageMeta)) {
     return;
   }
   persist_read_data(KEY_META, &s_meta, size);
-  bool old = size == OLD_META_SIZE;
-  int capacity = old ? OLD_MAX_ENTRIES : s_meta.capacity;
-  if ((!old && capacity != MAX_ENTRIES) || s_meta.head < 0 || s_meta.head >= capacity ||
-      s_meta.count < 0 || s_meta.count > capacity) {
+  if (s_meta.capacity != MAX_ENTRIES || s_meta.head < 0 || s_meta.head >= MAX_ENTRIES ||
+      s_meta.count < 0 || s_meta.count > MAX_ENTRIES) {
     s_meta = (UsageMeta){.capacity = MAX_ENTRIES};
     return;
   }
-  s_meta.capacity = MAX_ENTRIES;
   for (int k = 0; k < ENTRY_KEYS; k++) {
     int first = k * ENTRIES_PER_KEY;
     int n = MAX_ENTRIES - first < ENTRIES_PER_KEY ? MAX_ENTRIES - first : ENTRIES_PER_KEY;
     if (persist_exists(KEY_ENTRIES + k)) {
       persist_read_data(KEY_ENTRIES + k, &s_entries[first], n * sizeof(UsageEntry));
     }
-  }
-  if (old) {
-    // Saved by the 200-entry version: entries past slot 199 wrapped to slot 0.
-    // They go after it instead, and everything is saved in the new layout.
-    int wrapped = s_meta.head + s_meta.count - OLD_MAX_ENTRIES;
-    if (wrapped > 0) {
-      memcpy(&s_entries[OLD_MAX_ENTRIES], &s_entries[0], wrapped * sizeof(UsageEntry));
-    }
-    s_dirty = ((uint64_t)1 << ENTRY_KEYS) - 1;
-    save();
   }
   if (s_meta.count) {
     APP_LOG(APP_LOG_LEVEL_INFO, "%d usage log entries not yet on the phone", s_meta.count);
