@@ -541,7 +541,7 @@ test('Test alerts: reminder in 2 min, all-aboard in 3, to reserve in 4, even bef
   var s = slice.buildSlice(b, {}, {}, at('2027-02-22', 20, 11), tapped);
   var nowC = slice.cruiseMinutes(slice.daysFromIso(b.sailDate), at('2027-02-22', 20, 10));
   assert.deepStrictEqual(s.alarms.map(function(a) { return [a.kind, a.at - nowC, a.ref - nowC, a.title]; }), [
-    [slice.ALARM_REMINDER, 2, 17, 'Test reminder'],
+    [slice.ALARM_REMINDER, 2, 22, 'Test reminder'],
     [slice.ALARM_ALL_ABOARD, 3, 18, 'Test all-aboard'],
     [slice.ALARM_TO_RESERVE, 4, 1440, 'Test show'],
     [slice.ALARM_TO_RESERVE, 4, 1530, 'Test show 2']
@@ -557,7 +557,7 @@ test('packed alarm layout', function() {
   var bytes = pack.encodeAlarm({at: 3000, ref: -2, extra: -60, kind: 1, title: 'Ice', venue: 'B'});
   assert.deepStrictEqual(bytes, [0xB8, 0x0B, 0, 0, 0xFE, 0xFF, 0xFF, 0xFF, 0xC4, 0xFF, 1, 0, 0, 0, 0, 0, 0,
                                  3, 73, 99, 101, 1, 66, 0]);
-  // The arrive-early byte follows `where` (Phase 4; the phone sends 0 until PR F).
+  // The arrive-early byte follows `where` (Phase 4).
   assert.strictEqual(pack.encodeAlarm({at: 1, ref: 1, kind: 1, title: '', venue: '', early: 15})[16], 15);
   bytes = pack.encodeAlarm({at: 1, ref: 1, kind: 1, title: '', venue: '', from: venues.FROM_ROUTE,
                             fromPos: 1, fromVenue: 'Royal Theater',
@@ -1766,6 +1766,44 @@ test('event details reach the packed events; untimed events never arrive early',
   slice.buildEvents(b, {}, {}, 1, sail).forEach(function(e) {
     assert.deepStrictEqual(pack.encodeEvent(e).slice(11, 15), [0, 0, 0, 0]);
   });
+});
+
+test('arrive-early reminders fire before the arrive-by time, across midnight too (Phase 4 §3)', function() {
+  var b = {
+    ship: {code: 'HM'}, sailDate: '2027-03-06',
+    itinerary: [{day: 1, date: '2027-03-06', type: 'EMBARK', port: 'Miami', depart: '16:00'},
+                {day: 2, date: '2027-03-07', type: 'CRUISING', port: 'Cruising'},
+                {day: 3, date: '2027-03-08', type: 'CRUISING', port: 'Cruising'}],
+    schedule: {
+      published: true, cats: [['Entertainment', 'Comedy']], venues: ['Comedy Live'], notes: [],
+      infos: [[null, 15, []], [null, 20, []]],
+      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation', 'info'],
+      events: [['Adult Comedy', 0, 0, '2027-03-07', '22:00', 60, 0, 0, 0],
+               // Listed 00:10 on the 7th = just after midnight that night.
+               ['Late Jazz', 0, 0, '2027-03-07', '00:10', 45, 0, 0, 1],
+               ['Open Mic', 0, 0, '2027-03-07', '20:00', 60, 0, 0, null]]
+    }
+  };
+  var stars = {};
+  b.schedule.events.forEach(function(r) { stars[slice.starKey(r[0], r[3], r[4], 'Comedy Live')] = true; });
+  var settings = {reminderLead: 15,
+                  personal: [{title: 'Dinner', venue: 'Main Dining', date: '2027-03-07', time: '18:00', minutes: 90}]};
+  var day2 = 1440;
+  var list = slice.buildAlarms(b, settings, stars, at('2027-03-07', 12, 0)).map(function(a) {
+    return [a.title, a.at, a.ref, a.early || 0];
+  });
+  assert.deepStrictEqual(list, [
+    ['Dinner', day2 + 17 * 60 + 45, day2 + 18 * 60, 0],
+    ['Open Mic', day2 + 19 * 60 + 45, day2 + 20 * 60, 0],
+    ['Adult Comedy', day2 + 21 * 60 + 30, day2 + 22 * 60, 15],  // arrive by 21:45
+    ['Late Jazz', day2 + 23 * 60 + 35, 2 * 1440 + 10, 20]        // arrive by 23:50, before midnight
+  ]);
+  var jazz = slice.buildAlarms(b, settings, stars, at('2027-03-07', 12, 0))[3];
+  assert.strictEqual(pack.encodeAlarm(jazz)[16], 20, 'the alarm carries the early byte');
+  // Starred after its reminder time has passed: no reminder, even before the start.
+  assert.ok(slice.buildAlarms(b, settings, stars, at('2027-03-07', 23, 40)).every(function(a) {
+    return a.title !== 'Late Jazz';
+  }));
 });
 
 test('age filters: which events each one matches (Phase 4 §2)', function() {
