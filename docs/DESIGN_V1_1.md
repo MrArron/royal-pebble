@@ -920,7 +920,9 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
 `WatchVoice*`. Now Phase 5 in the brief (Phase 4 from 2026-09-26 to 09-27):
 nothing here is built
 until that phase's scope session, which includes the airplane-mode dictation
-test in `docs/FUTURE_VOICE_QUERIES.md` on the owner's phone.
+test in `docs/FUTURE_VOICE_QUERIES.md` on the owner's phone. Scope session
+2026-09-28 (brief, item 29): every command below is in scope; schedule
+questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
 
 - **Hold Select** on Home or on a Route screen starts dictation. (On place pages
   Hold Select is the restroom route.) Check it doesn't clash with any firmware

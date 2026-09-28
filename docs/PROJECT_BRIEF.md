@@ -459,6 +459,24 @@ Versions start at 1.4.0. Items are in build order after a docs PR and a data PR
     the decision: does dictation work in airplane mode, and does the new Pebble
     app accept a third-party PebbleKit Android companion. Record the outcome
     and the scope here.
+    **Scope session, 2026-09-28 (owner):**
+    - **Phone:** Android (the phone on the Dec 12 sailing). The airplane-mode
+      dictation test runs on it; iPhone is not tested.
+    - **Timing:** before the Dec 12 sailing, so voice is tried at sea on the
+      test cruise. The airplane-mode test comes first; nothing else is built
+      until it passes.
+    - **How it's built:** the current setup (PebbleKit JS and the Pebble app's
+      dictation) if the test passes. The PebbleKit Android companion probe runs
+      only if it fails; if dictation can't work offline, voice leaves the
+      sailing's scope and the companion app question goes back to the owner.
+    - **Commands in scope** (DESIGN_V1_1 section 9.6): routes (`How do I get to
+      <B>`, `<A> to <B>`, `my cabin` as A or B), `Closest restroom (from
+      <venue>)`, and setting where you are (`I'm at <venue>` / `I'm in cabin
+      <number>`), always with the Heard/Matched confirm step.
+    - **Future goal, not in Phase 5:** schedule questions by voice (see Future
+      concepts).
+    - **Test result:** not yet run. Test app: RP Probe round 3 (the throwaway
+      `rp-webview-probe` repo).
 30. **Native Android companion app**, only if the scope session chooses it: it
     moves from Later to the front of this phase and is built before the voice
     features (reversing the earlier "stay on PebbleKit JS until after the
@@ -516,6 +534,12 @@ Android companion) are now part of the Phase 5 scope session.
 ### Future concepts (no timeline)
 
 Ideas kept for later with no version or date attached.
+
+**Schedule questions by voice** (owner, 2026-09-28, future goal after Phase 5):
+`What's next`, `When is <event>`, `Where is <event>`, answered from the day's
+slice. Harder than venues: event titles change from day to day and have to be
+matched from speech, so it builds on the Phase 5 matcher once that has been
+tried at sea.
 
 **Sun and hydration reminders** (in v1.1 Phase 3 until the owner moved them
 here on 2026-09-26; sun reminders are only worth building together with
