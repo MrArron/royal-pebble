@@ -419,6 +419,24 @@ test('Filters: the Casino category uses the shared matcher (§27)', function() {
   assert.ok(html.indexOf('bingo and raffles') !== -1, 'Filters note');
 });
 
+test('Filters: the AGES switches above categories, sent back as ageFilters (Phase 4 §2.4)', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
+    categories: [], hiddenCats: [], ageFilters: ['young']};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  var script = pageScript(html);
+  new Function(script);
+  assert.ok(html.indexOf('function isFamily(') !== -1, 'family matcher embedded');
+  assert.ok(html.indexOf('function ageMask(') !== -1, 'age matcher embedded');
+  assert.ok(html.indexOf('"ageFilters":["young"]') !== -1, 'state embedded');
+  assert.ok(html.indexOf('>AGES</div>') < html.indexOf('>CATEGORIES</div>'), 'AGES first');
+  ['Hide Adult only events', 'Hide Teen and Kid only events', 'Hide Family events'].forEach(function(t) {
+    assert.ok(script.indexOf(t) !== -1, t);
+  });
+  assert.ok(html.indexOf('never hide an event with no age listed') !== -1, 'note');
+  assert.ok(script.indexOf('r.ageFilters = ageOn.slice();') !== -1, 'sent back');
+  assert.ok(script.indexOf('(e.ages & ageHideMask()) !== 0') !== -1, 'Hidden on watch');
+});
+
 test('Events rows: age, arrive-early and a Notes toggle (Phase 4 §2.3, §3.3, §4.2)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY};
   var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));

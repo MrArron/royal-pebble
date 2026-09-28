@@ -518,6 +518,7 @@ function pageState(ships) {
     // For Settings > Filters.
     categories: bundle ? slice.categorySummary(bundle) : [],
     hiddenCats: slice.hiddenCats(settings),
+    ageFilters: slice.ageFilters(settings),
     showFeatured: settings.showFeatured !== false,
     // For Settings > Events.
     schedule: bundle && bundle.schedule && bundle.schedule.events && bundle.schedule.events.length ?
@@ -777,6 +778,10 @@ function settingsClosed(text) {
   var hidden = slice.cleanHiddenCats(r.hiddenCats);
   if (hidden) {
     settings.hiddenCats = hidden;
+  }
+  var ageFilters = slice.cleanAgeFilters(r.ageFilters);
+  if (ageFilters) {
+    settings.ageFilters = ageFilters;
   }
   // Per-day settings come back for every day the page showed; null clears one.
   if (r.days && typeof r.days === 'object') {
