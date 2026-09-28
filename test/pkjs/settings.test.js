@@ -419,6 +419,17 @@ test('Filters: the Casino category uses the shared matcher (§27)', function() {
   assert.ok(html.indexOf('bingo and raffles') !== -1, 'Filters note');
 });
 
+test('Events rows: age, arrive-early and a Notes toggle (Phase 4 §2.3, §3.3, §4.2)', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  var script = pageScript(html);
+  new Function(script);
+  assert.ok(html.indexOf('function ageText(') !== -1, 'age wording embedded');
+  assert.ok(script.indexOf("'Arrive ' + e.early + ' min early'") !== -1, 'arrive-early text');
+  assert.ok(script.indexOf('data-act="notes" aria-expanded="false">Notes &middot; ') !== -1, 'notes toggle');
+  assert.ok(script.indexOf('<ul class="notes" hidden>') !== -1, 'notes collapsed');
+});
+
 test('Events search: count line, day headers, My entries and Hidden on watch (§24.3)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
     personal: [{title: 'Trivia with friends', venue: 'Pub', date: '2027-03-07', time: '15:00', minutes: 0}]};

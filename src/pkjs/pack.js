@@ -2,8 +2,9 @@
 //
 // Per event, little-endian:
 //   int32 start (cruise minutes, -1 = untimed), uint16 minutes, uint8 flags,
-//   4 bytes where (below), uint8 title length, title bytes (UTF-8), uint8 venue
-//   length, venue bytes.
+//   4 bytes where (below), uint8 age_min, uint8 age_max, uint8 early, uint8
+//   tags (0 = none; Phase 4), uint8 title length, title bytes (UTF-8), uint8
+//   venue length, venue bytes.
 
 var TITLE_MAX = 63;  // bytes; the watch buffers are 64 and 32 with the NUL
 var VENUE_MAX = 31;
@@ -85,8 +86,13 @@ function encodeEvent(e) {
     start & 255, (start >> 8) & 255, (start >> 16) & 255, (start >> 24) & 255,
     minutes & 255, (minutes >> 8) & 255,
     flags
-  ].concat(encodeWhere(e.where), [title.length], title, [venue.length], venue,
+  ].concat(encodeWhere(e.where), detailBytes(e), [title.length], title, [venue.length], venue,
            flags & FLAG_BOOKED ? bookedBytes(e.booked) : []);
+}
+
+// Age limits, arrive-early minutes and what-to-bring tags (slice.eventDetails).
+function detailBytes(e) {
+  return [(e.ageMin | 0) & 255, (e.ageMax | 0) & 255, (e.early | 0) & 255, (e.tags | 0) & 255];
 }
 
 // Notices and star changes: the watch buffers are 40 and 24 with the NUL.
@@ -105,9 +111,10 @@ function int32(n) {
 // Per alarm, little-endian: int32 at, int32 ref, int16 extra, uint8 kind,
 // uint8 from (bits 0-1 the previous venue's position, 2-3 the kind of "From"
 // directions, 4 set when the event still needs its reservation, 5 a booked
-// order), 4 bytes where (as events), then title, venue and the previous
-// venue's name, each as uint8 length and bytes; a booked order's reminder ends
-// with the same three bytes as its event.
+// order), 4 bytes where (as events), uint8 early (the event's arrive-early
+// minutes; Phase 4), then title, venue and the previous venue's name, each as
+// uint8 length and bytes; a booked order's reminder ends with the same three
+// bytes as its event.
 var ALARM_NOT_RESERVED = 16;  // bit 4 of `from`
 var ALARM_BOOKED = 32;        // bit 5 of `from`
 
@@ -119,7 +126,7 @@ function encodeAlarm(a) {
   var from = ((a.fromPos | 0) & 3) | (((a.from | 0) & 3) << 2) | (a.notReserved ? ALARM_NOT_RESERVED : 0) |
     (a.booked ? ALARM_BOOKED : 0);
   return int32(a.at).concat(int32(a.ref), [extra & 255, (extra >> 8) & 255, a.kind & 255, from],
-                            encodeWhere(a.where), [title.length], title, [venue.length], venue,
+                            encodeWhere(a.where), [(a.early | 0) & 255], [title.length], title, [venue.length], venue,
                             [fromVenue.length], fromVenue, a.booked ? bookedBytes(a.booked) : []);
 }
 

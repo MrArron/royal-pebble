@@ -4,6 +4,7 @@
 #include "usage.h"
 
 // Event details: title, venue, deck and position, time and duration,
+// arrive-by, age and what-to-bring tags (docs/DESIGN_PHASE4.md),
 // reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §5, §8.4).
 // Hold Select toggles the star; Select toggles Reserved on a starred event
 // that needs a reservation. A booked order (docs/DESIGN_PHASE3.md §22.3) shows
@@ -26,6 +27,48 @@ static int draw_line(GContext *ctx, const char *text, const char *font_key, GCol
   graphics_draw_text(ctx, text, font, box, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
                      NULL);
   return y + size.h;
+}
+
+// What-to-bring tags (docs/WATCH_PROTOCOL.md, Packed events), in bit order.
+static const char *const TAG_TEXTS[8] = {
+  "Bring SeaPass", "Weather permitting", "Sign up at venue", "Waiver needed", "Athletic shoes",
+  "Swimwear or active wear", "Limited spots, come early", "Meeting spot on phone",
+};
+
+// Phase 4 lines under the time (docs/DESIGN_PHASE4.md §2.1, §3.1, §4.1):
+// "Arrive by 9:45p" (or "Meet 9:00a" ashore), "Ages 18+" and the tags. Each
+// is left out when the phone sent nothing for it.
+static int draw_event_info(GContext *ctx, const Event *e, int y, int w) {
+  char line[32];
+  if (e->early && event_is_timed(e)) {
+    char at_buf[8];
+    fmt_clock(at_buf, sizeof(at_buf), e->start - e->early);
+    snprintf(line, sizeof(line), "%s %s", where_ashore(&e->where) ? "Meet" : "Arrive by", at_buf);
+    y = draw_line(ctx, line, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD, y - 2, w, 22) + 2;
+  }
+  if (e->age_min || e->age_max) {
+    if (e->age_min && e->age_max) {
+      snprintf(line, sizeof(line), "Ages %d-%d", e->age_min, e->age_max);
+    } else if (e->age_min) {
+      snprintf(line, sizeof(line), "Ages %d+", e->age_min);
+    } else {
+      snprintf(line, sizeof(line), "Ages %d & under", e->age_max);
+    }
+    y = draw_line(ctx, line, FONT_KEY_GOTHIC_18_BOLD, g_theme->port_accent, PAD, y - 2, w, 22) + 2;
+  }
+  if (e->tags) {
+    // All eight with separators take 171 bytes.
+    char tags[176];
+    int n = 0;
+    tags[0] = '\0';
+    for (int i = 0; i < 8; i++) {
+      if ((e->tags & (1 << i)) && n >= 0 && n < (int)sizeof(tags)) {
+        n += snprintf(tags + n, sizeof(tags) - n, "%s%s", n ? " \xc2\xb7 " : "", TAG_TEXTS[i]);
+      }
+    }
+    y = draw_line(ctx, tags, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 90) + 2;
+  }
+  return y;
 }
 
 int details_draw_event(GContext *ctx, int index, int width, int y,
@@ -67,6 +110,7 @@ int details_draw_event(GContext *ctx, int index, int width, int y,
     }
   }
   y = draw_line(ctx, when, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD, y, w, 22) + 2;
+  y = draw_event_info(ctx, e, y, w);
 
   bool booked = (e->flags & EVENT_BOOKED) != 0;
   if (booked) {

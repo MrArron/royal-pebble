@@ -383,6 +383,72 @@ function eventCat(title, venue, cat) {
   return isCasino(title, venue, cat) ? ['Casino', ''] : cat;
 }
 
+// Phase 4 event details (docs/DATA_FORMAT.md `infos`, docs/WATCH_PROTOCOL.md
+// Packed events). The watch shows up to eight fixed tags, worked out here from
+// an event's notes: by Royal's note id first, keywords in the text second
+// (Royal's ids are inconsistent; docs/PHASE4_PLAN.md item 6). A short
+// description (id `short`) only gives the meeting spot tag.
+var TAG_RULES = [
+  [1, /seapass/i, /seapass/i],
+  [2, /weather/i, /weather permitting/i],
+  [4, /sign-?ups?\b/i, /^sign[ -]?ups?\b/i],
+  [8, /waiver|disclaim/i, /waiver|disclaimer/i],
+  [16, /athl|sneaker|wcts|close[ds]?-toe|crocs/i, /athletic|sneakers|close[ds]?-toed?|crocs/i],
+  [32, /bathing|activeattire|swim/i, /swimsuit|swimwear|bathing suit|active attire|dry clothes/i],
+  [64, /limited|limseat|fcfs|\/early$/i, /limited (spots|seating)|first[- ]come|early arrival/i]
+];
+var TAG_LIMITED = 64;        // left off when the event has an arrive-by time
+var TAG_MEETING_SPOT = 128;  // the short description names a meeting spot
+
+function noteTags(id, text) {
+  id = typeof id === 'string' ? id : '';
+  text = typeof text === 'string' ? text : '';
+  if (id === 'short') {
+    return /\(meet\b/i.test(text) ? TAG_MEETING_SPOT : 0;
+  }
+  var tags = 0;
+  TAG_RULES.forEach(function(r) {
+    if (r[1].test(id) || r[2].test(text)) {
+      tags |= r[0];
+    }
+  });
+  return tags;
+}
+
+// A byte for the watch: a positive number up to 255, else 0 (none).
+function detailByte(n) {
+  return typeof n === 'number' && n > 0 ? Math.min(255, Math.round(n)) : 0;
+}
+
+// The schedule's `infos` rows as the watch gets them: [{ageMin, ageMax, early,
+// tags}], each 0 when missing.
+function eventDetails(sched) {
+  var notes = (sched && sched.notes) || [];
+  return ((sched && sched.infos) || []).map(function(r) {
+    r = Array.isArray(r) ? r : [];
+    var age = Array.isArray(r[0]) ? r[0] : [];
+    var early = detailByte(r[1]);
+    var tags = 0;
+    (Array.isArray(r[2]) ? r[2] : []).forEach(function(i) {
+      var n = notes[i];
+      if (Array.isArray(n)) {
+        tags |= noteTags(n[0], n[1]);
+      }
+    });
+    return {ageMin: detailByte(age[0]), ageMax: detailByte(age[1]), early: early,
+            tags: early ? tags & ~TAG_LIMITED : tags};
+  });
+}
+
+// `Ages 18+`, `Ages 17 & under`, `Ages 13-17`, or '' (docs/DESIGN_PHASE4.md
+// §2.1). The settings page gets this function as text.
+function ageText(min, max) {
+  if (min && max) {
+    return 'Ages ' + min + '-' + max;
+  }
+  return min ? 'Ages ' + min + '+' : max ? 'Ages ' + max + ' & under' : '';
+}
+
 // Categories in a bundle's schedule with event counts, for Settings > Filters:
 // [{name, n, subs: [{name, n}]}] sorted by name; '' is a missing subcategory.
 function categorySummary(bundle) {
@@ -583,8 +649,9 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var events = [];
   var whereOf = venues.bundleFinder(bundle, settings).where;
   var finals = finalShows(bundle);
+  var details = eventDetails(bundle.schedule);
 
-  function add(title, venue, date, time, minutes, flags, cat, paid) {
+  function add(title, venue, date, time, minutes, flags, cat, paid, info) {
     var tod = minutesFromHhmm(time);
     // Royal lists after-midnight events under the evening's date (a 01:00 curfew
     // is dated the night before), so times before 04:00 are after that midnight.
@@ -606,6 +673,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     if ((flags & FLAG_RESERVATION) && stars[reservedKey(key)]) {
       flags |= FLAG_RESERVED;
     }
+    var d = details[info] || {};
     events.push({
       title: title,
       venue: venue || '',
@@ -613,6 +681,10 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
       minutes: minutes || 0,
       flags: flags,
       where: whereOf(venue),
+      ageMin: d.ageMin || 0,
+      ageMax: d.ageMax || 0,
+      early: start === NO_TIME ? 0 : d.early || 0,
+      tags: d.tags || 0,
       key: key
     });
     if (countOnly && cat && cat[0] && !(flags & FLAG_STARRED)) {
@@ -631,7 +703,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     var fin = finals[starKey(row[f.title], row[f.date], row[f.time], venue)];
     flags |= fin === FINAL_LAST_CHANCE ? FLAG_LAST_CHANCE : fin === FINAL_ONLY_SHOW ? FLAG_ONLY_SHOW : 0;
     add(row[f.title], venue, row[f.date], row[f.time], row[f.minutes], flags, cat,
-        f.paid !== undefined && !!row[f.paid]);
+        f.paid !== undefined && !!row[f.paid], f.info === undefined ? null : row[f.info]);
   });
 
   (settings.personal || []).forEach(function(p) {
@@ -1240,6 +1312,9 @@ module.exports = {
   hiddenCats: hiddenCats,
   isCasino: isCasino,
   eventCat: eventCat,
+  noteTags: noteTags,
+  eventDetails: eventDetails,
+  ageText: ageText,
   defaultBuffer: defaultBuffer,
   warnPeriod: warnPeriod,
   royalAllAboard: royalAllAboard,

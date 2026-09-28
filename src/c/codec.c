@@ -63,7 +63,7 @@ static void write_where(uint8_t *p, const Where *w) {
   p[3] = (uint8_t)w->rel;
 }
 
-#define EVENT_FIXED 11
+#define EVENT_FIXED 15
 #define BOOKED_BYTES 3
 
 // A booked order's three trailing bytes: meet_before, guests, kind.
@@ -85,7 +85,7 @@ static uint8_t *write_booked(uint8_t *p, const Booked *b) {
   return p + BOOKED_BYTES;
 }
 #define DIR_ROW_FIXED 10
-#define ALARM_FIXED 16
+#define ALARM_FIXED 17
 
 bool codec_read_event(const uint8_t **p, const uint8_t *end, Event *e) {
   const uint8_t *q = *p;
@@ -96,6 +96,10 @@ bool codec_read_event(const uint8_t **p, const uint8_t *end, Event *e) {
   e->minutes = (uint16_t)(q[4] | (q[5] << 8));
   e->flags = q[6];
   codec_read_where(q + 7, &e->where);
+  e->age_min = q[11];
+  e->age_max = q[12];
+  e->early = q[13];
+  e->tags = q[14];
   q += EVENT_FIXED;
   if (!codec_read_str(&q, end, e->title, sizeof(e->title)) ||
       !codec_read_str(&q, end, e->venue, sizeof(e->venue))) {
@@ -115,6 +119,10 @@ uint8_t *codec_write_event(uint8_t *p, const Event *e) {
   p[5] = (uint8_t)(e->minutes >> 8);
   p[6] = e->flags;
   write_where(p + 7, &e->where);
+  p[11] = e->age_min;
+  p[12] = e->age_max;
+  p[13] = e->early;
+  p[14] = e->tags;
   p = codec_write_str(p + EVENT_FIXED, e->title, TITLE_LEN - 1);
   p = codec_write_str(p, e->venue, VENUE_LEN - 1);
   return (e->flags & EVENT_BOOKED) ? write_booked(p, &e->booked) : p;
@@ -136,6 +144,7 @@ bool codec_read_alarm(const uint8_t **p, const uint8_t *end, Alarm *a) {
   a->kind = q[10];
   a->from = q[11];
   codec_read_where(q + 12, &a->where);
+  a->early = q[16];
   q += ALARM_FIXED;
   if (!codec_read_str(&q, end, a->title, sizeof(a->title)) ||
       !codec_read_str(&q, end, a->venue, sizeof(a->venue)) ||
@@ -158,6 +167,7 @@ uint8_t *codec_write_alarm(uint8_t *p, const Alarm *a) {
   p[10] = a->kind;
   p[11] = a->from;
   write_where(p + 12, &a->where);
+  p[16] = a->early;
   p = codec_write_str(p + ALARM_FIXED, a->title, ALARM_TITLE_LEN - 1);
   p = codec_write_str(p, a->venue, ALARM_VENUE_LEN - 1);
   p = codec_write_str(p, a->from_venue, ALARM_VENUE_LEN - 1);
