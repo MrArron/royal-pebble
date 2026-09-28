@@ -164,6 +164,9 @@ var CSS = [
   '.ev{display:flex;gap:14px;align-items:center;padding:6px 8px 6px 20px}',
   '.ev .tm{width:56px;flex:none;font-weight:600;color:var(--on-surface-variant)}',
   '.ev .t{flex:1;min-width:0}.ev b{display:block;font-weight:600}',
+  '.notesbtn{display:block;background:none;padding:0;margin-top:4px;font:inherit;font-size:14px;font-weight:600;',
+  'color:var(--primary);text-align:left}.notes{margin:4px 0 0;padding-left:18px;font-size:14px;line-height:19px;',
+  'color:var(--on-surface-variant)}',
   '.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}',
   '.schip.clash{display:inline-flex;align-items:center;gap:6px;background:var(--warning-container);',
   'color:var(--on-warning-container)}.schip.clash svg{width:6px;height:14px;flex:none}',
@@ -1687,6 +1690,8 @@ function pageMain(S, V, CL, SH) {
   if (sched && sched.events) {
     var fi = {};
     (sched.fields || []).forEach(function(name, i) { fi[name] = i; });
+    var infoRows = Array.isArray(sched.infos) ? sched.infos : [];
+    var noteRows = Array.isArray(sched.notes) ? sched.notes : [];
     allEvents = sched.events.map(function(row) {
       var e = {
         title: row[fi.title], venue: schedV.names[row[fi.venue]] || '',
@@ -1694,6 +1699,17 @@ function pageMain(S, V, CL, SH) {
         minutes: row[fi.minutes] || 0, featured: !!row[fi.featured], reservation: !!row[fi.reservation],
         paid: fi.paid !== undefined && !!row[fi.paid], price: fi.price !== undefined ? row[fi.price] : null
       };
+      // Phase 4 details (docs/DATA_FORMAT.md `infos`, docs/DESIGN_PHASE4.md
+      // §2.3, §3.3, §4.2): the age, arrive-early minutes and notes.
+      var inf = fi.info !== undefined ? infoRows[row[fi.info]] : null;
+      if (Array.isArray(inf)) {
+        var age = Array.isArray(inf[0]) ? inf[0] : [];
+        e.age = ageText(age[0], age[1]);
+        e.early = e.time && typeof inf[1] === 'number' && inf[1] > 0 ? inf[1] : 0;
+        e.notes = (Array.isArray(inf[2]) ? inf[2] : []).map(function(i) { return noteRows[i]; })
+          .filter(function(n) { return Array.isArray(n) && typeof n[1] === 'string' && n[1]; })
+          .map(function(n) { return n[1]; });
+      }
       e.excursion = e.cat[0] === 'Shore excursions';  // docs/DATA_FORMAT.md
       e.cat = eventCat(e.title, e.venue, e.cat);  // Casino (slice.js)
       e.key = starKey(e.title, e.date, e.time, e.venue);
@@ -1872,6 +1888,16 @@ function pageMain(S, V, CL, SH) {
     return e.minutes + ' min';
   }
 
+  // An event's notes behind a "Notes · 2 ▾" toggle, collapsed (§4.2).
+  function notesBlock(e) {
+    if (!e.notes || !e.notes.length) {
+      return '';
+    }
+    return '<button class="notesbtn" data-act="notes" aria-expanded="false">Notes &middot; ' + e.notes.length +
+      ' <span aria-hidden="true">&#9662;</span></button><ul class="notes" hidden>' +
+      e.notes.map(function(n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
+  }
+
   function eventRow(e, withDate) {
     var on = isStarred(e.key);
     var bits = [];
@@ -1882,6 +1908,12 @@ function pageMain(S, V, CL, SH) {
       bits.push(VS ? '<button class="vlink" data-act="venue" data-venue="' + esc(e.venue) + '">' + esc(e.venue) +
         '</button>' : esc(e.venue));
     }
+    if (e.age) {
+      bits.push(esc(e.age));
+    }
+    if (e.early) {
+      bits.push('Arrive ' + e.early + ' min early');
+    }
     if (lengthText(e)) {
       bits.push(lengthText(e));
     }
@@ -1891,7 +1923,7 @@ function pageMain(S, V, CL, SH) {
         esc(shortClock(c.time)) : esc(c.venue)) + '</span>');
     }
     return '<div class="ev"><span class="tm">' + shortClock(e.time) + '</span><span class="t"><b>' + esc(e.title) +
-      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + eventExtras(e) + '</span>' +
+      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + notesBlock(e) + eventExtras(e) + '</span>' +
       '<button class="star" data-act="star" data-key="' + esc(e.key) + '" aria-pressed="' + on + '" aria-label="' +
       (on ? 'Unstar ' : 'Star ') + esc(e.title) + '">' + STAR_SVG + '</button></div>';
   }
@@ -2322,6 +2354,14 @@ function pageMain(S, V, CL, SH) {
       renderMine();
       $('evMine').scrollIntoView();
       $('peTitle').focus();
+      return;
+    }
+    var nb = ev.target.closest('[data-act=notes]');
+    if (nb) {
+      var open = nb.getAttribute('aria-expanded') !== 'true';
+      nb.setAttribute('aria-expanded', String(open));
+      nb.lastChild.innerHTML = open ? '&#9652;' : '&#9662;';
+      nb.nextElementSibling.hidden = !open;
       return;
     }
     var vb = ev.target.closest('[data-act=venue]');
@@ -3659,7 +3699,7 @@ function buildPage(state, now) {
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<title>Royal Pebble</title><style>' + CSS + '</style></head><body>' + BODY +
     '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';' + mapExport.toString() + ';' +
-    slice.isCasino.toString() + ';' + slice.eventCat.toString() + ';(' +
+    slice.isCasino.toString() + ';' + slice.eventCat.toString() + ';' + slice.ageText.toString() + ';(' +
     pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')(), (' +
     cabins.cabinLib.toString() + ')(), (' + share.shareLib.toString() + ')());</script>' +
     '</body></html>';

@@ -84,6 +84,11 @@ typedef struct {
   uint16_t minutes;  // duration; 0 if unknown
   uint8_t flags;
   Where where;
+  // Phase 4 (docs/WATCH_PROTOCOL.md, Packed events); 0 = none.
+  uint8_t age_min;   // years
+  uint8_t age_max;
+  uint8_t early;     // minutes to arrive (or meet) before the start
+  uint8_t tags;      // what-to-bring notes as bits (details_window.c)
   Booked booked;     // with EVENT_BOOKED
 } Event;
 
@@ -165,6 +170,7 @@ typedef struct {
   uint8_t from;   // reminder: "From" directions (FromKind << 2 | previous position),
                   // plus ALARM_NOT_RESERVED
   Where where;    // reminder: where the event is
+  uint8_t early;  // reminder: the event's arrive-early minutes (Phase 4)
   char title[ALARM_TITLE_LEN];  // all-aboard: location; reminder, to reserve: event title
   char venue[ALARM_VENUE_LEN];  // the venue's short name
   char from_venue[ALARM_VENUE_LEN];  // FROM_ROUTE: the previous venue's short name

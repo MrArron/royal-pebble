@@ -382,8 +382,8 @@ above, spread over 256-byte values (keys 40 on):
    first start, starred and featured counts, last kind and to-reserve count,
    then the terminal arrival), then the day's status and location, My info's
    six texts, the ship name, and tomorrow's status, location, first and last,
-   then the sail port and the terminal arrival text. (Storage version 8;
-   9 from Phase 4, whose events and alerts carry the new bytes, so a blob
+   then the sail port and the terminal arrival text. (Storage version 9
+   since 1.4.2, whose events and alerts carry the Phase 4 bytes, so a blob
    saved by an older version is ignored until the phone sends a slice.)
 2. Alerts, then events, each as packed above, in time order.
 

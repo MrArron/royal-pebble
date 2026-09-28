@@ -18,8 +18,9 @@
 // The first starred event or alert that doesn't fit is then the "cutoff": the
 // phone has to be back before then.
 
-#define STORE_VERSION 8  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown;
-                         // 7: tomorrow's to-reserve count; 8: terminal arrival
+#define STORE_VERSION 9  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown;
+                         // 7: tomorrow's to-reserve count; 8: terminal arrival; 9: event details
+                         // bytes (age, arrive-early, tags) and the alarm's early byte
 #define STORE_MAX_KEYS 40
 #define STORE_MAX_BUDGET (STORE_MAX_KEYS * PERSIST_DATA_MAX_LENGTH)
 #define STORE_MIN_BUDGET (4 * PERSIST_DATA_MAX_LENGTH)

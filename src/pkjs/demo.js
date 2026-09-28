@@ -54,6 +54,32 @@ var SEA_EVENTS = [
   ['Silent Disco', 'Boardwalk', 4, 330, 90, 0, 0, 0]
 ];
 
+// Phase 4 details (docs/DATA_FORMAT.md): notes, [age, early, notes] rows, and
+// which demo events use which row, by title.
+var NOTES = [
+  ['kbyg/general/seapass', 'Please bring your SeaPass'],
+  ['kbyg/general/WEATHER', 'Weather permitting'],
+  ['kbyg/general/signups', 'Sign up 15 minutes before activity'],
+  ['kbyg/general/ATHLSHOES', 'Wear athletic shoes'],
+  ['attire/bathing', 'Swimsuit under coverup or light clothing'],
+  ['kbyg/limited-spots-per-session', 'Limited spots per session']
+];
+var INFOS = [
+  [[18, null], 15, [0]],
+  [[3, 12], null, []],
+  [null, null, [0, 1, 2, 3]],
+  [null, null, [3]],
+  [null, null, [1, 4, 5]],
+  [null, 15, [0, 5]],
+  [[18, null], null, []],
+  [null, null, [5]],
+  [null, 30, []]
+];
+var DETAILS = {
+  'Adult Comedy': 0, 'Adventure Ocean Open House': 1, 'Shuffleboard Tournament': 2, 'Salsa Lesson': 3,
+  'Pool Games': 4, 'Ice Show: 1887': 5, 'Silent Disco': 6, 'Name That Tune': 7, 'HiRO': 8
+};
+
 // Tomorrow's events, as above but with a clock time instead of an offset.
 var TOMORROW_EVENTS = [
   ['Sunrise Pilates', 'Solarium', 3, '08:30', 45, 0, 0, 1],
@@ -132,7 +158,7 @@ function make(now, variant) {
     if (e[8]) {
       stars[slice.reservedKey(slice.starKey(e[0], date, time, e[1]))] = true;
     }
-    return [e[0], venues.indexOf(e[1]), e[2], date, time, e[4], e[5], e[6]];
+    return [e[0], venues.indexOf(e[1]), e[2], date, time, e[4], e[5], e[6], DETAILS[e[0]]];
   });
   // Tomorrow, for the evening's tomorrow card: a starred class, and a featured
   // show that is the sea day's show again (a last chance) or, on port
@@ -171,7 +197,9 @@ function make(now, variant) {
       published: true,
       cats: CATS,
       venues: venues,
-      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation'],
+      notes: NOTES,
+      infos: INFOS,
+      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation', 'info'],
       events: events
     }
   };

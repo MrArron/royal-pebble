@@ -359,7 +359,8 @@ test('packing round-trips and respects chunk size', function() {
   for (var i = 0; i < 90; i++) {
     events.push({title: 'Event number ' + i + ' with a fairly long title for testing', venue: 'Royal Promenade',
                  start: i < 2 ? -1 : 1440 + i * 10, minutes: 45, flags: i % 16,
-                 where: {deck: i % 18, deckTo: 0, pos: 2, ashore: false, rel: null}});
+                 where: {deck: i % 18, deckTo: 0, pos: 2, ashore: false, rel: null},
+                 ageMin: i % 3 ? 0 : 18, ageMax: i % 5 ? 0 : 17, early: i % 7 ? 0 : 15, tags: i});
   }
   var chunks = pack.packEvents(events, 700);
   var decoded = [];
@@ -372,11 +373,12 @@ test('packing round-trips and respects chunk size', function() {
       var minutes = b[p + 4] | (b[p + 5] << 8);
       var flags = b[p + 6];
       var deck = b[p + 7];
-      var tl = b[p + 11];
-      var title = String.fromCharCode.apply(null, b.slice(p + 12, p + 12 + tl));
-      var vl = b[p + 12 + tl];
-      p += 13 + tl + vl;
-      decoded.push({start: start, minutes: minutes, flags: flags, deck: deck, title: title});
+      var info = b.slice(p + 11, p + 15);
+      var tl = b[p + 15];
+      var title = String.fromCharCode.apply(null, b.slice(p + 16, p + 16 + tl));
+      var vl = b[p + 16 + tl];
+      p += 17 + tl + vl;
+      decoded.push({start: start, minutes: minutes, flags: flags, deck: deck, info: info, title: title});
     }
   });
   assert.strictEqual(decoded.length, 90);
@@ -385,6 +387,9 @@ test('packing round-trips and respects chunk size', function() {
   assert.strictEqual(decoded[50].title, events[50].title);
   assert.strictEqual(decoded[15].flags, 15);
   assert.strictEqual(decoded[17].deck, 17);
+  assert.deepStrictEqual(decoded[0].info, [18, 17, 15, 0]);
+  assert.deepStrictEqual(decoded[16].info, [0, 0, 0, 16]);
+  assert.deepStrictEqual(decoded[21].info, [18, 0, 15, 21]);
   console.log('    90 events -> ' + chunks.length + ' chunks');
 });
 
@@ -550,20 +555,22 @@ test('Test alerts: reminder in 2 min, all-aboard in 3, to reserve in 4, even bef
 
 test('packed alarm layout', function() {
   var bytes = pack.encodeAlarm({at: 3000, ref: -2, extra: -60, kind: 1, title: 'Ice', venue: 'B'});
-  assert.deepStrictEqual(bytes, [0xB8, 0x0B, 0, 0, 0xFE, 0xFF, 0xFF, 0xFF, 0xC4, 0xFF, 1, 0, 0, 0, 0, 0,
+  assert.deepStrictEqual(bytes, [0xB8, 0x0B, 0, 0, 0xFE, 0xFF, 0xFF, 0xFF, 0xC4, 0xFF, 1, 0, 0, 0, 0, 0, 0,
                                  3, 73, 99, 101, 1, 66, 0]);
+  // The arrive-early byte follows `where` (Phase 4; the phone sends 0 until PR F).
+  assert.strictEqual(pack.encodeAlarm({at: 1, ref: 1, kind: 1, title: '', venue: '', early: 15})[16], 15);
   bytes = pack.encodeAlarm({at: 1, ref: 1, kind: 1, title: '', venue: '', from: venues.FROM_ROUTE,
                             fromPos: 1, fromVenue: 'Royal Theater',
                             where: {deck: 4, deckTo: 0, pos: 2, ashore: false, rel: -2}});
   assert.strictEqual(bytes[11], 1 | (venues.FROM_ROUTE << 2));
   assert.deepStrictEqual(bytes.slice(12, 16), [4, 0, 2 | 8, 0xFE]);
-  assert.deepStrictEqual(bytes.slice(18), [13].concat(pack.utf8('Royal Theater', 99)));
+  assert.deepStrictEqual(bytes.slice(19), [13].concat(pack.utf8('Royal Theater', 99)));
   // Alerts keep 31 bytes of the title and 17 of each venue name, cut between characters.
   var long = pack.encodeAlarm({at: 1, ref: 1, kind: 1, title: new Array(41).join('x'),
                                venue: 'Boardwalk Dog House', fromVenue: new Array(17).join('y') + String.fromCharCode(233)});
-  assert.strictEqual(long[16], 31);
-  assert.strictEqual(long[16 + 1 + 31], 17);
-  assert.strictEqual(long[16 + 1 + 31 + 1 + 17], 16, 'the two-byte letter is not split');
+  assert.strictEqual(long[17], 31);
+  assert.strictEqual(long[17 + 1 + 31], 17);
+  assert.strictEqual(long[17 + 1 + 31 + 1 + 17], 16, 'the two-byte letter is not split');
 });
 
 // Stops on the sea day (2027-03-07) for the "From" tests: [title, venue, time, minutes].
@@ -1647,9 +1654,9 @@ test('booked orders: packed with three trailing bytes (event and alarm)', functi
   var bytes = pack.encodeEvent(e);
   assert.strictEqual(bytes[6], 129);
   assert.deepStrictEqual(bytes.slice(-3), [15, 2, 1]);
-  assert.strictEqual(bytes.length, 11 + 1 + 4 + 1 + 4 + 3);
+  assert.strictEqual(bytes.length, 15 + 1 + 4 + 1 + 4 + 3);
   // Without booked, nothing extra.
-  assert.strictEqual(pack.encodeEvent({title: 'Tour', venue: 'Port', start: 600, flags: 1}).length, 11 + 10);
+  assert.strictEqual(pack.encodeEvent({title: 'Tour', venue: 'Port', start: 600, flags: 1}).length, 15 + 10);
   var a = pack.encodeAlarm({at: 570, ref: 600, kind: 1, extra: 90, title: 'Tour', venue: 'Port',
                             booked: {meetBefore: 0, guests: 3, excursion: false}});
   assert.strictEqual(a[11], 32);
@@ -1666,6 +1673,110 @@ test('demo: port days have a booked excursion; sea days none', function() {
   assert.strictEqual(booked.length, 1);
   assert.strictEqual(booked[0].venue, 'St. Thomas');
   assert.strictEqual(demo.make(now, 1).bundle.mine, undefined);
+});
+
+// Phase 4 details (docs/WATCH_PROTOCOL.md, Packed events).
+test('note tags: by Royal id, then keywords; short descriptions only give the meeting spot', function() {
+  function tags(id, text) { return slice.noteTags(id, text || ''); }
+  assert.strictEqual(tags('kbyg/general/seapass'), 1);
+  assert.strictEqual(tags('kbyg/seapass'), 1);
+  assert.strictEqual(tags('kbyg/general/WEATHER'), 2);
+  assert.strictEqual(tags('kbyg/general/signups'), 4);
+  assert.strictEqual(tags('kbyg/sign-ups-close-once-competition-starts-'), 4);
+  assert.strictEqual(tags('legal/waiver'), 8);
+  assert.strictEqual(tags('kbyg/flowrdr/WARNDISCLAIM'), 8);
+  assert.strictEqual(tags('waiver', 'Signed waiver required'), 8);
+  assert.strictEqual(tags('kbyg/general/ATHLSHOES'), 16);
+  assert.strictEqual(tags('kbyg/general/wcts'), 16);
+  assert.strictEqual(tags('kbyg/general/crocs-not-allowed'), 16);
+  assert.strictEqual(tags('attire/bathing'), 32);
+  assert.strictEqual(tags('kbyg/general/Activeattire'), 32);
+  assert.strictEqual(tags('kbyg/limited-spots-per-session'), 64);
+  assert.strictEqual(tags('kbyg/general/LIMSEAT'), 64);
+  assert.strictEqual(tags('kbyg/general/fcfs'), 64);
+  assert.strictEqual(tags('kbyg/general/early', 'Early arrival is recommended'), 64);
+  // Keywords when the id is new.
+  assert.strictEqual(tags('kbyg/x1', 'Bring your SeaPass card'), 1);
+  assert.strictEqual(tags('kbyg/x2', 'Sign up at the pool bar'), 4);
+  assert.strictEqual(tags('kbyg/x3', 'Closed-toe shoes required'), 16);
+  assert.strictEqual(tags('kbyg/x4', 'Bring dry clothes'), 32);
+  assert.strictEqual(tags('kbyg/x5', 'Limited seating'), 64);
+  // Not tags.
+  ['kbyg/general/a15', 'kbyg/Atleast58', 'kbyg/general/over21', 'kbyg/general/sunglasses',
+   'age/16-accompanied-parent-guardian', 'kbyg/theater/doors45'].forEach(function(id) {
+    assert.strictEqual(tags(id), 0, id);
+  });
+  assert.strictEqual(tags('short', "Dance Fitness with your Cruise Director's Staff Lais (Meet by the Car)"), 128);
+  assert.strictEqual(tags('short', "World's Sexiest Man Competition:Sign Ups"), 0);
+  assert.strictEqual(tags('short', 'Seminar: Burn Fat Fast'), 0);
+  assert.strictEqual(tags(null, null), 0);
+});
+
+test('event details: ages, arrive-early, tags; limited spots left off with an arrive-by time', function() {
+  var fixture = require('../fixtures/expected-schedule.json');
+  var d = slice.eventDetails(fixture.schedule || fixture);
+  assert.deepStrictEqual(d.map(function(x) { return x.tags; }),
+                         [0, 1, 0, 0, 22, 21, 0, 65, 0, 0, 64, 0, 0, 41, 32, 0, 64, 176, 1, 4, 0, 0, 4, 11, 40, 1, 41]);
+  assert.deepStrictEqual(d[4], {ageMin: 18, ageMax: 0, early: 15, tags: 2 | 4 | 16});
+  assert.deepStrictEqual(d[8], {ageMin: 0, ageMax: 17, early: 0, tags: 0});
+  assert.deepStrictEqual(d[11], {ageMin: 18, ageMax: 25, early: 0, tags: 0});
+  var sched = {notes: [['short', 'Zumba (Meet at the pool)'], ['kbyg/general/fcfs', 'First-come, first-served']],
+               infos: [[null, 20, [0, 1]], [null, null, [1, 7]], 'junk', [[0, 300], -5, 'x']]};
+  assert.deepStrictEqual(slice.eventDetails(sched), [
+    {ageMin: 0, ageMax: 0, early: 20, tags: 128},
+    {ageMin: 0, ageMax: 0, early: 0, tags: 64},
+    {ageMin: 0, ageMax: 0, early: 0, tags: 0},
+    {ageMin: 0, ageMax: 255, early: 0, tags: 0}
+  ]);
+  assert.deepStrictEqual(slice.eventDetails({}), []);
+  assert.deepStrictEqual(slice.eventDetails(undefined), []);
+});
+
+test('age text', function() {
+  assert.strictEqual(slice.ageText(18, 0), 'Ages 18+');
+  assert.strictEqual(slice.ageText(null, 17), 'Ages 17 & under');
+  assert.strictEqual(slice.ageText(13, 17), 'Ages 13-17');
+  assert.strictEqual(slice.ageText(null, null), '');
+});
+
+test('event details reach the packed events; untimed events never arrive early', function() {
+  var b = {
+    ship: {code: 'HM'}, sailDate: '2027-03-06',
+    itinerary: [{day: 1, date: '2027-03-06', type: 'EMBARK', port: 'Miami', depart: '16:00'},
+                {day: 2, date: '2027-03-07', type: 'CRUISING', port: 'Cruising'}],
+    schedule: {
+      published: true, cats: [['Entertainment', 'Comedy']], venues: ['Comedy Live'],
+      notes: [['kbyg/general/seapass', 'Please bring your SeaPass'], ['kbyg/general/LIMSEAT', 'Limited seating']],
+      infos: [[[18, null], 15, [0, 1]], [null, 10, [1]]],
+      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation', 'info'],
+      events: [['Adult Comedy', 0, 0, '2027-03-07', '22:00', 60, 0, 0, 0],
+               ['Joke Sheets', 0, 0, '2027-03-07', null, 0, 0, 0, 1],
+               ['Open Mic', 0, 0, '2027-03-07', '20:00', 60, 0, 0, null]]
+    }
+  };
+  var sail = slice.daysFromIso(b.sailDate);
+  var ev = {};
+  slice.buildEvents(b, {}, {}, 1, sail).forEach(function(e) { ev[e.title] = e; });
+  assert.deepStrictEqual(pack.encodeEvent(ev['Adult Comedy']).slice(11, 15), [18, 0, 15, 1]);
+  assert.deepStrictEqual(pack.encodeEvent(ev['Joke Sheets']).slice(11, 15), [0, 0, 0, 0]);
+  assert.deepStrictEqual(pack.encodeEvent(ev['Open Mic']).slice(11, 15), [0, 0, 0, 0]);
+  // Older bundles (no `info` field) send four zeros.
+  b.schedule.fields.pop();
+  b.schedule.events.forEach(function(r) { r.pop(); });
+  slice.buildEvents(b, {}, {}, 1, sail).forEach(function(e) {
+    assert.deepStrictEqual(pack.encodeEvent(e).slice(11, 15), [0, 0, 0, 0]);
+  });
+});
+
+test('demo: some events carry Phase 4 details', function() {
+  var now = new Date(2027, 2, 7, 9, 0);
+  [0, 1].forEach(function(v) {
+    var d = demo.make(now, v);
+    var evs = slice.buildEvents(d.bundle, d.settings, d.stars, 1, slice.daysFromIso(d.bundle.sailDate));
+    assert.ok(evs.some(function(e) { return e.ageMin; }), 'an age, variant ' + v);
+    assert.ok(evs.some(function(e) { return e.early; }), 'an arrive-by, variant ' + v);
+    assert.ok(evs.some(function(e) { return e.tags; }), 'tags, variant ' + v);
+  });
 });
 
 test('cutText keeps whole characters', function() {
