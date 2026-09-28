@@ -3,7 +3,9 @@
 Status: researched 2026-09-24; scheduled as v1.1 Phase 4 on 2026-09-26, Phase 5 since 2026-09-27
 (`docs/PROJECT_BRIEF.md`). The phase starts with a scope session that decides
 between a native Android companion app and the current setup, using the tests
-below.
+below. Scope session held 2026-09-28: Android, before the sailing, current setup
+if the airplane-mode test passes; commands and outcome are under item 29 in the
+brief.
 
 ## The idea
 
@@ -47,7 +49,10 @@ the watch.
 
 ## Feasibility test (do before the owner's sailing if possible)
 
-Tiny test app that starts a dictation session and shows the returned text.
+Tiny test app that starts a dictation session and shows the returned text:
+RP Probe round 3 in the throwaway `rp-webview-probe` repo (confirm screen and
+error dialogs off, so each failure shows its real status; history of the last 8
+results on Hold Select). Android only, per the scope session.
 
 1. Pebble app speech setting set to local, local package downloaded.
 2. Phone in airplane mode with Bluetooth on.
