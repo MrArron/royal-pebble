@@ -1780,6 +1780,9 @@ function pageMain(S, V, CL, SH) {
       if (e.excursion) {
         e.reservation = true;  // picked means booked, so it takes a reserved mark (slice.js)
         e.booked = inOrders(e);
+        if (!e.minutes) {
+          e.early = 0;  // an all-day rental meets at its listed time (slice.js)
+        }
       }
       var ageRange = Array.isArray(inf) && Array.isArray(inf[0]) ? inf[0] : [];
       var tableName = e.venue && V.lookup(schedTable, e.venue,
@@ -1980,7 +1983,9 @@ function pageMain(S, V, CL, SH) {
       bits.push(esc(dayLabel(e.date)));
     }
     if (e.excursion) {
-      bits.push('Ashore' + (dayPortName(e.date) ? ' &middot; ' + esc(dayPortName(e.date)) : ''));
+      if (dayPortName(e.date)) {
+        bits.push('Ashore &middot; ' + esc(dayPortName(e.date)));
+      }
     } else if (e.venue) {
       bits.push(VS ? '<button class="vlink" data-act="venue" data-venue="' + esc(e.venue) + '">' + esc(e.venue) +
         '</button>' : esc(e.venue));
@@ -1989,7 +1994,7 @@ function pageMain(S, V, CL, SH) {
       bits.push(esc(e.age));
     }
     if (e.early) {
-      bits.push(e.excursion ? meetText(e) : 'Arrive ' + e.early + ' min early');
+      bits.push(e.excursion && dayPortName(e.date) ? meetText(e) : 'Arrive ' + e.early + ' min early');
     }
     if (lengthText(e)) {
       bits.push(lengthText(e));
@@ -2178,9 +2183,11 @@ function pageMain(S, V, CL, SH) {
     return '';
   }
 
-  // "Meet 9:00a", from the arrive-early minutes.
+  // "Meet 9:00a", from the arrive-early minutes ("Arrive by 9:00a" on a sea
+  // day, where these are ship tours and classes, as on the watch).
   function meetText(e) {
-    return 'Meet ' + shortClock(hhmm((dayMinutes(e.time) - e.early + 1440) % 1440));
+    return (dayPortName(e.date) ? 'Meet ' : 'Arrive by ') +
+      shortClock(hhmm((dayMinutes(e.time) - e.early + 1440) % 1440));
   }
 
   // "2 h 30", "4 h", "15 min".
@@ -2205,7 +2212,9 @@ function pageMain(S, V, CL, SH) {
         n = i;
       }
     });
-    return [n === -1 ? dayLabel(date) : 'Day ' + (n + 1), dayPortName(date), 'Shore excursions'].filter(Boolean)
+    var port = dayPortName(date);
+    return [n === -1 ? dayLabel(date) : 'Day ' + (n + 1), port || 'Sea day', port ? 'Shore excursions' : 'Tours']
+      .filter(Boolean)
       .map(function(b) { return esc(b.toUpperCase()); }).join(' &middot; ');
   }
 

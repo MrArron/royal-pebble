@@ -1659,7 +1659,8 @@ function excursionBundle() {
   b.schedule.infos = [[[6, null], 30, []]];
   b.schedule.events = b.schedule.events.map(function(r) { return r.concat([0, null, null]); }).concat([
     ['Snorkel and Beach Break', 3, 2, '2027-03-08', '09:30', 150, 0, 0, 1, 89, 0],
-    ['Beach Cabana', 3, 2, '2027-03-08', '09:00', 0, 0, 0, 1, 400, null],
+    ['Beach Cabana', 3, 2, '2027-03-08', '09:00', 0, 0, 0, 1, 400, 0],
+    ['Behind the Scenes Tour', 3, 2, '2027-03-07', '09:00', 120, 0, 0, 1, 224, 0],
     ['Island Snorkel', 3, 2, '2027-03-08', '09:00', 150, 0, 0, 1, 70, 0]
   ]);
   return b;
@@ -1692,7 +1693,7 @@ test('shore excursions: only picked ones, at the day port, Ashore and reserved',
   assert.strictEqual(e.early, 30);
   assert.strictEqual(e.ageMin, 6);
   assert.strictEqual(e.key, slice.starKey('Snorkel and Beach Break', '2027-03-08', '09:30', ''));
-  // An all-day rental: at its listed time with no length.
+  // An all-day rental: at its listed time with no length, meeting then too.
   var cabana = events.filter(function(x) { return x.title === 'Beach Cabana'; })[0];
   assert.strictEqual(cabana.start, 2 * 1440 + 540);
   assert.strictEqual(cabana.minutes, 0);
@@ -1701,6 +1702,27 @@ test('shore excursions: only picked ones, at the day port, Ashore and reserved',
   var unres = {};
   unres[slice.starKey('Snorkel and Beach Break', '2027-03-08', '09:30', '')] = true;
   assert.strictEqual(slice.buildTomorrow(b, {}, unres, 1, sail).toReserve, 1);
+});
+
+test('shore excursions on a sea day: on board, no venue, arrive-by wording', function() {
+  var b = excursionBundle();
+  var sail = slice.daysFromIso(b.sailDate);
+  var k = slice.starKey('Behind the Scenes Tour', '2027-03-07', '09:00', '');
+  var st = {};
+  st[k] = true;
+  var e = slice.buildEvents(b, {}, st, 1, sail)[0];
+  assert.strictEqual(e.title, 'Behind the Scenes Tour');
+  assert.strictEqual(e.venue, '');
+  assert.strictEqual(e.where.ashore, false);
+  assert.strictEqual(e.early, 30);
+  var r = slice.buildAlarms(b, {reminderLead: 15}, st, at('2027-03-07', 6, 0)).filter(function(a) {
+    return a.kind === slice.ALARM_REMINDER && a.title === 'Behind the Scenes Tour';
+  })[0];
+  assert.strictEqual(r.at, 1440 + 495);  // 8:15 = arrive by 8:30 - 15
+  assert.strictEqual(r.where.ashore, false);
+  // Unstarring on the watch finds it with no venue.
+  var ch = slice.applyWatchStarChanges(b, {}, st, {}, [watchChange(e, false)]);
+  assert.deepStrictEqual(ch.applied, [{key: k, on: false, reserved: false}]);
 });
 
 test('shore excursions: one in login data shows once, as the booked order', function() {

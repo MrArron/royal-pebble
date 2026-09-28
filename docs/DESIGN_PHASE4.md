@@ -181,6 +181,13 @@ card, and the Starred view shows the picked excursions' cards. Its content:
   once picked; tap again to unpick). Excursion sub-line: `Meet 9:00a · 2 h 30 ·
   Ages 6+`, leaving out what's missing. All-day rentals: `All day from 9:00a`.
 - Picking stars the session and marks it reserved, like a paid class today.
+- Royal also lists sea-day products (ship tours, dive classes) as shore
+  excursions, with the venue "Cruising". Their card reads `DAY 3 · SEA DAY ·
+  TOURS` and `Arrive by 8:45a`; on the watch they have no venue and aren't
+  Ashore, so they read `Arrive by` like any event. Found in a live Harmony
+  pull, 2026-09-27.
+- All-day rentals meet at their listed time: Royal gives them a meeting time
+  15 minutes earlier, which is ignored.
 - A picked excursion in the day list reads `Ashore · Perfect Day at CocoCay ·
   Meet 9:00a` in place of the venue and arrive-early time.
 - An excursion that's also in login data (`mine.orders`, same title, date and

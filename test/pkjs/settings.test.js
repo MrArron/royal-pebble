@@ -465,7 +465,7 @@ test('Booked activities and excursions: a card per port day with Pick buttons (P
   var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
   var script = pageScript(html);
   new Function(script);
-  assert.ok(script.indexOf("'Shore excursions'].filter(Boolean)") !== -1, 'day card head');
+  assert.ok(script.indexOf("port ? 'Shore excursions' : 'Tours']") !== -1, 'day card head, sea days too');
   assert.ok(script.indexOf('data-act="xPick"') !== -1, 'Pick button');
   assert.ok(script.indexOf("'All day from '") !== -1, 'all-day rental line');
   assert.ok(script.indexOf('function inOrders(e)') !== -1, 'booked ones show once');

@@ -610,7 +610,7 @@ function applyWatchStarChanges(bundle, settings, stars, times, changes) {
   // A picked shore excursion is at its port on the watch (buildEvents).
   var candidates = scheduleEvents(bundle).map(function(e) {
     if (e.excursion) {
-      e.venue = dayPort(bundle, settings, sailDays, e.date);
+      e.venue = excursionPort(bundle, settings, sailDays, e.date);
     }
     return e;
   }).concat(((settings && settings.personal) || []).map(function(p) {
@@ -700,6 +700,14 @@ function dayPort(bundle, settings, sailDays, date) {
   return buildDay(bundle, settings || {}, daysFromIso(date) - sailDays, sailDays).location;
 }
 
+// Where a picked shore excursion is on the watch: the day's port, or '' on a
+// sea day (Royal lists ship tours, dive classes and the like as shore
+// excursions on sea days, with the venue "Cruising").
+function excursionPort(bundle, settings, sailDays, date) {
+  var day = buildDay(bundle, settings || {}, daysFromIso(date) - sailDays, sailDays);
+  return day.kind === DAY_PORT ? day.location : '';
+}
+
 // Whether login data has this shore excursion session (bookedOrders): same
 // title, date and start time.
 function inOrders(orders, title, date, time) {
@@ -721,8 +729,9 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var finals = finalShows(bundle);
   var details = eventDetails(bundle.schedule);
 
-  // port: a picked shore excursion's port (the day's location); the watch
-  // shows it there, Ashore, while the star key keeps the schedule's venue.
+  // port: a picked shore excursion's port (excursionPort), or '' on a sea
+  // day. The watch shows it there, Ashore (on a sea day with no venue), while
+  // the star key keeps the schedule's venue.
   function add(title, venue, date, time, minutes, flags, cat, paid, info, port) {
     var tod = minutesFromHhmm(time);
     // Royal lists after-midnight events under the evening's date (a 01:00 curfew
@@ -754,10 +763,11 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
       start: start,
       minutes: minutes || 0,
       flags: flags,
-      where: port !== undefined ? ASHORE : finder.where(venue),
+      where: port ? ASHORE : port === '' ? finder.where('') : finder.where(venue),
       ageMin: d.ageMin || 0,
       ageMax: d.ageMax || 0,
-      early: start === NO_TIME ? 0 : d.early || 0,
+      // An all-day rental (a shore excursion with no length) meets at its listed time.
+      early: start === NO_TIME || (port !== undefined && !minutes) ? 0 : d.early || 0,
       tags: d.tags || 0,
       key: key
     });
@@ -791,7 +801,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
         return;
       }
       flags |= FLAG_RESERVATION;
-      port = dayPort(bundle, settings, sailDays, row[f.date]);
+      port = excursionPort(bundle, settings, sailDays, row[f.date]);
     }
     add(row[f.title], venue, row[f.date], row[f.time], row[f.minutes], flags, cat,
         f.paid !== undefined && !!row[f.paid], f.info === undefined ? null : row[f.info], port);

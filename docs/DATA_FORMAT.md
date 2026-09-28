@@ -88,7 +88,10 @@ text. One compact JSON object, ASCII only.
     the paid rule above: nothing shows until the user picks a session. `time`
     is the start; the meeting time is in `info` (`early`, below). All-day
     rentals (beach beds, cabanas, day passes, listed with 0 minutes) keep
-    Royal's listed time and `minutes` 0. Older bundles have none, and their
+    Royal's listed time and `minutes` 0; consumers treat that time as the
+    meeting time. Royal also lists some sea-day products (ship tours, dive
+    classes) as SHOREX, with the venue `Cruising`; consumers show those on
+    board, not ashore. Older bundles have none, and their
     consumers simply see no excursions. They aren't a Filters category
     (picked ones are starred, and starred events always show), and their
     venues, which are ports, aren't ship venues.
