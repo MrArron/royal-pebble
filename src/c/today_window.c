@@ -283,6 +283,9 @@ static void window_load(Window *window) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for Today's rows");
   }
   rebuild_rows();
+  // The menu sized itself when the callbacks were set, before the rows existed:
+  // without a reload it can't scroll until the minute's refresh (#64).
+  menu_layer_reload_data(s_menu);
   menu_layer_set_selected_index(s_menu, MenuIndex(0, first_current_row()), MenuRowAlignTop, false);
   layer_add_child(root, menu_layer_get_layer(s_menu));
 
