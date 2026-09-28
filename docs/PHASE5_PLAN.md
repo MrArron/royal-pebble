@@ -66,6 +66,31 @@ top it's down to a few hundred bytes. The **dictation UI's own heap use is
 unknown** (system screen inside the app). Voice starts from Home or a Route
 screen, so the worst case is a Route screen opened from a deep directory.
 
+### 1.3 Results so far (2026-09-28, emulator, demo data)
+
+| Build | Static | Room to 65,535 | Free heap, Home open |
+|---|---|---|---|
+| 1.4.8 (before) | 63,200 | 2,335 | 19,932 |
+| 1.5.0, proposal A + D (R1) | 61,624 | 3,911 | 31,236 |
+| 1.5.1, proposal C: LTO (R2) | 59,400 | 6,135 | - |
+| 1.5.2, proposal B: Ask screen (voice watch side) | 61,928 | 3,607 | - |
+
+- A saved 1,576 bytes (less than the 2-2.5 KB estimate: dead code was
+  already dropped by the linker; the win was static buffers). Freeing the
+  stored-slice blob gave back about 10 KB of heap.
+- C: `-flto` saved 2,224 bytes; `-Oz` gave the same bytes as `-Os` (GCC
+  14.2.1). LTO drops the SDK's app header unless the link keeps it
+  (`-Wl,-u,__pbl_app_info`); without that the build passes and the install
+  fails. Alerts (reminder, all-aboard) fire on time with the LTO build.
+- B cost 2,528 bytes with LTO (about 2.6 KB without; without LTO about
+  1.3 KB would be left).
+- Dictation's own heap use on the emulator is about 60 bytes (the system's
+  dictation screen doesn't come out of the app's heap there). Free heap at
+  dictation start: 25.6 KB from Home, 18.1 KB from a Route screen four
+  directory levels deep. Still to confirm on the watch: the usage log's new
+  `voice` entries record free heap at each dictation.
+- Not needed now: proposals E and F.
+
 ## 2. Proposals for making room
 
 Ranked by gain for risk. A-C are the recommended set.

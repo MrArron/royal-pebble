@@ -11,6 +11,7 @@ var royal = require('./royal');
 var config = require('./config');
 var venues = require('./venues');
 var directory = require('./directory');
+var voicecard = require('./voicecard');
 var gpstext = require('./gpstext');
 var shipmap = require('./shipmap');
 var logLib = require('./log');
@@ -31,6 +32,8 @@ var MSG_DIR_REQUEST = 15;
 var MSG_ROUTE_REQUEST = 16;
 var MSG_ROUTE_PAGE = 17;
 var MSG_LOG = 18;
+var MSG_VOICE = 19;       // watch -> phone: what dictation heard, or a confirm
+var MSG_VOICE_CARD = 20;  // phone -> watch
 
 // Keep each events chunk well under the watch's 2048-byte inbox.
 var CHUNK_BYTES = 1500;
@@ -68,6 +71,7 @@ var s_resend = false;
 var s_ack = null;        // star ack to send: {seq, resend}
 var s_dirRef = null;     // ship directory page the watch asked for
 var s_route = null;      // route the watch asked for: {ref, rest} or {start, venue}
+var s_voice = null;      // voice turn to answer: {seq, text}
 
 function load(key, fallback) {
   try {
@@ -314,6 +318,8 @@ function sendNext() {
     sendDirPage();
   } else if (s_route) {
     sendRoute();
+  } else if (s_voice) {
+    sendVoiceCard();
   } else if (s_resend) {
     s_resend = false;
     sendSlice();
@@ -361,6 +367,27 @@ function sendDirPage() {
               page.rows.length + ' rows' + gps + ', built in ' + built + ' ms, ' + sendText(ok, info));
     console.log('Directory page ' + ref + (ok ? ' sent: ' : ' failed: ') + page.rows.length + ' rows, ' +
                 msg.dir_rows.length + ' bytes');
+    sendNext();
+  });
+}
+
+// The answer to a voice turn (docs/WATCH_PROTOCOL.md, Voice): a card the watch
+// draws. Only the latest turn is answered.
+function sendVoiceCard() {
+  var turn = s_voice;
+  s_voice = null;
+  var data = currentData();
+  var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
+  var card = voicecard.answer(turn.text, ctx, data.isDemo);
+  s_sending = true;
+  sendQueue([{msg_type: MSG_VOICE_CARD, voice_seq: turn.seq, voice_card: voicecard.packCard(card)}],
+            function(ok, info) {
+    s_sending = false;
+    // Spoken cabin numbers may appear here (owner, 2026-09-26); the log never goes into the repo.
+    usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' +
+              ['nothing to do', 'route', 'confirm'][card.action] + (card.ref ? ' ' + card.ref : '') +
+              ' (' + card.rows.slice(1).map(function(r) { return r.label + ' ' + r.value; }).join(', ') + '), ' +
+              sendText(ok, info));
     sendNext();
   });
 }
@@ -922,6 +949,16 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
     case MSG_ROUTE_REQUEST:
       s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || '')}
                                             : {ref: p.dir_ref | 0, rest: !!p.route_rest};
+      if (!s_sending) {
+        sendNext();
+      }
+      break;
+    case MSG_VOICE:
+      if (p.voice_text === undefined) {
+        usage.add('voice', 'turn ' + (p.voice_seq | 0) + ' confirmed on the watch');
+        break;
+      }
+      s_voice = {seq: p.voice_seq | 0, text: String(p.voice_text)};
       if (!s_sending) {
         sendNext();
       }

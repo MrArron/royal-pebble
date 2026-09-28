@@ -944,6 +944,16 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
 - A spoken cabin number is used for routing only: never stored beyond the
   current start. The usage log may record it (owner, 2026-09-26); the log
   never goes into the repo.
+- **Built (1.5.2, Phase 5 proposal B):** the `Ask` screen draws whatever card
+  the phone sends: up to four label/value rows (`HEARD`, `FROM`, `TO`, `YOU'RE
+  AT`, `TRY`), a sea-accent hint line, and what Select does (open the route,
+  confirm, or ask again). All wording and matching live on the phone
+  (`src/pkjs/voicecard.js`), so they change without a watch update. The watch
+  writes only what it must say itself: `Voice is heard on the phone` (phone
+  away), `Matching on the phone...` and `No answer from the phone` (10 s).
+  On embark day, while `I'm on board` is offered, Hold Select on Home keeps
+  that job; Ask is on Hold Select the rest of the time. A Route screen opened
+  from Ask replaces an open one. Byte format: `docs/WATCH_PROTOCOL.md`, Voice.
 
 ### 9.7 Phone settings page (not mocked)
 

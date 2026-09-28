@@ -836,9 +836,12 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
 
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
   bool offered = offers_onboard(now_cruise());
-  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (offered ? 0 : USAGE_NOTHING), -1);
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
+  // "I'm on board" while it's offered (embark day), else Ask by voice (§9.6).
   if (offered) {
     onboard_window_push();
+  } else {
+    ask_window_push();
   }
 }
 

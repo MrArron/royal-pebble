@@ -337,7 +337,11 @@ test('watch entries decode and render', function() {
     {at: 1804000121, code: 15, x: 4, a: 0, b: 0, c: 0},
     {at: 1804000122, code: 1, x: 100, a: 60, b: 65536, c: 1},
     {at: 1804000123, code: 15, x: 2, a: 12, b: 0, c: 2},
-    {at: 1804000124, code: 3, x: 13, a: 0, b: 3, c: 1440 + 1260}
+    {at: 1804000124, code: 3, x: 13, a: 0, b: 3, c: 1440 + 1260},
+    {at: 1804000125, code: 16, x: 255, a: 0, b: 30720, c: 2},
+    {at: 1804000126, code: 16, x: 0, a: 27, b: 24576, c: 3},
+    {at: 1804000127, code: 16, x: 1, a: 0, b: 24576, c: 3},
+    {at: 1804000128, code: 3, x: 14, a: 0, b: 6, c: 3}
   ];
   var bytes = [];
   entries.forEach(function(e) { bytes = bytes.concat(pack.encodeLogEntry(e)); });
@@ -370,7 +374,11 @@ test('watch entries decode and render', function() {
     'sync  morning sync with the app open: asked for data',
     'open  opened by the morning sync, battery 60%, phone connected, 64 KB free',
     'sync  morning sync: phone unreachable after 12 s, closed with Back before it finished',
-    'screen  Remove star? (D2 21:00): 3 s'
+    'screen  Remove star? (D2 21:00): 3 s',
+    'voice  dictation started, turn 2, 30 KB free',
+    'voice  dictation heard (27 bytes), turn 3, 24 KB free',
+    'voice  dictation cancelled, turn 3, 24 KB free',
+    'screen  Ask: 6 s'
   ]);
   // 01:00 after midnight still belongs to the evening before.
   var late = log.watchEntry({at: 0, code: 3, x: 10, a: 0, b: 5, c: 2880 + 1500}, sail).detail;

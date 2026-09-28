@@ -92,6 +92,10 @@ Read before making changes:
   `qemu-pebble` processes or a damaged `~/.local/share/pebble-sdk/4.33.1/emery/
   qemu_spi_flash.bin` are the usual cause: kill the strays, move the flash file
   aside (don't delete it) and remove `/tmp/pb-emulator.json`.
+- Voice on the emulator: start `pebble transcribe "how do I get to the theater"
+  --emulator emery` in the background (one at a time; it answers the next
+  dictation), then Hold Select on Home. `--error no-speech-detected` tries a
+  failure. With demo data the phone's stand-in answers show each card.
 - Emulator input: `pebble emu-button click select --duration 900 --emulator emery`
   is a long press (`--repeat` moved the Today cursor only one row). After a `pebble
   kill` and reinstall, the firmware may show "wakeup events occurred"; press Back

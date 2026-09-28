@@ -304,8 +304,11 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
   }
 }
 
+static void select_long_click(ClickRecognizerRef recognizer, void *context);
+
 static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
+  window_long_click_subscribe(BUTTON_ID_SELECT, 700, select_long_click, NULL);
 }
 
 // Muted triangles under the top bar and at the bottom while there's more
@@ -411,6 +414,17 @@ static void push(int32_t ref, bool rest, const char *title, const char *header) 
   });
   comm_set_route_handlers(page_received, request_failed, phone_up);
   window_stack_push(s_window, true);
+}
+
+void route_window_close(void) {
+  if (s_window) {
+    window_stack_remove(s_window, false);
+  }
+}
+
+static void select_long_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
+  ask_window_push();
 }
 
 void route_window_refresh(void) {

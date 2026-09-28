@@ -22,6 +22,8 @@ enum {
   MSG_ROUTE_REQUEST = 16,
   MSG_ROUTE_PAGE = 17,
   MSG_LOG = 18,
+  MSG_VOICE = 19,       // watch -> phone: transcript, or confirm (no text)
+  MSG_VOICE_CARD = 20,  // phone -> watch
 };
 
 #define INBOX_SIZE 2048
@@ -39,6 +41,7 @@ static CommRoutePageHandler s_on_route_page;
 static CommDirFailedHandler s_on_route_failed;
 static CommPhoneUpHandler s_on_dir_up;
 static CommPhoneUpHandler s_on_route_up;
+static CommVoiceHandler s_on_voice;
 
 // The slice being received; committed to data.c on MSG_END. Its header is on
 // the heap only while a slice is coming in (500 bytes off the 64 KB limit on
@@ -271,6 +274,13 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     handle_dir_page(iter);
     return;
   }
+  if (msg == MSG_VOICE_CARD) {
+    Tuple *card = dict_find(iter, MESSAGE_KEY_voice_card);
+    if (s_on_voice && card && card->type == TUPLE_BYTE_ARRAY) {
+      s_on_voice(find_int(iter, MESSAGE_KEY_voice_seq), card->value->data, card->length);
+    }
+    return;
+  }
   if (msg == MSG_ROUTE_PAGE) {
     Tuple *route = dict_find(iter, MESSAGE_KEY_route);
     if (s_on_route_page && route && route->type == TUPLE_BYTE_ARRAY) {
@@ -447,6 +457,22 @@ bool comm_request_event_route(int32_t start, const char *venue) {
   dict_write_int32(iter, MESSAGE_KEY_route_start, start);
   dict_write_cstring(iter, MESSAGE_KEY_route_venue, venue);
   s_outbox_msg = MSG_ROUTE_REQUEST;
+  return app_message_outbox_send() == APP_MSG_OK;
+}
+
+void comm_set_voice_handler(CommVoiceHandler handler) { s_on_voice = handler; }
+
+bool comm_send_voice(int32_t seq, const char *text) {
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
+    return false;
+  }
+  dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_VOICE);
+  dict_write_int32(iter, MESSAGE_KEY_voice_seq, seq);
+  if (text) {
+    dict_write_cstring(iter, MESSAGE_KEY_voice_text, text);
+  }
+  s_outbox_msg = MSG_VOICE;
   return app_message_outbox_send() == APP_MSG_OK;
 }
 

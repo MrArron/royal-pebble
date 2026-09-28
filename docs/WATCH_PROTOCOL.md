@@ -52,6 +52,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | 7 | STAR_ACK | `star_ack`: the phone saved every star change up to this `seq`. No `slice_id`. |
 | 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_gps` (place pages with a Ship GPS block), `dir_rows`. No `slice_id`; see Ship directory. |
 | 17 | ROUTE_PAGE | A Route screen: `dir_ref` and `route_rest` (echoing the request), `route_start` (echoed, event routes only), `route` (bytes). No `slice_id`; see Route screen. |
+| 20 | VOICE_CARD | The answer to a voice turn: `voice_seq` (echoing VOICE), `voice_card` (bytes). No `slice_id`; see Voice. |
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
 e.g. `SAILS MAR 6` or `CRUISE ENDED`. Before the cruise, Home shows the
@@ -115,6 +116,7 @@ buffers.
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
 | 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank); `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
 | 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
+| 19 | VOICE | `voice_seq` (the watch's turn number) and `voice_text` (what dictation heard, ≤ 255 bytes). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
 
 (11 was an index-based STAR message, replaced by STAR_CHANGES.)
 
@@ -582,6 +584,38 @@ Both lines under the steps are empty on a `Same area` route; a divider is drawn
 before them only when one is there. Units are the phone's setting, as on place
 pages.
 
+## Voice
+
+Ask (`docs/DESIGN_V1_1.md` §9.6, `src/c/ask_window.c`, `src/pkjs/voicecard.js`).
+Hold Select on Home (when `I'm on board` isn't offered) or on a Route screen
+opens the Ask screen and starts the Pebble app's dictation (its own confirm
+step off). With the phone away the screen says `Voice is heard on the phone`
+and nothing is dictated. What was heard goes to the phone in VOICE with a new
+`voice_seq`; the screen shows `HEARD` and waits up to 10 s. The phone answers
+with a VOICE_CARD for that `voice_seq` (cards for older turns are ignored),
+and the watch draws it as sent: it has no place names or wording of its own.
+A cancelled dictation, or one the system already explained (no speech, no
+connection), closes an Ask screen that has nothing on it yet.
+
+`voice_card`, little-endian:
+
+| Bytes | Field |
+|---|---|
+| 1 | `action`: what Select does. 0 ask again, 1 open the Route screen for `ref`, 2 confirm (VOICE without text, then the screen closes) |
+| 1 | `flags`: 1 the route is to the closest restroom from `ref` |
+| 4 | `ref`: int32, a place page's `dir_ref` (action 1), else 0 |
+| 1 | how many rows (at most 4) |
+| 1 + n, 1 + n | each row: label (`HEARD`, `FROM`, `TO`, `YOU'RE AT`, `TRY`; ≤ 15 bytes, empty for none) and value (≤ 63 bytes; wraps to 3 lines) |
+| 1 + n | the hint line (`Select: route · Hold: ask again`), ≤ 47 bytes |
+| 1 + n, 1 + n | action 1 only: the Route screen's title and header until its page comes (≤ 31 bytes each) |
+
+Select on a route card opens the Route screen in the Ask screen's place (and
+closes a Route screen already open), which asks for its page with
+ROUTE_REQUEST as usual. Hold Select asks again; Back closes. Until the voice
+matcher is in (Phase 5 PR V2/V3), the phone's answer is a stand-in: with demo
+data a few key words show each kind of card (`pebble transcribe "..."` on the
+emulator), with real data `Not yet`.
+
 ## Usage log
 
 The watch's part of the usage log (`docs/PROJECT_BRIEF.md`, "Usage log";
@@ -622,12 +656,12 @@ text.
 plugged in. **Screens:** 1 Home, 2 summary card, 3 Today, 4 event details,
 5 My info, 6 ship directory page, 7 route to a place, 8 route to a restroom,
 9 route to Home's next event, 10 alert, 11 notice (schedule change or `PHONE
-NEEDED`), 12 `On board?`, 13 `Remove star?`. A screen's **detail**: Home, what its main card shows (below); the
+NEEDED`), 12 `On board?`, 13 `Remove star?`, 14 Ask. A screen's **detail**: Home, what its main card shows (below); the
 summary card, 1 for tomorrow's; event details, the event's start; a directory
 page or a route to a place or restroom, its `dir_ref`; a route to an event, its
 start; an alert, its `at`; `On board?`, 1 once confirmed; `Remove star?`, the
 event's start (the phone's `unstarred on the watch` entry right after the view
-means Hold Down removed the star; none means Back kept it). **Home's card:** 0 loading or no phone, 1 days to
+means Hold Down removed the star; none means Back kept it); Ask, the voice turn. **Home's card:** 0 loading or no phone, 1 days to
 sail, 2 connect your phone (a new day with no slice), 3 no cruise today, 4
 all-aboard countdown, 5 NEXT (starred), 6 FEATURED, 7 NOW (in progress), 8
 nothing starred today, 9 terminal arrival (embark day).

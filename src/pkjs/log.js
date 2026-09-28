@@ -17,7 +17,7 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '1.5.1';
+var APP_VERSION = '1.5.2';
 
 var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
@@ -414,7 +414,10 @@ function encodedLength(text) {
 
 var SCREENS = ['', 'Home', 'Summary card', 'Today', 'Event details', 'My info', 'Ship directory',
                'Route to place', 'Route to restroom', 'Route to next event', 'Alert', 'Notice', 'On board?',
-               'Remove star?'];
+               'Remove star?', 'Ask'];
+// DictationSessionStatus, for entry 16.
+var DICTATION = ['heard', 'cancelled', 'cancelled after an error', 'stopped by the system', 'no speech heard',
+                 'no connection to the phone', 'dictation turned off', 'internal error', 'recognizer error'];
 var HOME_CARDS = ['loading or no phone', 'days to sail', 'connect your phone', 'no cruise today',
                   'all-aboard countdown', 'NEXT', 'FEATURED', 'NOW', 'nothing starred today',
                   'terminal arrival'];
@@ -425,7 +428,7 @@ var ALERT_KINDS = ['all-aboard warning', 'reminder', 'to-reserve alert'];
 var STORES = ['schedule', 'star queue', 'usage log', 'other'];
 var SYNC_OUTCOMES = {1: 'synced', 2: 'phone unreachable', 3: 'timed out, phone connected but no data'};
 var MSG_TYPES = {10: 'REQUEST', 12: 'DEMO_NEXT', 13: 'STAR_CHANGES', 14: 'SAVED', 15: 'DIR_REQUEST',
-                 16: 'ROUTE_REQUEST', 18: 'LOG'};
+                 16: 'ROUTE_REQUEST', 18: 'LOG', 19: 'VOICE'};
 var APP_MSG = {2: 'SEND_TIMEOUT', 4: 'SEND_REJECTED', 8: 'NOT_CONNECTED', 16: 'APP_NOT_RUNNING',
                32: 'INVALID_ARGS', 64: 'BUSY', 128: 'BUFFER_OVERFLOW', 512: 'ALREADY_RELEASED',
                4096: 'OUT_OF_MEMORY', 8192: 'CLOSED', 16384: 'INTERNAL_ERROR', 32768: 'INVALID_STATE'};
@@ -544,6 +547,9 @@ function watchEntry(e, sailIso) {
       }
       return {kind: 'sync', detail: 'morning sync: ' + (SYNC_OUTCOMES[x] || 'outcome ' + x) + ' after ' + seconds(a) +
               (c === 2 ? ', closed with Back before it finished' : c ? ', app stayed open' : ', app closed')};
+    case 16:
+      return {kind: 'voice', detail: (x === 255 ? 'dictation started' : 'dictation ' + (DICTATION[x] || 'status ' + x) +
+              (x === 0 ? ' (' + a + ' bytes)' : '')) + ', turn ' + c + ', ' + Math.round(b / 1024) + ' KB free'};
     default:
       return {kind: 'watch', detail: 'entry ' + e.code + ': ' + [x, a, b, c].join(' ')};
   }

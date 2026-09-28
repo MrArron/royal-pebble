@@ -66,13 +66,6 @@ static void draw_button(GContext *ctx, const char *text, int y, int width, bool 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
-static void draw_label(GContext *ctx, const char *text, int y, int width) {
-  graphics_context_set_text_color(ctx, g_theme->muted);
-  graphics_draw_text(ctx, text, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
-                     GRect(PAD, y, width - 2 * PAD, 16), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
-}
-
 // Label above a single-line value; returns the y after its divider.
 static int draw_row(GContext *ctx, const char *label, const char *value, int y, int width) {
   draw_label(ctx, label, y, width);

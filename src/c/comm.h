@@ -81,3 +81,12 @@ bool comm_request_route(int32_t ref, bool rest);
 // Asks the phone for the route to the event at `start` (cruise minutes) at
 // `venue` (Home's NEXT); false if the outbox was busy.
 bool comm_request_event_route(int32_t start, const char *venue);
+
+// Voice (docs/WATCH_PROTOCOL.md, Voice): sends the transcript for voice turn
+// `seq`, or with `text` NULL confirms the turn's card (Select on "I'm at...").
+// False if the outbox was busy.
+bool comm_send_voice(int32_t seq, const char *text);
+// The phone's card for turn `seq`; `card` points into the message and is only
+// valid in the handler. NULL stops them.
+typedef void (*CommVoiceHandler)(int32_t seq, const uint8_t *card, int length);
+void comm_set_voice_handler(CommVoiceHandler handler);

@@ -153,6 +153,9 @@ void scroll_page_top(ScrollPage *p);
 void scroll_page_refresh(ScrollPage *p);
 void scroll_page_destroy(ScrollPage *p);
 
+// A small-caps label ("STATEROOM") in Gothic 14 bold, muted, on a page `width`
+// wide (My info, Ask).
+void draw_label(GContext *ctx, const char *text, int y, int width);
 // A sea-accent button hint with its `›` (Home's `Route ›`), right-aligned so
 // it ends at `right`, on a Gothic 14 bold line at y. Returns its width.
 int draw_hint_right(GContext *ctx, const char *text, int right, int y);
