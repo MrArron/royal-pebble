@@ -143,10 +143,12 @@ test('Me tab reference: cabin table, decks and the booking (§24.1)', function()
   assert.ok(r.decks.indexOf(5) !== -1 && r.decks.indexOf(17) !== -1, 'map, cabin and venue decks');
   assert.deepStrictEqual(r.decks, r.decks.slice().sort(function(p, q) { return p - q; }));
   assert.deepStrictEqual(r.booking, {stateroom: '8226', deck: 'Deck 8', muster: 'B4'});
+  assert.deepStrictEqual(r.dining, ['Main Dining Room 3', 'Main Dining Room 4', 'Main Dining Room 5']);
   r = config.meRef({ship: {code: 'XX', name: 'Test of the Seas'}, mine: {stateroom: 'GTY'}}, []);
   assert.strictEqual(r.cabins, null);
   assert.deepStrictEqual(r.decks, [], 'the page offers 1-18');
   assert.deepStrictEqual(r.booking, {stateroom: '', deck: '', muster: ''});
+  assert.deepStrictEqual(r.dining, []);
   assert.strictEqual(r.generic.length, 6);
   r = config.meRef(null, []);
   assert.strictEqual(r.ship, null);

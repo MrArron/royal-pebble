@@ -6,7 +6,7 @@
 
 // My info: while the user is on board (docs/DESIGN_PHASE3.md §22.6), an undo
 // row first; then the day's summary (docs/DESIGN_V1_1.md §8.1), the stateroom
-// (with deck and stairs), muster station, ship clock note, last sync, and the
+// (with deck and stairs), muster station, dining room, ship clock note, last sync, and the
 // way into the ship directory. Up and Down move the cursor between the undo
 // row, the summary and the directory, Select opens it (or undoes); the screen
 // scrolls up a little for the directory.
@@ -94,9 +94,9 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   while (!row_available(s_cursor)) {
     s_cursor++;
   }
-  // The content ends with the directory button, 202 px below the rows above.
+  // The content ends with the directory button, 242 px below the rows above.
   int top = onboard ? ONBOARD_ROW_HEIGHT : 0;
-  int content = 202 + top + (summary ? SUMMARY_ROW_HEIGHT : 0);
+  int content = 242 + top + (summary ? SUMMARY_ROW_HEIGHT : 0);
   int scroll = s_cursor == ROW_DIRECTORY && content > b.size.h ? content - b.size.h : 0;
   int y = 2 - scroll;
   if (onboard) {
@@ -124,6 +124,7 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   y += 48;
 
   y = draw_row(ctx, "MUSTER STATION", info->muster, y, w);
+  y = draw_row(ctx, "DINING ROOM", info->dining, y, w);
   y = draw_row(ctx, "SHIP CLOCK", info->clock_note, y, w);
 
   y = draw_row(ctx, "LAST SYNC", info->last_sync, y, w);

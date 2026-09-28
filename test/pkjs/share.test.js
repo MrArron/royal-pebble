@@ -30,12 +30,13 @@ test('build: stars sorted, reserved marks only on starred events, cabin only whe
   m.personal = [{title: 'Dinner', venue: 'Chops Grille', date: '2026-10-04', time: '19:30', minutes: 90}];
   m.days = {'2026-10-07': {allAboard: '16:00', warn: 60}, '2026-10-08': {edit: {type: 'CRUISING'}}, '2026-10-09': {}};
   m.venues = {'Chops Grille': {decks: [8], position: 'aft'}};
-  m.cabin = {stateroom: '9999', deck: 'Deck 9', stairs: '', muster: ' A1 '};
+  m.cabin = {stateroom: '9999', deck: 'Deck 9', stairs: '', muster: ' A1 ', dining: 'Main Dining Room 4'};
   var p = share.build(m, false);
   assert.deepStrictEqual(p.stars, [HAIRSPRAY, 'R|' + HAIRSPRAY, TRIVIA].sort());
   assert.strictEqual(p.cabin, undefined);
   assert.deepStrictEqual(Object.keys(p.days), ['2026-10-07', '2026-10-08']);
-  assert.deepStrictEqual(share.build(m, true).cabin, {stateroom: '9999', deck: 'Deck 9', muster: 'A1'});
+  assert.deepStrictEqual(share.build(m, true).cabin, {stateroom: '9999', deck: 'Deck 9', muster: 'A1',
+                                                    dining: 'Main Dining Room 4'});
   assert.deepStrictEqual(share.counts(p), {stars: 2, personal: 1, daySettings: 1, itinerary: 1, venues: 1, cabin: 0});
 });
 

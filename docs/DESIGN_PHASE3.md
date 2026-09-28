@@ -442,6 +442,18 @@ free text.
   option in the drop-down. My info follows the same rules, so a filled-in
   muster or deck follows a newer sync and an empty one falls back to the
   booking and the cabin table.
+- **Main dining room** (owner, 2026-09-28; built in 1.4.8): a `Dining` card
+  after Safety with a drop-down of the ship's main dining rooms from the venue
+  table (Harmony: `Main Dining Room 3`, `4`, `5`; a ship without them gets a
+  plain `Main Dining Room`) and `Not set`. Royal assigns every stateroom a
+  dining room; it's on the SeaPass and in the Royal app. Typed in for now:
+  whether Royal's booking data holds it is to be checked once the owner's
+  sailing has its schedule (`docs/ROYAL_LOGIN_DATA.md`); if it does, the
+  Advanced download fills it like muster (`From booking`). Stored as
+  `me.dining` with a `src` like the other fields, shared with the cabin
+  details in Share my plan, and shown on the watch's My info as `DINING ROOM`
+  under the muster station (`Not set` when empty). Planned use: voice and
+  directions send a plain "dining room" there (Phase 5).
 
 ### 24.2 Ready to sail (`Phone24Ready`, Cruise tab)
 

@@ -67,7 +67,7 @@ The last four came with the port day card (`docs/DESIGN_PHASE3.md` §23.6).
   event shows `NOW` and `ends 11:45`. Starred rows show ★. The cursor highlight is
   independent of starring.
 - **My info:** labeled rows: Stateroom (large) with deck and nearest stairs, Muster
-  station, Ship clock note, Last sync.
+  station, Dining room, Ship clock note, Last sync.
 - **Schedule change** (after a re-sync moved or cancelled starred events): the
   alert screen's layout with a gray band, `SCHEDULE CHANGE` / `MOVED` (or
   `CANCELLED`, `CHECK TIMES`), the title, then `Now 9:30p · Studio B` (bold) and
@@ -125,7 +125,7 @@ both clocks, and "Change itinerary" for skipped/added ports and changed times),
 **Filters** (featured-events switch, category switches expanding to subcategory
 chips, Shop off by default), **Events** (search, day chips, My entries card with
 Add, star buttons), **Me** (stateroom, deck, stairs, walking distance units,
-muster station, theme, reminder lead time, and a Help card). **Help**, under Me
+muster station, main dining room, theme, reminder lead time, and a Help card). **Help**, under Me
 (`DESIGN_V1_1.md` §9.7): the Always show button hints switch, every watch
 button per screen, notes, the ships with Ship GPS, and port/starboard settings
 for a mapped ship.

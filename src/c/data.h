@@ -140,6 +140,7 @@ typedef struct {
   char deck[16];
   char stairs[24];
   char muster[32];
+  char dining[24];
   char clock_note[40];
   char last_sync[24];
 } MyInfo;

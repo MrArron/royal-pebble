@@ -447,6 +447,10 @@ Versions start at 1.4.0. Items are in build order after a docs PR and a data PR
     page takes the email and password for one download, the phone script signs in
     to Royal and fetches the booking details; nothing is saved. Only if a probe on
     the owner's phone shows Royal accepts it.
+    **Me: main dining room** (owner, 2026-09-28; 1.4.8): typed in on the Me tab
+    and shown on the watch's My info. Whether Royal's data holds the
+    assignment is checked once the sailing has its schedule
+    (`docs/ROYAL_LOGIN_DATA.md`); if so the Advanced download fills it.
 39. **Sync tool updates.** `cruise_sync.py` writes every new field in the same PRs
     as the phone (shared test fixture) and gets a `--dump-products` option for
     re-checking Royal's data.

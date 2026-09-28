@@ -408,7 +408,7 @@ var BODY = [
   'Also a backup of your choices.</p>',
   '<div class="sbox" id="shareCounts"></div>',
   '<label class="check"><input type="checkbox" id="shareCabin"><span>Include cabin details (we share a cabin)',
-  '<small>Stateroom, deck, stairs and muster station</small></span></label>',
+  '<small>Stateroom, deck, stairs, muster station and dining room</small></span></label>',
   '<div class="actions"><button class="pill filled" id="shareCopy">Share plan</button>',
   '<button class="pill tonal" id="shareImport">Import plan</button></div>',
   '<p class="help" id="shareCopied" role="status"></p></div>',
@@ -485,6 +485,11 @@ var BODY = [
   '<div class="card"><h2>Safety</h2>',
   '<div class="flab"><label for="muster">Muster station</label><span class="fsrc" id="musterSrc" hidden></span></div>',
   '<input id="muster" maxlength="30" placeholder="B4"><div class="fkept" id="musterKept" hidden></div></div>',
+  '<div class="card"><h2>Dining</h2>',
+  '<div class="flab"><label for="dining">Main dining room</label><span class="fsrc" id="diningSrc" hidden></span></div>',
+  '<select id="dining"></select><div class="fkept" id="diningKept" hidden></div>',
+  '<p class="help">The dining room Royal assigned your stateroom, on your SeaPass and in the Royal app. ',
+  'Shown on the watch\'s My info screen.</p></div>',
   '<div class="card"><h2>Watch</h2>',
   '<label>Theme</label><div class="seg" id="theme"><button data-v="light">Light</button>',
   '<button data-v="dark">Dark</button></div>',
@@ -3016,8 +3021,9 @@ function pageMain(S, V, CL, SH) {
   // the cabin table and the ship map; a hand edit is kept and never refilled
   // (docs/DESIGN_PHASE3.md §24.1). me.src remembers each field's source.
   var me = S.me || {};
-  var MR = S.meRef || {decks: [], booking: {}, generic: []};
-  var ME_FIELDS = ['stateroom', 'deck', 'stairs', 'muster'];
+  var MR = S.meRef || {decks: [], booking: {}, generic: [], dining: []};
+  var ME_FIELDS = ['stateroom', 'deck', 'stairs', 'muster', 'dining'];
+  var ME_LISTS = ['deck', 'stairs', 'dining'];  // drop-downs
   var SRC_NAME = {booking: 'booking', cabin: 'cabin table', map: 'ship map'};
   var meEdited = {};
   $('clockNote').value = me.clockNote || '';
@@ -3039,6 +3045,11 @@ function pageMain(S, V, CL, SH) {
     if (f === 'muster') {
       return b.muster ? {value: b.muster, src: 'booking'} : null;
     }
+    if (f === 'dining') {
+      // Typed in for now: Royal's booking data isn't known to hold it (to check
+      // once the sailing's schedule is out; docs/ROYAL_LOGIN_DATA.md).
+      return null;
+    }
     var c = roomCabin();
     if (f === 'deck') {
       return c ? {value: 'Deck ' + c.deck, src: 'cabin'} : b.deck ? {value: b.deck, src: 'booking'} : null;
@@ -3051,6 +3062,9 @@ function pageMain(S, V, CL, SH) {
   // The drop-down's choices: the ship's decks (1-18 without a table), and the
   // chosen deck's stairwells (the generic list without map data).
   function meNames(f) {
+    if (f === 'dining') {
+      return (MR.dining || []).length ? MR.dining : ['Main Dining Room'];
+    }
     if (f === 'deck') {
       var decks = MR.decks.slice();
       for (var d = 1; !MR.decks.length && d <= 18; d++) {
@@ -3063,7 +3077,7 @@ function pageMain(S, V, CL, SH) {
   }
 
   function meSet(f, v) {
-    if (f !== 'deck' && f !== 'stairs') {
+    if (ME_LISTS.indexOf(f) === -1) {
       $(f).value = v;
       return;
     }
@@ -3094,7 +3108,7 @@ function pageMain(S, V, CL, SH) {
     var a = meAuto(f);
     if (!meEdited[f] && !keep) {
       meSet(f, a ? a.value : '');
-    } else if (f === 'deck' || f === 'stairs') {
+    } else if (ME_LISTS.indexOf(f) !== -1) {
       meSet(f, $(f).value);
     }
     var chip = $(f + 'Src');
@@ -3146,7 +3160,7 @@ function pageMain(S, V, CL, SH) {
     meShowAll(true);
   });
   $('stateroom').addEventListener('change', function() { meShowAll(); });
-  ['deck', 'stairs', 'muster'].forEach(function(f) {
+  ['deck', 'stairs', 'muster', 'dining'].forEach(function(f) {
     $(f).addEventListener(f === 'muster' ? 'input' : 'change', function() {
       meEdited[f] = meIsEdit(f);
       meShowAll(true);
@@ -3552,7 +3566,8 @@ function pageMain(S, V, CL, SH) {
 
   var DAY_NAMES = {allAboard: 'All aboard', shift: 'All-aboard shift', buffer: 'All aboard before departure',
                    warn: 'Warning period', offset: 'Local time', edit: 'Itinerary'};
-  var CABIN_NAMES = {stateroom: 'Stateroom', deck: 'Deck', stairs: 'Nearest stairs', muster: 'Muster station'};
+  var CABIN_NAMES = {stateroom: 'Stateroom', deck: 'Deck', stairs: 'Nearest stairs', muster: 'Muster station',
+                     dining: 'Main dining room'};
 
   function dayValue(f, v) {
     if (v === null || v === undefined) {
@@ -3920,7 +3935,9 @@ function buildPage(state, now) {
 
 // For the Me tab (docs/DESIGN_PHASE3.md §24.1): the ship's cabin table (null
 // without one), its decks for the drop-down ([] = 1-18), the generic stairs
-// list and the booking's stateroom, deck and muster. mapDecks: shipmap.decks().
+// list, the booking's stateroom, deck and muster, and the ship's main dining
+// rooms for the Dining drop-down ([] = a plain "Main Dining Room"). mapDecks:
+// shipmap.decks().
 function meRef(bundle, mapDecks) {
   var code = (bundle && bundle.ship && bundle.ship.code) || null;
   var mine = (bundle && bundle.mine) || {};
@@ -3941,12 +3958,16 @@ function meRef(bundle, mapDecks) {
   }
   var room = String(mine.stateroom || '').replace(/\D/g, '');
   var deck = venues.cabinDeck(mine.deck);
+  var dining = code ? Object.keys(venues.builtIn(code).venues).filter(function(n) {
+    return /^Main Dining Room/.test(n);
+  }).sort() : [];
   return {
     ship: code,
     shipName: (bundle && bundle.ship && bundle.ship.name) || 'your ship',
     cabins: table,
     decks: Object.keys(decks).map(Number).sort(function(a, b) { return a - b; }),
     generic: cabins.GENERIC_STAIRS,
+    dining: dining,
     booking: {stateroom: room, deck: deck ? 'Deck ' + deck : '', muster: String(mine.muster || '').trim()}
   };
 }

@@ -1317,7 +1317,7 @@ function cutoffWhen(sailDate, cutoff, now) {
 // settings: {theme, showFeatured, alwaysHints, hiddenCats, ageFilters,
 //            days: {date: {offset, buffer, allAboard, shift, warn,
 //                          edit: {type, port, arrive, depart}}},
-//            personal: [...], me: {stateroom, deck, stairs, muster, clockNote},
+//            personal: [...], me: {stateroom, deck, stairs, muster, dining, clockNote},
 //            reminderLead, reserveAlertAt (minutes after midnight),
 //            venues: {shipCode: owner's venue edits}}
 // stars: {starKey: true}
@@ -1373,6 +1373,7 @@ function myInfo(bundle, me) {
     deck: pick('deck', cabin ? 'Deck ' + cabin.deck : bookDeck ? 'Deck ' + bookDeck : ''),
     stairs: pick('stairs', near.length ? cabins.stairName(ship, near[0]) : ''),
     muster: pick('muster', String(mine.muster || '').trim()) || 'Not set',
+    dining: pick('dining', '') || 'Not set',
     clockNote: me.clockNote || 'Ship time not confirmed',
     lastSync: formatSync(bundle.generated)
   };

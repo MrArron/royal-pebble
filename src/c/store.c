@@ -18,9 +18,10 @@
 // The first starred event or alert that doesn't fit is then the "cutoff": the
 // phone has to be back before then.
 
-#define STORE_VERSION 9  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown;
-                         // 7: tomorrow's to-reserve count; 8: terminal arrival; 9: event details
-                         // bytes (age, arrive-early, tags) and the alarm's early byte
+#define STORE_VERSION 10  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown;
+                          // 7: tomorrow's to-reserve count; 8: terminal arrival; 9: event details
+                          // bytes (age, arrive-early, tags) and the alarm's early byte; 10: My
+                          // info's dining room
 #define STORE_MAX_KEYS 40
 #define STORE_MAX_BUDGET (STORE_MAX_KEYS * PERSIST_DATA_MAX_LENGTH)
 #define STORE_MIN_BUDGET (4 * PERSIST_DATA_MAX_LENGTH)
@@ -48,10 +49,10 @@ enum {
 // tomorrow's uint8 kind, int32 arrive, depart, all-aboard and first start,
 // uint8 starred, featured, last kind and to-reserve count, then the day's int32
 // terminal arrival. Then the texts: the day's status and location, My info's
-// six, the ship name, tomorrow's status, location, first and last, the sail
+// seven, the ship name, tomorrow's status, location, first and last, the sail
 // port and the terminal arrival text.
 #define HEADER_FIXED 59
-#define HEADER_TEXTS 15
+#define HEADER_TEXTS 16
 
 // On the heap, not static: the app's code, data and static buffers must stay
 // under 64 KB (the SDK stores that size in a uint16), and the heap has room.
@@ -88,6 +89,7 @@ static int info_size(const MyInfo *info, const Day *day) {
          codec_str_len(info->deck, sizeof(info->deck) - 1) +
          codec_str_len(info->stairs, sizeof(info->stairs) - 1) +
          codec_str_len(info->muster, sizeof(info->muster) - 1) +
+         codec_str_len(info->dining, sizeof(info->dining) - 1) +
          codec_str_len(info->clock_note, sizeof(info->clock_note) - 1) +
          codec_str_len(info->last_sync, sizeof(info->last_sync) - 1) +
          codec_str_len(meta->ship_name, sizeof(meta->ship_name) - 1) +
@@ -138,6 +140,7 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   p = codec_write_str(p, info->deck, sizeof(info->deck) - 1);
   p = codec_write_str(p, info->stairs, sizeof(info->stairs) - 1);
   p = codec_write_str(p, info->muster, sizeof(info->muster) - 1);
+  p = codec_write_str(p, info->dining, sizeof(info->dining) - 1);
   p = codec_write_str(p, info->clock_note, sizeof(info->clock_note) - 1);
   p = codec_write_str(p, info->last_sync, sizeof(info->last_sync) - 1);
   p = codec_write_str(p, meta->ship_name, sizeof(meta->ship_name) - 1);
@@ -361,6 +364,7 @@ bool store_load(void) {
       !codec_read_str(&p, end, info.deck, sizeof(info.deck)) ||
       !codec_read_str(&p, end, info.stairs, sizeof(info.stairs)) ||
       !codec_read_str(&p, end, info.muster, sizeof(info.muster)) ||
+      !codec_read_str(&p, end, info.dining, sizeof(info.dining)) ||
       !codec_read_str(&p, end, info.clock_note, sizeof(info.clock_note)) ||
       !codec_read_str(&p, end, info.last_sync, sizeof(info.last_sync)) ||
       !codec_read_str(&p, end, meta.ship_name, sizeof(meta.ship_name)) ||

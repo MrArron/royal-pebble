@@ -270,6 +270,7 @@ function sendSlice() {
     info_deck: sl.info.deck,
     info_stairs: sl.info.stairs,
     info_muster: sl.info.muster,
+    info_dining: sl.info.dining,
     info_clock: sl.info.clockNote,
     info_sync: sl.info.lastSync
   }];

@@ -252,7 +252,8 @@ the paste was cut short. A version above the reader's asks the user to update.
   "personal": [{"title": "Dinner", "venue": "Chops Grille", "date": "2026-10-04", "time": "19:30", "minutes": 90}],
   "days": {"2026-10-07": {"allAboard": "16:00", "warn": 60}, "2026-10-08": {"edit": {"type": "CRUISING"}}},
   "venues": {"Chops Grille": {"decks": [8], "position": "aft"}},
-  "cabin": {"stateroom": "1234", "deck": "Deck 12", "stairs": "Forward stairs", "muster": "A1"}
+  "cabin": {"stateroom": "1234", "deck": "Deck 12", "stairs": "Forward stairs", "muster": "A1",
+            "dining": "Main Dining Room 4"}
 }
 ```
 
@@ -264,7 +265,7 @@ the paste was cut short. A version above the reader's asks the user to update.
 | `personal` | Personal entries, as the phone stores them. Left out when empty. |
 | `days` | Per-day settings by date, only the fields set: `allAboard`, `shift`, `buffer`, `warn`, `offset`, `edit` (the same values as the phone's day settings). Left out when empty. |
 | `venues` | The sender's venue fixes for this ship, as the phone stores them. Left out when empty. |
-| `cabin` | Only when "Include cabin details" is ticked, and only the fields that are set. |
+| `cabin` | Only when "Include cabin details" is ticked, and only the fields that are set: `stateroom`, `deck`, `stairs`, `muster`, and `dining` (the main dining room, from 1.4.8; older versions ignore it). |
 
 On import the receiver's page compares the plan with its own state
 (`share.js` `diff`): stars differ both ways; personal entries, day-setting

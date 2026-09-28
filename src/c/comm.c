@@ -178,6 +178,7 @@ static void handle_info(DictionaryIterator *iter) {
   find_str(iter, MESSAGE_KEY_info_deck, s_info.deck, sizeof(s_info.deck));
   find_str(iter, MESSAGE_KEY_info_stairs, s_info.stairs, sizeof(s_info.stairs));
   find_str(iter, MESSAGE_KEY_info_muster, s_info.muster, sizeof(s_info.muster));
+  find_str(iter, MESSAGE_KEY_info_dining, s_info.dining, sizeof(s_info.dining));
   find_str(iter, MESSAGE_KEY_info_clock, s_info.clock_note, sizeof(s_info.clock_note));
   find_str(iter, MESSAGE_KEY_info_sync, s_info.last_sync, sizeof(s_info.last_sync));
 }

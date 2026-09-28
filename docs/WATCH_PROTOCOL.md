@@ -44,7 +44,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | `msg_type` | Name | Other keys |
 |---|---|---|
 | 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `terminal`, `terminal_text` (embark day's terminal arrival, below), `warn_period` (minutes before `all_aboard` of the first all-aboard alert and the bar's red section: 30, 60, 90 or 120; 30 when missing), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `button_hints` (0/1: Home's button hints at every open), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
-| 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_clock`, `info_sync` (display strings) |
+| 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_dining`, `info_clock`, `info_sync` (display strings) |
 | 3 | EVENTS | `event_first` (index of the first event in this chunk), `events` (bytes, below) |
 | 5 | ALARMS | `alarm_first`, `alarms` (bytes, below) |
 | 4 | END | — |
@@ -384,9 +384,10 @@ above, spread over 256-byte values (keys 40 on):
    the cruise's starred count, then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
    first start, starred and featured counts, last kind and to-reserve count,
    then the terminal arrival), then the day's status and location, My info's
-   six texts, the ship name, and tomorrow's status, location, first and last,
-   then the sail port and the terminal arrival text. (Storage version 9
-   since 1.4.2, whose events and alerts carry the Phase 4 bytes, so a blob
+   seven texts (the dining room after the muster station), the ship name, and
+   tomorrow's status, location, first and last, then the sail port and the
+   terminal arrival text. (Storage version 10 since 1.4.8, which added My
+   info's dining room; version 9 from 1.4.2 added the Phase 4 bytes. A blob
    saved by an older version is ignored until the phone sends a slice.)
 2. Alerts, then events, each as packed above, in time order.
 
