@@ -126,6 +126,10 @@ test('settings page builds, embeds state safely and its script parses', function
   assert.ok(html.indexOf('id="reserveAt"') !== -1, 'reserve reminder time');
   assert.ok(html.indexOf("segment('reserveAt'") !== -1);
   assert.ok(html.indexOf('"oldestSailDate":"2026-09-10"') !== -1);
+  // Advanced download: a masked password field that browsers don't autofill.
+  assert.ok(html.indexOf('id="downloadLogin"') !== -1, 'Download with login');
+  assert.ok(html.indexOf('<input id="rcPassword" type="password" autocomplete="off"') !== -1);
+  assert.ok(html.indexOf("r.login = {email: $('rcEmail').value.trim(), password: $('rcPassword').value}") !== -1);
   var url = config.pageUrl(state);
   assert.ok(/^data:text\/html;charset=utf-8,%3C!DOCTYPE/.test(url));
   console.log('    page ' + Math.round(html.length / 1024) + ' KB, data URL ' + Math.round(url.length / 1024) + ' KB');

@@ -658,7 +658,7 @@ function openSettings() {
   Pebble.openURL(url);
 }
 
-// `how`: 'downloaded' or 'pasted'.
+// `how`: 'downloaded', 'downloaded with login' or 'pasted'.
 function useBundle(bundle, how) {
   // Stars of rescheduled events follow them; cancelled ones are dropped. The
   // user hears about both on the watch and the settings page.
@@ -719,6 +719,10 @@ function settingsClosed(text) {
       return;
     }
   }
+  // Advanced download: the email and password leave the result before anything
+  // else reads it, and go only to the sign-in (docs/PHASE4_PLAN.md).
+  var login = r.login;
+  delete r.login;
   usage.add('settings', 'page closed: ' + (r.action || 'save') + ', result ' + Math.round(text.length / 1024) + ' KB');
   // Share my plan: counts only (docs/DESIGN_PHASE3.md §28).
   var imp = r.imported;
@@ -829,21 +833,45 @@ function settingsClosed(text) {
   sendSlice();
 
   if (r.download && r.download.ship && r.download.ship.code && r.download.sailDate) {
-    console.log('Downloading ' + r.download.ship.code + ' ' + r.download.sailDate);
-    usage.add('download', 'asked for ' + r.download.ship.code + ' ' + r.download.sailDate);
-    var started = Date.now();
-    royal.download(r.download.ship, r.download.sailDate, function(err, bundle) {
-      if (err) {
-        console.log('Download failed: ' + err);
-        usage.add('download', 'FAILED after ' + (Date.now() - started) + ' ms: ' + err);
-        save(STORE_STATUS, {error: err, at: nowStamp()});
-        return;
-      }
-      usage.add('download', 'done in ' + (Date.now() - started) + ' ms: ' + royal.scheduleSummary(bundle.schedule));
-      useBundle(bundle, 'downloaded');
-      sendSlice();
-    });
+    startDownload(r.download, r.action === 'download-login' ? login : null);
   }
+  login = null;
+}
+
+// `login`: {email, password} for the Advanced download, or null. The log gets
+// only whether it was used and how it went, never the login or Royal's replies.
+function startDownload(dl, login) {
+  var withLogin = !!(login && typeof login.email === 'string' && login.email &&
+                     typeof login.password === 'string' && login.password);
+  console.log('Downloading ' + dl.ship.code + ' ' + dl.sailDate + (withLogin ? ' with login' : ''));
+  usage.add('download', 'asked for ' + dl.ship.code + ' ' + dl.sailDate + (withLogin ? ' with login' : ''));
+  var started = Date.now();
+  function done(err, bundle, mineErr) {
+    if (err) {
+      console.log('Download failed: ' + err);
+      usage.add('download', 'FAILED after ' + (Date.now() - started) + ' ms: ' + err);
+      save(STORE_STATUS, {error: err, at: nowStamp()});
+      return;
+    }
+    usage.add('download', 'done in ' + (Date.now() - started) + ' ms: ' + royal.scheduleSummary(bundle.schedule));
+    if (withLogin) {
+      usage.add('download', 'login download: ' + (mineErr ? 'failed: ' + mineErr : 'ok, ' + royal.mineSummary(bundle.mine)));
+    }
+    useBundle(bundle, withLogin ? 'downloaded with login' : 'downloaded');
+    if (mineErr) {
+      // After useBundle, which clears the status.
+      save(STORE_STATUS, {title: 'Booking details not downloaded',
+                          error: 'Your sailing downloaded, but your booking details didn\'t: ' + mineErr,
+                          at: nowStamp()});
+    }
+    sendSlice();
+  }
+  if (withLogin) {
+    royal.downloadWithLogin(dl.ship, dl.sailDate, login.email, login.password, done);
+  } else {
+    royal.download(dl.ship, dl.sailDate, done);
+  }
+  login = null;
 }
 
 Pebble.addEventListener('showConfiguration', guard('showConfiguration', openSettings));

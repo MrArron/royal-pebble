@@ -1,0 +1,41 @@
+{
+ "stateroom": "1234",
+ "deck": "12",
+ "muster": "Z9",
+ "arrival": "11:30",
+ "orders": [
+  {
+   "title": "Beach Day",
+   "category": "pt_shoreX",
+   "guests": 3,
+   "date": "2027-03-09",
+   "time": "09:00",
+   "day": 4,
+   "port": "PCC",
+   "meet": "08:45",
+   "end": "11:30",
+   "minutes": 150
+  },
+  {
+   "title": "Deluxe Beverage Package",
+   "category": "pt_beverage",
+   "guests": 2
+  }
+ ],
+ "ports": [
+  {
+   "day": 3,
+   "code": "NAS",
+   "gangwayDown": "07:00",
+   "gangwayUp": "16:30",
+   "lat": 25.0781,
+   "lon": -77.3412
+  },
+  {
+   "day": 4,
+   "code": "PCC",
+   "gangwayUp": "see daily planner"
+  }
+ ],
+ "embarkTimeZone": "America/New_York"
+}

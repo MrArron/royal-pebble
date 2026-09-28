@@ -145,8 +145,10 @@ text. One compact JSON object, ASCII only.
       `pid`, and new consumers treat missing fields as `null`.
     - Both producers are checked against one expected schedule made from
       public products (`test/fixtures`), so they can't drift apart.
-- `mine` — only when fetched with login, so only `cruise_sync.py --login`
-  produces it (the phone companion never logs in). Private: it holds the
+- `mine` — only when fetched with login: `cruise_sync.py --login`, or the
+  phone companion's Advanced download (`royal.fetchMine`, a port of
+  `fetch_mine`; both are checked against `test/fixtures/expected-mine.json`).
+  A plain phone download has none. Private: it holds the
   stateroom and cabin details. Every field may be missing or `null`; consumers
   must not require any of them. What each field is based on, and what is still
   unverified, is in `docs/ROYAL_LOGIN_DATA.md`. A new bundle for the same ship

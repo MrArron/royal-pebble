@@ -24,9 +24,9 @@ map to the sections below.
 
 ## Summary
 
-All seven event items fit in 7 app PRs (1.4.0 to 1.4.5, then 1.4.7) and a docs PR,
-plus a PC-tool-only PR and an optional login track (probe, docs, 1.4.8). A watch
-bug-fix PR took 1.4.6. Nothing needs a
+All seven event items fit in 7 app PRs (1.4.0 to 1.4.5, then 1.4.8) and a docs PR,
+plus a PC-tool-only PR and an optional login track (probe, then one PR with its
+docs and code, 1.4.7). A watch bug-fix PR took 1.4.6. Nothing needs a
 format version bump: every new field is additive, like `paid` and `price` were.
 
 - **No new requests to Royal.** Every field comes from the products listing both
@@ -348,11 +348,10 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | F | 1.4.4 | 3 | Reminder at arrive-by time; fills the alarm byte; alert screen line | Real-time alert-test variant in the emulator, then the watch |
 | G | 1.4.5 | 7 | Selectable excursions; sync tool meet fallback | Node tests, `test_cruise_sync.py`, one `--login` run on the owner's booking |
 | — | 1.4.6 | bugs | Today list scrolls right after opening (#64); the small star drawn as mirrored pixel rows (#65) | emulator, then the Pebble Time 2 |
-| H | 1.4.7 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes |
+| H | 1.4.8 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes (a first re-pull on 2026-09-28: all 207 shared titles kept their ids) |
 | K | none (PC tool only) | checks | `--dump-products` (Windows sync tool section); the report compares product ids by title with an earlier dump of the same sailing | `test_cruise_sync.py`, one live run (done 2026-09-27: 326 products, 55 venue codes) |
 | — | throwaway | login | Phone sign-in probe (not merged): passed 2026-09-27 | the owner's phone |
-| I | none (docs) | login | `DATA_FORMAT.md`, page text | review |
-| J | 1.4.8 | login | Advanced download block, `royal.fetchMine`, log guards | Node tests with made-up bookings, then the owner's real account on the phone |
+| I+J | 1.4.7 | login | One PR (owner, 2026-09-28): `DATA_FORMAT.md`, the page design (`DESIGN_PHASE4.md` §7) and text; Advanced download (expands in the Download card), `royal.fetchMine`, log guards | Node tests with made-up bookings (shared fixture), then the owner's real account on the phone |
 
 - **B comes first:** the new fields must exist in both producers before anything
   reads them. B alone changes nothing a user sees; excursion sessions stay hidden
@@ -378,7 +377,7 @@ login runs.
 | B | Shared fixture: `test/fixtures/products-HM-sample.json` (about 30 public products trimmed from the 2026-10-01 pull, one per case) and `expected-schedule.json`. `test_cruise_sync.py` and a Node test both check their output against it, so the two producers can't drift | all |
 | G | `fetch_mine` fills `meet` from the public SHOREX sessions first and calls the logged-in catalog only for a missing `end` or `minutes` | 7 |
 | K | `--dump-products`: saves the raw listing and a field report as `royal-pebble-products-*` (git-ignored), for the 2026-09-30 and later re-runs | 5, checks |
-| J | No change to the PC tool; `royal.fetchMine` copies `fetch_mine`, with its own shared fixture of a made-up booking so both give the same `mine` | login |
+| I+J | No change to the PC tool; `royal.fetchMine` copies `fetch_mine`. The made-up booking replies moved to `test/fixtures/login-HM-sample.json` with `expected-mine.json`, so both give the same `mine` | login |
 
 - **Old and new mix safely.** A new bundle pasted into an older app version is
   fine: consumers read fields by name and ignore the rest. An old bundle in a new
@@ -467,9 +466,29 @@ It recorded only status codes, timings, yes/no checks and a count:
 
 So the login track goes ahead.
 
-**PRs:** a docs PR (`DATA_FORMAT.md`; the page text), then one
+**PRs:** planned as a docs PR (`DATA_FORMAT.md`; the page text), then one
 app PR for the page block, `royal.fetchMine` and the log guards, with offline tests
-using made-up bookings and cabin numbers.
+using made-up bookings and cabin numbers. The owner combined them into one PR
+(1.4.7) on 2026-09-28.
+
+**As built (1.4.7)**
+
+- The sign-in comes first, so the password is dropped before anything else runs;
+  then the usual public download, then `fetchMine` with the new schedule (a booked
+  excursion's meeting time and length come from the public listing when it has
+  them, as in the sync tool).
+- A refused sign-in downloads nothing: "Royal Caribbean didn't accept that email
+  and password." If the sign-in works but the booking part fails (no booking for
+  that sailing, say), the sailing is still saved, the old bundle's `mine` is kept
+  for the same sailing, and the Cruise tab shows **Booking details not
+  downloaded** with the reason.
+- `index.js` takes `login` out of the page's result before anything else reads
+  it. The usage log gets `asked for HM 2026-10-01 with login` and `login download:
+  ok, booking found: 2 purchases (1 timed), 3 port days` (or `failed: <reason>`):
+  counts only. A companion test checks that the email, password and token reach
+  neither phone storage, the log nor the next settings page.
+- Unlike the sync tool, the phone doesn't retry a failed request (no browser
+  impersonation or retries; one try per call).
 
 ## Open questions and risks
 

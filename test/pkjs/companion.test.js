@@ -271,6 +271,100 @@ test('script errors in a handler are logged, then thrown', function() {
   assert.ok(has(c.log(), /^error  showConfiguration: boom$/));
 });
 
+// A fake Royal for downloads: the shared made-up login fixture plus a one-day
+// sailing. opts: {login: status, fail: [paths]}. Returns the requests' paths.
+function fakeRoyal(token, opts) {
+  opts = opts || {};
+  var fs = require('fs');
+  var fixtures = path.join(__dirname, '..', 'fixtures');
+  var replies = JSON.parse(fs.readFileSync(path.join(fixtures, 'login-HM-sample.json'), 'utf8')).replies;
+  replies['/v3/ships/HM/sailDate/20270306'] = {payload: {sailingInfo: [{itinerary: {events: [
+    {day: 1, port: {portName: 'Port Canaveral', portCode: 'PCN', portType: 'EMBARK',
+                    arrivalDateTime: '20270306T000000', departureDateTime: '20270306T163000'}}]}}]}};
+  replies['/v3/products'] = {payload: {products: [{productType: {productType: 'NON_REVENUE_SCHEDULABLE'},
+    productTitle: 'Trivia', productID: 'P1', productLocation: {locationCode: 'ONAIR', locationTitle: 'On Air'},
+    offering: [{offeringDate: '20270306', offeringTime: '2000', offeringDurationInMinutes: '45'}]}]}};
+  var paths = [];
+  global.XMLHttpRequest = function() {
+    var x = this;
+    var p;
+    x.open = function(method, url) {
+      p = url.split('?')[0].replace(/^https:\/\/[^/]+/, '').replace('/en/royal/web/commerce-api', '')
+        .replace('/en/royal/web', '');
+    };
+    x.setRequestHeader = function() {};
+    x.send = function() {
+      paths.push(p);
+      if (/access_token$/.test(p)) {
+        x.status = opts.login || 200;
+        x.responseText = JSON.stringify(x.status === 200 ? {access_token: token} : {error: 'invalid_grant'});
+      } else if (p in replies && (opts.fail || []).indexOf(p) === -1) {
+        x.status = 200;
+        x.responseText = JSON.stringify(replies[p]);
+      } else {
+        x.status = 404;
+        x.responseText = '{}';
+      }
+      x.onload();
+    };
+  };
+  return paths;
+}
+
+test('download with login: saves mine; the login never reaches storage, the log or the page', function() {
+  var EMAIL = 'made.up.guest@example.com';
+  var PASSWORD = 'Secret#Pass&1%41';
+  var b64 = function(o) { return Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, ''); };
+  var TOKEN = b64({alg: 'none'}) + '.' + b64({sub: 'ACC1'}) + '.tokensignature';
+  var c = companion();
+  c.handlers.ready();
+  var paths = fakeRoyal(TOKEN);
+  c.handlers.webviewclosed({response: encodeURIComponent(JSON.stringify({action: 'download-login',
+    download: {ship: {code: 'HM', name: 'Harmony of the Seas'}, sailDate: '2027-03-06'},
+    login: {email: EMAIL, password: PASSWORD}}))});
+  var lines = c.log();
+  assert.ok(/access_token$/.test(paths[0]), paths.join(' '));
+  assert.ok(has(lines, /^settings  page closed: download-login, result 0 KB$/), lines.join('\n'));
+  assert.ok(has(lines, /^download  asked for HM 2027-03-06 with login$/));
+  assert.ok(has(lines, /^download  login download: ok, booking found: 2 purchases \(1 timed\), 2 port days$/),
+            lines.join('\n'));
+  assert.ok(has(lines, /^bundle  downloaded with login: ship HM, new sailing/));
+  var bundle = JSON.parse(c.store.bundle);
+  assert.strictEqual(bundle.mine.muster, 'Z9');
+  assert.strictEqual(bundle.mine.orders.length, 2);
+  c.handlers.showConfiguration();
+  var everything = JSON.stringify(c.store) + c.opened.join('') + decodeURIComponent(c.opened.join(''));
+  [EMAIL, PASSWORD, encodeURIComponent(PASSWORD), 'tokensignature', TOKEN].forEach(function(secret) {
+    assert.strictEqual(everything.indexOf(secret), -1, 'leaked: ' + secret);
+  });
+});
+
+test('download with login: a refused sign-in saves nothing; no booking keeps the sailing', function() {
+  var c = companion();
+  fakeRoyal('x', {login: 401});
+  var result = {action: 'download-login', download: {ship: {code: 'HM', name: 'Harmony'}, sailDate: '2027-03-06'},
+                login: {email: 'made.up.guest@example.com', password: 'wrong'}};
+  c.handlers.webviewclosed({response: encodeURIComponent(JSON.stringify(result))});
+  assert.strictEqual(c.store.bundle, undefined);
+  assert.ok(/didn't accept that email and password/.test(JSON.parse(c.store.status).error));
+  assert.ok(has(c.log(), /^download  FAILED after \d+ ms: Royal Caribbean didn't accept/));
+
+  var b64 = function(o) { return Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, ''); };
+  fakeRoyal(b64({}) + '.' + b64({sub: 'ACC1'}) + '.s', {fail: ['/v1/profileBookings/enriched/ACC1']});
+  c.handlers.webviewclosed({response: encodeURIComponent(JSON.stringify(result))});
+  assert.strictEqual(JSON.parse(c.store.bundle).mine, undefined);
+  var status = JSON.parse(c.store.status);
+  assert.strictEqual(status.title, 'Booking details not downloaded');
+  assert.ok(/^Your sailing downloaded, but your booking details didn't: /.test(status.error), status.error);
+  assert.ok(has(c.log(), /^download  login download: failed: /));
+
+  // Without the login action, the login fields are ignored: a plain download.
+  var paths = fakeRoyal('x');
+  result.action = 'download';
+  c.handlers.webviewclosed({response: encodeURIComponent(JSON.stringify(result))});
+  assert.ok(paths.every(function(p) { return !/access_token/.test(p); }), paths.join(' '));
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {

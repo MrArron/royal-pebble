@@ -7,9 +7,10 @@ explorer calls each endpoint below once and writes a values-free shape report.
 Re-run it before relying on anything marked *unverified*, and again on board or
 after online check-in, when more fields fill in.
 
-The phone companion never logs in (`docs/PROJECT_BRIEF.md`, To verify early), so
-everything here reaches the app only through `cruise_sync.py --login` and the
-paste-in backup (`docs/DATA_FORMAT.md`, `mine`). What the sync tool already
+Everything here reaches the app through `cruise_sync.py --login` and the
+paste-in backup, or through the settings page's Advanced download, where the
+phone companion signs in once and makes the same calls (`royal.fetchMine`, from
+1.4.7; `docs/DATA_FORMAT.md`, `mine`). What the sync tool already
 copies into the bundle is marked **In the bundle**; the rest is for a future
 session to weigh.
 
