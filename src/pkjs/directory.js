@@ -20,6 +20,7 @@ var REF_DECK = 100;    // + deck number
 var REF_AREA = 200;    // + index in AREA_KEYS
 var REF_ELEVATORS = 300;
 var REF_BANK = 301;    // + index in BANKS
+var REF_CABIN = 400;   // Route screen only: to your stateroom (voice, docs/WATCH_PROTOCOL.md Voice)
 var REF_PLACE = 1000;  // + index in places()
 var REF_FLAG = 30000;  // + a place page's ref: Flag a map problem (Map check)
 
@@ -576,8 +577,40 @@ function capSteps(list) {
 // your deck`, or a message when there's no route), `big` and `small` the lines
 // under them (the summary; for a restroom, its deck and how it relates to the
 // venue).
+// The Route screen to your stateroom (`Take me to my cabin`), from where
+// routestart.js says you are. `from` is where it starts (a venue's name), or
+// '' when that's the cabin itself (nothing to walk).
+function cabinRoutePage(s, ctx) {
+  var ship = s.c.shipCode;
+  var room = ctx.bundle ? stateroom(s.c) : '';
+  var spot = room ? shipmap.cabin(ship, room) : null;
+  var page;
+  if (!room) {
+    page = routeMessage('Your cabin', 'Add your stateroom on the phone for walking directions');
+  } else if (!spot) {
+    page = routeMessage('Your cabin', 'Your cabin isn\'t on the map');
+  } else {
+    var best = bestRoute([spot], s.c, s.cabin);
+    if (best.flags) {
+      page = routeMessage('Your cabin', 'No route found');
+    } else if (best.start.kind === 'cabin') {
+      page = routeMessage('Your cabin', 'No starred event on now to start from');
+    } else {
+      page = placeRoute({name: 'Your cabin', short: 'Your cabin'}, best,
+                        {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)});
+      page.from = venues.bundleFinder(ctx.bundle, s.c.settings).short(best.start.venue) || best.start.venue || '';
+    }
+  }
+  page.ref = REF_CABIN;
+  page.rest = false;
+  return page;
+}
+
 function routePage(ref, rest, ctx) {
   var s = setup(ctx);
+  if (ref === REF_CABIN) {
+    return cabinRoutePage(s, ctx);
+  }
   var ship = s.c.shipCode;
   var opts = {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)};
   var target = null;
@@ -886,7 +919,7 @@ function encodeBank(b) {
 
 module.exports = {
   REF_DECKS: REF_DECKS, REF_AREAS: REF_AREAS, REF_DECK: REF_DECK, REF_AREA: REF_AREA, REF_PLACE: REF_PLACE,
-  REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK, REF_FLAG: REF_FLAG,
+  REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK, REF_FLAG: REF_FLAG, REF_CABIN: REF_CABIN,
   ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE, ROW_MUTED: ROW_MUTED,
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
   GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,

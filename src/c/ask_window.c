@@ -115,7 +115,8 @@ static void no_reply(void *context) {
 static void send_now(void *context) {
   Card *c = s_card;
   c->timer = NULL;
-  if (comm_send_voice(s_seq, c->heard[0] ? c->heard : NULL, onboard_is_set() ? 1 : 0)) {
+  if (comm_send_voice(s_seq, c->heard[0] ? c->heard : NULL,
+                      (onboard_is_set() ? 1 : 0) | (clock_is_24h_style() ? 2 : 0))) {
     if (c->heard[0]) {
       c->timer = app_timer_register(REPLY_WAIT_MS, no_reply, NULL);
     } else {

@@ -172,7 +172,8 @@ Home then shows the **sea-day layout** (the NEXT card) for the rest of the day.
 
 - **By voice (1.5.3):** `I'm on board` and `I'm ashore` on the Ask screen
   (`docs/DESIGN_V1_1.md` §9.6) set and clear the same flag, with the same
-  buzz, log entry and alert changes.
+  buzz, log entry and alert changes. From 1.5.4, Hold Select on Home opens Ask
+  (say `I'm on board`); the `On board?` screen stays for when the phone is away.
 
 - **Where: Hold Select on Home**, only while Home shows the terminal arrival
   card (§22.5) or the all-aboard countdown. Select does nothing on those

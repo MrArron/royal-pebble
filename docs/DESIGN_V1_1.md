@@ -941,6 +941,25 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
     otherwise. The card shows `YOU'RE On board` with `Select: all-aboard alerts
     off for today`. These need no place names, so they work before the voice
     matcher is in (1.5.3). `When is all aboard` is not a command (no `I'm`).
+  - Also with real data before the matcher (owner, 2026-09-28; 1.5.4), times
+    in the watch's 12/24-hour style, with the port's local time when it
+    differs:
+    - `When do we leave?` / `What time do we sail?`: `TODAY` port, `DEPARTS`
+      (or `DEPARTED`), `ALL ABOARD`; `At sea today` on sea days.
+    - `What's tomorrow?` / `Where are we tomorrow?`: `TOMORROW` port,
+      `ARRIVES`, `ALL ABOARD` (or `DEPARTS`); `At sea`.
+    - `Where's my muster station?` (also heard as `mustard`): `MUSTER
+      STATION` from the Me tab or the booking; Select routes there when it
+      names a place on the map, else `Not a place on the map`.
+    - `Take me to my cabin` / `back to my room`: the route to the stateroom
+      from where routes start now (§9.4): a starred event on now, later a
+      spoken `I'm at`. With nothing but the cabin to start from: `No starred
+      event on now to start from`.
+  - `Forget where I am` (owner, 2026-09-28) comes with the spoken start in V3:
+    until then there's no spoken location to forget.
+- **Hold Select on Home always asks by voice** (owner, 2026-09-28), also on
+  embark and port days, where `I'm on board` is said. With the phone away,
+  Hold Select opens the `On board?` screen while it's offered.
 - **Only one-spot places can be a location:** landmark venues and cabins.
   Restrooms, elevators and stairs are refused (`There are 26 restrooms` / `Say a
   venue or a cabin number near you instead`); they're fine as destinations.

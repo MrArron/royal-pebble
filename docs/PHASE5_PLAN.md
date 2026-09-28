@@ -75,6 +75,7 @@ screen, so the worst case is a Route screen opened from a deep directory.
 | 1.5.1, proposal C: LTO (R2) | 59,400 | 6,135 | - |
 | 1.5.2, proposal B: Ask screen (voice watch side) | 61,928 | 3,607 | - |
 | 1.5.3, voice `I'm on board` / `I'm ashore` | 61,960 | 3,575 | - |
+| 1.5.4, voice departure, tomorrow, muster, my cabin; Home Hold Select = Ask | 61,984 | 3,551 | - |
 
 - A saved 1,576 bytes (less than the 2-2.5 KB estimate: dead code was
   already dropped by the linker; the win was static buffers). Freeing the
@@ -90,6 +91,17 @@ screen, so the worst case is a Route screen opened from a deep directory.
   dictation start: 25.6 KB from Home, 18.1 KB from a Route screen four
   directory levels deep. Still to confirm on the watch: the usage log's new
   `voice` entries record free heap at each dictation.
+- **On the watch (2026-09-28):** 1.5.4 passed the owner's full test pass on
+  the Pebble Time 2 and Android phone: Home, Today, star, stored schedule
+  with the phone away, My info, directory, routes, every voice command,
+  Ask from a Route screen, cancel and no-speech, phone away, and dictation
+  in airplane mode.
+- **Heap on the watch** (usage log, 2026-09-28, real Harmony data, 115-event
+  day): free at open 30.7 KB on 1.5.4 against 20.2 KB on 1.4.7 (+10.5 KB, the
+  stored-slice blob no longer kept). Free at every dictation start 24-25 KB
+  (from Home and from a Route screen), and the same after it: the dictation
+  screen takes no app heap on the watch either. Lowest free while open
+  24 KB (1.4.x sessions went down to 18 KB). Proposal F isn't needed.
 - Not needed now: proposals E and F.
 
 ## 2. Proposals for making room
@@ -202,9 +214,11 @@ left after it), and E goes on the list for Phase 6.
 | V2 | Lexicon + parser: `tools/voice/`, `src/pkjs/data/voice-HM.js`, `src/pkjs/voice.js`, tests and fixtures (from `voice-phase5/`), not wired | 1.5.2 |
 | V3 | Phone wiring: transcript message in, parse, resolve (group to nearest, cabin check, stateroom, ashore, same place), confirm rows out, spoken start via `routestart.js`, `voice` log lines; a settings-page test box to type a phrase without the watch | 1.5.3 |
 
-Since this plan: B (1.5.2) and `I'm on board` / `I'm ashore` (1.5.3) went in
-ahead of V2, so the version numbers above move up. V2/V3 keep those two
-intents (`voicecard.onboardIntent`) when the matcher takes over the answers.
+Since this plan: B (1.5.2), `I'm on board` / `I'm ashore` (1.5.3) and
+departure, tomorrow, muster station and `Take me to my cabin` (1.5.4) went in
+ahead of V2, so the version numbers above move up. V2/V3 keep these commands
+(`src/pkjs/voicecard.js`) when the matcher takes over the other answers, and V3
+adds `Forget where I am` with the spoken start.
 
 ### Stage 4: voice on the watch
 

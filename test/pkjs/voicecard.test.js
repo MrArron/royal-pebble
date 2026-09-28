@@ -104,6 +104,69 @@ test('on board cards follow the day and the watch flag', function() {
   assert.strictEqual(atSea.rows[1].value, 'At sea today');
 });
 
+test('clock follows the watch style', function() {
+  assert.strictEqual(voicecard.clock(17 * 60, 0), '5:00p');
+  assert.strictEqual(voicecard.clock(1440 + 30, 0), '12:30a');
+  assert.strictEqual(voicecard.clock(12 * 60 + 5, 0), '12:05p');
+  assert.strictEqual(voicecard.clock(17 * 60, voicecard.STATE_24H), '17:00');
+});
+
+test('departure, tomorrow and muster cards', function() {
+  var now = new Date(2027, 2, 8, 13, 0);
+  var port = demo.make(now, 0);
+  var sea = demo.make(now, 1);
+  function ctx(d) { return {bundle: d.bundle, settings: d.settings, stars: d.stars, now: now}; }
+  var leave = voicecard.answer('When do we leave?', ctx(port), false, 0);
+  assert.deepStrictEqual(leave.rows.map(function(r) { return r.label; }), ['HEARD', 'TODAY', 'DEPARTS', 'ALL ABOARD']);
+  assert.ok(/[ap]$/.test(leave.rows[2].value));
+  assert.ok(/:/.test(voicecard.answer('what time does the ship sail', ctx(port), false, 0).rows[2].value));
+  assert.strictEqual(voicecard.answer('when do we leave', ctx(sea), false, 0).rows[1].value, 'At sea today');
+  var tmr = voicecard.answer("where are we tomorrow", ctx(sea), false, voicecard.STATE_24H);
+  assert.strictEqual(tmr.rows[1].label, 'TOMORROW');
+  assert.ok(!/[ap]$/.test(tmr.rows[2].value), '24-hour');
+  // Muster: a place name in it gives a route; a bare code doesn't.
+  var m = voicecard.answer("where's my muster station", ctx(port), false, 0);
+  assert.strictEqual(m.rows[1].label, 'MUSTER STATION');
+  var c = ctx(port);
+  c.settings = JSON.parse(JSON.stringify(c.settings));
+  c.settings.me.muster = 'B4';
+  c.settings.me.src = {muster: 'edited'};
+  var bare = voicecard.answer('take me to my mustard station', c, false, 0);
+  assert.strictEqual(bare.action, voicecard.ACT_NONE);
+  assert.strictEqual(bare.rows[1].value, 'B4');
+  c.settings.me.muster = 'A2 Royal Theater';
+  var routed = voicecard.answer('muster station', c, false, 0);
+  assert.strictEqual(routed.action, voicecard.ACT_ROUTE);
+  assert.strictEqual(routed.ref, voicecard.placeRef('Royal Theater', c));
+  unpack(voicecard.packCard(routed));
+  // Real data without these words still says not yet.
+  assert.strictEqual(voicecard.answer('play some music', ctx(port), false, 0).rows[1].value, 'Not yet');
+});
+
+test('take me to my cabin', function() {
+  var now = new Date(2027, 2, 8, 13, 0);
+  var port = demo.make(now, 0);
+  var c = {bundle: port.bundle, settings: port.settings, stars: port.stars, now: now};
+  ['take me to my cabin', 'take me back to my room', 'how do I get back to my stateroom'].forEach(function(t) {
+    var card = voicecard.answer(t, c, false, 0);
+    assert.strictEqual(card.rows[1].value, 'Your cabin', t);
+  });
+  // With no starred event on now, the route would start at the cabin itself.
+  assert.strictEqual(voicecard.answer('take me to my cabin', c, false, 0).action, voicecard.ACT_NONE);
+  // During a starred show (the demo sea day's 14:00 at Studio B), it routes from there.
+  var sea = demo.make(now, 1);
+  var during = {bundle: sea.bundle, settings: sea.settings, stars: sea.stars, now: new Date(2027, 2, 8, 14, 0)};
+  var route = voicecard.answer('take me to my cabin', during, false, 0);
+  assert.strictEqual(route.action, voicecard.ACT_ROUTE);
+  assert.strictEqual(route.ref, directory.REF_CABIN);
+  assert.strictEqual(route.rows[1].value, 'Studio B');
+  var page = directory.routePage(directory.REF_CABIN, false, during);
+  assert.ok(page.steps.length > 1);
+  assert.strictEqual(page.steps[page.steps.length - 1].glyph, 4, 'ends with the arrival');
+  // "my cabin to the theater" isn't a cabin route.
+  assert.notStrictEqual(voicecard.answer('from my cabin to the theater', c, false, 0).rows[1].value, 'Your cabin');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {
