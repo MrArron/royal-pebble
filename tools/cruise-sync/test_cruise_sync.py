@@ -265,5 +265,44 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(s["infos"][0], [None, 15, []])
 
 
+class DumpProductsTest(unittest.TestCase):
+    def test_report(self):
+        text = cs.products_report([
+            product(),
+            product(productTitle="Bingo", productID="P2", productLocation={"locationCode": "ONAIR", "locationTitle": "Studio"}),
+            product(productTitle="Bingo", productID="P3", productLocation={"locationCode": "VINT", "locationTitle": None}),
+            product(productTitle="Massage", productType={"productType": "SPA"}, productID="S1")])
+        self.assertIn("  NON_REVENUE_SCHEDULABLE: 3\n  SPA: 1\n", text)
+        self.assertIn(" *ONAIR: On Air x2; Studio x1\n", text)
+        self.assertIn("  VINT: (blank) x1\n", text)
+        self.assertIn(" *Bingo: P2, P3\n", text)
+        self.assertNotIn("Massage:", text)  # not a schedule type
+        self.assertIn("  offeringTime: 4\n", text)
+        self.assertNotIn("Compared", text)
+
+    def test_compare(self):
+        old = [product(), product(productTitle="Bingo", productID="P2"), product(productTitle="Gone", productID="P4")]
+        new = [product(), product(productTitle="Bingo", productID="P9"), product(productTitle="New", productID="P5")]
+        self.assertEqual(cs.compare_ids(old, new), [
+            "Titles in both pulls: 2; same productID: 1; changed: 1; only in the earlier pull: 1; only in this pull: 1",
+            "  changed  Bingo: P2 -> P9", "  gone     Gone", "  new      New"])
+
+    def test_dump_compares_with_newest_earlier(self):
+        import datetime as dt
+        import tempfile
+        ship = {"shipCode": "HM", "name": "Harmony of the Seas"}
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            cs.dump_products(d, ship, DATE8, [product(productID="P0")], dt.datetime(2026, 9, 26, 9, 0))
+            cs.dump_products(d, ship, DATE8, [product()], dt.datetime(2026, 9, 27, 9, 0))
+            raw, report = cs.dump_products(d, ship, DATE8, [product()], dt.datetime(2026, 9, 30, 9, 5))
+            self.assertEqual(raw.name, f"royal-pebble-products-HM-{DATE8}-pulled-20260930-0905.json")
+            self.assertEqual(json.loads(raw.read_text(encoding="utf-8"))["products"], [product()])
+            text = report.read_text(encoding="utf-8")
+            self.assertTrue(text.startswith(f"Harmony of the Seas (HM), sailing {DATE8}, pulled 2026-09-30 09:05\n"))
+            self.assertIn("Compared with the earlier pull (2026-09-27 09:00):\nTitles in both pulls: 1; same productID: 1;",
+                          text)
+
+
 if __name__ == "__main__":
     unittest.main()

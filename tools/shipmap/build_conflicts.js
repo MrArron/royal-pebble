@@ -14,6 +14,9 @@ function build(ship) {
   var file = JSON.parse(fs.readFileSync(path.join(__dirname, 'conflicts-' + ship + '.json'), 'utf8'));
   var open = file.conflicts.filter(function(c) { return c.status === 'open'; }).map(function(c) {
     var out = {id: c.id, kind: c.kind, check: c.check, svg: c.svg, app: c.app, using: c.using};
+    if (c.schedule) {
+      out.schedule = c.schedule;
+    }
     if (c.venues) {
       out.venues = c.venues;
     }

@@ -296,6 +296,7 @@ function eventsAt(v, ctx) {
     return [];
   }
   var table = venues.builtIn(ctx.shipCode);
+  var codes = venues.scheduleVenues(ctx.bundle).codes;
   var key = L.norm(v.name);
   var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
   var nowMin = slice.cruiseMinutes(sailDays, ctx.now);
@@ -304,7 +305,7 @@ function eventsAt(v, ctx) {
     if (!e.venue) {
       return false;
     }
-    var name = L.lookup(table, e.venue) || e.venue;
+    var name = L.lookup(table, e.venue, codes[e.venue]) || e.venue;
     if (L.norm(name) !== key) {
       return false;
     }
@@ -353,8 +354,7 @@ function stops(ctx, sailDays, today) {
 // GPS_NO_CABIN or GPS_NO_FROM when there's none.
 function bestRoute(to, ctx, cabin, target) {
   var ship = ctx.shipCode;
-  var settings = ctx.settings || {};
-  var finder = venues.venueFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
+  var finder = venues.bundleFinder(ctx.bundle, ctx.settings);
   var room = stateroom(ctx);
   var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
   var now = slice.cruiseMinutes(sailDays, ctx.now);
@@ -632,8 +632,7 @@ function eventRoutePage(ev, ctx) {
   var target = null;
   var problem = null;
   if (ctx.bundle && name && shipmap.data(ship)) {
-    var finder = venues.venueFinder(ship, (s.c.settings.venues || {})[ship], (s.c.settings.me || {}).deck);
-    var v = finder.entry(name);
+    var v = venues.bundleFinder(ctx.bundle, s.c.settings).entry(name);
     target = {name: v.name, short: v.short || v.name, to: spotsOf(ship, v, s.cabin)};
     problem = spotProblem(v, target.to);
   }

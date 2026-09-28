@@ -200,6 +200,62 @@ var SHIPS = {
       ['Windjammer', 'Windjammer Marketplace'],
       ['Jogging Track', 'Running Track']
     ],
+    // Royal's venue codes (the schedule's venueCodes, docs/DATA_FORMAT.md), from
+    // the products listing for the 2026-10-01 sailing (pulled 2026-09-27). A
+    // code wins over the venue's title. Left out: codes of places not in the
+    // table (CHEF, SAMBA, NVMYTIMEDINE, the port PCN) and SILK,
+    // titled "Main Dining Room 5" (conflicts-HM.json, silk-dining-floor).
+    codes: [
+      ['150CP', '150 Central Park'],
+      ['ADVE', 'Adventure Ocean Theater'],
+      ['AQUA_AL', 'AquaTheater'],
+      ['ARTGAL', 'Art Gallery'],
+      ['BBPUB0', 'Boot & Bonnet Pub'],
+      ['BOLER', 'Boleros'],
+      ['BRDWLK', 'Boardwalk'],
+      ['BREIT', 'Breitling'],
+      ['CARTIER', 'Cartier'],
+      ['CASN', 'Casino Royale'],
+      ['CENTPRK', 'Central Park'],
+      ['CHOP', 'Chops Grille'],
+      ['DAZZ', 'Dazzles'],
+      ['FITNESS', 'Fitness Center'],
+      ['FLOW', 'FlowRider'],
+      ['GIOKITWINE', "Giovanni's Wine Bar"],
+      ['GIOV', "Jamie's Italian"],  // "Giovanni's Italian Kitchen" (central-park-restaurant-names)
+      ['HUBLOT', 'Hublot'],
+      ['ICE_AL', 'Studio B'],
+      ['IZUM', 'Izumi'],
+      ['IZUMIHIBACHI', 'Izumi'],
+      ['KIDSTHTER', 'Adventure Ocean Theater'],
+      ['NXCR', 'NextCruise Office'],
+      ['OMEGA', 'Omega'],
+      ['ONAIR', 'On Air'],
+      ['PCC', 'Perfect Day at CocoCay'],
+      ['pdi', 'Perfect Day at CocoCay'],
+      ['PHTGLLRY', 'Focus Photo Gallery'],
+      ['PICST', 'Picture This'],
+      ['POOLD', 'Pool Deck'],
+      ['PRINCE', 'Prince & Greene'],
+      ['PROM', 'Royal Promenade'],
+      ['REGJEWELL', 'Regalia Fine Jewelry'],
+      ['ROCK', 'Rock Climbing Wall'],
+      ['RYLTHTR', 'Royal Theater'],
+      ['SCHOON', 'Schooner Bar'],
+      ['SOLARIUM', 'Solarium'],
+      ['SOLERA', 'Solera'],
+      ['SPSCRT', 'Sports Court'],
+      ['TABTC', 'Table Tennis Court'],
+      ['VINT', 'Vintages'],  // the wine tasting, blank title
+      ['VSPA', 'Vitality Spa'],
+      ['casitas', 'Pool Deck'],  // rentable lounges around the pools (owner, 2026-09-27)
+      ['harmony-dunes', 'Harmony Dunes'],
+      ['pandora', 'Pandora'],
+      ['regalia-watches-', 'Regalia Watches'],
+      ['roberto-coin-boutique', 'Roberto Coin Boutique'],
+      ['royal-escape-room', 'The Puzzle Break'],  // escape-room-name
+      ['social100', 'Social100 (Ages 13-17)']
+    ],
     // Names for the reminder alert, which keeps 17 bytes of each venue name
     // (docs/WATCH_PROTOCOL.md, Alerts). Longer names without one are cut.
     short: [
@@ -225,10 +281,11 @@ var SHIPS = {
   }
 };
 
-// The built-in table for a ship code: {venues: {name: venue}, aliases: {name: target}}.
+// The built-in table for a ship code: {venues: {name: venue}, aliases: {name:
+// target}, codes: {Royal's venue code: name}}.
 function builtIn(ship) {
   var src = SHIPS[ship];
-  var out = {venues: {}, aliases: {}};
+  var out = {venues: {}, aliases: {}, codes: {}};
   if (!src) {
     return out;
   }
@@ -249,6 +306,9 @@ function builtIn(ship) {
   });
   src.aliases.forEach(function(a) {
     out.aliases[a[0]] = a[1];
+  });
+  (src.codes || []).forEach(function(c) {
+    out.codes[c[0]] = c[1];
   });
   (src.short || []).forEach(function(s) {
     out.venues[s[0]].short = s[1];
@@ -285,9 +345,14 @@ function venueLib() {
     return field === 'deck' ? 'decks' : field;
   }
 
-  // The table name for a schedule venue name, following aliases; null when it
-  // isn't in the table. table: {venues: {name: venue}, aliases: {name: target}}.
-  function lookup(table, name) {
+  // The table name for a schedule venue: by Royal's venue code when the table
+  // knows it, else by name, following aliases; null when it isn't in the table.
+  // table: {venues: {name: venue}, aliases: {name: target}, codes?: {code: name}}.
+  function lookup(table, name, code) {
+    var byCode = code && table.codes && has(table.codes, code) ? table.codes[code] : null;
+    if (byCode && has(table.venues, byCode)) {
+      return byCode;
+    }
     var key = norm(name);
     if (!key) {
       return null;
@@ -310,6 +375,26 @@ function venueLib() {
       }
     }
     return null;
+  }
+
+  // A schedule's venue names, one per sched.venues entry, and the code the
+  // table knows for each name: {names: [...], codes: {name: code}}. A blank
+  // title takes its code's table name (the wine tasting's VINT is Vintages).
+  // Events use these names everywhere, star keys included, so the phone and the
+  // settings page must both get them from here.
+  function scheduleVenues(table, sched) {
+    var codes = (sched && sched.venueCodes) || [];
+    var out = {names: [], codes: {}};
+    ((sched && sched.venues) || []).forEach(function(n, i) {
+      var code = codes[i] || null;
+      var known = code && table.codes && has(table.codes, code) && has(table.venues, table.codes[code]);
+      var name = n || (known ? table.codes[code] : '');
+      out.names.push(name);
+      if (name && known && !has(out.codes, name)) {
+        out.codes[name] = code;
+      }
+    });
+    return out;
   }
 
   // One venue as the owner sees it: built-in values with their edits applied.
@@ -383,7 +468,9 @@ function venueLib() {
 
   // Every venue the owner can look at: the table, schedule venues missing from
   // it, and venues they added that the schedule no longer lists. Sorted by name.
-  function entries(table, overrides, scheduleVenues) {
+  // codes: {schedule name: code} (scheduleVenues), so a name the table knows only
+  // by its code isn't listed as missing.
+  function entries(table, overrides, schedNames, codes) {
     overrides = overrides || {};
     var out = [];
     var seen = {};
@@ -396,8 +483,9 @@ function venueLib() {
       out.push(resolve(name, base, has(overrides, name) ? overrides[name] : null));
     }
     Object.keys(table.venues).forEach(function(n) { add(n, table.venues[n]); });
-    (scheduleVenues || []).concat(Object.keys(overrides)).forEach(function(n) {
-      if (n && !lookup(table, n)) {
+    codes = codes || {};
+    (schedNames || []).concat(Object.keys(overrides)).forEach(function(n) {
+      if (n && !lookup(table, n, has(codes, n) ? codes[n] : null)) {
         add(n, null);
       }
     });
@@ -546,7 +634,7 @@ function venueLib() {
   return {
     AREAS: AREAS, ASHORE: ASHORE, POSITIONS: POSITIONS, FIELDS: FIELDS,
     norm: norm, lookup: lookup, resolve: resolve, setField: setField, resetField: resetField,
-    confirm: confirm, entries: entries, counts: counts, deckList: deckList, deckText: deckText,
+    scheduleVenues: scheduleVenues, confirm: confirm, entries: entries, counts: counts, deckList: deckList, deckText: deckText,
     nearestDeck: nearestDeck, cabinDeck: cabinDeck, watchLines: watchLines, subLine: subLine,
     groups: groups, reviewQueue: reviewQueue
   };
@@ -653,16 +741,18 @@ function nearestPair(fromDecks, toDecks) {
 //     venue unknown, Ashore or missing), else {kind: FROM_*, fromPos (0-3),
 //     where: the venue's watchWhere() relative to the previous venue (deck is
 //     the entrance nearest to it, rel the decks between them)}
-function venueFinder(shipCode, overrides, cabinText) {
+// codes: {schedule name: Royal's venue code} (scheduleVenues), tried first.
+function venueFinder(shipCode, overrides, cabinText, codes) {
   var table = builtIn(shipCode);
   var own = function(o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
   overrides = overrides || {};
+  codes = codes || {};
   var cabin = lib.cabinDeck(cabinText);
   var cache = {};
 
   function venue(name) {
     if (!own(cache, name)) {
-      var tableName = lib.lookup(table, name);
+      var tableName = lib.lookup(table, name, own(codes, name) ? codes[name] : null);
       var key = tableName || name;
       var base = tableName ? table.venues[tableName] : null;
       var v = lib.resolve(key, base, own(overrides, key) ? overrides[key] : null);
@@ -713,8 +803,22 @@ function venueFinder(shipCode, overrides, cabinText) {
 }
 
 // A function from a venue name to its watchWhere() (see venueFinder).
-function whereFinder(shipCode, overrides, cabinText) {
-  return venueFinder(shipCode, overrides, cabinText).where;
+function whereFinder(shipCode, overrides, cabinText, codes) {
+  return venueFinder(shipCode, overrides, cabinText, codes).where;
+}
+
+// A bundle's schedule venue names and codes (lib.scheduleVenues).
+function scheduleVenues(bundle) {
+  var ship = (bundle && bundle.ship && bundle.ship.code) || '';
+  return lib.scheduleVenues(builtIn(ship), bundle && bundle.schedule);
+}
+
+// venueFinder for a bundle's ship with the owner's settings and the schedule's
+// venue codes.
+function bundleFinder(bundle, settings) {
+  settings = settings || {};
+  var ship = (bundle && bundle.ship && bundle.ship.code) || '';
+  return venueFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck, scheduleVenues(bundle).codes);
 }
 
 module.exports = {
@@ -728,6 +832,8 @@ module.exports = {
   watchWhere: watchWhere,
   whereFinder: whereFinder,
   venueFinder: venueFinder,
+  bundleFinder: bundleFinder,
+  scheduleVenues: scheduleVenues,
   builtIn: builtIn,
   venueLib: venueLib,
   lib: lib,

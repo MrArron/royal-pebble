@@ -665,6 +665,32 @@ test('no "From" directions ashore or for venues not in the table', function() {
   assert.strictEqual(a['Karaoke'].from, venues.FROM_NONE);
 });
 
+test('venue codes: a blank title takes the venue of its code, and the code wins', function() {
+  var b = makeBundle([
+    ['Wine Tasting', 3, 0, '2027-03-07', '13:00', 60, 0, 0],   // blank title, VINT: Vintages, deck 8 mid
+    ['Escape', 4, 0, '2027-03-07', '14:00', 60, 0, 0],         // Royal Escape Room: The Puzzle Break, deck 14 fore
+    ['Mixer', 5, 0, '2027-03-07', '15:00', 60, 0, 0]           // blank, no code
+  ]);
+  b.schedule.venues = b.schedule.venues.concat(['', 'Royal Escape Room', '']);
+  b.schedule.venueCodes = [null, null, null, 'VINT', 'royal-escape-room', null];
+  var now = at('2027-03-07', 8, 0);
+  var ev = {};
+  slice.buildSlice(b, {me: {deck: 'Deck 9'}}, {}, now, null).events.forEach(function(e) { ev[e.title] = e; });
+  assert.strictEqual(ev['Wine Tasting'].venue, 'Vintages');
+  assert.deepStrictEqual(ev['Wine Tasting'].where, {deck: 8, deckTo: 0, pos: 2, ashore: false, rel: -1});
+  assert.deepStrictEqual(pack.encodeWhere(ev['Wine Tasting'].where), [8, 0, 2 | 8, 255]);
+  assert.strictEqual(ev['Escape'].venue, 'Royal Escape Room', 'the title stays; the table is found by code');
+  assert.deepStrictEqual(ev['Escape'].where, {deck: 14, deckTo: 0, pos: 1, ashore: false, rel: 5});
+  assert.deepStrictEqual([ev['Mixer'].venue, ev['Mixer'].where], ['', venues.NOWHERE]);
+
+  // Star keys use the filled name, the same as the settings page.
+  var key = slice.starKey('Wine Tasting', '2027-03-07', '13:00', 'Vintages');
+  var stars = {};
+  stars[key] = 1;
+  var starred = slice.buildSlice(b, {}, stars, now, null).events.filter(function(e) { return e.title === 'Wine Tasting'; })[0];
+  assert.ok(starred.flags & slice.FLAG_STARRED);
+});
+
 test('packed where: deck, range, position, ashore, decks from cabin', function() {
   assert.deepStrictEqual(pack.encodeWhere(null), [0, 0, 0, 0]);
   assert.deepStrictEqual(pack.encodeWhere({deck: 3, deckTo: 5, pos: 1, ashore: false, rel: null}), [3, 5, 1, 0]);

@@ -90,9 +90,17 @@ It only reads (no bookings or changes), one request at a time with a short pause
 py cruise_sync.py --ship harmony --date YYYY-MM-DD
 py cruise_sync.py --ship HM --date YYYY-MM-DD --login
 py cruise_sync.py --ship HM --date YYYY-MM-DD --out-dir <folder> --no-clipboard
+py cruise_sync.py --ship HM --date YYYY-MM-DD --dump-products
 py cruise_sync.py --help
 py test_cruise_sync.py          (offline tests, no login needed)
 ```
+
+`--dump-products` (a test option for working on the app) also saves Royal's raw
+products listing and a `.txt` report on it as `royal-pebble-products-<ship>-<date>-pulled-<time>`:
+product types, every venue code with its titles, the product id of each schedule
+title, and which fields Royal sent. If `--out-dir` already holds a dump of the same
+sailing, the report compares product ids by title with the newest one. The
+listing is public (no login), but keep the files out of the repository.
 
 ## Troubleshooting
 
