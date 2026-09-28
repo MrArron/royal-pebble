@@ -205,6 +205,14 @@ function sendText(ok, info) {
     (info.retries ? ', ' + info.retries + ' retries' : '');
 }
 
+// Test alerts stay on for an hour after they were turned on.
+var TEST_HOUR = 3600 * 1000;
+
+function testAlertsOn() {
+  var at = load(STORE_TEST, 0);
+  return at > 0 && Date.now() - at < TEST_HOUR;
+}
+
 function sendSlice() {
   if (s_sending) {
     s_resend = true;
@@ -212,9 +220,8 @@ function sendSlice() {
   }
   var built = Date.now();
   var data = currentData();
-  var testAt = load(STORE_TEST, 0);
   var sl = slice.buildSlice(data.bundle, data.settings, data.stars, new Date(),
-                            Date.now() - testAt < 3600 * 1000 ? new Date(testAt) : null);
+                            testAlertsOn() ? new Date(load(STORE_TEST, 0)) : null);
   built = Date.now() - built;
   s_sliceId = (s_sliceId + 1) & 0x7FFF;
 
@@ -533,6 +540,7 @@ function pageState(ships) {
     dayLoad: bundle ? slice.dayLoad(bundle, settings, load(STORE_STARS, {})) : [],
     maxEvents: slice.MAX_EVENTS,
     watchStorage: watchStorage(),
+    testAlerts: testAlertsOn(),
     personal: settings.personal || [],
     // Booked excursions and other timed orders from login data (read-only).
     orders: bundle ? slice.bookedList(bundle, settings) : [],
@@ -801,10 +809,12 @@ function settingsClosed(text) {
   save(STORE_SETTINGS, settings);
   logLib.diffSettings(before, settings).forEach(function(d) { usage.add('setting', d); });
 
-  if (r.action === 'test') {
-    console.log('Test alerts requested');
-    usage.add('alert', 'test alerts asked for');
-    save(STORE_TEST, Date.now());
+  // Settings > Me > Test alerts is a switch: on starts the test alerts from
+  // now (kept for an hour), off clears the ones still to come.
+  if (typeof r.testAlerts === 'boolean' && r.testAlerts !== testAlertsOn()) {
+    console.log('Test alerts ' + (r.testAlerts ? 'on' : 'off'));
+    usage.add('alert', r.testAlerts ? 'test alerts turned on' : 'test alerts turned off');
+    save(STORE_TEST, r.testAlerts ? Date.now() : 0);
   }
 
   if (r.bundle) {

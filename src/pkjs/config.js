@@ -4,7 +4,7 @@
 //
 // The page returns its result through `return_to` (the emulator tooling adds
 // it) or the phone app's pebblejs://close# URL:
-//   {action: 'save' | 'download' | 'test', me, theme, reminderLead, reserveAlertAt,
+//   {action: 'save' | 'download', me, theme, reminderLead, reserveAlertAt,
 //    days: {date: {offset, buffer, allAboard, shift, warn, edit} | null}, showFeatured, alwaysHints, hiddenCats,
 //    ageFilters: [adult, young, family] (the Ages switches turned on),
 //    shipSides: {ship, all, decks, confirmed} (Help > Port and starboard, mapped ships only),
@@ -13,6 +13,7 @@
 //    download: {ship: {code, name}, sailDate}, bundle, ships,
 //    venues: {ship, overrides} (all venue edits for that ship, only when changed),
 //    usage: {on, label, clear} (Me > Usage log),
+//    testAlerts: true | false (Me > Test alerts, only when the switch was flipped),
 //    mapCheck: {ship, clear, notes: {id: {answer, deck, pos, side, note, place} | null},
 //               added: [{place, deck, pos, side, note}]} (Me > Map check, mapped ships only)}
 
@@ -197,6 +198,13 @@ var CSS = [
   '.bk .rm{width:40px;height:40px;flex:none;border-radius:20px;background:transparent;color:var(--on-surface-variant);',
   'font-size:20px;line-height:1}',
   '.booked .textbtn{min-height:40px;font-size:14px}',
+  '.xs{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--surface-high)}',
+  '.xs .tm{width:52px;flex:none;font-weight:700;font-size:14px}.xs .t{flex:1;min-width:0}',
+  '.xs .t b{display:block;font-weight:600}.xs .t .muted{display:block;font-size:13px}',
+  '.xpick{display:inline-flex;align-items:center;gap:4px;flex:none;min-height:40px;padding:0 12px;border-radius:8px;',
+  'border:1px solid var(--outline);background:transparent;color:var(--primary);font:inherit;font-size:13px;font-weight:700}',
+  '.xpick.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}',
+  '.xpick svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}',
   '.mine .ev{width:100%;padding:8px 0;background:none;color:inherit;text-align:left;min-height:48px}',
   '.mine .ev .tm{color:inherit;font-weight:700}',
   '.star{width:48px;height:48px;flex:none;border-radius:24px;background:transparent;',
@@ -470,10 +478,12 @@ var BODY = [
   '<label for="clockNote">Ship clock note</label><input id="clockNote" maxlength="38" ',
   'placeholder="Ship stays on Eastern time">',
   '<p class="help">Shown on the watch\'s My info screen.</p>',
-  '<label>Alerts</label><button class="pill tonal wide" id="testAlerts" style="margin-top:4px">Test alerts</button>',
-  '<p class="help">Saves and closes this page. About 2 minutes later your watch shows a test reminder, ',
+  '<div class="switch-row" style="margin-top:12px"><span class="t"><b>Test alerts</b>',
+  '<span class="muted">Turns off by itself after an hour</span></span>',
+  '<button class="switch" role="switch" id="testAlerts" aria-label="Test alerts"></button></div>',
+  '<p class="help">Turn on and save: about 2 minutes later your watch shows a test reminder, ',
   'then a test all-aboard alert a minute after that, then a test reminder to reserve. Close the app on the watch first to check that ',
-  'alerts open it by themselves.</p><p class="help" id="watchStorage"></p></div>',
+  'alerts open it by themselves. Turn off and save to stop the ones still to come.</p><p class="help" id="watchStorage"></p></div>',
   '<div class="card" id="mapCard" hidden><h2>Map check</h2>',
   '<p class="muted" id="mapIntro"></p>',
   '<div class="stats"><div class="stat"><b id="mapChecked"></b><span id="mapOf"></span></div>',
@@ -1565,6 +1575,7 @@ function pageMain(S, V, CL, SH) {
     });
   }
   makeSwitch('hints', S.alwaysHints === true);
+  makeSwitch('testAlerts', S.testAlerts === true);
   function hintsOn() {
     return switchOn('hints');
   }
@@ -1729,6 +1740,15 @@ function pageMain(S, V, CL, SH) {
     return DAYS[d.getDay()] + ' ' + d.getDate();
   }
 
+  // A shore excursion session that login data also has (slice.js inOrders):
+  // it shows once, under FROM YOUR BOOKING.
+  function inOrders(e) {
+    var t = (e.title || '').trim().toLowerCase();
+    return (S.orders || []).some(function(o) {
+      return o.excursion && o.date === e.date && o.time === e.time && (o.title || '').trim().toLowerCase() === t;
+    });
+  }
+
   // Venue names as the phone makes them (venues.js scheduleVenues), so star
   // keys match: a blank title takes its venue code's table name.
   var schedTable = S.venues ? S.venues.table : {venues: {}, aliases: {}};
@@ -1757,6 +1777,10 @@ function pageMain(S, V, CL, SH) {
           .map(function(n) { return n[1]; });
       }
       e.excursion = e.cat[0] === 'Shore excursions';  // docs/DATA_FORMAT.md
+      if (e.excursion) {
+        e.reservation = true;  // picked means booked, so it takes a reserved mark (slice.js)
+        e.booked = inOrders(e);
+      }
       var ageRange = Array.isArray(inf) && Array.isArray(inf[0]) ? inf[0] : [];
       var tableName = e.venue && V.lookup(schedTable, e.venue,
         Object.prototype.hasOwnProperty.call(schedV.codes, e.venue) ? schedV.codes[e.venue] : null);
@@ -1955,7 +1979,9 @@ function pageMain(S, V, CL, SH) {
     if (withDate) {
       bits.push(esc(dayLabel(e.date)));
     }
-    if (e.venue) {
+    if (e.excursion) {
+      bits.push('Ashore' + (dayPortName(e.date) ? ' &middot; ' + esc(dayPortName(e.date)) : ''));
+    } else if (e.venue) {
       bits.push(VS ? '<button class="vlink" data-act="venue" data-venue="' + esc(e.venue) + '">' + esc(e.venue) +
         '</button>' : esc(e.venue));
     }
@@ -1963,7 +1989,7 @@ function pageMain(S, V, CL, SH) {
       bits.push(esc(e.age));
     }
     if (e.early) {
-      bits.push('Arrive ' + e.early + ' min early');
+      bits.push(e.excursion ? meetText(e) : 'Arrive ' + e.early + ' min early');
     }
     if (lengthText(e)) {
       bits.push(lengthText(e));
@@ -2097,7 +2123,7 @@ function pageMain(S, V, CL, SH) {
       '<p class="note">From the sync tool with login. Change it in the Royal app.</p></div>';
   }
 
-  // ---- Booked activities: paid classes and experiences (escape room,
+  // ---- Booked activities and excursions: paid classes and experiences (escape room,
   // FlowRider lessons, tastings) come as many sessions each. Only the ones
   // picked here are starred and marked reserved, and only those reach the
   // watch (slice.js buildEvents) or show in the lists above.
@@ -2107,8 +2133,7 @@ function pageMain(S, V, CL, SH) {
     var byName = {};
     var list = [];
     allEvents.forEach(function(e) {
-      // Shore excursion sessions get their own section in Phase 4 PR G
-      // (docs/PHASE4_PLAN.md item 7); until then they stay off the page.
+      // Shore excursions have their own cards (excursionCards).
       if (!e.paid || e.excursion || (isFinished(e.date, e.time, e.minutes) && !isStarred(e.key))) {
         return;
       }
@@ -2140,11 +2165,90 @@ function pageMain(S, V, CL, SH) {
       }).join('') + '</select>';
   }
 
+  // ---- Shore excursions (docs/DESIGN_PHASE4.md §6.1): one card per port day
+  // with a Pick button per session. Picking stars it and marks it reserved,
+  // like an activity's session; the watch shows it at the port, Ashore.
+  function dayPortName(date) {
+    for (var i = 0; i < itinerary.length; i++) {
+      if (itinerary[i].date === date) {
+        var it = effective(itinerary[i]);
+        return it.type === 'CRUISING' ? '' : shortPort(it.port);
+      }
+    }
+    return '';
+  }
+
+  // "Meet 9:00a", from the arrive-early minutes.
+  function meetText(e) {
+    return 'Meet ' + shortClock(hhmm((dayMinutes(e.time) - e.early + 1440) % 1440));
+  }
+
+  // "2 h 30", "4 h", "15 min".
+  function hoursText(m) {
+    return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + m % 60 : '');
+  }
+
+  // "Meet 9:00a · 2 h 30 · Ages 6+"; an all-day rental (no length) "All day from 9:00a".
+  function excursionSub(e) {
+    if (!e.minutes && e.time) {
+      return ['All day from ' + shortClock(e.time), e.age || ''].filter(Boolean).join(' \u00b7 ');
+    }
+    return [e.early ? meetText(e) : '', e.minutes ? hoursText(e.minutes) : '', e.age || '']
+      .filter(Boolean).join(' \u00b7 ');
+  }
+
+  // "DAY 4 · NASSAU · SHORE EXCURSIONS"
+  function excursionHead(date) {
+    var n = -1;
+    itinerary.forEach(function(d, i) {
+      if (d.date === date) {
+        n = i;
+      }
+    });
+    return [n === -1 ? dayLabel(date) : 'Day ' + (n + 1), dayPortName(date), 'Shore excursions'].filter(Boolean)
+      .map(function(b) { return esc(b.toUpperCase()); }).join(' &middot; ');
+  }
+
+  // The day view shows that day's sessions; Starred shows the picked ones.
+  function excursionCards() {
+    var byDate = {};
+    var dates = [];
+    allEvents.forEach(function(e) {
+      if (!e.excursion || e.booked || (evDay !== 'starred' && e.date !== evDay)) {
+        return;
+      }
+      var picked = isStarred(e.key);
+      if (evDay === 'starred' ? !picked : (isFinished(e.date, e.time, e.minutes) && !picked)) {
+        return;
+      }
+      if (!byDate[e.date]) {
+        byDate[e.date] = [];
+        dates.push(e.date);
+      }
+      byDate[e.date].push(e);
+    });
+    return dates.map(function(date, i) {
+      var list = byDate[date];
+      return '<div class="booked"><div class="mine-head"><small>' + excursionHead(date) + '</small></div>' +
+        (i === 0 ? '<p class="muted">Pick the sessions you booked in the Royal app. Picked ones are ' +
+          'starred and go to your watch; the rest stay off it.</p>' : '') +
+        list.map(function(e) {
+          var on = isStarred(e.key);
+          return '<div class="xs"><span class="tm">' + shortClock(e.time) + '</span><span class="t"><b>' +
+            esc(e.title) + '</b><span class="muted">' + esc(excursionSub(e)) + '</span></span>' +
+            '<button class="xpick' + (on ? ' on' : '') + '" data-act="xPick" data-key="' + esc(e.key) +
+            '" aria-pressed="' + on + '" aria-label="' + (on ? 'Unpick ' : 'Pick ') + esc(e.title) + ' ' +
+            esc(shortClock(e.time)) + '">' + (on ? CHECK_SVG + 'Picked' : 'Pick') + '</button></div>';
+        }).join('') + '</div>';
+    }).join('');
+  }
+
   function renderBooked() {
-    var products = evDates.length && !searchText() && (evDay === 'starred' || evDates.indexOf(evDay) !== -1) ?
-      paidProducts() : [];
+    var shownDay = evDates.length && !searchText() && (evDay === 'starred' || evDates.indexOf(evDay) !== -1);
+    var excursions = shownDay ? excursionCards() : '';
+    var products = shownDay ? paidProducts() : [];
     if (!products.length) {
-      $('evBooked').innerHTML = '';
+      $('evBooked').innerHTML = excursions;
       return;
     }
     var booked = products.filter(function(p) { return p.sessions.some(function(e) { return isStarred(e.key); }); });
@@ -2170,7 +2274,7 @@ function pageMain(S, V, CL, SH) {
       html += '<button class="textbtn" data-act="bkMore">' + (showAllPaid ? 'Show booked only' :
         (booked.length ? 'Show ' + rest.length + ' more' : 'Show all ' + rest.length)) + '</button>';
     }
-    $('evBooked').innerHTML = html + '</div>';
+    $('evBooked').innerHTML = excursions + html + '</div>';
   }
 
   // Booking a session stars it and marks it reserved; unbooking clears both.
@@ -2199,6 +2303,8 @@ function pageMain(S, V, CL, SH) {
     }
     if (b.getAttribute('data-act') === 'bkRemove') {
       setBooked(b.getAttribute('data-key'), false);
+    } else if (b.getAttribute('data-act') === 'xPick') {
+      setBooked(b.getAttribute('data-key'), !isStarred(b.getAttribute('data-key')));
     } else if (b.getAttribute('data-act') === 'bkMore') {
       showAllPaid = !showAllPaid;
     } else {
@@ -2235,8 +2341,8 @@ function pageMain(S, V, CL, SH) {
       if (e.finished === undefined) {
         e.finished = isFinished(e.date, e.time, e.minutes);
       }
-      // Paid sessions only once booked (Booked activities).
-      if (e.finished || (e.paid && !isStarred(e.key))) {
+      // Paid sessions only once picked; an excursion in login data is under its day's orders.
+      if (e.finished || (e.paid && !isStarred(e.key)) || e.booked) {
         return;
       }
       if (e.search.indexOf(q) !== -1 || (qVenue !== null && vCanon[e.venue] === qVenue)) {
@@ -2308,8 +2414,8 @@ function pageMain(S, V, CL, SH) {
         if (e.finished && e.date === evDay) {
           finishedCount++;
         }
-        // Paid sessions only once booked (Booked activities).
-        return !e.finished && (!e.paid || isStarred(e.key));
+        // Paid sessions only once picked; an excursion in login data is under FROM YOUR BOOKING.
+        return !e.finished && (!e.paid || isStarred(e.key)) && !e.booked;
       });
       if (evDay === 'starred') {
         list = upcoming.filter(function(e) { return isStarred(e.key); });
@@ -3645,6 +3751,9 @@ function pageMain(S, V, CL, SH) {
     }
     r.showFeatured = featuredOn();
     r.alwaysHints = hintsOn();
+    if (switchOn('testAlerts') !== (S.testAlerts === true)) {
+      r.testAlerts = switchOn('testAlerts');  // only when flipped, so an hour ending here doesn't restart it
+    }
     r.usage = {on: switchOn('logOn'), label: $('logLabel').value.trim(), clear: logClear};
     if (MC) {
       r.mapCheck = mapResult();
@@ -3705,7 +3814,6 @@ function pageMain(S, V, CL, SH) {
   }
   $('save').addEventListener('click', function() { close('save'); });
   $('download').addEventListener('click', function() { close('download'); });
-  $('testAlerts').addEventListener('click', function() { close('test'); });
   if (S.watchStorage) {
     $('watchStorage').textContent = 'Watch storage: the saved schedule uses ' + kb(S.watchStorage.bytes) +
       ' of ' + kb(S.watchStorage.max) + '.';

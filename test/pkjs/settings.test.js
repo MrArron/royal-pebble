@@ -120,7 +120,7 @@ test('settings page builds, embeds state safely and its script parses', function
   assert.strictEqual(html.indexOf('</script><script>alert'), -1, 'state cannot close the script tag');
   assert.strictEqual((html.match(/<\/script>/g) || []).length, 1);
   new Function(pageScript(html));  // throws on a syntax error
-  assert.ok(html.indexOf('id="testAlerts"') !== -1, 'Test alerts button');
+  assert.ok(html.indexOf('id="testAlerts"') !== -1, 'Test alerts switch');
   assert.ok(html.indexOf('id="shareCard"') !== -1 && html.indexOf('id="plan"') !== -1, 'Share my plan');
   assert.ok(html.indexOf('function shareLib()') !== -1, 'share.js embedded');
   assert.ok(html.indexOf('id="reserveAt"') !== -1, 'reserve reminder time');
@@ -458,6 +458,28 @@ test('Events search: count line, day headers, My entries and Hidden on watch (§
   assert.ok(html.indexOf('class="dhead"') !== -1, 'day headers');
   assert.ok(html.indexOf('Hidden on watch') !== -1, 'hidden chip');
   assert.ok(html.indexOf('>My entry<') !== -1, 'entry chip');
+});
+
+test('Booked activities and excursions: a card per port day with Pick buttons (Phase 4 §6.1)', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  var script = pageScript(html);
+  new Function(script);
+  assert.ok(script.indexOf("'Shore excursions'].filter(Boolean)") !== -1, 'day card head');
+  assert.ok(script.indexOf('data-act="xPick"') !== -1, 'Pick button');
+  assert.ok(script.indexOf("'All day from '") !== -1, 'all-day rental line');
+  assert.ok(script.indexOf('function inOrders(e)') !== -1, 'booked ones show once');
+  assert.ok(script.indexOf('Pick the sessions you booked in the Royal app.') !== -1, 'intro');
+});
+
+test('Test alerts is a switch, sent back only when flipped', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY, testAlerts: true};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  var script = pageScript(html);
+  assert.ok(html.indexOf('role="switch" id="testAlerts"') !== -1, 'switch');
+  assert.ok(script.indexOf("makeSwitch('testAlerts', S.testAlerts === true)") !== -1, 'starts as saved');
+  assert.ok(script.indexOf("switchOn('testAlerts') !== (S.testAlerts === true)") !== -1, 'only when flipped');
+  assert.strictEqual(script.indexOf("close('test')"), -1, 'no longer closes the page');
 });
 
 var failed = 0;

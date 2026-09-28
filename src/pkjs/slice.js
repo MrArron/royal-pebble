@@ -607,7 +607,13 @@ function sameWatchText(text, sent, packedMax, keptMax) {
 // list of {key or title, on, reserved}.
 function applyWatchStarChanges(bundle, settings, stars, times, changes) {
   var sailDays = daysFromIso(bundle.sailDate);
-  var candidates = scheduleEvents(bundle).concat(((settings && settings.personal) || []).map(function(p) {
+  // A picked shore excursion is at its port on the watch (buildEvents).
+  var candidates = scheduleEvents(bundle).map(function(e) {
+    if (e.excursion) {
+      e.venue = dayPort(bundle, settings, sailDays, e.date);
+    }
+    return e;
+  }).concat(((settings && settings.personal) || []).map(function(p) {
     return {title: p.title, venue: p.venue || '', date: p.date, time: p.time || null,
             key: starKey(p.title, p.date, p.time, p.venue)};
   }));
@@ -686,6 +692,22 @@ function cleanHiddenCats(list) {
   return out;
 }
 
+var ASHORE = {deck: 0, deckTo: 0, pos: 0, ashore: true, rel: null};
+
+// The day's location as the watch shows it (Settings > Days edits included):
+// where booked orders and picked shore excursions are placed.
+function dayPort(bundle, settings, sailDays, date) {
+  return buildDay(bundle, settings || {}, daysFromIso(date) - sailDays, sailDays).location;
+}
+
+// Whether login data has this shore excursion session (bookedOrders): same
+// title, date and start time.
+function inOrders(orders, title, date, time) {
+  return orders.some(function(o) {
+    return o.excursion && o.date === date && o.time === time && sameTitle(o.title, title);
+  });
+}
+
 // countOnly (for dayLoad): hide nothing, don't trim to MAX_EVENTS, and give each
 // event a filter could hide its `cat` and `ages` (ageMask).
 function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
@@ -699,7 +721,9 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var finals = finalShows(bundle);
   var details = eventDetails(bundle.schedule);
 
-  function add(title, venue, date, time, minutes, flags, cat, paid, info) {
+  // port: a picked shore excursion's port (the day's location); the watch
+  // shows it there, Ashore, while the star key keeps the schedule's venue.
+  function add(title, venue, date, time, minutes, flags, cat, paid, info, port) {
     var tod = minutesFromHhmm(time);
     // Royal lists after-midnight events under the evening's date (a 01:00 curfew
     // is dated the night before), so times before 04:00 are after that midnight.
@@ -726,11 +750,11 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     }
     events.push({
       title: title,
-      venue: venue || '',
+      venue: port !== undefined ? port : venue || '',
       start: start,
       minutes: minutes || 0,
       flags: flags,
-      where: finder.where(venue),
+      where: port !== undefined ? ASHORE : finder.where(venue),
       ageMin: d.ageMin || 0,
       ageMax: d.ageMax || 0,
       early: start === NO_TIME ? 0 : d.early || 0,
@@ -751,14 +775,26 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var f = {};
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
   var vnames = venues.scheduleVenues(bundle).names;
+  var orders = bookedOrders(bundle);
   (sched.events || []).forEach(function(row) {
     var venue = vnames[row[f.venue]];
     var cat = eventCat(row[f.title], venue, (sched.cats || [])[row[f.cat]] || []);
     var flags = (row[f.featured] ? FLAG_FEATURED : 0) | (row[f.reservation] ? FLAG_RESERVATION : 0);
     var fin = finals[starKey(row[f.title], row[f.date], row[f.time], venue)];
     flags |= fin === FINAL_LAST_CHANCE ? FLAG_LAST_CHANCE : fin === FINAL_ONLY_SHOW ? FLAG_ONLY_SHOW : 0;
+    var port;
+    if (cat[0] === EXCURSIONS) {
+      // Shore excursions (docs/DESIGN_PHASE4.md §6): picked ones are booked,
+      // so they take a reserved mark. One also in login data goes only as
+      // the booked order below.
+      if (inOrders(orders, row[f.title], row[f.date], row[f.time])) {
+        return;
+      }
+      flags |= FLAG_RESERVATION;
+      port = dayPort(bundle, settings, sailDays, row[f.date]);
+    }
     add(row[f.title], venue, row[f.date], row[f.time], row[f.minutes], flags, cat,
-        f.paid !== undefined && !!row[f.paid], f.info === undefined ? null : row[f.info]);
+        f.paid !== undefined && !!row[f.paid], f.info === undefined ? null : row[f.info], port);
   });
 
   (settings.personal || []).forEach(function(p) {
@@ -767,19 +803,19 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
 
   // Booked excursions and other timed orders (§22.1): starred and booked, at
   // the day's port, Ashore. Never filtered out.
-  bookedOrders(bundle).forEach(function(o) {
+  orders.forEach(function(o) {
     var start = eventStart(sailDays, o.date, o.time);
     if (start < from || start >= to) {
       return;
     }
-    var port = buildDay(bundle, settings, daysFromIso(o.date) - sailDays, sailDays).location;
+    var port = dayPort(bundle, settings, sailDays, o.date);
     events.push({
       title: o.title,
       venue: port,
       start: start,
       minutes: o.minutes,
       flags: FLAG_STARRED | FLAG_BOOKED,
-      where: {ashore: true},
+      where: ASHORE,
       booked: {meetBefore: o.meetBefore, guests: o.guests, excursion: o.excursion},
       key: 'B|' + starKey(o.title, o.date, o.time, port)
     });
@@ -844,7 +880,8 @@ function scheduleEvents(bundle) {
   return (sched.events || []).map(function(row) {
     var e = {title: row[f.title], venue: vnames[row[f.venue]] || '', date: row[f.date],
              time: row[f.time] || null, minutes: row[f.minutes] || 0, featured: !!row[f.featured],
-             paid: f.paid !== undefined && !!row[f.paid]};
+             paid: f.paid !== undefined && !!row[f.paid],
+             excursion: ((sched.cats || [])[row[f.cat]] || [])[0] === EXCURSIONS};
     e.key = starKey(e.title, e.date, e.time, e.venue);
     return e;
   });
@@ -894,7 +931,7 @@ function bookedOrders(bundle) {
 function bookedList(bundle, settings) {
   var sailDays = daysFromIso(bundle.sailDate);
   return bookedOrders(bundle).map(function(o) {
-    o.port = buildDay(bundle, settings || {}, daysFromIso(o.date) - sailDays, sailDays).location;
+    o.port = dayPort(bundle, settings, sailDays, o.date);
     return o;
   });
 }

@@ -170,8 +170,12 @@ text. One compact JSON object, ASCII only.
     which can include guests from other staterooms. Timed bookings (shore
     excursions; probably dining and shows) add `date` (`YYYY-MM-DD`), `time`
     (`HH:MM`, ship/port-local like the schedule), `day` (cruise day, 1 = embark),
-    `port` (port code) and, when the product page lists them, `meet` and `end`
-    (`HH:MM`, same date) and `minutes`. Packages and credits have none of these.
+    `port` (port code) and, when known, `meet` and `end` (`HH:MM`, same date)
+    and `minutes`. A shore excursion's `meet` and `minutes` come from the
+    public listing first (the schedule's session with the same title, date and
+    time, when there is exactly one); the product page (logged in) is asked
+    only when either is still missing, and its values win. Packages and
+    credits have none of these.
   - `voyageError`, `ordersError`: a message when that part couldn't be fetched.
   - Changes to `mine` are additive and don't bump `v`. Before September 2026,
     `orders` entries could hold a `when` object instead of `date`/`time`; ignore it.

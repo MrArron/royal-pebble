@@ -83,9 +83,10 @@ On the phone, in the Pebble app's settings page for the watch app (works offline
   reminder.
 - **Me:** your stateroom details, muster station, walking-distance units, light or
   dark theme, reminder lead time, the time of the evening reservation reminder and
-  a ship clock note. **Test alerts** sends your watch a test reminder and a test
-  all-aboard alert a couple of minutes later, so you can check alerts before you
-  sail.
+  a ship clock note. The **Test alerts** switch sends your watch a test reminder,
+  a test all-aboard alert and a test reminder to reserve a couple of minutes
+  later, so you can check alerts before you sail. Turn it off to stop them; it
+  turns itself off after an hour.
   - **Map check** (ships with Ship GPS): questions to settle on board where
     Royal's sources disagree about the map, the problems you flagged on the watch
     and the ones the app ran into by itself. Add a note to each, then **Copy
