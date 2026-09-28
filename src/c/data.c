@@ -100,13 +100,15 @@ void data_set_reminder(const Event *e, bool on) {
   }
 
   // Directions from the cabin until the phone's next plan works out the rest.
+  // Before the arrive-by time when the event asks to come early.
   Alarm a = {
-    .at = e->start - s_meta.reminder_lead,
+    .at = e->start - e->early - s_meta.reminder_lead,
     .ref = e->start,
     .extra = (int16_t)e->minutes,
     .kind = ALARM_REMINDER,
     .from = (FROM_NONE << 2) | (event_not_reserved(e->flags) ? ALARM_NOT_RESERVED : 0),
     .where = e->where,
+    .early = e->early,
   };
   copy_text(a.title, sizeof(a.title), title);
   copy_text(a.venue, sizeof(a.venue), e->venue);

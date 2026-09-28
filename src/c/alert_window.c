@@ -10,7 +10,8 @@
 // the event's details body with the "From" directions under the where lines
 // (docs/DESIGN_PHASE3.md §22.9). The evening's "To reserve" alert lists
 // tomorrow's starred events that still need a reservation (§5). A booked
-// order's reminder counts down to its meeting time (§22.4).
+// order's reminder counts down to its meeting time (§22.4), an arrive-early
+// event's to its arrive-by time (docs/DESIGN_PHASE4.md §3.2).
 // Opened by a wakeup (app closed) it is the only
 // screen the user asked for, so Back leaves the app; Select opens Home.
 
@@ -203,16 +204,18 @@ static void update_proc(Layer *layer, GContext *ctx) {
   int count = s_count;
   bool all_aboard = a->kind == ALARM_ALL_ABOARD;
   bool booked = !all_aboard && (a->from & ALARM_BOOKED);
-  // A booked order counts down to its meeting time when it has one.
-  int left = (int)(a->ref - (booked ? a->booked.meet_before : 0) - now_cruise());
+  // A booked order counts down to its meeting time when it has one, an event
+  // that asks to come early to its arrive-by time (Phase 4 §3.2).
+  int before = booked ? a->booked.meet_before : all_aboard ? 0 : a->early;
+  int left = (int)(a->ref - before - now_cruise());
   int w = b.size.w - 2 * PAD;
   int y = 2;
 
-  // "MEET IN 15 MIN" when a booked order counts down to its meeting time.
-  const char *meet = booked && a->booked.meet_before ? "MEET " : "";
+  // "MEET IN 15 MIN" (booked, or Ashore) or "ARRIVE IN 15 MIN" then.
+  const char *meet = !before ? "" : booked || where_ashore(&a->where) ? "MEET " : "ARRIVE ";
   char when[24];
   if (left <= 0) {
-    snprintf(when, sizeof(when), "%s", all_aboard ? "NOW" : meet[0] ? "MEET NOW" : "STARTING NOW");
+    snprintf(when, sizeof(when), "%s%s", meet, meet[0] || all_aboard ? "NOW" : "STARTING NOW");
   } else if (left < 60) {
     snprintf(when, sizeof(when), "%sIN %d MIN", meet, left);
   } else {
@@ -273,6 +276,16 @@ static void update_proc(Layer *layer, GContext *ctx) {
                      GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft, NULL);
   y += 22;
+  if (before) {
+    // "Arrive by 9:45p" ("Meet" Ashore) under the time, as on the details page.
+    fmt_clock(ref_buf, sizeof(ref_buf), a->ref - before);
+    snprintf(detail, sizeof(detail), "%s %s", meet[0] == 'M' ? "Meet" : "Arrive by", ref_buf);
+    graphics_context_set_text_color(ctx, g_theme->text);
+    graphics_draw_text(ctx, detail, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                       GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    y += 22;
+  }
 
   if (!all_aboard) {
     char where[24];

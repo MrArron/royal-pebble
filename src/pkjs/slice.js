@@ -1161,6 +1161,8 @@ function notReserved(e) {
 // reserveAlertAt) on a watch day, one per starred event of the next watch day
 // that needs a reservation and isn't marked reserved, at most MAX_TO_RESERVE,
 // in time order. `ref` is the event's start, `extra` how many there are in all.
+// A reminder's `early` is the event's arrive-early minutes: it fires `lead`
+// minutes before start - early.
 function buildAlarms(bundle, settings, stars, now, testAt) {
   settings = settings || {};
   stars = stars || {};
@@ -1198,10 +1200,13 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
                      from: venues.FROM_NONE, booked: e.booked});
         return;
       }
+      // Before the arrive-by time when the event asks to come early (Phase 4
+      // §3); `ref` stays the start, so directions and clashes use the start.
       var prev = previousStop(stops, e);
       var route = prev ? finder.route(prev.venue, e.venue) : null;
-      alarms.push({at: e.start - lead, ref: e.start, kind: ALARM_REMINDER, extra: e.minutes,
-                   title: e.title, venue: finder.short(e.venue), where: route ? route.where : e.where,
+      alarms.push({at: e.start - e.early - lead, ref: e.start, kind: ALARM_REMINDER, extra: e.minutes,
+                   early: e.early, title: e.title, venue: finder.short(e.venue),
+                   where: route ? route.where : e.where,
                    from: route ? route.kind : venues.FROM_NONE, fromPos: route ? route.fromPos : 0,
                    fromVenue: route && route.kind === venues.FROM_ROUTE ? finder.short(prev.venue) : '',
                    notReserved: notReserved(e)});
@@ -1229,12 +1234,14 @@ function allAboardAlerts(period) {
 }
 
 // Alerts from Settings > Me > Test alerts, anchored to when it was tapped: a
-// reminder 2 minutes later, an all-aboard warning a minute after that and a
+// reminder 2 minutes later (arrive 5 minutes early, so its countdown and
+// `Arrive by` line show too), an all-aboard warning a minute after that and a
 // to-reserve alert (two events) a minute after that.
 function testAlarms(sailDays, requestedAt) {
   var t = cruiseMinutes(sailDays, requestedAt);
   return [
-    {at: t + 2, ref: t + 17, kind: ALARM_REMINDER, extra: 30, title: 'Test reminder', venue: 'Alert test'},
+    {at: t + 2, ref: t + 22, kind: ALARM_REMINDER, extra: 30, early: 5, title: 'Test reminder',
+     venue: 'Alert test'},
     {at: t + 3, ref: t + 18, kind: ALARM_ALL_ABOARD, extra: 0, title: 'Test all-aboard', venue: ''},
     {at: t + 4, ref: t + MINUTES_PER_DAY, kind: ALARM_TO_RESERVE, extra: 2, title: 'Test show',
      venue: 'Alert test', notReserved: true},

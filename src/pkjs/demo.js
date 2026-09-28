@@ -5,10 +5,11 @@
 // Variants (hold Up on the watch's Home): 0 port/light, 1 sea/light,
 // 2 port/dark "alert test", 3 sea/dark, 4 embark/light (today is the sail
 // date, with a terminal arrival under an hour out). The alert test puts a starred event
-// 17 minutes out and all-aboard 18 minutes out, so with the default 15-minute
-// lead a reminder buzzes about 2 minutes after switching and the 15-minute
-// all-aboard warning a minute later (close the app to see them launch it). A
-// starred show just before the event gives the reminder "From" directions.
+// 22 minutes out that asks to arrive 5 minutes early, and all-aboard 18 minutes
+// out, so with the default 15-minute lead a reminder buzzes about 2 minutes
+// after switching (ARRIVE IN 15 MIN) and the 15-minute all-aboard warning a
+// minute later (close the app to see them launch it). A starred show just
+// before the event gives the reminder "From" directions.
 // Port variants also have a booked excursion from login data (`mine.orders`).
 
 var slice = require('./slice');
@@ -73,11 +74,13 @@ var INFOS = [
   [null, 15, [0, 5]],
   [[18, null], null, []],
   [null, null, [5]],
-  [null, 30, []]
+  [null, 30, []],
+  [null, 5, [0]]
 ];
 var DETAILS = {
   'Adult Comedy': 0, 'Adventure Ocean Open House': 1, 'Shuffleboard Tournament': 2, 'Salsa Lesson': 3,
-  'Pool Games': 4, 'Ice Show: 1887': 5, 'Silent Disco': 6, 'Name That Tune': 7, 'HiRO': 8
+  'Pool Games': 4, 'Ice Show: 1887': 5, 'Silent Disco': 6, 'Name That Tune': 7, 'HiRO': 8,
+  'Towel Animal Class': 9
 };
 
 // Tomorrow's events, as above but with a clock time instead of an offset.
@@ -174,15 +177,16 @@ function make(now, variant) {
     events.push([e[0], venues.indexOf(e[1]), e[2], tomorrow, e[3], e[4], e[5], e[6]]);
   });
   if (alertTest) {
-    // A starred show ending 7 minutes before the class, so the reminder shows
+    // A starred show ending 12 minutes before the class, so the reminder shows
     // "From" directions (from Royal Theater).
     var showTime = hhmm((nowMin + 24 * 60 - 15) % (24 * 60));
     venues.push('Royal Theater');
     events.push(['Magic Matinee', venues.length - 1, 0, today, showTime, 25, 0, 0]);
     stars[slice.starKey('Magic Matinee', today, showTime, 'Royal Theater')] = true;
-    var testTime = hhmm((nowMin + 17) % (24 * 60));
+    var testTime = hhmm((nowMin + 22) % (24 * 60));
     venues.push('Pool Deck');
-    events.push(['Towel Animal Class', venues.length - 1, 1, today, testTime, 30, 0, 0]);
+    events.push(['Towel Animal Class', venues.length - 1, 1, today, testTime, 30, 0, 0,
+                 DETAILS['Towel Animal Class']]);
     stars[slice.starKey('Towel Animal Class', today, testTime, 'Pool Deck')] = true;
   }
 

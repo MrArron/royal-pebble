@@ -218,7 +218,7 @@ starred event of the next watch day that needs a reservation and isn't marked
 reserved, at most 5, all in the same minute. The watch shows them on one screen.
 
 Only future alerts are sent, sorted by time, then kind, then `ref`, at most 24.
-Settings > Me > **Test alerts** adds a test reminder 2 minutes, a test
+Settings > Me > **Test alerts** adds a test reminder 2 minutes (to an event 5 minutes after its arrive-by time, so it shows `ARRIVE IN` and `Arrive by`), a test
 all-aboard warning 3 minutes and a test to-reserve alert (two events) 4 minutes
 after the tap (anchored to the tap, kept for an hour), to check alerts on the
 watch with any data, before the cruise too.
