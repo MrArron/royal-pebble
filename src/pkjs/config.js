@@ -1681,12 +1681,15 @@ function pageMain(S, V, CL, SH) {
     return DAYS[d.getDay()] + ' ' + d.getDate();
   }
 
+  // Venue names as the phone makes them (venues.js scheduleVenues), so star
+  // keys match: a blank title takes its venue code's table name.
+  var schedV = V.scheduleVenues(S.venues ? S.venues.table : {venues: {}, aliases: {}}, sched);
   if (sched && sched.events) {
     var fi = {};
     (sched.fields || []).forEach(function(name, i) { fi[name] = i; });
     allEvents = sched.events.map(function(row) {
       var e = {
-        title: row[fi.title], venue: (sched.venues || [])[row[fi.venue]] || '',
+        title: row[fi.title], venue: schedV.names[row[fi.venue]] || '',
         cat: (sched.cats || [])[row[fi.cat]] || [], date: row[fi.date], time: row[fi.time],
         minutes: row[fi.minutes] || 0, featured: !!row[fi.featured], reservation: !!row[fi.reservation],
         paid: fi.paid !== undefined && !!row[fi.paid], price: fi.price !== undefined ? row[fi.price] : null
@@ -2417,7 +2420,7 @@ function pageMain(S, V, CL, SH) {
       schedVenues.push(e.venue);
     }
   });
-  schedVenues.forEach(function(n) { vCanon[n] = V.lookup(vTable, n) || n; });
+  schedVenues.forEach(function(n) { vCanon[n] = V.lookup(vTable, n, schedV.codes[n]) || n; });
   var PIN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/>' +
     '<circle cx="12" cy="9" r="2.5"/></svg>';
   var CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
@@ -2434,7 +2437,7 @@ function pageMain(S, V, CL, SH) {
   };
 
   function vList() {
-    return V.entries(vTable, vOver, schedVenues);
+    return V.entries(vTable, vOver, schedVenues, schedV.codes);
   }
 
   function vEntry(name) {
@@ -3072,7 +3075,8 @@ function pageMain(S, V, CL, SH) {
       var n = mcNotes[id] || {id: id, type: 'answer'};
       html.push(mcItem(id, n, esc(c.check), esc(c.venues ? c.venues.join(', ') : 'Deck ' + c.deck + ' restrooms'),
         '<p class="src"><b>Website plans:</b> ' + esc(c.svg) + '</p><p class="src"><b>Royal app:</b> ' +
-        esc(c.app) + '</p><p class="src"><b>The map uses:</b> ' +
+        esc(c.app) + '</p>' + (c.schedule ? '<p class="src"><b>Royal&#39;s schedule:</b> ' + esc(c.schedule) + '</p>' : '') +
+        '<p class="src"><b>The map uses:</b> ' +
         esc(c.using === 'svg' ? 'the website plans' : c.using === 'app' ? 'the Royal app' : c.using) + '</p>' +
         '<label>Which is right?</label>' + mcSeg('answer', n.answer || 'not checked', MC_ANSWERS, 'ans'), false));
     });

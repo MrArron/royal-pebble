@@ -98,7 +98,10 @@ text. One compact JSON object, ASCII only.
     download (`docs/PHASE4_PLAN.md` items 1-7):
     - `venueCodes`: beside `venues`, Royal's `locationCode` for each venue, or
       `null`. Venues are indexed by name and code together, so a blank title
-      with a code (the wine tasting: `""`, `VINT`) is its own entry.
+      with a code (the wine tasting: `""`, `VINT`) is its own entry. The phone
+      finds a venue in its table by code first, then by name, and a blank
+      title takes the table name of its code (`src/pkjs/venues.js`,
+      `scheduleVenues`); star keys use that name.
     - `notes`: shared table of `[id, text]`. `id` is Royal's advisement or
       restriction id (`kbyg/general/seapass`), `short` for a product's short
       description when it says more than the title, and `waiver` for Royal's

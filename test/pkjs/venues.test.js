@@ -26,7 +26,51 @@ test('built-in table is well formed', function() {
     assert.ok(HM.venues[HM.aliases[a]], 'alias target ' + HM.aliases[a]);
   });
   assert.deepStrictEqual(HM.venues['Royal Theater'].decks, [3, 4, 5]);
-  assert.deepStrictEqual(venues.builtIn('XX'), {venues: {}, aliases: {}});
+  assert.deepStrictEqual(venues.builtIn('XX'), {venues: {}, aliases: {}, codes: {}});
+  Object.keys(HM.codes).forEach(function(c) {
+    assert.ok(HM.venues[HM.codes[c]], 'code ' + c + ' target ' + HM.codes[c]);
+  });
+  // Left out on purpose (conflicts-HM.json silk-dining-floor).
+  assert.ok(!HM.codes.SILK);
+});
+
+test('venue codes: code wins over name, unknown code falls back to the name', function() {
+  assert.strictEqual(L.lookup(HM, 'Studio B', 'ICE_AL'), 'Studio B');
+  assert.strictEqual(L.lookup(HM, 'Some New Title', 'ICE_AL'), 'Studio B');
+  assert.strictEqual(L.lookup(HM, 'On Air', 'ICE_AL'), 'Studio B', 'code wins');
+  assert.strictEqual(L.lookup(HM, 'On Air', 'NOPE'), 'On Air');
+  assert.strictEqual(L.lookup(HM, 'Main Dining Room 5', 'SILK'), 'Main Dining Room 5');
+  assert.strictEqual(L.lookup(HM, '', 'VINT'), 'Vintages');
+  assert.strictEqual(L.lookup(HM, '', 'NOPE'), null);
+  assert.strictEqual(L.lookup(HM, '', null), null);
+  assert.strictEqual(L.lookup({venues: HM.venues, aliases: {}}, 'x', 'ICE_AL'), null, 'a table without codes');
+});
+
+test('schedule venues: blank titles filled from the code, codes per name', function() {
+  var sched = {venues: ['', 'Royal Escape Room', 'On Air', '', 'Main Dining Room 5', 'Perfect Day CocoCay',
+                        'Perfect Day CocoCay', 'Mystery Room'],
+               venueCodes: ['VINT', 'royal-escape-room', 'ONAIR', null, 'SILK', 'NOPE', 'PCC', 'NOPE2']};
+  var sv = L.scheduleVenues(HM, sched);
+  assert.deepStrictEqual(sv.names, ['Vintages', 'Royal Escape Room', 'On Air', '', 'Main Dining Room 5',
+                                    'Perfect Day CocoCay', 'Perfect Day CocoCay', 'Mystery Room']);
+  assert.deepStrictEqual(sv.codes, {Vintages: 'VINT', 'Royal Escape Room': 'royal-escape-room', 'On Air': 'ONAIR',
+                                    'Perfect Day CocoCay': 'PCC'});
+  // Older bundles have no venueCodes.
+  assert.deepStrictEqual(L.scheduleVenues(HM, {venues: ['', 'On Air']}), {names: ['', 'On Air'], codes: {}});
+  assert.deepStrictEqual(L.scheduleVenues(HM, null), {names: [], codes: {}});
+
+  // Ship venues: a name the table knows only by its code isn't listed as missing.
+  var names = sv.names.filter(Boolean);
+  assert.ok(find(L.entries(HM, {}, names), 'Royal Escape Room'), 'missing without codes');
+  assert.ok(!find(L.entries(HM, {}, names, sv.codes), 'Royal Escape Room'));
+  assert.ok(find(L.entries(HM, {}, names, sv.codes), 'Mystery Room'));
+
+  // The finder follows the code.
+  var b = {ship: {code: 'HM'}, schedule: sched};
+  var f = venues.bundleFinder(b, {me: {deck: 'Deck 9'}});
+  assert.strictEqual(f.entry('Royal Escape Room').name, 'The Puzzle Break');
+  assert.deepStrictEqual(f.where('Vintages'), {deck: 8, deckTo: 0, pos: 2, ashore: false, rel: -1});
+  assert.deepStrictEqual(venues.scheduleVenues(b), sv);
 });
 
 test('lookup ignores case, marks and spaces and follows aliases', function() {
@@ -256,6 +300,7 @@ test('cleanOverrides keeps valid edits only', function() {
 test('the page copy of the rules parses on its own', function() {
   var copy = new Function('return (' + venues.venueLib.toString() + ')();')();
   assert.strictEqual(copy.lookup(HM, 'casino royale non-smoking'), 'Casino Royale');
+  assert.deepStrictEqual(copy.scheduleVenues(HM, {venues: [''], venueCodes: ['VINT']}).names, ['Vintages']);
 });
 
 var failed = 0;

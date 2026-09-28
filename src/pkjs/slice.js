@@ -390,8 +390,9 @@ function categorySummary(bundle) {
   var f = {};
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
   var byName = {};
+  var vnames = venues.scheduleVenues(bundle).names;
   (sched.events || []).forEach(function(row) {
-    var cat = eventCat(row[f.title], (sched.venues || [])[row[f.venue]], (sched.cats || [])[row[f.cat]] || []);
+    var cat = eventCat(row[f.title], vnames[row[f.venue]], (sched.cats || [])[row[f.cat]] || []);
     // Shore excursions show only once picked, and picked ones are starred, so
     // hiding them would do nothing (docs/DATA_FORMAT.md).
     if (!cat || !cat[0] || cat[0] === EXCURSIONS) {
@@ -580,8 +581,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var today = isoFromDays(sailDays + dayIndex);
   var hidden = countOnly ? [] : hiddenCats(settings);
   var events = [];
-  var ship = (bundle.ship && bundle.ship.code) || '';
-  var whereOf = venues.whereFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
+  var whereOf = venues.bundleFinder(bundle, settings).where;
   var finals = finalShows(bundle);
 
   function add(title, venue, date, time, minutes, flags, cat, paid) {
@@ -623,12 +623,14 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var sched = bundle.schedule || {};
   var f = {};
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
+  var vnames = venues.scheduleVenues(bundle).names;
   (sched.events || []).forEach(function(row) {
-    var cat = eventCat(row[f.title], (sched.venues || [])[row[f.venue]], (sched.cats || [])[row[f.cat]] || []);
+    var venue = vnames[row[f.venue]];
+    var cat = eventCat(row[f.title], venue, (sched.cats || [])[row[f.cat]] || []);
     var flags = (row[f.featured] ? FLAG_FEATURED : 0) | (row[f.reservation] ? FLAG_RESERVATION : 0);
-    var fin = finals[starKey(row[f.title], row[f.date], row[f.time], (sched.venues || [])[row[f.venue]])];
+    var fin = finals[starKey(row[f.title], row[f.date], row[f.time], venue)];
     flags |= fin === FINAL_LAST_CHANCE ? FLAG_LAST_CHANCE : fin === FINAL_ONLY_SHOW ? FLAG_ONLY_SHOW : 0;
-    add(row[f.title], (sched.venues || [])[row[f.venue]], row[f.date], row[f.time], row[f.minutes], flags, cat,
+    add(row[f.title], venue, row[f.date], row[f.time], row[f.minutes], flags, cat,
         f.paid !== undefined && !!row[f.paid]);
   });
 
@@ -708,8 +710,9 @@ function scheduleEvents(bundle) {
   var sched = (bundle && bundle.schedule) || {};
   var f = {};
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
+  var vnames = venues.scheduleVenues(bundle).names;
   return (sched.events || []).map(function(row) {
-    var e = {title: row[f.title], venue: (sched.venues || [])[row[f.venue]] || '', date: row[f.date],
+    var e = {title: row[f.title], venue: vnames[row[f.venue]] || '', date: row[f.date],
              time: row[f.time] || null, minutes: row[f.minutes] || 0, featured: !!row[f.featured],
              paid: f.paid !== undefined && !!row[f.paid]};
     e.key = starKey(e.title, e.date, e.time, e.venue);
@@ -1035,8 +1038,7 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
   var nowMin = cruiseMinutes(sailDays, now);
   var today = cruiseDayIndex(nowMin);
   var lead = [5, 15, 30].indexOf(settings.reminderLead) !== -1 ? settings.reminderLead : 15;
-  var ship = (bundle.ship && bundle.ship.code) || '';
-  var finder = venues.venueFinder(ship, (settings.venues || {})[ship], (settings.me || {}).deck);
+  var finder = venues.bundleFinder(bundle, settings);
   var alarms = [];
 
   // Starred events and personal entries from yesterday's watch day on, so the
