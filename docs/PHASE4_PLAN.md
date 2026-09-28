@@ -324,7 +324,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | --- | --- | --- | --- | --- |
 | A | none (docs) | all | `DATA_FORMAT.md` fields and the excursions change; `WATCH_PROTOCOL.md` 4 event bytes + 1 alarm byte; mockups in a new `DESIGN_PHASE4.md` | review (done; design approved 2026-09-27) |
 | B | 1.4.0 | data for 1-7 | Both producers write `venueCodes`, `notes`, `infos`, `info`, `pid` and keep SHOREX; shared fixture trimmed from the 2026-10-01 pull. Excursions stay out of Booked activities until G, and out of Filters and Ship venues for good; `settingsClosed` parses before decoding | `test_cruise_sync.py`, `test/pkjs/royal.test.js`, live pull of a sailing within 2 weeks |
-| C | 1.4.1 | 1 | Venue codes in `venues.js`, code-first lookup, blank titles filled, conflicts entries | `venues.test.js`, `slice.test.js` |
+| C | 1.4.1 | 1 | Venue codes in `venues.js` (49 codes from the 2026-09-27 dump; `casitas` is the pools' rentable lounges, so Pool Deck), code-first lookup, blank titles filled (star keys too), conflicts `silk-dining-floor` and `escape-room-name` | `venues.test.js`, `slice.test.js`, the 2026-10-01 bundle |
 | D | 1.4.2 | 2, 4, 6 (+3 display) | Packed events +4 bytes and the alarm's `early` byte (sent as 0 until F), storage version 9; watch details lines; settings page rows | Node tests, emulator screenshots, then the Pebble Time 2 |
 | E | 1.4.3 | 2 | The two age filters | `slice.test.js`, `settings.test.js` |
 | F | 1.4.4 | 3 | Reminder at arrive-by time; fills the alarm byte; alert screen line | Real-time alert-test variant in the emulator, then the watch |

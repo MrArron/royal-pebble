@@ -2,7 +2,8 @@
   "_about": "Where the sources disagree about Harmony (HM). Nothing here is settled until checked in person on board. The map data keeps the 'using' value until then; never overwrite it silently from a new scrape. Every new scrape (a new SVG profile, more Royal app screenshots) is compared with the data and each difference is added here. After the sailing, the owner's on-board log settles each entry: set 'status' to 'confirmed' with 'truth', then fix the data (overrides, venue table) and rebuild. See tools/shipmap/README.md, Conflicts.",
   "sources": {
     "svg": "Royal's deck-plan SVGs, profile 2396 (sailings from May 21, 2026): the initial scrape, what the map data is built from",
-    "app": "Screenshots of the deck plans in Royal's Android app, 2026-09-26 (decks 2, 5, 6, 8, 14, 15); schematic, positions about 5 m out, up to ~15 m on decks 6 and 14"
+    "app": "Screenshots of the deck plans in Royal's Android app, 2026-09-26 (decks 2, 5, 6, 8, 14, 15); schematic, positions about 5 m out, up to ~15 m on decks 6 and 14",
+    "schedule": "Royal's products listing (venue codes and titles) for the 2026-10-01 sailing, pulled 2026-09-27 with cruise_sync.py --dump-products; the venue table's codes come from it"
   },
   "statuses": ["open", "confirmed"],
   "conflicts": [
@@ -53,6 +54,7 @@
     {"id": "central-park-restaurant-names", "kind": "venue name", "venues": ["Vintages", "Giovanni's Wine Bar", "Jamie's Italian"], "status": "open",
      "svg": "deck 8 starboard: VINTAGES (a 135.2, x 12.2) and JAMIE'S ITALIAN (a 156.7, x 13.2)",
      "app": "Giovanni's Wine Bar and Giovanni's Italian Kitchen at those spots; Giovanni's Wine Bar was given the Vintages spot",
+     "schedule": "three codes: VINT (the wine tasting, blank title), GIOKITWINE \"Giovanni's Wine Bar\" and GIOV \"Giovanni's Italian Kitchen\" (dining); the venue table maps them to Vintages, Giovanni's Wine Bar and Jamie's Italian",
      "using": "both", "check": "Confirm the names; the venue table keeps Vintages and Jamie's Italian as separate venues."},
     {"id": "deck14-kids-rooms", "kind": "venue name", "venues": ["Adventure Science", "Adventure Art", "Nursery", "Play", "The Puzzle Break", "Arena & Hangouts (Ages 6-12)", "AO Workshop"], "status": "open",
      "svg": "deck 14 forward: Adventure Science port (a 78.1, x -10.7), Adventure Art starboard (a 79.9, x 11.3), Nursery (a 90.4, x 12.6), Play (a 91.3, x 0.2), The Puzzle Break (a 100.5, x 9.1)",
@@ -73,6 +75,16 @@
     {"id": "medical-center-spot", "kind": "venue spot", "venues": ["Medical Center"], "status": "open",
      "svg": "deck 2 not in the scrape",
      "app": "deck 2 port, just forward of the aft elevators (about a 216.5, x -10.5); not used because deck 2 has no walkways",
-     "using": "none (approximate)", "check": "Where is the Medical Center, and how do you get there from the aft elevators?"}
+     "using": "none (approximate)", "check": "Where is the Medical Center, and how do you get there from the aft elevators?"},
+    {"id": "silk-dining-floor", "kind": "venue name", "venues": ["Main Dining Room 3", "Main Dining Room 4", "Main Dining Room 5"], "status": "open",
+     "svg": "MAIN DINING ROOM on decks 3, 4 and 5; the floors aren't named",
+     "app": "not compared",
+     "schedule": "code SILK with the title Main Dining Room 5; no other dining room floor has a code",
+     "using": "the title (Main Dining Room 5); SILK is left out of the venue table's codes", "check": "Which floor of the Main Dining Room is Silk, and what are the other floors called?"},
+    {"id": "escape-room-name", "kind": "venue name", "venues": ["The Puzzle Break"], "status": "open",
+     "svg": "deck 14 forward: The Puzzle Break (a 100.5, x 9.1)",
+     "app": "Escape Room on deck 14 forward",
+     "schedule": "Royal Escape Room, code royal-escape-room",
+     "using": "svg (the code royal-escape-room maps to The Puzzle Break)", "check": "Is the Royal Escape Room the same room as The Puzzle Break?"}
   ]
 }
