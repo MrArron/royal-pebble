@@ -24,8 +24,9 @@ map to the sections below.
 
 ## Summary
 
-All seven event items fit in 7 app PRs (1.4.0 to 1.4.6) and a docs PR, plus a
-PC-tool-only PR and an optional login track (probe, docs, 1.4.7). Nothing needs a
+All seven event items fit in 7 app PRs (1.4.0 to 1.4.5, then 1.4.7) and a docs PR,
+plus a PC-tool-only PR and an optional login track (probe, docs, 1.4.8). A watch
+bug-fix PR took 1.4.6. Nothing needs a
 format version bump: every new field is additive, like `paid` and `price` were.
 
 - **No new requests to Royal.** Every field comes from the products listing both
@@ -346,11 +347,12 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | E | 1.4.3 | 2 | The two age filters and the family filter | `slice.test.js`, `settings.test.js` |
 | F | 1.4.4 | 3 | Reminder at arrive-by time; fills the alarm byte; alert screen line | Real-time alert-test variant in the emulator, then the watch |
 | G | 1.4.5 | 7 | Selectable excursions; sync tool meet fallback | Node tests, `test_cruise_sync.py`, one `--login` run on the owner's booking |
-| H | 1.4.6 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes |
+| — | 1.4.6 | bugs | Today list scrolls right after opening (#64); the small star drawn as mirrored pixel rows (#65) | emulator, then the Pebble Time 2 |
+| H | 1.4.7 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes |
 | K | none (PC tool only) | checks | `--dump-products` (Windows sync tool section); the report compares product ids by title with an earlier dump of the same sailing | `test_cruise_sync.py`, one live run (done 2026-09-27: 326 products, 55 venue codes) |
 | — | throwaway | login | Phone sign-in probe (not merged): passed 2026-09-27 | the owner's phone |
 | I | none (docs) | login | `DATA_FORMAT.md`, page text | review |
-| J | 1.4.7 | login | Advanced download block, `royal.fetchMine`, log guards | Node tests with made-up bookings, then the owner's real account on the phone |
+| J | 1.4.8 | login | Advanced download block, `royal.fetchMine`, log guards | Node tests with made-up bookings, then the owner's real account on the phone |
 
 - **B comes first:** the new fields must exist in both producers before anything
   reads them. B alone changes nothing a user sees; excursion sessions stay hidden

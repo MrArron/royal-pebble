@@ -208,22 +208,30 @@ void top_bar_destroy(Layer *bar) { layer_destroy(bar); }
 
 // ---- Drawing helpers -------------------------------------------------------
 
-static const GPathInfo STAR_PATH_INFO = {
-  .num_points = 10,
-  .points = (GPoint[]){
-    {0, -6}, {2, -2}, {6, -2}, {3, 1}, {4, 6},
-    {0, 3}, {-4, 6}, {-3, 1}, {-6, -2}, {-2, -2},
-  },
+// The 13x13 star, top row to bottom: each row fills x from -outer to -inner and
+// from inner to outer around the center (one span when inner is 0). Drawn as
+// pixel rows so both halves are exact mirrors; a filled GPath came out
+// lopsided (#65).
+#define STAR_SIZE 13
+static const uint8_t STAR_ROWS[STAR_SIZE][2] = {
+  {0, 0}, {0, 0}, {1, 0}, {1, 0}, {6, 0}, {5, 0}, {4, 0},
+  {3, 0}, {3, 0}, {3, 1}, {4, 2}, {4, 3}, {4, 4},
 };
 
 void draw_star(GContext *ctx, GPoint center, GColor color) {
-  static GPath *s_star_path;
-  if (!s_star_path) {
-    s_star_path = gpath_create(&STAR_PATH_INFO);
-  }
-  gpath_move_to(s_star_path, center);
   graphics_context_set_fill_color(ctx, color);
-  gpath_draw_filled(ctx, s_star_path);
+  for (int i = 0; i < STAR_SIZE; i++) {
+    int outer = STAR_ROWS[i][0];
+    int inner = STAR_ROWS[i][1];
+    int y = center.y - STAR_SIZE / 2 + i;
+    if (inner == 0) {
+      graphics_fill_rect(ctx, GRect(center.x - outer, y, 2 * outer + 1, 1), 0, GCornerNone);
+    } else {
+      int w = outer - inner + 1;
+      graphics_fill_rect(ctx, GRect(center.x - outer, y, w, 1), 0, GCornerNone);
+      graphics_fill_rect(ctx, GRect(center.x + inner, y, w, 1), 0, GCornerNone);
+    }
+  }
 }
 
 void draw_bang(GContext *ctx, GPoint top_left, int h, GColor color) {
