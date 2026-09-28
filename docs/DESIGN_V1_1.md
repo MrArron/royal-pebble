@@ -955,6 +955,11 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
       from where routes start now (§9.4): a starred event on now, later a
       spoken `I'm at`. With nothing but the cabin to start from: `No starred
       event on now to start from`.
+  - `Nearest bathroom` / `closest restroom` (1.5.5): the restroom route from
+    where routes start now (a starred event on now, else the cabin); the card
+    shows `FROM` so a place named in the question (`near the theater`, which
+    needs the matcher) isn't mistaken for the start. `I'm sure.` on its own
+    counts as `I'm ashore` (the watch heard it that way, 2026-09-28).
   - `Forget where I am` (owner, 2026-09-28) comes with the spoken start in V3:
     until then there's no spoken location to forget.
 - **Hold Select on Home always asks by voice** (owner, 2026-09-28), also on

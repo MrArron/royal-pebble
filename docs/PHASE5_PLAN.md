@@ -102,6 +102,10 @@ screen, so the worst case is a Route screen opened from a deep directory.
   (from Home and from a Route screen), and the same after it: the dictation
   screen takes no app heap on the watch either. Lowest free while open
   24 KB (1.4.x sessions went down to 18 KB). Proposal F isn't needed.
+- **1.5.5 on the watch (2026-09-28):** `Nearest bathroom` and `I need a
+  toilet` gave the route card from the cabin and Select opened the restroom
+  route (Deck 8, one deck below the cabin); `I'm sure.` was taken as ashore
+  (`At sea today`); watch and phone voice turn numbers now match.
 - Not needed now: proposals E and F.
 
 ## 2. Proposals for making room

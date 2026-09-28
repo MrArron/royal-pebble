@@ -179,7 +179,7 @@ static void close_empty(void *context) {
 
 static void dictated(DictationSession *session, DictationSessionStatus status, char *text, void *context) {
   usage_add(USAGE_VOICE, (uint8_t)status, (int16_t)(status == DictationSessionStatusSuccess ? codec_str_len(text, 255) : 0),
-            (int32_t)heap_bytes_free(), s_seq);
+            (int32_t)heap_bytes_free(), s_seq + 1);
   if (!s_card) {
     return;
   }
@@ -214,7 +214,7 @@ static void listen(void) {
     dictation_session_enable_confirmation(s_session, false);
   }
   stop_timer();
-  usage_add(USAGE_VOICE, 255, 0, (int32_t)heap_bytes_free(), s_seq);
+  usage_add(USAGE_VOICE, 255, 0, (int32_t)heap_bytes_free(), s_seq + 1);
   dictation_session_start(s_session);
 }
 

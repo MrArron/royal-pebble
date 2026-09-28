@@ -84,8 +84,12 @@ var ASHORE = new RegExp('(?:' + I_AM + ' (?:going |back )?(?:ashore|on shore|off
                         '(?:going|back) ashore|(?:leaving|left|getting off) the ship)');
 
 // Whether `t` (lower case) asks to set or clear the on-board flag: true, false, or null.
+// Dictation heard "I'm ashore" as "I'm sure." on the watch (usage log,
+// 2026-09-28); only when that's all that was said.
+var SURE = /^\s*i ?'? ?m sure[.!]?\s*$/;
+
 function onboardIntent(t) {
-  return ASHORE.test(t) ? false : ONBOARD.test(t) ? true : null;
+  return ASHORE.test(t) || SURE.test(t) ? false : ONBOARD.test(t) ? true : null;
 }
 
 // The card for "I'm on board" (on true) or "I'm ashore" (§22.6). The flag
@@ -126,6 +130,7 @@ function shipTime(min, day, state) {
 var DEPART = /\b(?:when|what time)\b.*\b(?:leave|leaving|sail|sailing|depart|departing|departure|sail ?away)\b|\b(?:departure time|sail ?away time)\b/;
 var TOMORROW = /\btomorrow'?s?\b/;
 var MUSTER = /\bmust(?:er|ard)\b/;
+var RESTROOM = /\b(?:bathroom|restroom|rest room|toilet|washroom|lavatory|loo|men'?s room|ladies'? room)s?\b/;
 var CABIN = /\bto (?:my|our) (?:cabin|room|state ?room)\b|\btake (?:me|us) home\b|\bback to (?:the|my|our) (?:cabin|room|state ?room)\b/;
 
 // "When do we leave?": today's port, departure and all-aboard.
@@ -200,6 +205,20 @@ function cabinCard(heard, ctx) {
           hint: 'Select: route \u00b7 Hold: ask again', title: 'Your cabin', header: page.header};
 }
 
+// "Nearest bathroom": the route to the closest restroom from where you are
+// now (a starred event on now, else the cabin). A place named in the question
+// ("restroom near the theater") needs the matcher; until then the FROM row
+// shows where it starts.
+function restroomCard(heard, ctx) {
+  var page = directory.routePage(directory.REF_REST_HERE, false, ctx);
+  if (!page.steps.length) {
+    return {action: ACT_NONE, rows: [heard, {label: 'TO', value: 'Closest restroom'}], hint: page.lead};
+  }
+  return {action: ACT_ROUTE, ref: directory.REF_REST_HERE,
+          rows: [heard, {label: 'FROM', value: page.from}, {label: 'TO', value: 'Closest restroom'}],
+          hint: 'Select: route \u00b7 Hold: ask again', title: 'Restroom', header: page.header};
+}
+
 // The answer to `text` (see the top of this file). `state`: the watch's
 // voice_state bits.
 function answer(text, ctx, isDemo, state) {
@@ -213,6 +232,9 @@ function answer(text, ctx, isDemo, state) {
   var hasCruise = !!(ctx.bundle && ctx.bundle.sailDate);
   if (hasCruise && CABIN.test(t)) {
     return cabinCard(heard, ctx);
+  }
+  if (hasCruise && RESTROOM.test(t)) {
+    return restroomCard(heard, ctx);
   }
   if (hasCruise && MUSTER.test(t)) {
     return musterCard(heard, ctx);
@@ -228,11 +250,6 @@ function answer(text, ctx, isDemo, state) {
             hint: 'Voice matching comes in the next update'};
   }
   var theater = placeRef('Royal Theater', ctx);
-  if (/restroom|bathroom|toilet/.test(t) && theater >= 0) {
-    return {action: ACT_ROUTE, rest: true, ref: theater,
-            rows: [heard, {label: 'FROM', value: 'Royal Theater'}, {label: 'TO', value: 'Closest restroom'}],
-            hint: 'Select: route · Hold: ask again', title: 'Restroom', header: 'CLOSEST TO ROYAL THEATER'};
-  }
   if (/i ?'? ?m at|i am at/.test(t)) {
     return {action: ACT_CONFIRM,
             rows: [heard, {label: 'YOU\'RE AT', value: 'Solarium'}],

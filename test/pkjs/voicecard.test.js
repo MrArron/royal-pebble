@@ -61,7 +61,7 @@ test('demo stand-in shows each kind of card', function() {
   assert.strictEqual(route.action, voicecard.ACT_ROUTE);
   assert.strictEqual(route.ref, theater);
   var rest = voicecard.answer('closest restroom', CTX, true);
-  assert.ok(rest.rest);
+  assert.strictEqual(rest.action, voicecard.ACT_NONE, 'no cruise data: nothing to route from');
   assert.strictEqual(voicecard.answer("I'm at the Solarium", CTX, true).action, voicecard.ACT_CONFIRM);
   assert.strictEqual(voicecard.answer('play some music', CTX, true).action, voicecard.ACT_NONE);
   // Every one packs.
@@ -75,7 +75,10 @@ test('on board and ashore phrases', function() {
   var neither = ['when is all aboard', 'what time is all aboard', "I'm at the solarium", 'how do I get to the pool',
                  'where do I board the tender', 'the swim on board ship'];
   yes.forEach(function(t) { assert.strictEqual(voicecard.onboardIntent(t.toLowerCase()), true, t); });
-  no.forEach(function(t) { assert.strictEqual(voicecard.onboardIntent(t.toLowerCase()), false, t); });
+  no.concat(["I'm sure.", 'i m sure']).forEach(function(t) {
+    assert.strictEqual(voicecard.onboardIntent(t.toLowerCase()), false, t);
+  });
+  assert.strictEqual(voicecard.onboardIntent("i'm sure it's at seven"), null, 'only on its own');
   neither.forEach(function(t) { assert.strictEqual(voicecard.onboardIntent(t.toLowerCase()), null, t); });
 });
 
@@ -165,6 +168,27 @@ test('take me to my cabin', function() {
   assert.strictEqual(page.steps[page.steps.length - 1].glyph, 4, 'ends with the arrival');
   // "my cabin to the theater" isn't a cabin route.
   assert.notStrictEqual(voicecard.answer('from my cabin to the theater', c, false, 0).rows[1].value, 'Your cabin');
+});
+
+test('nearest bathroom routes from where you are', function() {
+  var sea = demo.make(new Date(2027, 2, 8, 13, 0), 1);
+  var c = {bundle: sea.bundle, settings: sea.settings, stars: sea.stars, now: new Date(2027, 2, 8, 14, 0)};
+  ['nearest bathroom', 'where is the closest restroom', 'I need a toilet'].forEach(function(t) {
+    var card = voicecard.answer(t, c, false, 0);
+    assert.strictEqual(card.action, voicecard.ACT_ROUTE, t);
+    assert.strictEqual(card.ref, directory.REF_REST_HERE);
+    assert.strictEqual(card.rows[1].value, 'Studio B', 'from the starred show on now');
+  });
+  unpack(voicecard.packCard(voicecard.answer('nearest bathroom', c, false, 0)));
+  var page = directory.routePage(directory.REF_REST_HERE, false, c);
+  assert.strictEqual(page.header, 'CLOSEST TO STUDIO B');
+  assert.strictEqual(page.steps[page.steps.length - 1].glyph, 4);
+  // With nothing on, from the cabin.
+  c.now = new Date(2027, 2, 8, 11, 0);
+  var home = directory.routePage(directory.REF_REST_HERE, false, c);
+  assert.strictEqual(home.header, 'CLOSEST TO YOUR CABIN');
+  assert.ok(/your cabin$/.test(home.small.text) || home.small.text === '', home.small.text);
+  assert.strictEqual(voicecard.answer('nearest bathroom', c, false, 0).rows[1].value, 'Your cabin');
 });
 
 var failed = 0;

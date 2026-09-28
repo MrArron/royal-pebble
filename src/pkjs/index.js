@@ -386,7 +386,7 @@ function sendVoiceCard() {
     // Spoken cabin numbers may appear here (owner, 2026-09-26); the log never goes into the repo.
     usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' +
               ['nothing to do', 'route', 'confirm', card.onboard ? 'set on board' : 'back ashore'][card.action] + (card.ref ? ' ' + card.ref : '') +
-              ' (' + card.rows.slice(1).map(function(r) { return r.label + ' ' + r.value; }).join(', ') + '), ' +
+              ' (' + card.rows.slice(1).map(function(r) { return (r.label ? r.label + ' ' : '') + r.value; }).join(', ') + '), ' +
               sendText(ok, info));
     sendNext();
   });

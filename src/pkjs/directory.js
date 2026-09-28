@@ -21,6 +21,7 @@ var REF_AREA = 200;    // + index in AREA_KEYS
 var REF_ELEVATORS = 300;
 var REF_BANK = 301;    // + index in BANKS
 var REF_CABIN = 400;   // Route screen only: to your stateroom (voice, docs/WATCH_PROTOCOL.md Voice)
+var REF_REST_HERE = 401;  // Route screen only: to the closest restroom from where you are (voice)
 var REF_PLACE = 1000;  // + index in places()
 var REF_FLAG = 30000;  // + a place page's ref: Flag a map problem (Map check)
 
@@ -606,10 +607,47 @@ function cabinRoutePage(s, ctx) {
   return page;
 }
 
+// The Route screen to the closest restroom from where routestart.js says you
+// are (`Nearest bathroom`): from a starred event on now, else the cabin.
+// `from` is where it starts, as for cabinRoutePage.
+function restHerePage(s, ctx) {
+  var ship = s.c.shipCode;
+  var page = null;
+  if (!ctx.bundle || !shipmap.data(ship)) {
+    page = routeMessage('Restroom', 'No route found');
+  } else {
+    var finder = venues.bundleFinder(ctx.bundle, s.c.settings);
+    var room = stateroom(s.c);
+    var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
+    var now = slice.cruiseMinutes(sailDays, s.c.now);
+    var start = routestart.start({stops: stops(s.c, sailDays, slice.cruiseDayIndex(now)), now: now, cabin: room});
+    var at = start.venue ? spotsOf(ship, finder.entry(start.venue), s.cabin)[0] : null;
+    var name = start.venue ? finder.short(start.venue) || start.venue : '';
+    if (!at && room) {
+      at = shipmap.cabin(ship, room);
+      name = 'Your cabin';
+    }
+    if (!at) {
+      page = routeMessage('Restroom', 'Add your stateroom on the phone for walking directions');
+    } else {
+      // "1 deck below your cabin", "CLOSEST TO YOUR CABIN".
+      page = restroomRoute({name: name, short: name === 'Your cabin' ? 'your cabin' : name}, at, ship,
+                           {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)});
+      page.from = name;
+    }
+  }
+  page.ref = REF_REST_HERE;
+  page.rest = false;
+  return page;
+}
+
 function routePage(ref, rest, ctx) {
   var s = setup(ctx);
   if (ref === REF_CABIN) {
     return cabinRoutePage(s, ctx);
+  }
+  if (ref === REF_REST_HERE) {
+    return restHerePage(s, ctx);
   }
   var ship = s.c.shipCode;
   var opts = {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)};
@@ -919,7 +957,7 @@ function encodeBank(b) {
 
 module.exports = {
   REF_DECKS: REF_DECKS, REF_AREAS: REF_AREAS, REF_DECK: REF_DECK, REF_AREA: REF_AREA, REF_PLACE: REF_PLACE,
-  REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK, REF_FLAG: REF_FLAG, REF_CABIN: REF_CABIN,
+  REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK, REF_FLAG: REF_FLAG, REF_CABIN: REF_CABIN, REF_REST_HERE: REF_REST_HERE,
   ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE, ROW_MUTED: ROW_MUTED,
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
   GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,

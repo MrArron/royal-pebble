@@ -114,7 +114,7 @@ buffers.
 | 13 | STAR_CHANGES | `star_count`, `star_changes` (bytes, below): stars changed on the watch and not yet acked |
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
-| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or 400 for the route to your stateroom (from a voice card); `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
+| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom and 401 for the route to the closest restroom from where you are; `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
 | 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
 | 19 | VOICE | `voice_seq` (the watch's turn number), `voice_text` (what dictation heard, ≤ 255 bytes) and `voice_state` (bit 0: today's `I'm on board` flag is set; bit 1: the watch shows 24-hour time, so card times match it). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
 
@@ -546,8 +546,9 @@ watch sends ROUTE_REQUEST with the page's `dir_ref` and `route_rest`, and the
 phone answers with ROUTE_PAGE (`directory.routePage`). The watch offers Select
 only when the page has a FROM block (`dir_gps` without flags 2 and 4) and Hold
 Select only on a venue with a restroom line. `dir_ref` 400 (`REF_CABIN`, only from a voice
-card) is the route to your stateroom from where routes start now (§9.4); it
-has no place page. As with directory pages, nothing is
+card) is the route to your stateroom from where routes start now (§9.4), and
+401 (`REF_REST_HERE`) the route from there to the closest restroom; neither
+has a place page. As with directory pages, nothing is
 stored; the watch ignores a page that doesn't match its request, and with the
 phone away (not connected, the request fails, or no answer within 8 seconds) it
 says `Connect your phone`, and Select asks again. A request sent before the
@@ -685,6 +686,7 @@ nothing starred today, 9 terminal arrival (embark day).
 | 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short; −5 (`E_OUT_OF_MEMORY`) when the schedule's save or load buffer couldn't be allocated | persistent key (0 for −5) | bytes asked for (−5), else — |
 | 14 | on board (§22.6); the phone writes `onboard set` or `onboard undo` | 1 set, 0 undo | — | ship time (cruise minutes) | — |
 | 15 | morning sync (§25) | 0 set (when it changes), 1 synced, 2 phone unreachable, 3 timed out (phone connected, no slice), 4 fired with the app open | 0 set: the error when none is set; 1-3: seconds until the slice came, or waited | 0 set: when (−1 none) | 1-3: 0 it closed itself, 1 the app stayed open (a notice, or the user left Home), 2 closed with Back before it finished |
+| 16 | voice (Ask, 1.5.2) | `DictationSessionStatus` (0 heard, 1 cancelled, 2 cancelled after an error, 3 stopped by the system, 4 no speech, 5 no connection, 6 turned off, 7 internal error, 8 recognizer error); 255 dictation started | transcript bytes (heard) | free memory (bytes) | the voice turn it is for (`voice_seq`, as in the phone's `voice` line) |
 
 Button presses are logged while the phone is connected; a Select that did
 nothing always is. Screen views are always logged, so with the phone away the

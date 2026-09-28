@@ -21,7 +21,7 @@ enum {
   USAGE_STORAGE_ERROR = 13,
   USAGE_ONBOARD = 14,
   USAGE_SYNC = 15,
-  USAGE_VOICE = 16,  // x: DictationSessionStatus (255 started), a: transcript bytes, b: free heap, c: voice seq
+  USAGE_VOICE = 16,  // x: DictationSessionStatus (255 started), a: transcript bytes, b: free heap, c: the voice turn (as the phone logs it)
 };
 
 // USAGE_SYNC's `x`: the morning sync (docs/DESIGN_PHASE3.md §25).
