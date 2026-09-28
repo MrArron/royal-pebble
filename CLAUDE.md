@@ -119,6 +119,15 @@ Read before making changes:
 - Watch C code: don't use `strtol()` or `strlen()`; both faulted on real Pebble
   Time 2 hardware. The emulator won't catch this.
 
+## Bugs
+
+Known bugs live in the repo's GitHub issues (`gh issue list --label bug`), not in
+chat or handoffs. When you notice a bug outside the current task, file an issue
+with `gh issue create --label bug` plus `watch` or `phone`: what happens, where
+it was seen (watch, emulator, which version), log lines showing it and the
+suspected code. The repo is public, so leave out cabin numbers, names and other
+personal cruise data. A PR that fixes one says `Fixes #N` in its description.
+
 ## Pull requests
 
 Small, focused PRs. In the description say what changed, how it was tested (and on
