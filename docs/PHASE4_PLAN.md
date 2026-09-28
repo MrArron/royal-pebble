@@ -47,6 +47,8 @@ Decisions (owner, 2026-09-27):
 4. **Product id check on 2026-09-30** (re-pull the same sailing); it gates PR H.
 5. **Advanced download with Royal login** is in scope, gated on a phone probe.
    It reverses "no login in the phone app".
+6. **Family filter: yes** (owner, 2026-09-27). A third switch hides family
+   events, found by title and venue on the phone (item 2).
 
 ## Where the work lands
 
@@ -153,10 +155,23 @@ medium, because it opens the watch protocol change that items 3 and 6 share.
       the Casino category, and turning both on hides everything a teen can't join.
     - **Hide Teen and Kid only events** (any event whose `age` has a maximum of
       17 or under), for adults cruising without kids.
-    - Both are off by default and work like hidden categories. They apply to
-      lists, Today, search and the morning summary counts. Starred and booked
-      events always go to the watch, as today. An event with no age data is never
-      hidden.
+    - **Hide Family events** (owner, 2026-09-27), for adults who'd rather not
+      see family programming. Royal gives family events no age, so the phone
+      finds them from the title and venue; the bundle needs nothing new. An
+      event is a family event when its title starts with "Family", or contains
+      "All Ages", or its venue is Adventure Ocean Theater (case-insensitive;
+      the venue by table name, so codes and aliases count). "Starts with"
+      matters: "Perfect Day Farewell with our Entertainment Family" is the crew
+      farewell. On 2026-10-01 (pulled 2026-09-27) it catches 12 sessions with
+      no false hits: 8 at Adventure Ocean Theater (Family Movies, Family
+      Bingo, Family Paper Plane Competition, Blacklight Puppet Show) and 4
+      elsewhere (Family SHUSH! Silent Party on the Boardwalk, Family Mini Golf
+      at Harmony Dunes, Family Karaoke and All Ages Karaoke at On Air). The
+      venue alone would miss 5 of them.
+    - All three are off by default and work like hidden categories. They apply
+      to lists, Today, search and the morning summary counts. Starred and
+      booked events always go to the watch, as today. An event with no age data
+      is never hidden by the age filters.
 - **Watch protocol** (`WATCH_PROTOCOL.md`, Packed events): add 4 bytes after
   `where` on every event: `age_min` and `age_max` uint8 (0 = none), `early` uint8
   (item 3) and `tags` uint8 (item 6). The `Event` struct grows by about 640 bytes
@@ -165,11 +180,13 @@ medium, because it opens the watch protocol change that items 3 and 6 share.
 - **Watch:** `codec.c` decodes the bytes; `details_window.c` adds an `Ages 18+`
   line under the time. Filtering happens on the phone, so the watch needs no
   filter code.
-- **Settings page:** the age text after the venue in event rows; the two filter
-  toggles.
+- **Settings page:** the age text after the venue in event rows; the three
+  filter toggles.
 - **Tests:** a producer test for each wording and pattern seen; `slice.test.js`
-  for the new bytes and for both filters (starred events kept, no-age events
-  kept); emulator screenshot of an 18+ event's details.
+  for the new bytes and for all three filters (starred events kept, no-age
+  events kept; the family rule with the 2026-10-01 titles, the crew farewell
+  not matched, and a family event found by venue code); emulator screenshot of
+  an 18+ event's details.
 
 ## 3. Arrive-early times
 
@@ -326,7 +343,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | B | 1.4.0 | data for 1-7 | Both producers write `venueCodes`, `notes`, `infos`, `info`, `pid` and keep SHOREX; shared fixture trimmed from the 2026-10-01 pull. Excursions stay out of Booked activities until G, and out of Filters and Ship venues for good; `settingsClosed` parses before decoding | `test_cruise_sync.py`, `test/pkjs/royal.test.js`, live pull of a sailing within 2 weeks |
 | C | 1.4.1 | 1 | Venue codes in `venues.js`, code-first lookup, blank titles filled, conflicts entries | `venues.test.js`, `slice.test.js` |
 | D | 1.4.2 | 2, 4, 6 (+3 display) | Packed events +4 bytes and the alarm's `early` byte (sent as 0 until F), storage version 9; watch details lines; settings page rows | Node tests, emulator screenshots, then the Pebble Time 2 |
-| E | 1.4.3 | 2 | The two age filters | `slice.test.js`, `settings.test.js` |
+| E | 1.4.3 | 2 | The two age filters and the family filter | `slice.test.js`, `settings.test.js` |
 | F | 1.4.4 | 3 | Reminder at arrive-by time; fills the alarm byte; alert screen line | Real-time alert-test variant in the emulator, then the watch |
 | G | 1.4.5 | 7 | Selectable excursions; sync tool meet fallback | Node tests, `test_cruise_sync.py`, one `--login` run on the owner's booking |
 | H | 1.4.6 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes |

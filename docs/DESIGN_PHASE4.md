@@ -77,13 +77,18 @@ The row's details line adds the age after the venue: `Sports Court · Ages
 
 ### 2.4 Settings page, Filters tab (`Phone4Filters`)
 
-A new **AGES** heading above CATEGORIES, with two switches, both off by
-default (the owner chose these names on review, 2026-09-27):
+A new **AGES** heading above CATEGORIES, with three switches, all off by
+default (the owner chose the first two names on review, 2026-09-27):
 
 - **Hide Adult only events** — sub-line `18+ and 21+ · 31 events`. For a
   teen's watch.
 - **Hide Teen and Kid only events** — sub-line `17 and under · 14 events`. For
   adults cruising without kids.
+
+- **Hide Family events** — sub-line `Family and all-ages events · 12 events`.
+  For adults who'd rather not see family programming. Added 2026-09-27 after
+  review, so it isn't in the mockup; it sits third under AGES, styled like the
+  other two. Which events count: `PHASE4_PLAN.md` §2.
 
 The note under them: `Events you star always show. Events with no age listed
 never hide. Casino games are in the Casino category below.`
