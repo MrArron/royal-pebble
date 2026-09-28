@@ -24,7 +24,7 @@ This file only lists what Phase 4 adds or changes. The data behind it is in
 | 35 Short descriptions, 6 notes | **Approved 2026-09-27** (§4) |
 | 36 Stable ids for re-sync | No screens (§5) |
 | 37 Shore excursions | **Approved 2026-09-27** (§6) |
-| 38 Login download | Not designed yet (its own docs PR, `PHASE4_PLAN.md` PR I) |
+| 38 Login download | Settings page block (§7), built with the code in one PR (1.4.7) |
 
 ---
 
@@ -219,7 +219,45 @@ unstar it on the watch or the phone. Its reminder counts down to the meeting
 time (`MEET IN 15 MIN`). An all-day rental shows at its listed time with no
 end (`9:00a`), like any event of unknown length.
 
-## 7. For the build PRs (not design)
+## 7. Advanced download (`PHASE4_PLAN.md` item 38)
+
+### 7.1 Settings page, Cruise tab
+
+A collapsed card right under **Download your sailing**, above Backup:
+
+```
+Advanced download                                    v
+  Advanced download using your Royal login to pull your
+  bookings/information automatically: stateroom, deck, muster
+  station, terminal time, booked excursions and purchases. Uses
+  the ship and sailing picked above.
+  Royal Caribbean email   [                              ]
+  Password                [••••••••                      ]
+  [          Download with login          ]      filled pill
+  Pick your ship and sailing above first.      help, until both are set
+  Your email and password go from this page to Royal Pebble's
+  phone script ... (the text in PHASE4_PLAN.md, "What users are
+  told")                                       help text
+```
+
+- The button is off until a sailing is picked above and both fields are filled;
+  the help line says which is missing.
+- The fields are plain inputs with autocomplete off (no password manager offer,
+  checked by the probe). Nothing on the page keeps them, and the password field is
+  cleared as the page closes.
+- Like Download, the page closes and the phone works in the background.
+
+### 7.2 Result
+
+- Done: the Cruise tab shows the sailing as after any download, and the Me tab
+  fills from the booking (`docs/DESIGN_PHASE3.md`).
+- Sign-in refused, or no internet: the usual **Last download failed** card with
+  the reason; nothing is replaced.
+- Signed in but the booking part failed: the sailing is saved and a warning card
+  reads **Booking details not downloaded**, `Your sailing downloaded, but your
+  booking details didn't: <reason>`.
+
+## 8. For the build PRs (not design)
 
 - **The alarm byte comes with the event bytes.** Both change the saved blob, so
   PR D adds the four event bytes and the alarm's `early` byte together (the

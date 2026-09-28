@@ -4,13 +4,15 @@
 //
 // The page returns its result through `return_to` (the emulator tooling adds
 // it) or the phone app's pebblejs://close# URL:
-//   {action: 'save' | 'download', me, theme, reminderLead, reserveAlertAt,
+//   {action: 'save' | 'download' | 'download-login', me, theme, reminderLead, reserveAlertAt,
 //    days: {date: {offset, buffer, allAboard, shift, warn, edit} | null}, showFeatured, alwaysHints, hiddenCats,
 //    ageFilters: [adult, young, family] (the Ages switches turned on),
 //    shipSides: {ship, all, decks, confirmed} (Help > Port and starboard, mapped ships only),
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
 //    each was made), personal: [{title, venue, date, time, minutes}],
 //    download: {ship: {code, name}, sailDate}, bundle, ships,
+//    login: {email, password} (download-login only; the phone script passes it to
+//           the sign-in and nothing keeps it, docs/PHASE4_PLAN.md),
 //    venues: {ship, overrides} (all venue edits for that ship, only when changed),
 //    usage: {on, label, clear} (Me > Usage log),
 //    testAlerts: true | false (Me > Test alerts, only when the switch was flipped),
@@ -421,6 +423,23 @@ var BODY = [
   '<button class="pill filled wide" id="download">Download</button>',
   '<p class="help">The page closes and your phone downloads in the background. ',
   'Your watch updates when it is done.</p></div>',
+  '<details class="card" id="loginCard"><summary><h2>Advanced download</h2></summary>',
+  '<p class="muted">Advanced download using your Royal login to pull your bookings/information automatically: ',
+  'stateroom, deck, muster station, terminal time, booked excursions and purchases. Uses the ship and ',
+  'sailing picked above.</p>',
+  '<label for="rcEmail">Royal Caribbean email</label>',
+  '<input id="rcEmail" type="email" autocomplete="off" autocapitalize="off" spellcheck="false">',
+  '<label for="rcPassword">Password</label>',
+  '<input id="rcPassword" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">',
+  '<button class="pill filled wide" id="downloadLogin">Download with login</button>',
+  '<p class="help" id="loginHelp" role="status"></p>',
+  '<p class="help">Your email and password go from this page to Royal Pebble\'s phone script inside the ',
+  'Pebble app, and from there only to Royal Caribbean, to sign in for this one download. Royal Pebble ',
+  'doesn\'t save them, doesn\'t put them in the usage log, and never sends them anywhere else. Royal sends ',
+  'back your booking details; those are saved on this phone and your watch like the rest of your cruise ',
+  'data. You\'ll type your login again next time you sync if you wish to keep your data synced with ',
+  'Royal\'s. This uses Royal\'s website sign-in, which Royal could change without notice; if it stops ',
+  'working, use the Windows sync tool.</p></details>',
   '<div id="venueCard"></div>',
   '<details class="card" id="backup"><summary><h2>Backup: paste cruise data</h2></summary>',
   '<p class="muted">If Download doesn\'t work, run <code>sync.bat</code> from <code>tools/cruise-sync</code> ',
@@ -719,7 +738,7 @@ function pageMain(S, V, CL, SH) {
     var st = S.status || {};
     var html = '';
     if (st.error) {
-      html += '<div class="card warn"><h2>Last download failed</h2><p>' + esc(st.error) + '</p>' +
+      html += '<div class="card warn"><h2>' + esc(st.title || 'Last download failed') + '</h2><p>' + esc(st.error) + '</p>' +
         (st.at ? '<p class="muted">' + esc(st.at) + '</p>' : '') + '</div>';
     }
     if (!S.cruise) {
@@ -1014,12 +1033,19 @@ function pageMain(S, V, CL, SH) {
   }
 
   function updateDownload() {
-    $('download').disabled = !($('ship').value && /^\d{4}-\d{2}-\d{2}$/.test(chosenDate()));
+    var sailing = !!($('ship').value && /^\d{4}-\d{2}-\d{2}$/.test(chosenDate()));
+    $('download').disabled = !sailing;
+    var login = !!($('rcEmail').value.trim() && $('rcPassword').value);
+    $('downloadLogin').disabled = !(sailing && login);
+    $('loginHelp').textContent = sailing ? (login ? '' : 'Type your Royal Caribbean email and password.') :
+      'Pick your ship and sailing above first.';
   }
 
   $('ship').addEventListener('change', loadSailings);
   $('sailing').addEventListener('change', updateDownload);
   $('sailDate').addEventListener('input', updateDownload);
+  $('rcEmail').addEventListener('input', updateDownload);
+  $('rcPassword').addEventListener('input', updateDownload);
 
   // ---- Paste-in backup
   function checkPaste() {
@@ -3795,10 +3821,13 @@ function pageMain(S, V, CL, SH) {
         r.days[d.date] = Object.keys(set).length ? set : null;
       });
     }
-    if (action === 'download') {
+    if (action === 'download' || action === 'download-login') {
       var code = $('ship').value;
       var opt = $('ship').options[$('ship').selectedIndex];
       r.download = {ship: {code: code, name: opt ? opt.textContent : code}, sailDate: chosenDate()};
+      if (action === 'download-login') {
+        r.login = {email: $('rcEmail').value.trim(), password: $('rcPassword').value};
+      }
     } else if (pastedBundle) {
       r.bundle = pastedBundle;
     }
@@ -3819,10 +3848,13 @@ function pageMain(S, V, CL, SH) {
       $('pasteHelp').scrollIntoView({block: 'center'});
       return;
     }
-    document.location = returnUrl() + encodeURIComponent(JSON.stringify(result(action)));
+    var text = JSON.stringify(result(action));
+    $('rcPassword').value = '';
+    document.location = returnUrl() + encodeURIComponent(text);
   }
   $('save').addEventListener('click', function() { close('save'); });
   $('download').addEventListener('click', function() { close('download'); });
+  $('downloadLogin').addEventListener('click', function() { close('download-login'); });
   if (S.watchStorage) {
     $('watchStorage').textContent = 'Watch storage: the saved schedule uses ' + kb(S.watchStorage.bytes) +
       ' of ' + kb(S.watchStorage.max) + '.';

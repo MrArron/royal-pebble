@@ -1,0 +1,239 @@
+{
+ "_note": "Made-up logged-in replies (shapes from September 2026, docs/ROYAL_LOGIN_DATA.md), by path. Paths drop the API host, /en/royal/web and /en/royal/web/commerce-api. Used by tools/cruise-sync/test_cruise_sync.py and test/pkjs/royal.test.js.",
+ "account": "ACC1",
+ "ship": "HM",
+ "date8": "20270306",
+ "replies": {
+  "/v1/profileBookings/enriched/ACC1": {
+   "payload": {
+    "profileBookings": [
+     {
+      "shipCode": "WN",
+      "sailDate": "20280101",
+      "bookingId": "R0",
+      "passengerId": "P0"
+     },
+     {
+      "shipCode": "HM",
+      "sailDate": "20270306",
+      "bookingId": "R1",
+      "passengerId": "P1",
+      "stateroomNumber": "1234",
+      "deckNumber": "12",
+      "musterStation": "Z9",
+      "passengers": [
+       {
+        "passengerId": "P2",
+        "arrivalTime": "10:00 AM"
+       },
+       {
+        "passengerId": "P1",
+        "arrivalTime": "11:30 AM"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "/v3/ships/voyages/HM20270306/enriched": {
+   "payload": {
+    "sailingInfo": [
+     {
+      "departurePortInformation": {
+       "timeZoneName": "America/New_York"
+      },
+      "itinerary": {
+       "portInfo": [
+        {
+         "day": 1,
+         "portCode": "PCN",
+         "pointsOfInterest": []
+        },
+        {
+         "day": 3,
+         "portCode": "NAS",
+         "gangwayDown": "7:00 AM",
+         "gangwayUp": "1630",
+         "pointsOfInterest": [
+          {
+           "title": "a"
+          },
+          {
+           "title": "b",
+           "latitude": 25.0781234,
+           "longitude": -77.3412
+          }
+         ]
+        },
+        {
+         "day": 4,
+         "portCode": "PCC",
+         "gangwayUp": "see daily planner"
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "/calendar/v1/HM/orderHistory": {
+   "payload": {
+    "myOrders": [
+     {
+      "orderCode": "O1"
+     },
+     {
+      "orderCode": "O2"
+     },
+     {
+      "orderCode": "O9",
+      "status": "CANCELLED"
+     }
+    ],
+    "ordersOthersHaveBookedForMe": [
+     {
+      "orderCode": "O3"
+     }
+    ]
+   }
+  },
+  "/calendar/v1/HM/orderHistory/O1": {
+   "payload": {
+    "orderCode": "O1",
+    "status": "BOOKED",
+    "orderHistoryDetailItems": [
+     {
+      "status": "BOOKED",
+      "productSummary": {
+       "title": "Deluxe Beverage Package",
+       "productTypeCategory": {
+        "id": "pt_beverage"
+       },
+       "baseOptions": [
+        {
+         "selected": {
+          "code": "O1P"
+         }
+        }
+       ]
+      },
+      "offering": {
+       "id": "x"
+      },
+      "guests": [
+       {
+        "orderStatus": "BOOKED",
+        "reservationId": "R1"
+       },
+       {
+        "orderStatus": "BOOKED",
+        "reservationId": "R1"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "/calendar/v1/HM/orderHistory/O2": {
+   "payload": {
+    "orderCode": "O2",
+    "status": "BOOKED",
+    "orderHistoryDetailItems": [
+     {
+      "status": "BOOKED",
+      "productSummary": {
+       "title": "Beach \u00ae Day",
+       "productTypeCategory": {
+        "id": "pt_shoreX"
+       },
+       "baseOptions": [
+        {
+         "selected": {
+          "code": "O2P"
+         }
+        }
+       ]
+      },
+      "offering": {
+       "id": "ZZX1-HM20270306-A",
+       "dateTime": "2027-03-09T09:00:00",
+       "dayOfCruise": 4,
+       "portCode": "PCC"
+      },
+      "guests": [
+       {
+        "orderStatus": "BOOKED",
+        "reservationId": "R1"
+       },
+       {
+        "orderStatus": "BOOKED",
+        "reservationId": "R1"
+       },
+       {
+        "orderStatus": "BOOKED",
+        "reservationId": "R1"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "/calendar/v1/HM/orderHistory/O3": {
+   "payload": {
+    "orderCode": "O3",
+    "status": "CANCELLED",
+    "orderHistoryDetailItems": [
+     {
+      "status": "CANCELLED",
+      "productSummary": {
+       "title": "Arcade Credit",
+       "productTypeCategory": {
+        "id": "pt_arcades"
+       },
+       "baseOptions": [
+        {
+         "selected": {
+          "code": "O3P"
+         }
+        }
+       ]
+      },
+      "offering": {
+       "id": "y"
+      },
+      "guests": [
+       {
+        "orderStatus": "CANCELLED",
+        "reservationId": "R1"
+       },
+       {
+        "orderStatus": "CANCELLED",
+        "reservationId": "R1"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "/catalog/v2/HM/categories/pt_shoreX/products/O2P": {
+   "payload": {
+    "durationInMins": 150,
+    "bookingOfferingData": {
+     "offerings": [
+      {
+       "id": "other",
+       "dateTime": "2027-03-10T09:00:00",
+       "meetingTime": "2027-03-10T08:30:00"
+      },
+      {
+       "id": "ZZX1-HM20270306-A",
+       "dateTime": "2027-03-09T09:00:00",
+       "meetingTime": "2027-03-09T08:45:00",
+       "endDateTime": "2027-03-09T11:30:00"
+      }
+     ]
+    }
+   }
+  }
+ }
+}

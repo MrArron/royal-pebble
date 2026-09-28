@@ -177,8 +177,12 @@ for the Phase 3 port-day features. See
 
 ## Privacy
 
-- The watch app and phone settings never ask for your Royal Caribbean login. They
-  only read public sailing and schedule data.
+- The watch app and phone settings read only public sailing and schedule data,
+  unless you use the optional **Advanced download** on the settings page. Then your
+  Royal Caribbean email and password go from the page to Royal Pebble's phone
+  script and from there only to Royal Caribbean, for that one download. They are
+  never saved or written to the usage log; your booking details are saved like the
+  rest of your cruise data.
 - Your personal details (stateroom and so on) stay in the Pebble phone app's storage
   on your phone.
 - The sync tool's optional login uses your password once and never saves it. Its

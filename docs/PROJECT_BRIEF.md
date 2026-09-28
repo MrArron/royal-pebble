@@ -43,8 +43,8 @@ with a request in a session, ask before changing direction.
 ## Data sources
 
 Unofficial, undocumented Royal Caribbean web endpoints (learned from
-jdeath/CheckRoyalCaribbeanPrice, MIT). No login in the phone app yet (Phase 4 item 38
-looks into an optional one). Keep request
+jdeath/CheckRoyalCaribbeanPrice, MIT). The phone app logs in only for the optional
+Advanced download (Phase 4 item 38, from 1.4.7). Keep request
 volume low (a sync or two, not polling). See `docs/DATA_FORMAT.md` for the bundle
 format and `tools/cruise-sync/cruise_sync.py` as the reference implementation of
 every request.
@@ -73,7 +73,7 @@ Known facts about the data:
   Eastern time while St. Thomas is on Atlantic time (+1h in December), hence the
   per-day ship-time offset. Unconfirmed until onboard.
 - The public data has no pier coordinates, muster station, onboard spending or
-  excursion times. A login (sync tool only) adds deck, muster station, booked
+  excursion times. A login (sync tool, or the phone's Advanced download) adds deck, muster station, booked
   excursion times, gangway times and approximate port coordinates, some still
   unverified: `docs/ROYAL_LOGIN_DATA.md`.
 - Plain HTTP clients have worked for these public endpoints so far; if Royal
@@ -566,7 +566,8 @@ publication.
   mimic a browser if Royal blocks it. Until then the Windows tool is the login
   path. (Excursion orders do carry times, as of Sept 2026. On 2026-09-27 the
   owner chose to look into it: Phase 4 item 38, gated on a probe on the phone;
-  `docs/PHASE4_PLAN.md`.)
+  `docs/PHASE4_PLAN.md`. The probe passed on 2026-09-27 and the Advanced
+  download shipped in 1.4.7.)
 
 ## Testing
 
