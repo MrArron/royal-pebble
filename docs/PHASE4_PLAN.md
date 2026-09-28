@@ -330,7 +330,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | F | 1.4.4 | 3 | Reminder at arrive-by time; fills the alarm byte; alert screen line | Real-time alert-test variant in the emulator, then the watch |
 | G | 1.4.5 | 7 | Selectable excursions; sync tool meet fallback | Node tests, `test_cruise_sync.py`, one `--login` run on the owner's booking |
 | H | 1.4.6 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes |
-| K | none (PC tool only) | checks | `--dump-products` (Windows sync tool section) | `test_cruise_sync.py`, one live run |
+| K | none (PC tool only) | checks | `--dump-products` (Windows sync tool section); the report compares product ids by title with an earlier dump of the same sailing | `test_cruise_sync.py`, one live run (done 2026-09-27: 326 products, 55 venue codes) |
 | — | throwaway | login | Phone sign-in probe (not merged): passed 2026-09-27 | the owner's phone |
 | I | none (docs) | login | `DATA_FORMAT.md`, page text | review |
 | J | 1.4.7 | login | Advanced download block, `royal.fetchMine`, log guards | Node tests with made-up bookings, then the owner's real account on the phone |
