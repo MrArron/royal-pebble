@@ -383,6 +383,53 @@ function eventCat(title, venue, cat) {
   return isCasino(title, venue, cat) ? ['Casino', ''] : cat;
 }
 
+// Settings > Filters > Ages (docs/PHASE4_PLAN.md §2, docs/DESIGN_PHASE4.md
+// §2.4): hide adult only events, teen and kid only events, family events.
+// Stored as a list of these names; all off until the user turns one on.
+var AGE_FILTERS = ['adult', 'young', 'family'];
+
+function ageFilters(settings) {
+  return Array.isArray(settings.ageFilters) ? settings.ageFilters : [];
+}
+
+// A family event: its title starts with "Family" or says "All Ages", or it is
+// at Adventure Ocean Theater (the venue's table name, so codes count). "Starts
+// with" keeps out the crew's "... with our Entertainment Family" farewell.
+// venue: the table name (venues.js lookup), so an alias or a code matches.
+function isFamily(title, venue) {
+  return /^\s*family\b|\ball ages\b/i.test(title || '') || /^adventure ocean theater$/i.test(venue || '');
+}
+
+// Which age filters would hide an event, as bits: 1 adult only (a minimum of
+// 18 or more), 2 teen and kid only (a maximum of 17 or less), 4 family. No
+// age, no age bits. The settings page gets this function (and isFamily) as
+// text, so it must not use anything outside them.
+function ageMask(ageMin, ageMax, title, venue) {
+  var min = typeof ageMin === 'number' ? ageMin : 0;
+  var max = typeof ageMax === 'number' ? ageMax : 0;
+  return (min >= 18 ? 1 : 0) | (max > 0 && max <= 17 ? 2 : 0) | (isFamily(title, venue) ? 4 : 0);
+}
+
+// The age filters' bits turned on in settings.
+function ageFilterMask(settings) {
+  var mask = 0;
+  ageFilters(settings).forEach(function(name) {
+    var i = AGE_FILTERS.indexOf(name);
+    if (i !== -1) {
+      mask |= 1 << i;
+    }
+  });
+  return mask;
+}
+
+// Checks ageFilters as returned by the settings page.
+function cleanAgeFilters(list) {
+  if (!Array.isArray(list)) {
+    return null;
+  }
+  return AGE_FILTERS.filter(function(name) { return list.indexOf(name) !== -1; });
+}
+
 // Phase 4 event details (docs/DATA_FORMAT.md `infos`, docs/WATCH_PROTOCOL.md
 // Packed events). The watch shows up to eight fixed tags, worked out here from
 // an event's notes: by Royal's note id first, keywords in the text second
@@ -640,14 +687,15 @@ function cleanHiddenCats(list) {
 }
 
 // countOnly (for dayLoad): hide nothing, don't trim to MAX_EVENTS, and give each
-// event a filter could hide its `cat`.
+// event a filter could hide its `cat` and `ages` (ageMask).
 function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   var from = dayIndex * MINUTES_PER_DAY + DAY_START;
   var to = from + MINUTES_PER_DAY;
   var today = isoFromDays(sailDays + dayIndex);
   var hidden = countOnly ? [] : hiddenCats(settings);
+  var hideAges = countOnly ? 0 : ageFilterMask(settings);
   var events = [];
-  var whereOf = venues.bundleFinder(bundle, settings).where;
+  var finder = venues.bundleFinder(bundle, settings);
   var finals = finalShows(bundle);
   var details = eventDetails(bundle.schedule);
 
@@ -663,9 +711,12 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
       return;
     }
     var key = starKey(title, date, time, venue);
+    var d = details[info] || {};
+    // Only schedule events (they have a cat) meet the age filters, not personal entries.
+    var ages = cat ? ageMask(d.ageMin, d.ageMax, title, venue ? finder.entry(venue).name : '') : 0;
     if (stars[key]) {
       flags |= FLAG_STARRED;
-    } else if (paid || (cat && isHidden(hidden, cat))) {
+    } else if (paid || (cat && isHidden(hidden, cat)) || (ages & hideAges)) {
       // Filtered out unless starred. A paid session is starred when the owner
       // picks it under Booked activities, so the others never reach the watch.
       return;
@@ -673,22 +724,26 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     if ((flags & FLAG_RESERVATION) && stars[reservedKey(key)]) {
       flags |= FLAG_RESERVED;
     }
-    var d = details[info] || {};
     events.push({
       title: title,
       venue: venue || '',
       start: start,
       minutes: minutes || 0,
       flags: flags,
-      where: whereOf(venue),
+      where: finder.where(venue),
       ageMin: d.ageMin || 0,
       ageMax: d.ageMax || 0,
       early: start === NO_TIME ? 0 : d.early || 0,
       tags: d.tags || 0,
       key: key
     });
-    if (countOnly && cat && cat[0] && !(flags & FLAG_STARRED)) {
-      events[events.length - 1].cat = cat;
+    if (countOnly && !(flags & FLAG_STARRED)) {
+      if (cat && cat[0]) {
+        events[events.length - 1].cat = cat;
+      }
+      if (ages) {
+        events[events.length - 1].ages = ages;
+      }
     }
   }
 
@@ -742,22 +797,25 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
 
 // For the settings page's Ready to sail check (docs/DESIGN_PHASE3.md §24.2):
 // what each cruise day would send the watch before the MAX_EVENTS trim, as
-// [{date, fixed, cats: [[category, subcategory, n]]}]. `fixed` counts what no
-// filter hides (starred, personal, booked, no category), so the page can
-// recount as categories are hidden.
+// [{date, fixed, cats: [[category, subcategory, n(, ages)]]}]. `fixed` counts
+// what no filter hides (starred, personal, booked, no category or age), so the
+// page can recount as categories and age filters change. `ages` (ageMask) is
+// there only when an age filter could hide those events; the category is ''
+// for an event with an age but no category.
 function dayLoad(bundle, settings, stars) {
   var sailDays = daysFromIso(bundle.sailDate);
   return (bundle.itinerary || []).map(function(it) {
     var day = {date: it.date, fixed: 0, cats: []};
     var at = {};
     buildEvents(bundle, settings, stars, daysFromIso(it.date) - sailDays, sailDays, true).forEach(function(e) {
-      if (!e.cat) {
+      if (!e.cat && !e.ages) {
         day.fixed++;
         return;
       }
-      var k = e.cat[0] + ' / ' + (e.cat[1] || '');
+      var cat = e.cat || ['', ''];
+      var k = cat[0] + ' / ' + (cat[1] || '') + ' / ' + (e.ages || 0);
       if (at[k] === undefined) {
-        at[k] = day.cats.push([e.cat[0], e.cat[1] || '', 0]) - 1;
+        at[k] = day.cats.push(e.ages ? [cat[0], cat[1] || '', 0, e.ages] : [cat[0], cat[1] || '', 0]) - 1;
       }
       day.cats[at[k]][2]++;
     });
@@ -1202,7 +1260,7 @@ function cutoffWhen(sailDate, cutoff, now) {
   return {date: isoFromDays(sailDays + day), time: pad2(Math.floor(min / 60)) + ':' + pad2(min % 60)};
 }
 
-// settings: {theme, showFeatured, alwaysHints, hiddenCats,
+// settings: {theme, showFeatured, alwaysHints, hiddenCats, ageFilters,
 //            days: {date: {offset, buffer, allAboard, shift, warn,
 //                          edit: {type, port, arrive, depart}}},
 //            personal: [...], me: {stateroom, deck, stairs, muster, clockNote},
@@ -1310,6 +1368,10 @@ module.exports = {
   pruneStarTimes: pruneStarTimes,
   categorySummary: categorySummary,
   hiddenCats: hiddenCats,
+  ageFilters: ageFilters,
+  cleanAgeFilters: cleanAgeFilters,
+  isFamily: isFamily,
+  ageMask: ageMask,
   isCasino: isCasino,
   eventCat: eventCat,
   noteTags: noteTags,

@@ -6,6 +6,7 @@
 // it) or the phone app's pebblejs://close# URL:
 //   {action: 'save' | 'download' | 'test', me, theme, reminderLead, reserveAlertAt,
 //    days: {date: {offset, buffer, allAboard, shift, warn, edit} | null}, showFeatured, alwaysHints, hiddenCats,
+//    ageFilters: [adult, young, family] (the Ages switches turned on),
 //    shipSides: {ship, all, decks, confirmed} (Help > Port and starboard, mapped ships only),
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
 //    each was made), personal: [{title, venue, date, time, minutes}],
@@ -424,7 +425,10 @@ var BODY = [
   '<div class="card switch-row"><span class="t"><b>Royal\'s featured events</b>',
   '<span class="muted">Show on the watch\'s home when nothing starred is next</span></span>',
   '<button class="switch" role="switch" id="featured" aria-label="Royal\'s featured events"></button></div>',
-  '<div id="catList"></div>',
+  '<div class="dhead">AGES</div><div class="cats" id="ageList"></div>',
+  '<p class="help">Events you star always show. The age switches never hide an event with no age listed. ',
+  'Casino games are in the Casino category below.</p>',
+  '<div class="dhead">CATEGORIES</div><div id="catList"></div>',
   '<p class="help">Hidden categories stay off the watch\'s lists. Events you star always show. Casino has ',
   'Casino Royale and casino games (slots, blackjack, poker, roulette, craps, tournaments); bingo and raffles ',
   'keep their own categories.</p>',
@@ -764,7 +768,7 @@ function pageMain(S, V, CL, SH) {
     (S.dayLoad || []).forEach(function(d) {
       var n = d.fixed;
       d.cats.forEach(function(c) {
-        if (hidden.indexOf(c[0]) === -1 && hidden.indexOf(c[0] + ' / ' + c[1]) === -1) {
+        if (hidden.indexOf(c[0]) === -1 && hidden.indexOf(c[0] + ' / ' + c[1]) === -1 && !(c[3] & ageHideMask())) {
           n += c[2];
         }
       });
@@ -1498,6 +1502,47 @@ function pageMain(S, V, CL, SH) {
   var categories = S.categories || [];
   var hidden = (S.hiddenCats || ['Shop']).slice();
   var openCat = null;
+  // Ages (docs/DESIGN_PHASE4.md §2.4): switches, not categories. Each row's
+  // bit is its place here, as slice.js ageMask gives them.
+  var ageOn = (S.ageFilters || []).slice();
+  var AGE_ROWS = [['adult', 'Hide Adult only events', '18+ and 21+'],
+    ['young', 'Hide Teen and Kid only events', '17 and under'],
+    ['family', 'Hide Family events', 'Family and all-ages events']];
+
+  function ageHideMask() {
+    var mask = 0;
+    AGE_ROWS.forEach(function(a, i) {
+      if (ageOn.indexOf(a[0]) !== -1) {
+        mask |= 1 << i;
+      }
+    });
+    return mask;
+  }
+
+  function renderAges() {
+    $('ageList').innerHTML = AGE_ROWS.map(function(a, i) {
+      var n = allEvents.filter(function(e) { return e.ages & (1 << i); }).length;
+      var on = ageOn.indexOf(a[0]) !== -1;
+      return '<div class="cat"><div class="switch-row"><span class="t"><b>' + a[1] + '</b><span class="muted">' +
+        a[2] + (allEvents.length ? ' &middot; ' + n + (n === 1 ? ' event' : ' events') : '') + '</span></span>' +
+        '<button class="switch" role="switch" data-age="' + a[0] + '" aria-checked="' + on + '" aria-label="' +
+        a[1] + '"></button></div></div>';
+    }).join('');
+  }
+
+  $('ageList').addEventListener('click', function(ev) {
+    var btn = ev.target.closest('[data-age]');
+    if (!btn) {
+      return;
+    }
+    var name = btn.getAttribute('data-age');
+    if (ageOn.indexOf(name) === -1) {
+      ageOn.push(name);
+    } else {
+      ageOn = ageOn.filter(function(a) { return a !== name; });
+    }
+    renderAges();
+  });
 
   $('featured').setAttribute('aria-checked', String(S.showFeatured !== false));
   $('featured').addEventListener('click', function() {
@@ -1686,7 +1731,8 @@ function pageMain(S, V, CL, SH) {
 
   // Venue names as the phone makes them (venues.js scheduleVenues), so star
   // keys match: a blank title takes its venue code's table name.
-  var schedV = V.scheduleVenues(S.venues ? S.venues.table : {venues: {}, aliases: {}}, sched);
+  var schedTable = S.venues ? S.venues.table : {venues: {}, aliases: {}};
+  var schedV = V.scheduleVenues(schedTable, sched);
   if (sched && sched.events) {
     var fi = {};
     (sched.fields || []).forEach(function(name, i) { fi[name] = i; });
@@ -1711,6 +1757,10 @@ function pageMain(S, V, CL, SH) {
           .map(function(n) { return n[1]; });
       }
       e.excursion = e.cat[0] === 'Shore excursions';  // docs/DATA_FORMAT.md
+      var ageRange = Array.isArray(inf) && Array.isArray(inf[0]) ? inf[0] : [];
+      var tableName = e.venue && V.lookup(schedTable, e.venue,
+        Object.prototype.hasOwnProperty.call(schedV.codes, e.venue) ? schedV.codes[e.venue] : null);
+      e.ages = e.excursion ? 0 : ageMask(ageRange[0], ageRange[1], e.title, tableName || e.venue);  // Filters > Ages
       e.cat = eventCat(e.title, e.venue, e.cat);  // Casino (slice.js)
       e.key = starKey(e.title, e.date, e.time, e.venue);
       e.search = (e.title + ' ' + e.venue).toLowerCase();
@@ -1874,7 +1924,8 @@ function pageMain(S, V, CL, SH) {
   }
 
   function hiddenOnWatch(e) {
-    return hidden.indexOf(e.cat[0]) !== -1 || hidden.indexOf(e.cat[0] + ' / ' + (e.cat[1] || '')) !== -1;
+    return hidden.indexOf(e.cat[0]) !== -1 || hidden.indexOf(e.cat[0] + ' / ' + (e.cat[1] || '')) !== -1 ||
+      (e.ages & ageHideMask()) !== 0;
   }
 
   function lengthText(e) {
@@ -3602,6 +3653,7 @@ function pageMain(S, V, CL, SH) {
       r.shipSides = {ship: SD.ship, all: switchOn('flipAll'), decks: flipDecks.slice(), confirmed: switchOn('sidesOk')};
     }
     r.hiddenCats = hidden.slice();
+    r.ageFilters = ageOn.slice();
     if (Object.keys(starChanges).length) {
       r.stars = starChanges;
       r.starTimes = starTimes;
@@ -3667,6 +3719,7 @@ function pageMain(S, V, CL, SH) {
   renderShare();
   renderDays();
   renderCats();
+  renderAges();
   renderEvents();
   fillShips();
   loadSailings();
@@ -3679,7 +3732,7 @@ function pad2(n) {
   return (n < 10 ? '0' : '') + n;
 }
 
-// state: {ships, cruise, status, itinerary, days, categories, hiddenCats, showFeatured, schedule, stars,
+// state: {ships, cruise, status, itinerary, days, categories, hiddenCats, ageFilters, showFeatured, schedule, stars,
 //         personal, venues, me, theme, reminderLead, reserveAlertAt, units, alwaysHints,
 //         shipSides ({ship, name, decks, all, flipDecks, confirmed} or null), gpsShips (names), api, appKey}
 function buildPage(state, now) {
@@ -3699,7 +3752,8 @@ function buildPage(state, now) {
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<title>Royal Pebble</title><style>' + CSS + '</style></head><body>' + BODY +
     '<script>' + findClashes.toString() + ';' + splitLog.toString() + ';' + mapExport.toString() + ';' +
-    slice.isCasino.toString() + ';' + slice.eventCat.toString() + ';' + slice.ageText.toString() + ';(' +
+    slice.isCasino.toString() + ';' + slice.eventCat.toString() + ';' + slice.ageText.toString() + ';' +
+    slice.isFamily.toString() + ';' + slice.ageMask.toString() + ';(' +
     pageMain.toString() + ')(' + json + ', (' + venues.venueLib.toString() + ')(), (' +
     cabins.cabinLib.toString() + ')(), (' + share.shareLib.toString() + ')());</script>' +
     '</body></html>';

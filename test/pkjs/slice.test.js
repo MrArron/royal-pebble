@@ -1768,6 +1768,92 @@ test('event details reach the packed events; untimed events never arrive early',
   });
 });
 
+test('age filters: which events each one matches (Phase 4 §2)', function() {
+  assert.strictEqual(slice.ageMask(18, 0, 'Adult Comedy', 'Comedy Live'), 1);
+  assert.strictEqual(slice.ageMask(21, 0, 'Wine Tasting', ''), 1);
+  assert.strictEqual(slice.ageMask(18, 25, 'Hyperlink Mixer', ''), 1);
+  assert.strictEqual(slice.ageMask(0, 17, 'Teen Hangout', ''), 2);
+  assert.strictEqual(slice.ageMask(13, 17, 'Social100', ''), 2);
+  assert.strictEqual(slice.ageMask(7, 0, 'Zip Line', ''), 0, 'a low minimum hides nothing');
+  assert.strictEqual(slice.ageMask(null, undefined, 'Trivia', ''), 0);
+  // Family: the 2026-10-01 titles, by title or by Adventure Ocean Theater.
+  ['Family Movies', 'Family Bingo', 'Family Paper Plane Competition', 'Family SHUSH! Silent Party',
+   'Family Mini Golf', 'family karaoke', 'All Ages Karaoke'].forEach(function(t) {
+    assert.strictEqual(slice.ageMask(0, 0, t, 'On Air'), 4, t);
+  });
+  assert.strictEqual(slice.ageMask(0, 0, 'Blacklight Puppet Show', 'Adventure Ocean Theater'), 4);
+  assert.strictEqual(slice.ageMask(0, 0, 'Perfect Day Farewell with our Entertainment Family', 'Studio B'), 0,
+                     'the crew farewell');
+  assert.strictEqual(slice.ageMask(0, 0, 'Familiar Tunes', ''), 0);
+  assert.strictEqual(slice.ageMask(18, 0, 'Family Feud Live', ''), 5);
+
+  assert.deepStrictEqual(slice.ageFilters({}), []);
+  assert.deepStrictEqual(slice.cleanAgeFilters(['family', 'adult', 'x', 'adult', 3]), ['adult', 'family']);
+  assert.deepStrictEqual(slice.cleanAgeFilters([]), []);
+  assert.strictEqual(slice.cleanAgeFilters('adult'), null);
+});
+
+test('age filters hide events on the watch; starred, personal and no-age events stay', function() {
+  var b = {
+    ship: {code: 'HM'}, sailDate: '2027-03-06',
+    itinerary: [{day: 1, date: '2027-03-06', type: 'EMBARK', port: 'Miami', depart: '16:00'},
+                {day: 2, date: '2027-03-07', type: 'CRUISING', port: 'Cruising'},
+                {day: 3, date: '2027-03-08', type: 'DEBARK', port: 'Miami', arrive: '06:00'}],
+    schedule: {
+      published: true, cats: [['Entertainment', 'Comedy'], ['Activities', '']],
+      venues: ['Comedy Live', 'Studio B', 'Adventure Ocean', '', 'On Air'],
+      venueCodes: [null, null, null, 'KIDSTHTER', null],
+      infos: [[[18, null], null, []], [[13, 17], null, []], [[null, 17], null, []], [[7, null], null, []]],
+      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation', 'info'],
+      events: [['Adult Comedy', 0, 0, '2027-03-07', '22:00', 60, 1, 0, 0],
+               ['Teen Hangout', 1, 1, '2027-03-07', '20:00', 60, 0, 0, 1],
+               ['Kids Crafts', 1, 1, '2027-03-07', '10:00', 60, 0, 0, 2],
+               ['Zip Line', 1, 1, '2027-03-07', '11:00', 60, 0, 0, 3],
+               ['Family Bingo', 1, 1, '2027-03-07', '14:00', 60, 0, 0, null],
+               ['Puppet Show', 2, 1, '2027-03-07', '15:00', 30, 0, 0, null],   // an alias of the theater
+               ['Movie Time', 3, 1, '2027-03-07', '16:00', 90, 0, 0, null],    // blank venue, KIDSTHTER code
+               ['All Ages Karaoke', 4, 1, '2027-03-07', '17:00', 60, 0, 0, null],
+               ['Perfect Day Farewell with our Entertainment Family', 1, 0, '2027-03-07', '18:00', 30, 0, 0, null],
+               ['Open Mic', 0, 0, '2027-03-07', '21:00', 60, 0, 0, null]]
+    }
+  };
+  var sail = slice.daysFromIso(b.sailDate);
+  function titles(settings, stars) {
+    return slice.buildEvents(b, settings, stars || {}, 1, sail).map(function(e) { return e.title; });
+  }
+  var all = titles({});
+  assert.strictEqual(all.length, 10, 'all off by default');
+  var farewell = 'Perfect Day Farewell with our Entertainment Family';
+  assert.deepStrictEqual(titles({ageFilters: ['adult']}).indexOf('Adult Comedy'), -1);
+  assert.deepStrictEqual(titles({ageFilters: ['young']}),
+    all.filter(function(t) { return t !== 'Teen Hangout' && t !== 'Kids Crafts'; }));
+  assert.deepStrictEqual(titles({ageFilters: ['family']}),
+    ['Kids Crafts', 'Zip Line', farewell, 'Teen Hangout', 'Open Mic', 'Adult Comedy']);
+  assert.deepStrictEqual(titles({ageFilters: ['adult', 'young', 'family']}),
+    ['Zip Line', farewell, 'Open Mic']);
+
+  // A starred event always goes, and so does a personal entry with a family title.
+  var stars = {};
+  stars[slice.starKey('Teen Hangout', '2027-03-07', '20:00', 'Studio B')] = true;
+  var settings = {ageFilters: ['young', 'family'],
+                  personal: [{title: 'Family dinner', venue: '', date: '2027-03-07', time: '19:00', minutes: 60}]};
+  var kept = titles(settings, stars);
+  assert.ok(kept.indexOf('Teen Hangout') !== -1, 'starred');
+  assert.ok(kept.indexOf('Family dinner') !== -1, 'personal');
+  assert.strictEqual(kept.indexOf('Kids Crafts'), -1);
+
+  // The morning summary counts what the watch gets: Adult Comedy is featured.
+  assert.strictEqual(slice.buildTomorrow(b, {}, {}, 0, sail).featured, 1);
+  assert.strictEqual(slice.buildTomorrow(b, {ageFilters: ['adult']}, {}, 0, sail).featured, 0);
+
+  // Ready to sail: events an age filter could hide carry their bits.
+  var day = slice.dayLoad(b, settings, stars)[1];
+  assert.strictEqual(day.fixed, 2, 'the starred event and the personal entry');
+  assert.deepStrictEqual(day.cats, [
+    ['Activities', '', 1, 2], ['Activities', '', 1], ['Activities', '', 4, 4],
+    ['Entertainment', 'Comedy', 2], ['Entertainment', 'Comedy', 1, 1]]);
+});
+
 test('demo: some events carry Phase 4 details', function() {
   var now = new Date(2027, 2, 7, 9, 0);
   [0, 1].forEach(function(v) {
