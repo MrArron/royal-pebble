@@ -1322,6 +1322,15 @@ function cutoffWhen(sailDate, cutoff, now) {
 //            venues: {shipCode: owner's venue edits}}
 // stars: {starKey: true}
 // testAt: Date when Test alerts was tapped, or null.
+// Today's day (buildDay) at `now`, with the cruise minute: {day, dayIndex, now}.
+// For answers that only need the day (voice cards).
+function today(bundle, settings, now) {
+  var sailDays = daysFromIso(bundle.sailDate);
+  var min = cruiseMinutes(sailDays, now);
+  var dayIndex = cruiseDayIndex(min);
+  return {day: buildDay(bundle, settings || {}, dayIndex, sailDays), dayIndex: dayIndex, now: min};
+}
+
 function buildSlice(bundle, settings, stars, now, testAt) {
   settings = settings || {};
   stars = stars || {};
@@ -1380,6 +1389,7 @@ function myInfo(bundle, me) {
 }
 
 module.exports = {
+  today: today,
   DAY_START: DAY_START,
   NO_TIME: NO_TIME,
   DAY_PORT: DAY_PORT,

@@ -1,6 +1,7 @@
 #include "screens.h"
 #include "codec.h"
 #include "comm.h"
+#include "onboard.h"
 #include "ui.h"
 #include "usage.h"
 
@@ -10,8 +11,9 @@
 // no places or wording: it draws the phone's rows. Only what it must say with
 // the phone away or silent is written here.
 //
-// Select does the card's action (open a route, or confirm, such as "I'm at"),
-// or asks again when there is none; Hold Select asks again; Back closes.
+// Select does the card's action (open a route; confirm, such as "I'm at"; set
+// or clear "I'm on board", docs/DESIGN_PHASE3.md §22.6), or asks again when
+// there is none; Hold Select asks again; Back closes.
 
 #define ROWS_MAX 4
 #define LABEL_LEN 16
@@ -21,8 +23,10 @@
 #define SEND_RETRY_MS 500
 #define SEND_TRIES 5
 
-// Card actions (the phone's first byte).
-enum { ACT_NONE = 0, ACT_ROUTE = 1, ACT_CONFIRM = 2 };
+// Card actions (the phone's first byte) and flags.
+enum { ACT_NONE = 0, ACT_ROUTE = 1, ACT_CONFIRM = 2, ACT_ONBOARD = 3 };
+#define FLAG_REST 1
+#define FLAG_ONBOARD 2
 
 typedef struct {
   ScrollPage page;
@@ -30,7 +34,7 @@ typedef struct {
   AppTimer *timer;       // waiting for the phone's card, or retrying the send
   int send_tries;
   uint8_t action;
-  uint8_t flags;         // ACT_ROUTE: 1 = the restroom route from place `ref`
+  uint8_t flags;         // FLAG_REST (ACT_ROUTE), FLAG_ONBOARD (ACT_ONBOARD)
   int32_t ref;
   uint8_t count;
   char label[ROWS_MAX][LABEL_LEN];
@@ -111,7 +115,7 @@ static void no_reply(void *context) {
 static void send_now(void *context) {
   Card *c = s_card;
   c->timer = NULL;
-  if (comm_send_voice(s_seq, c->heard[0] ? c->heard : NULL)) {
+  if (comm_send_voice(s_seq, c->heard[0] ? c->heard : NULL, onboard_is_set() ? 1 : 0)) {
     if (c->heard[0]) {
       c->timer = app_timer_register(REPLY_WAIT_MS, no_reply, NULL);
     } else {
@@ -220,7 +224,7 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
   usage_press(BUTTON_ID_SELECT, 0, c->action);
   if (c->action == ACT_ROUTE) {
     int32_t ref = c->ref;
-    bool rest = c->flags & 1;
+    bool rest = c->flags & FLAG_REST;
     char title[sizeof(c->title)], header[sizeof(c->header)];
     snprintf(title, sizeof(title), "%s", c->title);
     snprintf(header, sizeof(header), "%s", c->header);
@@ -228,6 +232,13 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
     window_stack_remove(s_window, false);
     route_window_close();
     route_window_push(ref, rest, title, header);
+  } else if (c->action == ACT_ONBOARD) {
+    // As on the "On board?" screen and My info's undo row.
+    onboard_set(c->flags & FLAG_ONBOARD);
+    vibes_short_pulse();
+    home_window_refresh();
+    info_window_refresh();
+    window_stack_remove(s_window, true);
   } else if (c->action == ACT_CONFIRM) {
     c->heard[0] = '\0';
     send();

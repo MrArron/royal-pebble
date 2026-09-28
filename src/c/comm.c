@@ -462,7 +462,7 @@ bool comm_request_event_route(int32_t start, const char *venue) {
 
 void comm_set_voice_handler(CommVoiceHandler handler) { s_on_voice = handler; }
 
-bool comm_send_voice(int32_t seq, const char *text) {
+bool comm_send_voice(int32_t seq, const char *text, int32_t state) {
   DictionaryIterator *iter;
   if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
     return false;
@@ -471,6 +471,7 @@ bool comm_send_voice(int32_t seq, const char *text) {
   dict_write_int32(iter, MESSAGE_KEY_voice_seq, seq);
   if (text) {
     dict_write_cstring(iter, MESSAGE_KEY_voice_text, text);
+    dict_write_int32(iter, MESSAGE_KEY_voice_state, state);
   }
   s_outbox_msg = MSG_VOICE;
   return app_message_outbox_send() == APP_MSG_OK;

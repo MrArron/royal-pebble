@@ -170,6 +170,10 @@ Sails 4:00p                              Gothic 14 bold, muted
 On embark day and port days the user can say they're on board or done ashore.
 Home then shows the **sea-day layout** (the NEXT card) for the rest of the day.
 
+- **By voice (1.5.3):** `I'm on board` and `I'm ashore` on the Ask screen
+  (`docs/DESIGN_V1_1.md` §9.6) set and clear the same flag, with the same
+  buzz, log entry and alert changes.
+
 - **Where: Hold Select on Home**, only while Home shows the terminal arrival
   card (§22.5) or the all-aboard countdown. Select does nothing on those
   layouts today (`route_target` is only for the NEXT card), and a hold can't

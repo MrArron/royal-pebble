@@ -1,7 +1,7 @@
 {
   "name": "cruise-watch",
   "author": "MrArron",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "keywords": [
     "pebble-app"
   ],
@@ -91,7 +91,8 @@
       "warn_period",
       "voice_seq",
       "voice_text",
-      "voice_card"
+      "voice_card",
+      "voice_state"
     ],
     "resources": {
       "media": []

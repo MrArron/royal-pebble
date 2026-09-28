@@ -116,7 +116,7 @@ buffers.
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
 | 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank); `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
 | 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
-| 19 | VOICE | `voice_seq` (the watch's turn number) and `voice_text` (what dictation heard, ≤ 255 bytes). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
+| 19 | VOICE | `voice_seq` (the watch's turn number), `voice_text` (what dictation heard, ≤ 255 bytes) and `voice_state` (bit 0: today's `I'm on board` flag is set). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
 
 (11 was an index-based STAR message, replaced by STAR_CHANGES.)
 
@@ -601,8 +601,8 @@ connection), closes an Ask screen that has nothing on it yet.
 
 | Bytes | Field |
 |---|---|
-| 1 | `action`: what Select does. 0 ask again, 1 open the Route screen for `ref`, 2 confirm (VOICE without text, then the screen closes) |
-| 1 | `flags`: 1 the route is to the closest restroom from `ref` |
+| 1 | `action`: what Select does. 0 ask again, 1 open the Route screen for `ref`, 2 confirm (VOICE without text, then the screen closes), 3 set or clear `I'm on board` on the watch (`docs/DESIGN_PHASE3.md` §22.6; logged as entry 14), then close |
+| 1 | `flags`: 1 the route is to the closest restroom from `ref`; 2 (action 3) on board, else back ashore |
 | 4 | `ref`: int32, a place page's `dir_ref` (action 1), else 0 |
 | 1 | how many rows (at most 4) |
 | 1 + n, 1 + n | each row: label (`HEARD`, `FROM`, `TO`, `YOU'RE AT`, `TRY`; ≤ 15 bytes, empty for none) and value (≤ 63 bytes; wraps to 3 lines) |

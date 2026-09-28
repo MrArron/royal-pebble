@@ -83,9 +83,9 @@ bool comm_request_route(int32_t ref, bool rest);
 bool comm_request_event_route(int32_t start, const char *venue);
 
 // Voice (docs/WATCH_PROTOCOL.md, Voice): sends the transcript for voice turn
-// `seq`, or with `text` NULL confirms the turn's card (Select on "I'm at...").
-// False if the outbox was busy.
-bool comm_send_voice(int32_t seq, const char *text);
+// `seq` with the watch's `state` bits (1: on board today), or with `text` NULL
+// confirms the turn's card (Select on "I'm at..."). False if the outbox was busy.
+bool comm_send_voice(int32_t seq, const char *text, int32_t state);
 // The phone's card for turn `seq`; `card` points into the message and is only
 // valid in the handler. NULL stops them.
 typedef void (*CommVoiceHandler)(int32_t seq, const uint8_t *card, int length);

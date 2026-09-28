@@ -74,6 +74,7 @@ screen, so the worst case is a Route screen opened from a deep directory.
 | 1.5.0, proposal A + D (R1) | 61,624 | 3,911 | 31,236 |
 | 1.5.1, proposal C: LTO (R2) | 59,400 | 6,135 | - |
 | 1.5.2, proposal B: Ask screen (voice watch side) | 61,928 | 3,607 | - |
+| 1.5.3, voice `I'm on board` / `I'm ashore` | 61,960 | 3,575 | - |
 
 - A saved 1,576 bytes (less than the 2-2.5 KB estimate: dead code was
   already dropped by the linker; the win was static buffers). Freeing the
@@ -200,6 +201,10 @@ left after it), and E goes on the list for Phase 6.
 | V1 | Docs: VOICE_FINAL_PLAN into `DESIGN_V1_1.md` §9.6, voice messages drafted in `WATCH_PROTOCOL.md` with byte limits (transcript <= 256 B, each confirm string <= 48 B), the generic card screen from proposal B | none |
 | V2 | Lexicon + parser: `tools/voice/`, `src/pkjs/data/voice-HM.js`, `src/pkjs/voice.js`, tests and fixtures (from `voice-phase5/`), not wired | 1.5.2 |
 | V3 | Phone wiring: transcript message in, parse, resolve (group to nearest, cabin check, stateroom, ashore, same place), confirm rows out, spoken start via `routestart.js`, `voice` log lines; a settings-page test box to type a phrase without the watch | 1.5.3 |
+
+Since this plan: B (1.5.2) and `I'm on board` / `I'm ashore` (1.5.3) went in
+ahead of V2, so the version numbers above move up. V2/V3 keep those two
+intents (`voicecard.onboardIntent`) when the matcher takes over the answers.
 
 ### Stage 4: voice on the watch
 

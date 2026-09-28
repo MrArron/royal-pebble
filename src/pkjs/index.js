@@ -71,7 +71,7 @@ var s_resend = false;
 var s_ack = null;        // star ack to send: {seq, resend}
 var s_dirRef = null;     // ship directory page the watch asked for
 var s_route = null;      // route the watch asked for: {ref, rest} or {start, venue}
-var s_voice = null;      // voice turn to answer: {seq, text}
+var s_voice = null;      // voice turn to answer: {seq, text, state}
 
 function load(key, fallback) {
   try {
@@ -378,14 +378,14 @@ function sendVoiceCard() {
   s_voice = null;
   var data = currentData();
   var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
-  var card = voicecard.answer(turn.text, ctx, data.isDemo);
+  var card = voicecard.answer(turn.text, ctx, data.isDemo, turn.state);
   s_sending = true;
   sendQueue([{msg_type: MSG_VOICE_CARD, voice_seq: turn.seq, voice_card: voicecard.packCard(card)}],
             function(ok, info) {
     s_sending = false;
     // Spoken cabin numbers may appear here (owner, 2026-09-26); the log never goes into the repo.
     usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' +
-              ['nothing to do', 'route', 'confirm'][card.action] + (card.ref ? ' ' + card.ref : '') +
+              ['nothing to do', 'route', 'confirm', card.onboard ? 'set on board' : 'back ashore'][card.action] + (card.ref ? ' ' + card.ref : '') +
               ' (' + card.rows.slice(1).map(function(r) { return r.label + ' ' + r.value; }).join(', ') + '), ' +
               sendText(ok, info));
     sendNext();
@@ -958,7 +958,7 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
         usage.add('voice', 'turn ' + (p.voice_seq | 0) + ' confirmed on the watch');
         break;
       }
-      s_voice = {seq: p.voice_seq | 0, text: String(p.voice_text)};
+      s_voice = {seq: p.voice_seq | 0, text: String(p.voice_text), state: p.voice_state | 0};
       if (!s_sending) {
         sendNext();
       }

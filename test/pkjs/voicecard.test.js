@@ -2,6 +2,7 @@
 var assert = require('assert');
 var voicecard = require('../../src/pkjs/voicecard');
 var directory = require('../../src/pkjs/directory');
+var demo = require('../../src/pkjs/demo');
 
 var tests = [];
 function test(name, fn) { tests.push({name: name, fn: fn}); }
@@ -65,6 +66,42 @@ test('demo stand-in shows each kind of card', function() {
   assert.strictEqual(voicecard.answer('play some music', CTX, true).action, voicecard.ACT_NONE);
   // Every one packs.
   [route, rest].forEach(function(card) { unpack(voicecard.packCard(card)); });
+});
+
+test('on board and ashore phrases', function() {
+  var yes = ["I'm on board", "i' m back on board", 'we are back on the ship', "we're aboard", 'back on board',
+             "I'm onboard now", 'im on board'];
+  var no = ["I'm ashore", 'going ashore', "I'm off the ship", 'leaving the ship', "we're back ashore"];
+  var neither = ['when is all aboard', 'what time is all aboard', "I'm at the solarium", 'how do I get to the pool',
+                 'where do I board the tender', 'the swim on board ship'];
+  yes.forEach(function(t) { assert.strictEqual(voicecard.onboardIntent(t.toLowerCase()), true, t); });
+  no.forEach(function(t) { assert.strictEqual(voicecard.onboardIntent(t.toLowerCase()), false, t); });
+  neither.forEach(function(t) { assert.strictEqual(voicecard.onboardIntent(t.toLowerCase()), null, t); });
+});
+
+test('on board cards follow the day and the watch flag', function() {
+  var now = new Date(2027, 2, 8, 13, 0);
+  var port = demo.make(now, 0);
+  var sea = demo.make(now, 1);
+  function ctx(d) { return {bundle: d.bundle, settings: d.settings, stars: d.stars, now: now}; }
+  // Port day, flag clear: "I'm on board" sets it, from real data too.
+  var set = voicecard.answer("I'm on board", ctx(port), false, 0);
+  assert.strictEqual(set.action, voicecard.ACT_ONBOARD);
+  assert.ok(set.onboard);
+  var c = unpack(voicecard.packCard(set));
+  assert.strictEqual(c.flags, voicecard.FLAG_ONBOARD);
+  // Already set: nothing to do.
+  assert.strictEqual(voicecard.answer("I'm on board", ctx(port), false, voicecard.STATE_ONBOARD).action,
+                     voicecard.ACT_NONE);
+  // Ashore clears it only when set.
+  var clear = voicecard.answer("I'm back ashore", ctx(port), false, voicecard.STATE_ONBOARD);
+  assert.strictEqual(clear.action, voicecard.ACT_ONBOARD);
+  assert.strictEqual(unpack(voicecard.packCard(clear)).flags, 0);
+  assert.strictEqual(voicecard.answer('going ashore', ctx(port), false, 0).action, voicecard.ACT_NONE);
+  // Sea day: nothing to change.
+  var atSea = voicecard.answer("I'm on board", ctx(sea), false, 0);
+  assert.strictEqual(atSea.action, voicecard.ACT_NONE);
+  assert.strictEqual(atSea.rows[1].value, 'At sea today');
 });
 
 var failed = 0;

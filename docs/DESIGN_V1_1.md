@@ -934,6 +934,13 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
   - `How do I get from <A> to <B>` / `<A> to <B>`;
   - `How do I get to <B>` (from the current start);
   - `my cabin` works as A or B.
+  - `I'm on board` / `We're back on the ship` and `I'm ashore` / `Going
+    ashore` (owner, 2026-09-28): set or clear the on-board flag
+    (`docs/DESIGN_PHASE3.md` §22.6). Only on a port or embark day with an
+    all-aboard time; `At sea today` / `Already on board` / `Already ashore`
+    otherwise. The card shows `YOU'RE On board` with `Select: all-aboard alerts
+    off for today`. These need no place names, so they work before the voice
+    matcher is in (1.5.3). `When is all aboard` is not a command (no `I'm`).
 - **Only one-spot places can be a location:** landmark venues and cabins.
   Restrooms, elevators and stairs are refused (`There are 26 restrooms` / `Say a
   venue or a cabin number near you instead`); they're fine as destinations.
