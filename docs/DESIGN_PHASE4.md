@@ -168,8 +168,10 @@ No screens. The existing re-sync messages (`Moved`, `Check the times`,
 
 ### 6.1 Settings page (`Phone4Excursions`)
 
-**Booked activities** on the Cruise tab becomes **Booked activities and
-excursions**. Its screen:
+**Booked activities** becomes **Booked activities and excursions**. As built
+(PR G, 1.4.5) it stays in the Events tab's day view, like Booked activities
+(`docs/DESIGN_V1_1.md`): the day's excursion card sits above the activities
+card, and the Starred view shows the picked excursions' cards. Its content:
 
 - The intro: `Pick the sessions you booked in the Royal app. Picked ones are
   starred and go to your watch; the rest stay off it.`
@@ -179,6 +181,15 @@ excursions**. Its screen:
   once picked; tap again to unpick). Excursion sub-line: `Meet 9:00a · 2 h 30 ·
   Ages 6+`, leaving out what's missing. All-day rentals: `All day from 9:00a`.
 - Picking stars the session and marks it reserved, like a paid class today.
+- Royal also lists sea-day products (ship tours, dive classes) as shore
+  excursions, with the venue "Cruising". Their card reads `DAY 3 · SEA DAY ·
+  TOURS` and `Arrive by 8:45a`; on the watch they have no venue and aren't
+  Ashore, so they read `Arrive by` like any event. Found in a live Harmony
+  pull, 2026-09-27.
+- All-day rentals meet at their listed time: Royal gives them a meeting time
+  15 minutes earlier, which is ignored.
+- A picked excursion in the day list reads `Ashore · Perfect Day at CocoCay ·
+  Meet 9:00a` in place of the venue and arrive-early time.
 - An excursion that's also in login data (`mine.orders`, same title, date and
   time) shows once, in the FROM YOUR BOOKING card (`docs/DESIGN_PHASE3.md`
   §22.7), not in this list.

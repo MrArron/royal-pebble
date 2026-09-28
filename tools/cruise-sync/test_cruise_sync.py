@@ -126,6 +126,35 @@ class FetchMineTest(unittest.TestCase):
         self.assertEqual(mine["orders"][0]["time"], "09:00")
         self.assertNotIn("meet", mine["orders"][0])
 
+    def test_public_meeting_time(self):
+        # The public listing has the booked excursion's session: no catalog call.
+        sched = schedule([product(productType={"productType": "SHOREX"}, productTitle="Beach Day", productID="X1",
+                                  productLocation={}, offering=[
+                                      {"offeringDate": "20270309", "offeringTime": "0900", "meetingTime": "0845",
+                                       "offeringDurationInMinutes": "150"},
+                                      {"offeringDate": "20270309", "offeringTime": "1300", "meetingTime": "1230",
+                                       "offeringDurationInMinutes": "150"}])])
+        sess = FakeSession()
+        mine = cs.fetch_mine(sess, AUTH, SHIP, DATE8, sched)
+        self.assertEqual(sum("/catalog/" in c for c in sess.calls), 0)
+        self.assertEqual(len(sess.calls), 6)
+        self.assertEqual(mine["orders"][0], {"title": "Beach Day", "category": "pt_shoreX", "guests": 3,
+                                             "date": "2027-03-09", "time": "09:00", "day": 4, "port": "PCC",
+                                             "meet": "08:45", "minutes": 150})
+
+    def test_public_times_no_guessing(self):
+        # Listed twice (two venues): left out, so the catalog is asked.
+        two = [product(productType={"productType": "SHOREX"}, productTitle="Beach Day", productID="X1",
+                       productLocation={"locationTitle": t}, offering=[
+                           {"offeringDate": "20270309", "offeringTime": "0900", "meetingTime": "0845",
+                            "offeringDurationInMinutes": "150"}]) for t in ("A", "B")]
+        self.assertEqual(cs.public_excursion_times(schedule(two)), {})
+        self.assertEqual(cs.public_excursion_times(None), {})
+        sess = FakeSession()
+        mine = cs.fetch_mine(sess, AUTH, SHIP, DATE8, schedule(two))
+        self.assertEqual(sum("/catalog/" in c for c in sess.calls), 1)
+        self.assertEqual(mine["orders"][0]["end"], "11:30")
+
     def test_guarantee_and_no_booking(self):
         REPLIES["/v1/profileBookings/enriched/ACC1"]["payload"]["profileBookings"][1]["stateroomNumber"] = "GTY"
         try:

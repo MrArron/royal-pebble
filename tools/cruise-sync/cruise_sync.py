@@ -608,9 +608,44 @@ def offering_times(sess, auth: dict, code: str, date8: str, booking: dict, summa
     return out
 
 
-def fetch_mine(sess, auth: dict, code: str, date8: str) -> dict:
+def public_excursion_times(schedule) -> dict:
+    """{(lowercase title, date, time): {"meet", "minutes"}} from the public shore
+    excursion sessions in a schedule (build_schedule), for booked orders. A
+    session listed more than once is left out: no guessing."""
+    if not schedule:
+        return {}
+    f = {name: i for i, name in enumerate(schedule.get("fields") or [])}
+    if "info" not in f:
+        return {}
+    cats, infos = schedule.get("cats") or [], schedule.get("infos") or []
+    out, seen = {}, set()
+    for e in schedule.get("events") or []:
+        if not e[f["time"]] or cats[e[f["cat"]]] != EXCURSION_CAT:
+            continue
+        key = (e[f["title"]].lower(), e[f["date"]], e[f["time"]])
+        if key in seen:
+            out.pop(key, None)
+            continue
+        seen.add(key)
+        times = {}
+        info = infos[e[f["info"]]] if e[f["info"]] is not None else None
+        early = info[1] if info else None
+        start = clock_minutes(e[f["time"]].replace(":", ""))
+        if isinstance(early, int) and 0 < early <= start:
+            times["meet"] = f"{(start - early) // 60:02d}:{(start - early) % 60:02d}"
+        if e[f["minutes"]]:
+            times["minutes"] = e[f["minutes"]]
+        out[key] = times
+    return out
+
+
+def fetch_mine(sess, auth: dict, code: str, date8: str, schedule=None) -> dict:
     """Stateroom, cabin details and purchased add-ons for the matching booking
-    (docs/DATA_FORMAT.md, mine). Parts that fail are skipped with a note."""
+    (docs/DATA_FORMAT.md, mine). Parts that fail are skipped with a note.
+    A booked excursion's meeting time and length come from the public listing
+    (`schedule`) when it has them; the logged-in catalog is asked only for what
+    is still missing."""
+    public = public_excursion_times(schedule)
     res = get_json(sess, "GET", f"{API}/v1/profileBookings/enriched/{auth['account-id']}",
                    params={"brand": "R", "includeCheckin": "true"}, headers=auth)
     bookings = (res.get("payload") or {}).get("profileBookings") or []
@@ -667,10 +702,12 @@ def fetch_mine(sess, auth: dict, code: str, date8: str) -> dict:
                     entry["day"] = offering["dayOfCruise"]
                 if offering.get("portCode"):
                     entry["port"] = offering["portCode"]
-                try:
-                    entry.update(offering_times(sess, auth, code, date8, b, summary, offering))
-                except SyncError:
-                    pass
+                entry.update(public.get((entry["title"].lower(), date, time_)) or {})
+                if "meet" not in entry or "minutes" not in entry:
+                    try:
+                        entry.update(offering_times(sess, auth, code, date8, b, summary, offering))
+                    except SyncError:
+                        pass
             mine["orders"].append(entry)
     mine["orders"].sort(key=lambda o: (o.get("date") or "9999", o.get("time") or "", o["title"]))
     return mine
@@ -761,7 +798,7 @@ def main(argv=None) -> int:
         password = os.environ.get("RCCL_PASSWORD") or getpass.getpass("Password (hidden, not saved): ")
         auth = login(sess, email, password)
         password = None
-        mine = fetch_mine(sess, auth, ship["shipCode"], date8)
+        mine = fetch_mine(sess, auth, ship["shipCode"], date8, schedule)
         bundle["mine"] = mine
         timed = sum(1 for o in mine["orders"] if o.get("time"))
         print(f"  Your booking: stateroom {mine.get('stateroom') or 'not assigned yet'}"

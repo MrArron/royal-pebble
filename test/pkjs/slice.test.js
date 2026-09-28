@@ -1648,6 +1648,128 @@ test('booked orders: the reminder is before the meeting time, with no directions
   assert.deepStrictEqual(r.booked, {meetBefore: 15, guests: 2, excursion: true});
 });
 
+// Shore excursions (docs/DESIGN_PHASE4.md §6): a snorkel (meet 30 min early,
+// ages 6+), an all-day cabana and the booked order's own session.
+function excursionBundle() {
+  var b = bookedBundle();
+  b.schedule.cats.push(['Shore excursions', '']);
+  b.schedule.venues.push('');
+  b.schedule.fields = b.schedule.fields.concat(['paid', 'price', 'info']);
+  b.schedule.notes = [];
+  b.schedule.infos = [[[6, null], 30, []]];
+  b.schedule.events = b.schedule.events.map(function(r) { return r.concat([0, null, null]); }).concat([
+    ['Snorkel and Beach Break', 3, 2, '2027-03-08', '09:30', 150, 0, 0, 1, 89, 0],
+    ['Beach Cabana', 3, 2, '2027-03-08', '09:00', 0, 0, 0, 1, 400, 0],
+    ['Behind the Scenes Tour', 3, 2, '2027-03-07', '09:00', 120, 0, 0, 1, 224, 0],
+    ['Island Snorkel', 3, 2, '2027-03-08', '09:00', 150, 0, 0, 1, 70, 0]
+  ]);
+  return b;
+}
+
+function picked(titleTimes) {
+  var st = {};
+  titleTimes.forEach(function(tt) {
+    var k = slice.starKey(tt[0], '2027-03-08', tt[1], '');
+    st[k] = true;
+    st[slice.reservedKey(k)] = true;
+  });
+  return st;
+}
+
+test('shore excursions: only picked ones, at the day port, Ashore and reserved', function() {
+  var b = excursionBundle();
+  var sail = slice.daysFromIso(b.sailDate);
+  function titles(st) {
+    return slice.buildEvents(b, {}, st, 2, sail).map(function(e) { return e.title; });
+  }
+  // Unpicked sessions stay off the watch; the booked order is there.
+  assert.deepStrictEqual(titles({}), ['Island Snorkel', 'Pool Party']);
+  var st = picked([['Snorkel and Beach Break', '09:30'], ['Beach Cabana', '09:00']]);
+  var events = slice.buildEvents(b, {}, st, 2, sail);
+  var e = events.filter(function(x) { return x.title === 'Snorkel and Beach Break'; })[0];
+  assert.strictEqual(e.venue, 'St. Thomas');
+  assert.deepStrictEqual(pack.encodeWhere(e.where), [0, 0, 4, 0]);
+  assert.strictEqual(e.flags, slice.FLAG_STARRED | slice.FLAG_RESERVATION | slice.FLAG_RESERVED);
+  assert.strictEqual(e.early, 30);
+  assert.strictEqual(e.ageMin, 6);
+  assert.strictEqual(e.key, slice.starKey('Snorkel and Beach Break', '2027-03-08', '09:30', ''));
+  // An all-day rental: at its listed time with no length, meeting then too.
+  var cabana = events.filter(function(x) { return x.title === 'Beach Cabana'; })[0];
+  assert.strictEqual(cabana.start, 2 * 1440 + 540);
+  assert.strictEqual(cabana.minutes, 0);
+  assert.strictEqual(cabana.early, 0);
+  // Picked but not marked reserved: the evening before asks to reserve it.
+  var unres = {};
+  unres[slice.starKey('Snorkel and Beach Break', '2027-03-08', '09:30', '')] = true;
+  assert.strictEqual(slice.buildTomorrow(b, {}, unres, 1, sail).toReserve, 1);
+});
+
+test('shore excursions on a sea day: on board, no venue, arrive-by wording', function() {
+  var b = excursionBundle();
+  var sail = slice.daysFromIso(b.sailDate);
+  var k = slice.starKey('Behind the Scenes Tour', '2027-03-07', '09:00', '');
+  var st = {};
+  st[k] = true;
+  var e = slice.buildEvents(b, {}, st, 1, sail)[0];
+  assert.strictEqual(e.title, 'Behind the Scenes Tour');
+  assert.strictEqual(e.venue, '');
+  assert.strictEqual(e.where.ashore, false);
+  assert.strictEqual(e.early, 30);
+  var r = slice.buildAlarms(b, {reminderLead: 15}, st, at('2027-03-07', 6, 0)).filter(function(a) {
+    return a.kind === slice.ALARM_REMINDER && a.title === 'Behind the Scenes Tour';
+  })[0];
+  assert.strictEqual(r.at, 1440 + 495);  // 8:15 = arrive by 8:30 - 15
+  assert.strictEqual(r.where.ashore, false);
+  // Unstarring on the watch finds it with no venue.
+  var ch = slice.applyWatchStarChanges(b, {}, st, {}, [watchChange(e, false)]);
+  assert.deepStrictEqual(ch.applied, [{key: k, on: false, reserved: false}]);
+});
+
+test('shore excursions: one in login data shows once, as the booked order', function() {
+  var b = excursionBundle();
+  var sail = slice.daysFromIso(b.sailDate);
+  var st = picked([['Island Snorkel', '09:00']]);
+  var snorkels = slice.buildEvents(b, {}, st, 2, sail).filter(function(e) { return e.title === 'Island Snorkel'; });
+  assert.strictEqual(snorkels.length, 1);
+  assert.strictEqual(snorkels[0].flags, slice.FLAG_STARRED | slice.FLAG_BOOKED);
+  // Titles match without case or spaces around; another time doesn't.
+  b.mine.orders[0].title = ' island snorkel ';
+  assert.strictEqual(slice.buildEvents(b, {}, st, 2, sail).filter(function(e) {
+    return e.title === 'Island Snorkel' && !e.booked;
+  }).length, 0);
+  b.mine.orders[0].time = '13:00';
+  assert.strictEqual(slice.buildEvents(b, {}, st, 2, sail).filter(function(e) {
+    return e.title === 'Island Snorkel' && !e.booked;
+  }).length, 1);
+});
+
+test('shore excursions: the reminder counts down to the meeting time, with no directions', function() {
+  var b = excursionBundle();
+  var st = picked([['Snorkel and Beach Break', '09:30']]);
+  var r = slice.buildAlarms(b, {reminderLead: 15}, st, at('2027-03-08', 6, 0)).filter(function(a) {
+    return a.kind === slice.ALARM_REMINDER && a.title === 'Snorkel and Beach Break';
+  })[0];
+  assert.strictEqual(r.at, 2 * 1440 + 525);  // 8:45 = meet 9:00 - 15
+  assert.strictEqual(r.ref, 2 * 1440 + 570);
+  assert.strictEqual(r.early, 30);
+  assert.strictEqual(r.venue, 'St. Thomas');
+  assert.strictEqual(r.where.ashore, true);
+  assert.strictEqual(r.from, venues.FROM_NONE);
+  assert.strictEqual(r.booked, undefined);
+});
+
+test('shore excursions: unstarring on the watch finds the session by its port', function() {
+  var b = excursionBundle();
+  var st = picked([['Snorkel and Beach Break', '09:30']]);
+  var e = slice.buildSlice(b, {}, st, at('2027-03-08', 6, 0)).events.filter(function(x) {
+    return x.title === 'Snorkel and Beach Break';
+  })[0];
+  var r = slice.applyWatchStarChanges(b, {}, st, {}, [watchChange(e, false)]);
+  var key = slice.starKey('Snorkel and Beach Break', '2027-03-08', '09:30', '');
+  assert.deepStrictEqual(r.applied, [{key: key, on: false, reserved: false}]);
+  assert.strictEqual(st[key], undefined);
+});
+
 test('booked orders: packed with three trailing bytes (event and alarm)', function() {
   var e = {title: 'Tour', venue: 'Port', start: 600, minutes: 90, flags: slice.FLAG_STARRED | slice.FLAG_BOOKED,
            where: {ashore: true}, booked: {meetBefore: 15, guests: 2, excursion: true}};
