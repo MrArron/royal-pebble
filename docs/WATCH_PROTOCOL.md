@@ -114,7 +114,7 @@ buffers.
 | 13 | STAR_CHANGES | `star_count`, `star_changes` (bytes, below): stars changed on the watch and not yet acked |
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
-| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom and 401 for the route to the closest restroom from where you are; `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
+| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom, 401 for the route to the closest restroom from where you are and 100000 + N for the route to cabin N said by voice; `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
 | 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
 | 19 | VOICE | `voice_seq` (the watch's turn number), `voice_text` (what dictation heard, ≤ 255 bytes) and `voice_state` (bit 0: today's `I'm on board` flag is set; bit 1: the watch shows 24-hour time, so card times match it). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
 
@@ -546,9 +546,10 @@ watch sends ROUTE_REQUEST with the page's `dir_ref` and `route_rest`, and the
 phone answers with ROUTE_PAGE (`directory.routePage`). The watch offers Select
 only when the page has a FROM block (`dir_gps` without flags 2 and 4) and Hold
 Select only on a venue with a restroom line. `dir_ref` 400 (`REF_CABIN`, only from a voice
-card) is the route to your stateroom from where routes start now (§9.4), and
-401 (`REF_REST_HERE`) the route from there to the closest restroom; neither
-has a place page. As with directory pages, nothing is
+card) is the route to your stateroom from where routes start now (§9.4),
+401 (`REF_REST_HERE`) the route from there to the closest restroom, and
+100000 + N (`REF_TO_CABIN`, 1.5.8) the route to cabin N said by voice (the
+number lives only in the ref; `route_rest` 0); none has a place page. As with directory pages, nothing is
 stored; the watch ignores a page that doesn't match its request, and with the
 phone away (not connected, the request fails, or no answer within 8 seconds) it
 says `Connect your phone`, and Select asks again. A request sent before the
@@ -614,10 +615,13 @@ connection), closes an Ask screen that has nothing on it yet.
 
 Select on a route card opens the Route screen in the Ask screen's place (and
 closes a Route screen already open), which asks for its page with
-ROUTE_REQUEST as usual. Hold Select asks again; Back closes. Until the voice
-matcher is in (Phase 5 PR V2/V3), the phone's answer is a stand-in: with demo
-data a few key words show each kind of card (`pebble transcribe "..."` on the
-emulator), with real data `Not yet`.
+ROUTE_REQUEST as usual. Hold Select asks again; Back closes. The phone answers
+the fixed commands first (on board, departure, tomorrow, muster, my cabin,
+nearest restroom), then the voice matcher (`src/pkjs/voice.js`, 1.5.8): its
+route cards use place page refs (the nearest member of a group or elevator
+bank, chosen by the planner from where routes start now), 401 or a place's
+restroom route (`flags` 1), 400, or 100000 + a spoken cabin number. Demo data
+is answered like real data.
 
 ## Usage log
 

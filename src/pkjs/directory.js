@@ -23,6 +23,7 @@ var REF_BANK = 301;    // + index in BANKS
 var REF_CABIN = 400;   // Route screen only: to your stateroom (voice, docs/WATCH_PROTOCOL.md Voice)
 var REF_REST_HERE = 401;  // Route screen only: to the closest restroom from where you are (voice)
 var REF_PLACE = 1000;  // + index in places()
+var REF_TO_CABIN = 100000;  // Route screen only: + a cabin number said by voice (never stored)
 var REF_FLAG = 30000;  // + a place page's ref: Flag a map problem (Map check)
 
 // Row kinds.
@@ -641,6 +642,92 @@ function restHerePage(s, ctx) {
   return page;
 }
 
+// What a Route screen ref goes to: {name, short, to (spots), venue (a place's
+// entry)}, or null. An elevator bank has no restroom route.
+function routeTarget(s, ref, rest) {
+  var ship = s.c.shipCode;
+  if (ref >= REF_BANK && ref < REF_BANK + s.banks.length && !rest) {
+    var b = s.banks[ref - REF_BANK];
+    return {name: b.name, short: b.name, to: b.spots};
+  }
+  if (ref >= REF_PLACE && ref - REF_PLACE < s.list.length) {
+    var v = s.list[ref - REF_PLACE];
+    var finder = venues.venueFinder(ship, (s.c.settings.venues || {})[ship], (s.c.settings.me || {}).deck);
+    return {name: v.name, short: finder.short(v.name) || v.name, to: spotsOf(ship, v, s.cabin), venue: v};
+  }
+  if (ref > REF_TO_CABIN && ref < REF_TO_CABIN * 2 && !rest) {
+    // A cabin said by voice: only in the ref, nothing kept (D11).
+    var name = 'Cabin ' + (ref - REF_TO_CABIN);
+    return {name: name, short: name, to: [shipmap.cabin(ship, ref - REF_TO_CABIN)].filter(Boolean)};
+  }
+  return null;
+}
+
+// Voice (voicecard.js): the nearest of the Route screen refs `refs` (places,
+// elevator banks, spoken cabins) by the planner's route from where routes start
+// now (§9.4), as the closest restroom is chosen. Returns {ref, from (where it
+// starts: `Your cabin` or a venue's short name), name (the target's), at (the full name of the venue
+// it starts at, else ''), header, flags}; flags GPS_NO_CABIN (nowhere to start)
+// or GPS_NO_FROM (no route, or nothing on the map) with no route.
+function nearestRef(refs, ctx) {
+  var s = setup(ctx);
+  var spots = [], owner = [], names = {};
+  refs.forEach(function(ref) {
+    var t = routeTarget(s, ref, false);
+    names[ref] = t ? t.name : '';
+    (t ? t.to : []).forEach(function(p) {
+      spots.push(p);
+      owner.push(ref);
+    });
+  });
+  if (!ctx.bundle || !ctx.bundle.sailDate || !spots.length) {
+    return {ref: refs[0], name: names[refs[0]], from: '', at: '', header: '', flags: GPS_NO_FROM};
+  }
+  var best = bestRoute(spots, s.c, s.cabin);
+  if (best.flags) {
+    return {ref: refs[0], name: names[refs[0]], from: '', at: '', header: '', flags: best.flags};
+  }
+  var i = spots.indexOf(best.route.to);
+  if (i === -1) {
+    // A reduced answer names no spot: the nearest as it measures them.
+    var f = best.from;
+    var score = function(p) { return Math.abs(p.deck - f.deck) * 10 + Math.abs(p.a - f.a); };
+    i = 0;
+    spots.forEach(function(p, k) {
+      if (score(p) < score(spots[i])) {
+        i = k;
+      }
+    });
+  }
+  var finder = venues.bundleFinder(ctx.bundle, s.c.settings);
+  var cabinStart = best.start.kind === 'cabin';
+  var entry = cabinStart || !best.start.venue ? null : finder.entry(best.start.venue);
+  return {ref: owner[i], name: names[owner[i]], flags: 0, header: best.header,
+          from: cabinStart ? 'Your cabin' : finder.short(best.start.venue) || best.start.venue || '',
+          at: entry ? entry.name : ''};
+}
+
+// The Route screen ref for a directory place or elevator bank named `name`, or -1.
+function refOf(name, ctx) {
+  var s = setup(ctx);
+  for (var i = 0; i < s.list.length; i++) {
+    if (s.list[i].name === name) {
+      return REF_PLACE + i;
+    }
+  }
+  for (var k = 0; k < s.banks.length; k++) {
+    if (s.banks[k].name === name) {
+      return s.banks[k].ref;
+    }
+  }
+  return -1;
+}
+
+// The Route screen refs of the elevator banks.
+function bankRefs(ctx) {
+  return setup(ctx).banks.map(function(b) { return b.ref; });
+}
+
 function routePage(ref, rest, ctx) {
   var s = setup(ctx);
   if (ref === REF_CABIN) {
@@ -651,15 +738,8 @@ function routePage(ref, rest, ctx) {
   }
   var ship = s.c.shipCode;
   var opts = {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)};
-  var target = null;
-  if (ref >= REF_BANK && ref < REF_BANK + s.banks.length && !rest) {
-    var b = s.banks[ref - REF_BANK];
-    target = {name: b.name, short: b.name, to: b.spots};
-  } else if (ref >= REF_PLACE && ref - REF_PLACE < s.list.length) {
-    var v = s.list[ref - REF_PLACE];
-    var finder = venues.venueFinder(ship, (s.c.settings.venues || {})[ship], (s.c.settings.me || {}).deck);
-    target = {name: v.name, short: finder.short(v.name) || v.name, to: spotsOf(ship, v, s.cabin)};
-  }
+  var target = routeTarget(s, ref, rest);
+  var v = target && target.venue;
   var page;
   var problem = null;
   if (!ctx.bundle || !target || !target.to.length) {
@@ -958,6 +1038,7 @@ function encodeBank(b) {
 module.exports = {
   REF_DECKS: REF_DECKS, REF_AREAS: REF_AREAS, REF_DECK: REF_DECK, REF_AREA: REF_AREA, REF_PLACE: REF_PLACE,
   REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK, REF_FLAG: REF_FLAG, REF_CABIN: REF_CABIN, REF_REST_HERE: REF_REST_HERE,
+  REF_TO_CABIN: REF_TO_CABIN, stateroomOf: stateroom, nearestRef: nearestRef, refOf: refOf, bankRefs: bankRefs,
   ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE, ROW_MUTED: ROW_MUTED,
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
   GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,

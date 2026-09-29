@@ -72,6 +72,7 @@ var s_ack = null;        // star ack to send: {seq, resend}
 var s_dirRef = null;     // ship directory page the watch asked for
 var s_route = null;      // route the watch asked for: {ref, rest} or {start, venue}
 var s_voice = null;      // voice turn to answer: {seq, text, state}
+var s_voiceRoute = null; // the last voice card's route, until Select opens it: {seq, ref, rest}
 
 function load(key, fallback) {
   try {
@@ -384,8 +385,10 @@ function sendVoiceCard() {
             function(ok, info) {
     s_sending = false;
     // Spoken cabin numbers may appear here (owner, 2026-09-26); the log never goes into the repo.
-    usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' +
-              ['nothing to do', 'route', 'confirm', card.onboard ? 'set on board' : 'back ashore'][card.action] + (card.ref ? ' ' + card.ref : '') +
+    s_voiceRoute = ok && card.action === voicecard.ACT_ROUTE ? {seq: turn.seq, ref: card.ref | 0, rest: !!card.rest} : null;
+    usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' + card.log + ': ' +
+              ['nothing to do', 'route', 'confirm', card.onboard ? 'set on board' : 'back ashore'][card.action] +
+              (card.ref ? ' ' + card.ref + (card.rest ? ' restroom' : '') : '') +
               ' (' + card.rows.slice(1).map(function(r) { return (r.label ? r.label + ' ' : '') + r.value; }).join(', ') + '), ' +
               sendText(ok, info));
     sendNext();
@@ -949,6 +952,12 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
     case MSG_ROUTE_REQUEST:
       s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || '')}
                                             : {ref: p.dir_ref | 0, rest: !!p.route_rest};
+      if (s_voiceRoute && p.route_start === undefined && s_voiceRoute.ref === (p.dir_ref | 0) &&
+          s_voiceRoute.rest === !!p.route_rest) {
+        // What the user did with a voice card (VOICE_FINAL_PLAN §10.1).
+        usage.add('voice', 'turn ' + s_voiceRoute.seq + ' Select: route opened');
+        s_voiceRoute = null;
+      }
       if (!s_sending) {
         sendNext();
       }
@@ -957,6 +966,10 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
       if (p.voice_text === undefined) {
         usage.add('voice', 'turn ' + (p.voice_seq | 0) + ' confirmed on the watch');
         break;
+      }
+      if (s_voiceRoute) {
+        usage.add('voice', 'turn ' + s_voiceRoute.seq + ' route not opened (asked again or Back)');
+        s_voiceRoute = null;
       }
       s_voice = {seq: p.voice_seq | 0, text: String(p.voice_text), state: p.voice_state | 0};
       if (!s_sending) {

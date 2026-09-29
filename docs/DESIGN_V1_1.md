@@ -962,6 +962,26 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
     counts as `I'm ashore` (the watch heard it that way, 2026-09-28).
   - `Forget where I am` (owner, 2026-09-28) comes with the spoken start in V3:
     until then there's no spoken location to forget.
+  - **Place names (1.5.8, Phase 5 V3 part 1):** everything the fixed commands
+    above don't answer goes to the voice matcher (`src/pkjs/voice.js`), and
+    `voicecard.js` turns its result into a card with the decided defaults
+    (VOICE_FINAL_PLAN D1-D22): `HEARD`, `FROM` (where routes start now) and
+    `TO`, Select opens the Route screen. A group or elevator bank routes to the
+    nearest member, named with `(nearest)`; `dining room` is yours from the Me
+    tab (`(yours)`); `CLOSEST BAR` / `CLOSEST COFFEE` the nearest flagged
+    place; a snack is Cafe Promenade (`Open 24 hours`); `Take me back` your
+    cabin; a spoken cabin is checked against the plans (`No cabin N on
+    Harmony`, `Say all 4 or 5 digits`) and kept only in the route's ref;
+    `Restroom near the theater` is that place's restroom route. Answers with
+    nothing to do: `CocoCay is ashore`, `Not on the map yet`, `You're already
+    there`, `Stairs are in many spots` / `A deck is not one spot` (`Say a
+    place on Deck N` with a `TRY` place there), refused locations, `Which
+    place?`, `No place matched`, `Not something I know`, `NOT YET` for
+    schedule and opening-time questions, each with a `TRY` example. **Not
+    yet:** a spoken start (`I'm at X`, `from X to Y`) is not used; those cards
+    say `YOU'RE AT ... Not yet`, or route from where routes start now with
+    `Starts where you are now`. That, `Forget where I am` and `closest restroom
+    on deck 5` (D10) come in V3 part 2.
 - **Hold Select on Home always asks by voice** (owner, 2026-09-28), also on
   embark and port days, where `I'm on board` is said. With the phone away,
   Hold Select opens the `On board?` screen while it's offered.
