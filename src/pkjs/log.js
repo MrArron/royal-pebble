@@ -17,7 +17,7 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '1.5.5';
+var APP_VERSION = '1.5.6';
 
 var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
@@ -479,7 +479,16 @@ function screenText(screen, detail, sailIso) {
     case 1: return name + ' (' + (HOME_CARDS[detail] || 'card ' + detail) + ')';
     case 2: return name + (detail ? ' (tomorrow)' : ' (today)');
     case 4: case 9: case 13: return name + ' (' + cruiseText(detail, sailIso) + ')';
-    case 6: case 7: case 8: return name + ' page ' + detail;
+    case 7:
+      // The Route screen's two voice-only refs (directory.js REF_CABIN, REF_REST_HERE).
+      if (detail === 400) {
+        return 'Route to my cabin';
+      }
+      if (detail === 401) {
+        return 'Route to nearest bathroom';
+      }
+      return name + ' page ' + detail;
+    case 6: case 8: return name + ' page ' + detail;
     case 10: return name + ' (at ' + cruiseText(detail, sailIso) + ')';
     case 11: return name + ' (' + detail + ')';
     case 12: return name + (detail ? ' (confirmed)' : '');

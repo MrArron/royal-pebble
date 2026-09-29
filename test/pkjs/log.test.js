@@ -390,6 +390,15 @@ test('watch entries decode and render', function() {
                      'Route to next event (cruise minute 900): 1 s');
 });
 
+test('voice routes are named in the log, not by place page number', function() {
+  var line = function(ref) {
+    return log.watchEntry({at: 0, code: 3, x: 7, a: 0, b: 2, c: ref}, null).detail;
+  };
+  assert.strictEqual(line(400), 'Route to my cabin: 2 s');
+  assert.strictEqual(line(401), 'Route to nearest bathroom: 2 s');
+  assert.strictEqual(line(12), 'Route to place page 12: 2 s');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {
