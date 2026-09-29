@@ -1,0 +1,1242 @@
+{
+ "name": "Royal Pebble voice command grammar",
+ "version": "0.1 (draft, 2026-09-28)",
+ "ship": "HM",
+ "status": "Design reference for v1.1 Phase 5 (docs/DESIGN_V1_1.md 9.6). Runtime: src/pkjs/voice.js (grammar) + src/pkjs/data/voice-HM.js (generated venue lexicon).",
+ "pipeline_summary": "raw transcript -> normalise (sentences -> clauses) -> parse each clause into an intent with slot SPANS -> resolve spans (venue matcher, cabin table) -> merge clauses -> one result -> confirm screen (HEARD + FROM/TO or YOU'RE AT).",
+ "output_schema": {
+  "intent": "SET_LOCATION | ROUTE | ROUTE_COMBINED | CLOSEST_RESTROOM | LOCATION_REFUSED | OUT_OF_SCOPE_KNOWN | INCOMPLETE | NO_MATCH",
+  "A": "start: venue span text, or a special token, or null (= current route start, 9.4)",
+  "B": "destination: venue span text, or a special token, or null",
+  "cabin": "the cabin number heard, digits only, or null (routing only, never stored beyond the current start)",
+  "A_target": "canonical venue name from venues.js (or directory place) after matching",
+  "B_target": "same for B",
+  "reason": "LOCATION_REFUSED: restroom | elevator | stairs | deck | multi_spot; NO_MATCH: no_command | no_place | empty",
+  "topic": "OUT_OF_SCOPE_KNOWN: schedule | hours | stateroom",
+  "deck": "a deck hint heard with a venue (\"main dining room on deck 5\"), or the deck of @deck:N"
+ },
+ "special_tokens": {
+  "@mycabin": "the stateroom set on the phone (Me tab). \"my cabin\", \"my room\", \"our stateroom\", \"home\"...",
+  "@cabin:NNNN": "a spoken cabin number (4 digits on decks 3-9 and 17, 5 digits on decks 10-14 for HM)",
+  "@here": "here / this place / where I am = the current route start; resolved to A = null",
+  "@there": "there (no referent) -> INCOMPLETE",
+  "@restroom": "any restroom synonym (26 restrooms, not a directory place)",
+  "@elevator": "elevator / lift without fore/aft",
+  "@forelev / @aftelev": "the named banks, directory places \"Fore elevators\" / \"Aft elevators\"",
+  "@stairs": "stairs / stairway / staircase / stairwell",
+  "@deck:N": "deck N (not a place; can qualify a venue or a cabin)"
+ },
+ "intents": {
+  "SET_LOCATION": {
+   "what": "Sets the spoken route start for 1.5 h (9.4). Only one-spot places: landmark venues, a cabin number, or my cabin (resets to the cabin).",
+   "slots": {
+    "A": "venue span | @cabin:N | @mycabin"
+   },
+   "patterns": [
+    "{I_AM} {ADVERB}* {PREP} {A}",
+    "{I_AM} in {CABIN_WORD} {CABIN}",
+    "{I_AM} in {CABIN}   (bare 4-5 digit number that is a real cabin)",
+    "{I_AM} home | {I_AM} back in {MY_CABIN}",
+    "at {A} | near {A} | in {CABIN_WORD} {CABIN}   (\"I'm\" dropped by ASR)",
+    "my location is {A} | set (my) location (to) {A} | start (from|at) {A} | routes start (at|from) {A}"
+   ],
+   "tokens": {
+    "I_AM": [
+     "i'm",
+     "im",
+     "i am",
+     "we're",
+     "we are",
+     "were (sentence start)",
+     "am (sentence start)",
+     "aim (ASR)",
+     "i'm add (ASR, = I'm at)"
+    ],
+    "ADVERB": [
+     "currently",
+     "now",
+     "right",
+     "just",
+     "still",
+     "standing",
+     "sitting",
+     "hanging out",
+     "waiting",
+     "over",
+     "up",
+     "down",
+     "back",
+     "here"
+    ],
+    "PREP": [
+     "at",
+     "in",
+     "on",
+     "near",
+     "by",
+     "next to",
+     "outside",
+     "outside of",
+     "inside",
+     "beside",
+     "close to",
+     "in front of",
+     "behind",
+     "across from",
+     "around"
+    ]
+   },
+   "top_phrasings": [
+    "I'm at the Solarium",
+    "I'm in cabin 8924",
+    "We're on the Boardwalk",
+    "I'm near Central Park",
+    "I'm back in the room"
+   ],
+   "guards": [
+    "\"I'm going/heading/walking to X\", \"I'm looking for X\", \"I'm on my way to X\", \"I'm trying to get to X\" are ROUTE, not SET_LOCATION: the location pattern needs a PREP right after I_AM (plus optional ADVERB).",
+    "A location span that contains \" to \" (\"I'm at the escape room to the Aqua Theater\") becomes ROUTE_COMBINED.",
+    "A location span that is @restroom, @elevator, @forelev/@aftelev, @stairs or @deck:N is LOCATION_REFUSED.",
+    "\"My cabin is 8924\" / \"set my cabin to 8924\" is not a location: OUT_OF_SCOPE_KNOWN topic stateroom (set it on the phone)."
+   ]
+  },
+  "ROUTE": {
+   "what": "Route from A (or the current start) to B. Opens the confirm screen, then the Route screen (9.2).",
+   "slots": {
+    "A": "optional: venue | @mycabin | @cabin:N | @here",
+    "B": "venue | @mycabin | @cabin:N | @forelev | @aftelev | @elevator | @stairs | @deck:N"
+   },
+   "patterns": [
+    "{TRIGGER} from {A} to {B}",
+    "{TRIGGER} to {B} from {A}           (reversed)",
+    "{TRIGGER} {B} from {A}",
+    "{TRIGGER} (to) {B}",
+    "{TRIGGER} {A} to {B}                (\"from\" dropped)",
+    "{TRIGGER} for|front|form {A} to {B} (\"from\" misheard)",
+    "from {A} to {B}",
+    "{A} to {B}                          (bare, observed: \"Boardwalk to the Solarium\")",
+    "{B} from {A}                        (bare, dropped words: \"Windjammer from my room\")",
+    "to {B}",
+    "{A} {B}                             (\"to\" dropped: only when the span splits into two known venues)",
+    "{B}                                  (bare single place; OWNER DECISION D2)",
+    "where is|where's|where are {B}     (OWNER DECISION D1: recommended = ROUTE)",
+    "how far is {B} (from {A})",
+    "what deck is {B} on"
+   ],
+   "trigger_families": {
+    "question_how": [
+     "how do I get to",
+     "how do we get to",
+     "how can I get to",
+     "how should I get to",
+     "how would I get to",
+     "how do I go to",
+     "how do I walk to",
+     "how do I find",
+     "how do I get back to",
+     "how to get to",
+     "how get to (ASR drop)",
+     "how'd I get to"
+    ],
+    "question_where": [
+     "where is",
+     "where's",
+     "where are",
+     "where can I find",
+     "where do I find"
+    ],
+    "question_which": [
+     "which way to",
+     "which way is",
+     "what's the best way to",
+     "what's the quickest way to",
+     "best way to",
+     "quickest way to",
+     "shortest way to",
+     "what's the route to"
+    ],
+    "question_distance": [
+     "how far is",
+     "how far to",
+     "how far away is",
+     "how many steps to",
+     "how long to walk to",
+     "how long does it take to get to",
+     "what deck is ... on",
+     "which deck is ... on"
+    ],
+    "imperative": [
+     "take me to",
+     "get me to",
+     "bring me to",
+     "lead me to",
+     "walk me to",
+     "guide me to",
+     "point me to",
+     "route me to",
+     "route to",
+     "navigate to",
+     "navigate me to",
+     "directions to",
+     "direction to",
+     "give me directions to",
+     "show me the way to",
+     "show me how to get to",
+     "go to",
+     "get to",
+     "head to",
+     "find",
+     "locate"
+    ],
+    "intention": [
+     "I want to go to",
+     "I need to get to",
+     "I'd like to go to",
+     "I wanna go to",
+     "I gotta get to",
+     "I'm going to",
+     "I'm heading to",
+     "I'm headed to",
+     "I'm looking for",
+     "I'm trying to get to",
+     "I'm on my way to",
+     "let's go to",
+     "on my way to",
+     "heading to"
+    ],
+    "back_home": [
+     "take me home",
+     "get me home",
+     "go home",
+     "how do I get home",
+     "how do I get back to my room",
+     "how do I get back (bare: OWNER DECISION D6)"
+    ]
+   },
+   "after_trigger_prepositions": [
+    "to",
+    "towards",
+    "toward",
+    "into",
+    "over to",
+    "up to",
+    "down to",
+    "back to",
+    "for (only when no later \"to\"; \"directions for the spa\")"
+   ],
+   "from_markers": [
+    "from",
+    "starting from",
+    "starting at",
+    "coming from",
+    "leaving from",
+    "leaving"
+   ],
+   "top_phrasings": [
+    "How do I get to the Windjammer?",
+    "Boardwalk to the Solarium",
+    "How do I get from the Solarium to my cabin?",
+    "Take me to Studio B",
+    "Where's the Aqua Theater?",
+    "Windjammer from my room"
+   ],
+   "guards": [
+    "B = @restroom turns the route into CLOSEST_RESTROOM (from A).",
+    "A = @restroom/@elevator/@forelev/@aftelev/@stairs/@deck:N is LOCATION_REFUSED (only one-spot places can be a start).",
+    "B = @there, or nothing after the trigger, is INCOMPLETE.",
+    "An unresolved B whose words look like an event (\"show\", \"trivia\", \"party\"...) is OUT_OF_SCOPE_KNOWN schedule (\"where is <event>\").",
+    "\"head to X\" is the verb (ROUTE); \"the head\" / \"nearest head\" is a restroom."
+   ]
+  },
+  "ROUTE_COMBINED": {
+   "what": "A location statement and a route question in one utterance: A = the stated location, B = the destination. Observed in the real test (\"I'm at the escape room. How do I get to the Aqua Theater?\").",
+   "slots": {
+    "A": "from the SET_LOCATION clause",
+    "B": "from the ROUTE clause"
+   },
+   "patterns": [
+    "{SET_LOCATION}. {ROUTE with no A}",
+    "{ROUTE with no A}. {SET_LOCATION}",
+    "{SET_LOCATION} (and|so) {ROUTE with no A}   (one sentence, no punctuation: the clause splitter cuts before the route trigger)",
+    "{I_AM} {PREP} {A} to {B}",
+    "{I_AM} {PREP} {A}, {B}?   -> not combined (bare B after a location is too loose); see slot_rules"
+   ],
+   "top_phrasings": [
+    "I'm at the escape room. How do I get to the Aqua Theater?",
+    "I'm in cabin 8924, how do I get to the Solarium?",
+    "We're at Central Park and want to go to the Boardwalk"
+   ],
+   "guards": [
+    "If the ROUTE clause already has its own A, it wins and the location clause is ignored (confirm screen shows FROM).",
+    "Whether a combined utterance ALSO sets the spoken start (9.4) is OWNER DECISION D4 (recommended: yes)."
+   ]
+  },
+  "CLOSEST_RESTROOM": {
+   "what": "Route to the closest restroom from A (or from the current start). Same page as Hold Select on a place page (9.2).",
+   "slots": {
+    "A": "optional: venue | @mycabin | @cabin:N | @here"
+   },
+   "patterns": [
+    "(closest|nearest)? {RESTROOM}",
+    "(where is|where's|how do I get to|take me to|I need) (the)? (closest|nearest)? {RESTROOM}",
+    "{RESTROOM} (from|near|by|to|next to|close to|around|at) {A}",
+    "closest {RESTROOM} to {A}",
+    "how do I get from {A} to (the)? {RESTROOM}",
+    "{A} to (the)? {RESTROOM}",
+    "(closest|nearest) {RESTROOM} to me   (me = @here)"
+   ],
+   "tokens": {
+    "RESTROOM": [
+     "restroom",
+     "restrooms",
+     "rest room",
+     "bathroom",
+     "bathrooms",
+     "bath room",
+     "toilet",
+     "toilets",
+     "loo",
+     "washroom",
+     "wash room",
+     "lavatory",
+     "lavatories",
+     "men's room",
+     "mens room",
+     "men's restroom",
+     "ladies room",
+     "ladies' room",
+     "lady's room",
+     "women's room",
+     "womens room",
+     "the head / nearest head / closest head (not \"head to\")",
+     "wc",
+     "powder room",
+     "potty",
+     "the gents",
+     "the ladies",
+     "facilities (OWNER DECISION D9)"
+    ]
+   },
+   "top_phrasings": [
+    "Closest restroom",
+    "Where's the bathroom?",
+    "Nearest restroom to the Solarium",
+    "Closest bathroom from my cabin",
+    "Restroom near Studio B"
+   ],
+   "guards": [
+    "\"from the restroom to X\" and \"I'm at the restroom\" are LOCATION_REFUSED (\"There are 26 restrooms\")."
+   ]
+  },
+  "LOCATION_REFUSED": {
+   "what": "A many-spot place was given as a location or route start. Design rule 9.6: \"Only one-spot places can be a location\".",
+   "triggers": [
+    "SET_LOCATION with A in {@restroom, @elevator, @forelev, @aftelev, @stairs, @deck:N}",
+    "ROUTE / CLOSEST_RESTROOM with A in that set",
+    "SET_LOCATION to a matched venue that has several separate spots (Running Track) -> reason multi_spot (matcher side; OWNER DECISION D8)"
+   ],
+   "top_phrasings": [
+    "I'm at the restroom",
+    "I'm by the elevators",
+    "I'm on deck 5",
+    "From the bathroom to the Solarium"
+   ]
+  },
+  "OUT_OF_SCOPE_KNOWN": {
+   "what": "Recognised but not in Phase 5: answer \"not yet\" instead of NO_MATCH, so the guest learns it is planned.",
+   "topics": {
+    "schedule": [
+     "what's next",
+     "what's on (tonight|now|today)",
+     "what's happening",
+     "what time is <event>",
+     "when is <event>",
+     "when does <event> start",
+     "where is <event> (unresolved span with event words)",
+     "how do I get to <event>",
+     "what shows are on",
+     "is there trivia tonight",
+     "all aboard time",
+     "what should we do"
+    ],
+    "hours": [
+     "when does <venue> open/close",
+     "is <venue> open",
+     "what time does <venue> open",
+     "<venue> hours"
+    ],
+    "stateroom": [
+     "my cabin is <number>",
+     "set my cabin to <number>",
+     "change my stateroom"
+    ]
+   },
+   "event_words": "see tables.event_words (only used when the span does not match a venue first)"
+  },
+  "INCOMPLETE": {
+   "what": "A command was recognised but its place is missing: \"How do I get to\", \"Take me\", \"I'm at\", \"How do I get from the Solarium\", \"How do I get there\".",
+   "response": "responses.INCOMPLETE"
+  },
+  "NO_MATCH": {
+   "what": "Nothing recognised (no_command), a place that matched nothing (no_place), or an empty transcript (empty). Always show HEARD and a TRY example."
+  },
+  "CLOSEST_BAR": {
+   "what": "Voice only (owner, 2026-09-28): the nearest bar, chosen by the route planner from the bars flagged B in the lexicon, the same way as the nearest restroom. From the current start, or from a place said in the same breath.",
+   "slots": {
+    "A": "optional venue span (from)"
+   },
+   "patterns": [
+    "where is the bar | where's the bar",
+    "(closest|nearest) bar",
+    "(closest|nearest) place (to|for) (get|grab|have) a drink",
+    "where can (I|we) (get|grab|find) a drink | drinks | a beer | a cocktail",
+    "I need a drink | I could use a beer | let's get a drink",
+    "bar near me",
+    "take me to (the closest|a) bar",
+    "{I_AM} at {A}. where can I get a drink?  (from A)"
+   ],
+   "notes": "A named bar (Schooner Bar, Sand Bar) and \"the pub\" (Boot & Bonnet Pub, the only pub) stay ROUTE to that venue. \"Wine bar\" has two candidates and is left to the venue matcher. \"I'm at the bar\" is refused (many bars). Candidates exclude Casino Royale (the Casino filter exists for guests who avoid it), Crown Lounge and Suite Lounge (restricted), and coffee places. Opening hours aren't known offline, so the route screen can't say whether the bar is open."
+  },
+  "CLOSEST_COFFEE": {
+   "what": "Voice only (owner, 2026-09-28): the nearest coffee place (flag C: Starbucks, Cafe Promenade, Park Cafe), found by the route planner like the nearest restroom. From the current start, or a place said in the same breath.",
+   "slots": {
+    "A": "optional venue span (from)"
+   },
+   "patterns": [
+    "(closest|nearest) coffee | coffee shop",
+    "where can (I|we) (get|grab) a coffee | a latte | an espresso",
+    "I need coffee | I could use a cup of coffee",
+    "where can I get a latte from {A}"
+   ],
+   "notes": "\"Starbucks\" said by name stays ROUTE to Starbucks. \"I'm at the coffee shop\" is refused (several places)."
+  },
+  "SNACK": {
+   "what": "Voice only (owner, 2026-09-28): a snack or a bite outside dining hours goes to Cafe Promenade, open 24 hours. Output is ROUTE (or ROUTE_COMBINED) with B_target Cafe Promenade and via: \"snack\", so the confirm screen can say it's open 24 hours.",
+   "slots": {
+    "A": "optional venue span (from)"
+   },
+   "patterns": [
+    "where can I get a snack | something to eat | a bite to eat",
+    "I'm hungry | midnight snack | late night food",
+    "where can I eat",
+    "{I_AM} at {A}. I'm hungry  (from A)"
+   ],
+   "notes": "Named food places stay themselves (\"pizza\" = Sorrento's, \"Cafe Promenade\" without via). Dining-room requests go to the Me tab's Main dining room (1.4.8)."
+  }
+ },
+ "variant_families": [
+  {
+   "family": "question_how",
+   "examples": [
+    "How do I get to the Solarium?",
+    "How can we get to Studio B?",
+    "How to get to the Boardwalk",
+    "How do I find the escape room?"
+   ]
+  },
+  {
+   "family": "question_where",
+   "examples": [
+    "Where's the Aqua Theater?",
+    "Where is Johnny Rockets?",
+    "Where can I find the casino?"
+   ]
+  },
+  {
+   "family": "question_which_way",
+   "examples": [
+    "Which way to the pool?",
+    "What's the quickest way to the Windjammer?"
+   ]
+  },
+  {
+   "family": "question_distance",
+   "examples": [
+    "How far is the Solarium?",
+    "How many steps to the FlowRider?",
+    "What deck is Izumi on?"
+   ]
+  },
+  {
+   "family": "imperative",
+   "examples": [
+    "Take me to Central Park",
+    "Directions to the spa",
+    "Navigate to the Royal Theater",
+    "Get me to the Windjammer",
+    "Go to the Boardwalk"
+   ]
+  },
+  {
+   "family": "intention",
+   "examples": [
+    "I want to go to the casino",
+    "I need to get to the Royal Theater",
+    "I'm heading to the pool",
+    "I'm looking for Studio B"
+   ]
+  },
+  {
+   "family": "bare_a_to_b",
+   "examples": [
+    "Boardwalk to the Solarium",
+    "From the casino to my cabin",
+    "Solarium to the Windjammer"
+   ]
+  },
+  {
+   "family": "reversed_b_from_a",
+   "examples": [
+    "To the Windjammer from the Solarium",
+    "Windjammer from my room",
+    "Take me to the pool from cabin 8924"
+   ]
+  },
+  {
+   "family": "dropped_words",
+   "examples": [
+    "Windjammer from my room",
+    "How get to Studio B",
+    "Boardwalk the Solarium (to dropped)",
+    "At the Solarium (I'm dropped)"
+   ]
+  },
+  {
+   "family": "bare_place",
+   "examples": [
+    "Solarium?",
+    "The Windjammer."
+   ]
+  },
+  {
+   "family": "politeness_filler",
+   "examples": [
+    "Um, hey Pebble, can you tell me how to get to the Solarium, please?",
+    "Okay so how do I get to the casino",
+    "Excuse me, where's the bathroom?"
+   ]
+  },
+  {
+   "family": "my_cabin_synonyms",
+   "examples": [
+    "my cabin",
+    "our cabin",
+    "my room",
+    "our room",
+    "the room",
+    "my stateroom",
+    "the stateroom",
+    "our suite",
+    "home",
+    "cabin (bare)"
+   ]
+  },
+  {
+   "family": "numbered_cabin",
+   "examples": [
+    "cabin 8924",
+    "room 8924",
+    "stateroom 10930",
+    "cabin eight nine two four",
+    "cabin eighty-nine twenty-four",
+    "cabin one oh nine three oh",
+    "deck 8 cabin 924",
+    "cabin 924 on deck 8"
+   ]
+  },
+  {
+   "family": "restroom_synonyms",
+   "examples": [
+    "restroom",
+    "bathroom",
+    "toilet",
+    "loo",
+    "washroom",
+    "men's room",
+    "ladies room",
+    "the head",
+    "rest room"
+   ]
+  },
+  {
+   "family": "nearest_closest",
+   "examples": [
+    "nearest restroom",
+    "closest bathroom",
+    "where's the closest restroom",
+    "closest elevator",
+    "nearest stairs"
+   ]
+  },
+  {
+   "family": "location_statement",
+   "examples": [
+    "I'm at the Solarium",
+    "I'm in cabin 8924",
+    "We're on the Boardwalk",
+    "I'm near Central Park",
+    "I'm sitting at the Schooner Bar",
+    "I'm back in the room"
+   ]
+  },
+  {
+   "family": "combined",
+   "examples": [
+    "I'm at the escape room. How do I get to the Aqua Theater?",
+    "I'm in cabin 8924, where's the closest restroom?"
+   ]
+  },
+  {
+   "family": "correction",
+   "examples": [
+    "How do I get to the Solarium, no, the Windjammer",
+    "Take me to Studio B. Sorry, the Royal Theater.",
+    "I'm at the Solarium, I mean the Boardwalk"
+   ]
+  },
+  {
+   "family": "stutter_repeat",
+   "examples": [
+    "How do I get to the how do I get to the Solarium",
+    "Take me take me to the casino"
+   ]
+  },
+  {
+   "family": "schedule_not_yet",
+   "examples": [
+    "What's next?",
+    "When is the ice show?",
+    "Where is trivia?",
+    "What time does the Windjammer open?"
+   ]
+  }
+ ],
+ "asr_artifacts": [
+  {
+   "heard": [
+    "two",
+    "too",
+    "2",
+    "tu"
+   ],
+   "meant": "to",
+   "where": "between two place spans or after a route trigger",
+   "rule": "A lone \"two/too/2\" with words on both sides becomes \"to\", unless the word before is deck/room/level/floor/cabin/stateroom/number (then it is the digit). Inside a digit run, choose by cabin validity (see numbers).",
+   "risk": "HIGH: \"cabin 8924 two the Solarium\" vs \"cabin 89242\". Resolved by trying both and keeping the reading where every number is a real cabin."
+  },
+  {
+   "heard": [
+    "for",
+    "front",
+    "form",
+    "fro"
+   ],
+   "meant": "from",
+   "where": "route clause of shape \"<X> <A> to <B>\"",
+   "rule": "Only when a later \" to \" exists in the same clause (\"for the Solarium to the Windjammer\"). Otherwise \"for\" means \"to\" (\"directions for the spa\").",
+   "risk": "MEDIUM: \"in front of\" is a location preposition, handled before this rule."
+  },
+  {
+   "heard": [
+    "im at",
+    "i am at",
+    "i'm add",
+    "im add",
+    "aim at",
+    "am at (start)",
+    "were at (start)",
+    "we are at"
+   ],
+   "meant": "I'm at",
+   "rule": "Canonicalise to the token \"iam\" before intent matching.",
+   "risk": "LOW. \"were\" only at sentence start."
+  },
+  {
+   "heard": [
+    "cab in",
+    "cabbin",
+    "cabinet",
+    "cabins",
+    "kevin (only before a number)",
+    "state room",
+    "suite (before a number)"
+   ],
+   "meant": "cabin",
+   "rule": "Cabin words followed by 3-5 digits become @cabin:N. Bare \"cabin\" without a number is @mycabin.",
+   "risk": "MEDIUM: \"Kevin\" is also a name; only mapped before digits."
+  },
+  {
+   "heard": [
+    "rest room",
+    "rest rooms",
+    "bath room",
+    "wash room"
+   ],
+   "meant": "restroom",
+   "rule": "Restroom synonyms are replaced BEFORE cabin synonyms so \"rest room\" is never read as \"the room\" (= my cabin).",
+   "risk": "HIGH if the order is wrong."
+  },
+  {
+   "heard": [
+    "8924",
+    "8,924",
+    "89 24",
+    "8 9 2 4",
+    "8-9-2-4",
+    "#8924",
+    "eight nine two four",
+    "eighty-nine twenty-four",
+    "eighty nine twenty four",
+    "eight nine twenty four",
+    "eight thousand nine hundred twenty four",
+    "892 four"
+   ],
+   "meant": "cabin 8924",
+   "rule": "Number words -> digit groups, groups concatenated (spoken grouping is how people say room numbers), thousands separators and hyphens between digits removed."
+  },
+  {
+   "heard": [
+    "one oh nine three oh",
+    "ten nine thirty",
+    "ten thousand nine hundred thirty",
+    "10 9 30",
+    "one zero nine three zero"
+   ],
+   "meant": "cabin 10930 (deck 10: five digits)",
+   "rule": "\"oh\"/\"o\" is 0 only next to another number word; otherwise it is filler."
+  },
+  {
+   "heard": [
+    "seventeen ninety-two",
+    "17 92"
+   ],
+   "meant": "cabin 1792 (deck 17 suites are 4 digits starting 17)",
+   "rule": "Concatenate; validity decides."
+  },
+  {
+   "heard": [
+    "cabin eight nine two",
+    "cabin 892"
+   ],
+   "meant": "partial cabin",
+   "rule": "Keep it as @cabin:892; the resolver answers \"Say all 4 or 5 digits\"."
+  },
+  {
+   "heard": [
+    "deck eight cabin nine twenty four",
+    "cabin 924 on deck 8",
+    "deck 8 room 924"
+   ],
+   "meant": "cabin 8924",
+   "rule": "deck N + cabin word + 3 digits (or 3 digits + on deck N) = N followed by the 3 digits, when that is a real cabin."
+  },
+  {
+   "heard": [
+    "eight nine to four",
+    "eight nine too four"
+   ],
+   "meant": "8924",
+   "rule": "\"to/too/for\" between number words may be a digit (2/4). Keep the reading that gives a real cabin."
+  },
+  {
+   "heard": [
+    "8924 to 6902",
+    "eight nine two four to six nine oh two"
+   ],
+   "meant": "cabin 8924 to cabin 6902",
+   "rule": "Joined reading 892426902 is not a cabin; split at \"to\"."
+  },
+  {
+   "heard": [
+    "windjam",
+    "wind jammer",
+    "wind jam"
+   ],
+   "meant": "Windjammer",
+   "rule": "Venue form: lives in tools/voice/venue-mishearings-HM.json (one source of truth). Venue matcher: compare with spaces removed; accept a unique prefix of 5+ letters; small edit distance on 7+ letters.",
+   "observed": true
+  },
+  {
+   "heard": [
+    "aqua theater",
+    "aqua theatre",
+    "aquatheatre"
+   ],
+   "meant": "AquaTheater",
+   "rule": "Venue form: lives in tools/voice/venue-mishearings-HM.json (one source of truth). Space-free compare + theatre/theater spelling.",
+   "observed": true
+  },
+  {
+   "heard": [
+    "escape room"
+   ],
+   "meant": "The Puzzle Break",
+   "rule": "Venue form: lives in tools/voice/venue-mishearings-HM.json (one source of truth). Spoken alias (Royal code royal-escape-room). Must win over the cabin rule for \"room\".",
+   "observed": true
+  },
+  {
+   "heard": [
+    "after",
+    "aught",
+    "off (before elevators)"
+   ],
+   "meant": "aft",
+   "rule": "Only in \"after elevators\" / \"aft elevator(s)\". \"after\" elsewhere is left alone."
+  },
+  {
+   "heard": [
+    "elevate her",
+    "elevated her",
+    "elevate or"
+   ],
+   "meant": "elevator",
+   "rule": "Rare; mapped only as a whole phrase."
+  },
+  {
+   "heard": [
+    "mass bar"
+   ],
+   "meant": "Mast Bar",
+   "rule": "Venue form: lives in tools/voice/venue-mishearings-HM.json (one source of truth). Spoken alias. Also why \"mass\" is not an event word."
+  },
+  {
+   "heard": [
+    "flow writer",
+    "flo rider",
+    "flow rider"
+   ],
+   "meant": "FlowRider",
+   "rule": "Venue form: lives in tools/voice/venue-mishearings-HM.json (one source of truth). Spoken alias / compact compare."
+  },
+  {
+   "heard": [
+    "studio be",
+    "studio bee"
+   ],
+   "meant": "Studio B",
+   "rule": "Venue form: lives in tools/voice/venue-mishearings-HM.json (one source of truth). Spoken alias."
+  },
+  {
+   "heard": [
+    "sorentos",
+    "sorrentos"
+   ],
+   "meant": "Sorrento's",
+   "rule": "Venue form: lives in tools/voice/venue-mishearings-HM.json (one source of truth). Apostrophes are dropped before compare; edit distance covers one letter."
+  },
+  {
+   "heard": [
+    "Capitalised, punctuated, several sentences"
+   ],
+   "meant": "as said",
+   "rule": "Lowercase; split on . ? ! ; into sentences; commas are soft (removed).",
+   "observed": true
+  },
+  {
+   "heard": [
+    "How do I get to the how do I get to the Solarium"
+   ],
+   "meant": "repeat after a pause",
+   "rule": "The clause splitter cuts at every strong trigger; an INCOMPLETE clause is dropped when a later clause is complete."
+  },
+  {
+   "heard": [
+    "the wind jam are two cabin"
+   ],
+   "meant": "Windjammer to my cabin",
+   "rule": "Too far gone: NO_MATCH with TRY (this is the mocked WatchVoiceNoMatch case)."
+  }
+ ],
+ "normalisation": [
+  {
+   "step": 1,
+   "name": "keep raw",
+   "does": "Keep the transcript exactly as returned for the HEARD line.",
+   "rationale": "The guest must see what the phone heard (9.6)."
+  },
+  {
+   "step": 2,
+   "name": "unicode and case",
+   "does": "Curly quotes -> straight, é -> e, lowercase.",
+   "pitfalls": "Café in venue names (\"Park Cafe\")."
+  },
+  {
+   "step": 3,
+   "name": "digit punctuation",
+   "does": "\"8,924\" -> \"8924\", \"8-9-2-4\" -> \"8 9 2 4\", \"#8924\" -> \"8924\", \"&\" -> \"and\", \"twenty-four\"/\"wind-jammer\" -> space.",
+   "rationale": "Do this before stripping punctuation or \"8,924\" becomes two numbers."
+  },
+  {
+   "step": 4,
+   "name": "sentence split",
+   "does": "Split on . ? ! ; : and ellipsis. Commas are removed (soft).",
+   "rationale": "Observed transcripts come back as several sentences; the combined intent depends on it.",
+   "pitfalls": "A pause can split \"Boardwalk. To the Solarium.\" -> merged by slot_rules."
+  },
+  {
+   "step": 5,
+   "name": "strip punctuation and apostrophes",
+   "does": "Drop apostrophes (\"i'm\" -> \"im\", \"sorrento's\" -> \"sorrentos\"), other punctuation -> space, collapse spaces."
+  },
+  {
+   "step": 6,
+   "name": "contractions and I-am",
+   "does": "im / i am / i m / we are / aim (start) / am (start) / were (start) -> \"iam\"; \"iam add\" -> \"iam at\"; wheres -> where is; whats -> what is; howd -> how do; wanna -> want to; gotta -> have to; lets -> let us.",
+   "pitfalls": "\"were\" and \"am\" only at the start of a sentence."
+  },
+  {
+   "step": 7,
+   "name": "numbers",
+   "does": "Number words -> digit groups -> concatenated; choose between \"to/too/two/for\" as digit or word by cabin validity; \"oh\" is zero only next to another number.",
+   "rationale": "Must run before filler removal (\"oh\" is also a filler) and before the to/two fix.",
+   "pitfalls": "Never turn \"to\" into 2 outside a digit run. \"Main Dining Room 5\", \"150 Central Park\", \"deck 5\" are numbers but not cabins."
+  },
+  {
+   "step": 8,
+   "name": "correction split",
+   "does": "Split at no / sorry / i mean / actually / wait / scratch that / make that when not at the start; the right part is flagged as a correction.",
+   "pitfalls": "\"no\" at the start is just filler."
+  },
+  {
+   "step": 9,
+   "name": "filler removal",
+   "does": "Remove um, uh, hey, hi, ok, so, well, please, thanks, pebble, hey pebble, excuse me, can you (tell me), could you, do you know, tell me, I want to know, I was wondering, just, help me, on the ship, on board.",
+   "pitfalls": "Whole words only: venue names like \"Play\", \"Focus\", \"Fuel\", \"Loyalty\" must not be touched. \"like\" is NOT a filler here."
+  },
+  {
+   "step": 10,
+   "name": "place-class synonyms (order matters)",
+   "does": "1 restroom words -> @restroom; 2 fore/aft elevators -> @forelev/@aftelev, other elevator words -> @elevator; 3 stairs words -> @stairs; 4 cabin word + number (and deck N cabin NNN) -> @cabin:N, bare real 4-5 digit cabin -> @cabin:N; 5 deck N -> @deck:N; 6 my cabin / my room / home / bare cabin -> @mycabin; 7 here / this place / where I am -> @here.",
+   "rationale": "Restrooms before cabins (\"rest room\"), numbered cabins before @mycabin, \"escape room\"/\"living room\"/\"card room\"/\"dining room\" are never @mycabin because only \"my/our/the room\" is."
+  },
+  {
+   "step": 11,
+   "name": "command-word ASR fixes",
+   "does": "Lone too/two/2 between words -> to (see asr_artifacts). for/front/form -> from inside route clauses only."
+  },
+  {
+   "step": 12,
+   "name": "clause split",
+   "does": "Cut a sentence before a strong trigger that is not at its start (how do, where is, take me, iam at, closest, what is next, ...), optionally preceded by and/so/but/then; not when the previous word is \"iam\"/\"i\" or \"the\".",
+   "rationale": "Handles \"I'm at the escape room how do I get to the Aqua Theater\" with no punctuation, and stutters."
+  },
+  {
+   "step": 13,
+   "name": "slot cleanup",
+   "does": "Per span: strip leading the/a/an/that/closest/nearest, trailing please/located/is/on/at/from here (-> A=@here); trailing \"on deck N\" becomes a deck hint."
+  }
+ ],
+ "slot_rules": [
+  {
+   "rule": "Splitting A and B",
+   "detail": "Priority inside a route clause: \"from A to B\" > \"to B from A\" > \"B from A\" > \"A to B\" > \"to B\" > \"B\". Split at the FIRST \" to \" (no HM venue name contains the word \"to\"). Location prepositions \"next to\" / \"close to\" are consumed before splitting."
+  },
+  {
+   "rule": "Dropped \"to\"",
+   "detail": "When a single span does not match any venue, try every split point: if both halves match venues, A = left, B = right (\"Boardwalk the Solarium\")."
+  },
+  {
+   "rule": "Multiple sentences",
+   "detail": "Parse each clause, then merge: a SET_LOCATION plus a ROUTE (or CLOSEST_RESTROOM) without A -> ROUTE_COMBINED (or CLOSEST_RESTROOM from that place). Otherwise the LAST complete in-scope clause wins; INCOMPLETE and NO_MATCH clauses are dropped when another clause is complete (\"Thanks.\" \"Hello.\")."
+  },
+  {
+   "rule": "Bare place then route",
+   "detail": "A clause that is only a place followed by a route clause without A (\"Boardwalk.\" \"To the Solarium.\") -> A = that place."
+  },
+  {
+   "rule": "Corrections",
+   "detail": "A correction clause that is a full command replaces the previous result; a bare place replaces the previous result's last slot (B for routes, A for locations, A for restrooms)."
+  },
+  {
+   "rule": "Conflicting starts",
+   "detail": "\"I'm at X. How do I get from Y to Z?\": the explicit route start Y wins; X is not used. The confirm screen shows FROM Y."
+  },
+  {
+   "rule": "Two locations",
+   "detail": "\"I'm at X. I'm at Y.\" or \"I'm at X, I mean Y\": the last one wins."
+  },
+  {
+   "rule": "More than two places",
+   "detail": "\"from X to Y to Z\": A = X, B = everything after the first \"to\"; that span will not match and the dropped-\"to\" split may pick Y+Z. Result shown on confirm; via-points are not supported. Recommend NO_MATCH-style TRY if unresolved."
+  },
+  {
+   "rule": "Missing B",
+   "detail": "Trigger with nothing after it, or \"from A\" only, or B = there -> INCOMPLETE with a TRY example."
+  },
+  {
+   "rule": "Here / this place",
+   "detail": "@here as A = the current start (A = null). \"closest restroom to me\" = from the current start. @here as a location (\"I'm here\") -> INCOMPLETE."
+  },
+  {
+   "rule": "my cabin",
+   "detail": "@mycabin as A or B; if no stateroom is set on the phone, answer \"Add your stateroom on the phone\" (existing wording). As a location it resets the spoken start to the cabin."
+  },
+  {
+   "rule": "Numbered cabin",
+   "detail": "Any @cabin:N fills `cabin`. Not a real cabin -> \"No cabin N on Harmony\". Fewer than 4 digits -> \"Say all 4 or 5 digits\". Never stored beyond the current start."
+  },
+  {
+   "rule": "Deck numbers",
+   "detail": "\"deck 5\" alone is @deck:5: refused as a location, and as a destination it is OWNER DECISION D5. \"on deck N\" after a venue is a hint (Main Dining Room 5, elevator lobby)."
+  },
+  {
+   "rule": "Unknown venue text",
+   "detail": "Venue matcher fails -> event words? OUT_OF_SCOPE_KNOWN schedule : NO_MATCH no_place, keeping the spans for the HEARD line."
+  },
+  {
+   "rule": "Ambiguous venue",
+   "detail": "\"dining room\", \"theater\", \"pool\": spoken aliases map them to a default or to a family (Main Dining Room 3|4|5 -> the floor nearest the start). OWNER DECISION D3."
+  },
+  {
+   "rule": "Same A and B",
+   "detail": "Resolver answers \"You're already there\" (no route)."
+  },
+  {
+   "rule": "Ashore venue",
+   "detail": "Perfect Day at CocoCay etc: \"CocoCay is ashore\" (no GPS lines ashore, 9.1)."
+  }
+ ],
+ "responses": {
+  "_layout": "Voice screens use the directory gray bar labelled `Ask` (confirm, errors) or `Route` (results). HEARD shows the raw transcript in quotes. Keep each line under ~20 characters at Gothic 18, ~26 at Gothic 14. Select confirms, Hold Select asks again.",
+  "SET_LOCATION": [
+   "HEARD",
+   "\"I'm at the Solarium\"",
+   "YOU'RE AT",
+   "Solarium",
+   "Deck 15 · Fore",
+   "Select: routes start here",
+   "Hold Select to ask again"
+  ],
+  "SET_LOCATION_cabin": [
+   "HEARD",
+   "\"I'm in cabin 9850\"",
+   "YOU'RE AT",
+   "Cabin 9850",
+   "Deck 9 · Aft",
+   "Select: routes start here"
+  ],
+  "SET_LOCATION_mycabin": [
+   "HEARD",
+   "\"I'm back in the room\"",
+   "YOU'RE AT",
+   "Your cabin",
+   "Select: routes start here"
+  ],
+  "ROUTE": [
+   "HEARD",
+   "\"How do I get from Windjammer to the casino\"",
+   "FROM",
+   "Windjammer",
+   "TO",
+   "Casino Royale",
+   "Select for route",
+   "Hold Select to ask again"
+  ],
+  "ROUTE_no_A": [
+   "HEARD",
+   "\"How do I get to the Windjammer\"",
+   "FROM",
+   "Your cabin (or the current start name, 9.4)",
+   "TO",
+   "Windjammer",
+   "Select for route"
+  ],
+  "ROUTE_COMBINED": [
+   "HEARD",
+   "\"I'm at the escape room. How do I get...\"",
+   "FROM",
+   "Puzzle Break",
+   "TO",
+   "AquaTheater",
+   "Select for route"
+  ],
+  "CLOSEST_RESTROOM": [
+   "HEARD",
+   "\"Closest restroom from Studio B\"",
+   "CLOSEST RESTROOM",
+   "FROM",
+   "Studio B",
+   "Select for route"
+  ],
+  "LOCATION_REFUSED_restroom": [
+   "HEARD",
+   "\"I'm at the restroom\"",
+   "There are 26 restrooms",
+   "Say a venue or a cabin number near you instead.",
+   "TRY",
+   "\"I'm at Studio B\""
+  ],
+  "LOCATION_REFUSED_elevator": [
+   "HEARD",
+   "\"I'm by the elevators\"",
+   "Elevators stop on many decks",
+   "Say a venue or a cabin number near you instead.",
+   "TRY",
+   "\"I'm at Studio B\""
+  ],
+  "LOCATION_REFUSED_stairs": [
+   "HEARD",
+   "\"I'm at the stairs\"",
+   "Stairs are in many spots",
+   "Say a venue or a cabin number near you instead.",
+   "TRY",
+   "\"I'm at Studio B\""
+  ],
+  "LOCATION_REFUSED_deck": [
+   "HEARD",
+   "\"I'm on deck 5\"",
+   "A deck is not one spot",
+   "Say a venue or a cabin number near you instead.",
+   "TRY",
+   "\"I'm at Studio B\""
+  ],
+  "OUT_OF_SCOPE_schedule": [
+   "HEARD",
+   "\"What's next\"",
+   "Not yet",
+   "Voice can't read the schedule yet. Press Down for Today.",
+   "TRY",
+   "\"How do I get to Studio B\""
+  ],
+  "OUT_OF_SCOPE_hours": [
+   "HEARD",
+   "\"When does the Windjammer open\"",
+   "Not yet",
+   "Opening times aren't in voice yet.",
+   "TRY",
+   "\"Where is the Windjammer\""
+  ],
+  "OUT_OF_SCOPE_stateroom": [
+   "HEARD",
+   "\"My cabin is 8924\"",
+   "Set your stateroom on the phone",
+   "Me tab in the Pebble app settings"
+  ],
+  "INCOMPLETE": [
+   "HEARD",
+   "\"How do I get to\"",
+   "Which place?",
+   "TRY",
+   "\"How do I get to the Solarium\""
+  ],
+  "NO_MATCH_no_place": [
+   "HEARD",
+   "\"the wind jam are two cabin\"",
+   "No place matched",
+   "Short phrases work best in noisy places.",
+   "TRY",
+   "\"Windjammer to my cabin\""
+  ],
+  "NO_MATCH_no_command": [
+   "HEARD",
+   "\"Is it going to rain\"",
+   "Not something I know",
+   "TRY",
+   "\"Closest restroom\""
+  ],
+  "NO_MATCH_empty": [
+   "Nothing heard",
+   "Hold Select and speak after the tone"
+  ],
+  "CABIN_UNKNOWN": [
+   "HEARD",
+   "\"I'm in cabin 8923\"",
+   "No cabin 8923 on Harmony",
+   "TRY",
+   "\"I'm in cabin 9850\""
+  ],
+  "CABIN_PARTIAL": [
+   "HEARD",
+   "\"I'm in cabin 892\"",
+   "Say all 4 or 5 digits",
+   "TRY",
+   "\"Cabin nine eight five oh\""
+  ],
+  "NO_STATEROOM": [
+   "HEARD",
+   "\"Take me to my cabin\"",
+   "Add your stateroom on the phone for walking directions"
+  ],
+  "NO_START": [
+   "HEARD",
+   "\"How do I get to the spa\"",
+   "Where are you?",
+   "TRY",
+   "\"I'm at the Solarium\"",
+   "(only when no stateroom, no stop and no spoken start: start kind none)"
+  ],
+  "SAME_PLACE": [
+   "HEARD",
+   "\"Solarium to the Solarium\"",
+   "You're already there"
+  ],
+  "ASHORE": [
+   "HEARD",
+   "\"How do I get to CocoCay\"",
+   "CocoCay is ashore",
+   "No ship route"
+  ],
+  "AMBIGUOUS": [
+   "HEARD",
+   "\"Take me to the dining room\"",
+   "TO",
+   "Main Dining Room 5 (nearest floor)",
+   "Select for route",
+   "(OWNER DECISION D3)"
+  ],
+  "PHONE_AWAY": [
+   "Connect your phone",
+   "Voice is heard on the phone",
+   "Hold Select to try again"
+  ],
+  "DICTATION_FAILED": [
+   "Couldn't hear that",
+   "Hold Select to try again"
+  ],
+  "CLOSEST_BAR": [
+   "HEARD",
+   "\"Where can I get a drink?\"",
+   "CLOSEST BAR",
+   "Schooner Bar",
+   "FROM",
+   "Your cabin",
+   "Select for route"
+  ],
+  "LOCATION_REFUSED_bar": [
+   "HEARD",
+   "\"I'm at the bar\"",
+   "There are many bars",
+   "Say the bar's name or a venue near you",
+   "TRY",
+   "\"I'm at Schooner Bar\""
+  ],
+  "CLOSEST_COFFEE": [
+   "HEARD",
+   "\"Where can I get a coffee?\"",
+   "CLOSEST COFFEE",
+   "Cafe Promenade",
+   "FROM",
+   "Your cabin",
+   "Select for route"
+  ],
+  "SNACK": [
+   "HEARD",
+   "\"I'm hungry\"",
+   "TO",
+   "Cafe Promenade",
+   "Open 24 hours",
+   "Select for route"
+  ],
+  "LOCATION_REFUSED_coffee": [
+   "HEARD",
+   "\"I'm at the coffee shop\"",
+   "There are a few coffee places",
+   "Say its name or a venue near you",
+   "TRY",
+   "\"I'm at Starbucks\""
+  ]
+ },
+ "tables": {
+  "_moved": "The runtime grammar tables live in src/pkjs/voice.js (GRAMMAR), hand-edited and covered by test/pkjs/voice.test.js. Venue names, aliases and their mishearings live only in tools/voice/venue-mishearings-HM.json. Multi-spot and ashore flags are fields there (location: false) or come from venues.js (Ashore)."
+ }
+}

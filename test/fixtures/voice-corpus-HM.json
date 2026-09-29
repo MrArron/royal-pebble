@@ -1,0 +1,5345 @@
+{
+ "about": "Test utterances as the phone's local speech-to-text might return them (capitalised, punctuated, ASR errors, filler), with the expected parse. A/B hold the normalised span (lowercase, no leading article) or a special token (@mycabin, @cabin:N, @restroom, @elevator, @forelev, @aftelev, @stairs, @deck:N); A = null means the current route start. *_target is the canonical venues.js name the matcher should resolve to. Cabin numbers are made up and are NOT on the HM deck plans (repo rule); tests inject them as a fake cabin fixture: 8924, 6902, 9850, 10930, 10932, 11844, 14906, 9804, 1792, 7646, 12990. 8923, 892 and 9999 are deliberately not in the fixture. Decision-dependent cases are tagged decision_Dn (see voice-commands.md).",
+ "scoring": "intent must match; cabin must match; for A/B: when *_target is given the resolved target must match, otherwise the span must match after removing spaces/punctuation (special tokens exactly). LOCATION_REFUSED also compares reason; OUT_OF_SCOPE_KNOWN compares topic. Slots are not compared for INCOMPLETE / NO_MATCH / OUT_OF_SCOPE_KNOWN.",
+ "count": 370,
+ "cases": [
+  {
+   "id": "v001",
+   "text": "How do I get to the windjam?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjam",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "observed",
+    "asr_venue"
+   ]
+  },
+  {
+   "id": "v002",
+   "text": "How do I get to the wind jammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "wind jammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "observed",
+    "asr_venue"
+   ]
+  },
+  {
+   "id": "v003",
+   "text": "Boardwalk to the Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "observed",
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v004",
+   "text": "I'm at the escape room. How do I get to the Aqua Theater?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "escape room",
+    "B": "aqua theater",
+    "cabin": null,
+    "A_target": "The Puzzle Break",
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "observed",
+    "combined",
+    "multi_sentence"
+   ]
+  },
+  {
+   "id": "v005",
+   "text": "How do I get to the Solarium?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v006",
+   "text": "How do we get to Studio B?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "studio b",
+    "cabin": null,
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v007",
+   "text": "How can I get to the casino?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v008",
+   "text": "How to get to the Boardwalk?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "boardwalk",
+    "cabin": null,
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v009",
+   "text": "How do I find the escape room?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "escape room",
+    "cabin": null,
+    "B_target": "The Puzzle Break"
+   },
+   "tags": [
+    "question_how",
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v010",
+   "text": "How do I go to Central Park?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "central park",
+    "cabin": null,
+    "B_target": "Central Park"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v011",
+   "text": "How would I get to the Royal Theater?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "royal theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v012",
+   "text": "How do I get to Johnny Rockets?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "johnny rockets",
+    "cabin": null,
+    "B_target": "Johnny Rockets"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v013",
+   "text": "How do I get too the FlowRider?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "flowrider",
+    "cabin": null,
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "asr_to"
+   ]
+  },
+  {
+   "id": "v014",
+   "text": "How do I get 2 the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "asr_to"
+   ]
+  },
+  {
+   "id": "v015",
+   "text": "How do I get two the Aqua theater?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "aqua theater",
+    "cabin": null,
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "asr_to"
+   ]
+  },
+  {
+   "id": "v016",
+   "text": "How get to Studio B",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "studio b",
+    "cabin": null,
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "dropped_words"
+   ]
+  },
+  {
+   "id": "v017",
+   "text": "how do i get to the flow rider",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "flow rider",
+    "cabin": null,
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "lowercase",
+    "asr_venue"
+   ]
+  },
+  {
+   "id": "v018",
+   "text": "How do I get to the Aquatheater",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "aquatheater",
+    "cabin": null,
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v019",
+   "text": "How do I get to Izumi?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "izumi",
+    "cabin": null,
+    "B_target": "Izumi"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v020",
+   "text": "How do I get to Starbucks?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "starbucks",
+    "cabin": null,
+    "B_target": "Starbucks"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v021",
+   "text": "How do I get to the Schooner bar?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "schooner bar",
+    "cabin": null,
+    "B_target": "Schooner Bar"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v022",
+   "text": "How do I get to the zip line?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "zip line",
+    "cabin": null,
+    "B_target": "Zip Line"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v023",
+   "text": "How do I get to Sorrento's?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "sorrentos",
+    "cabin": null,
+    "B_target": "Sorrento's"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v024",
+   "text": "How do I get to Guest Services?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "guest services",
+    "cabin": null,
+    "B_target": "Guest Services"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v025",
+   "text": "How do I get to the Main Dining Room on deck 5?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "main dining room",
+    "cabin": null,
+    "B_target": "Main Dining Room 5"
+   },
+   "tags": [
+    "deck_qualifier",
+    "numbers_not_cabin"
+   ]
+  },
+  {
+   "id": "v026",
+   "text": "How do I get to 150 Central Park?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "150 central park",
+    "cabin": null,
+    "B_target": "150 Central Park"
+   },
+   "tags": [
+    "numbers_not_cabin"
+   ]
+  },
+  {
+   "id": "v027",
+   "text": "How do I get to one fifty Central Park?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "150 central park",
+    "cabin": null,
+    "B_target": "150 Central Park"
+   },
+   "tags": [
+    "numbers_not_cabin"
+   ]
+  },
+  {
+   "id": "v028",
+   "text": "How do I get to the Mast Bar?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "mast bar",
+    "cabin": null,
+    "B_target": "Mast Bar"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v029",
+   "text": "How do I get to the mass bar?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "mass bar",
+    "cabin": null,
+    "B_target": "Mast Bar"
+   },
+   "tags": [
+    "asr_venue"
+   ]
+  },
+  {
+   "id": "v030",
+   "text": "How do I get to the rock climbing wall?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "rock climbing wall",
+    "cabin": null,
+    "B_target": "Rock Climbing Wall"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v031",
+   "text": "Where's the Aqua Theater?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "aqua theater",
+    "cabin": null,
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "question_where"
+   ]
+  },
+  {
+   "id": "v032",
+   "text": "Where is Johnny Rockets?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "johnny rockets",
+    "cabin": null,
+    "B_target": "Johnny Rockets"
+   },
+   "tags": [
+    "question_where"
+   ]
+  },
+  {
+   "id": "v033",
+   "text": "Where can I find the casino?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "question_where"
+   ]
+  },
+  {
+   "id": "v034",
+   "text": "Where is the Solarium located?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "question_where"
+   ]
+  },
+  {
+   "id": "v035",
+   "text": "Where are the water slides?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "water slides",
+    "cabin": null,
+    "B_target": "The Perfect Storm Waterslides"
+   },
+   "tags": [
+    "question_where"
+   ]
+  },
+  {
+   "id": "v036",
+   "text": "Where's the gym?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "gym",
+    "cabin": null,
+    "B_target": "Fitness Center"
+   },
+   "tags": [
+    "question_where"
+   ]
+  },
+  {
+   "id": "v037",
+   "text": "Could you tell me where the Solarium is?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "question_where",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v038",
+   "text": "WHERE IS THE SOLARIUM",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "question_where",
+    "caps"
+   ]
+  },
+  {
+   "id": "v039",
+   "text": "Which way to the pool?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "pool",
+    "cabin": null,
+    "B_target": "Pool Deck"
+   },
+   "tags": [
+    "question_which"
+   ]
+  },
+  {
+   "id": "v040",
+   "text": "What's the quickest way to the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "question_which"
+   ]
+  },
+  {
+   "id": "v041",
+   "text": "Best way to Central Park?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "central park",
+    "cabin": null,
+    "B_target": "Central Park"
+   },
+   "tags": [
+    "question_which"
+   ]
+  },
+  {
+   "id": "v042",
+   "text": "How far is the Solarium?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "question_distance"
+   ]
+  },
+  {
+   "id": "v043",
+   "text": "How far is the Windjammer from here?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "question_distance",
+    "here"
+   ]
+  },
+  {
+   "id": "v044",
+   "text": "How many steps to the FlowRider?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "flowrider",
+    "cabin": null,
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "question_distance"
+   ]
+  },
+  {
+   "id": "v045",
+   "text": "What deck is Izumi on?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "izumi",
+    "cabin": null,
+    "B_target": "Izumi"
+   },
+   "tags": [
+    "question_distance"
+   ]
+  },
+  {
+   "id": "v046",
+   "text": "Which deck is the Solarium on?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "question_distance"
+   ]
+  },
+  {
+   "id": "v047",
+   "text": "So um I want to know how far the FlowRider is",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "flowrider",
+    "cabin": null,
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "question_distance",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v048",
+   "text": "Take me to Central Park.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "central park",
+    "cabin": null,
+    "B_target": "Central Park"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v049",
+   "text": "Directions to the spa.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "spa",
+    "cabin": null,
+    "B_target": "Vitality Spa"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v050",
+   "text": "Navigate to the Royal Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "royal theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v051",
+   "text": "Get me to the Windjammer.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v052",
+   "text": "Go to the Boardwalk.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "boardwalk",
+    "cabin": null,
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v053",
+   "text": "Show me the way to the escape room.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "escape room",
+    "cabin": null,
+    "B_target": "The Puzzle Break"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v054",
+   "text": "Guide me to Studio B.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "studio b",
+    "cabin": null,
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v055",
+   "text": "Route to the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v056",
+   "text": "Give me directions to the Aqua Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "aqua theater",
+    "cabin": null,
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v057",
+   "text": "Find the Card Room.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "card room",
+    "cabin": null,
+    "B_target": "Card Room"
+   },
+   "tags": [
+    "imperative",
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v058",
+   "text": "Head to the pool.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "pool",
+    "cabin": null,
+    "B_target": "Pool Deck"
+   },
+   "tags": [
+    "imperative",
+    "head_pitfall"
+   ]
+  },
+  {
+   "id": "v059",
+   "text": "Bring me to the casino please.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "imperative",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v060",
+   "text": "Walk me to the Rising Tide bar.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "rising tide bar",
+    "cabin": null,
+    "B_target": "Rising Tide Bar"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v061",
+   "text": "Point me to Guest Services.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "guest services",
+    "cabin": null,
+    "B_target": "Guest Services"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v062",
+   "text": "Take us to Johnny Rockets.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "johnny rockets",
+    "cabin": null,
+    "B_target": "Johnny Rockets"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v063",
+   "text": "Take me to the Aqua Theatre.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "aqua theatre",
+    "cabin": null,
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "imperative",
+    "spelling"
+   ]
+  },
+  {
+   "id": "v064",
+   "text": "I want to go to the casino.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "intention"
+   ]
+  },
+  {
+   "id": "v065",
+   "text": "I need to get to the Royal Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "royal theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "intention"
+   ]
+  },
+  {
+   "id": "v066",
+   "text": "I'd like to go to the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "intention"
+   ]
+  },
+  {
+   "id": "v067",
+   "text": "I'm heading to the pool.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "pool",
+    "cabin": null,
+    "B_target": "Pool Deck"
+   },
+   "tags": [
+    "intention",
+    "iam_guard"
+   ]
+  },
+  {
+   "id": "v068",
+   "text": "I'm looking for Studio B.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "studio b",
+    "cabin": null,
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "intention",
+    "iam_guard"
+   ]
+  },
+  {
+   "id": "v069",
+   "text": "I'm trying to get to the Windjammer.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "intention",
+    "iam_guard"
+   ]
+  },
+  {
+   "id": "v070",
+   "text": "I'm going to the Boardwalk. How do I get there?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "boardwalk",
+    "cabin": null,
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "intention",
+    "iam_guard",
+    "multi_sentence"
+   ]
+  },
+  {
+   "id": "v071",
+   "text": "We wanna go to the FlowRider.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "flowrider",
+    "cabin": null,
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "intention"
+   ]
+  },
+  {
+   "id": "v072",
+   "text": "Let's go to the Aqua Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "aqua theater",
+    "cabin": null,
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "intention"
+   ]
+  },
+  {
+   "id": "v073",
+   "text": "On my way to the Windjammer, which way?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "intention"
+   ]
+  },
+  {
+   "id": "v074",
+   "text": "Um, hey Pebble, can you tell me how to get to the Solarium, please?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "politeness"
+   ]
+  },
+  {
+   "id": "v075",
+   "text": "Okay so how do I get to the casino",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "politeness"
+   ]
+  },
+  {
+   "id": "v076",
+   "text": "Uh, how do I get to, um, Central Park?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "central park",
+    "cabin": null,
+    "B_target": "Central Park"
+   },
+   "tags": [
+    "politeness"
+   ]
+  },
+  {
+   "id": "v077",
+   "text": "Hey Pebble. Take me to the Boardwalk.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "boardwalk",
+    "cabin": null,
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "politeness",
+    "multi_sentence"
+   ]
+  },
+  {
+   "id": "v078",
+   "text": "Pebble, where's Studio B?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "studio b",
+    "cabin": null,
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "politeness"
+   ]
+  },
+  {
+   "id": "v079",
+   "text": "Do you know how to get to the Royal Theater?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "royal theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "politeness"
+   ]
+  },
+  {
+   "id": "v080",
+   "text": "Excuse me, how do I get to the Windjammer? Thanks.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "politeness",
+    "multi_sentence"
+   ]
+  },
+  {
+   "id": "v081",
+   "text": "Hmm. Uh. Solarium to the Windjammer please.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "politeness",
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v082",
+   "text": "Solarium to the Windjammer",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v083",
+   "text": "From the casino to my cabin.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "casino",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "bare_a_to_b",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v084",
+   "text": "How do I get from the Solarium to the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "a_to_b"
+   ]
+  },
+  {
+   "id": "v085",
+   "text": "How do I get from Central Park to the Boardwalk?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "central park",
+    "B": "boardwalk",
+    "cabin": null,
+    "A_target": "Central Park",
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "a_to_b"
+   ]
+  },
+  {
+   "id": "v086",
+   "text": "Directions from Studio B to the Royal Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "studio b",
+    "B": "royal theater",
+    "cabin": null,
+    "A_target": "Studio B",
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "a_to_b"
+   ]
+  },
+  {
+   "id": "v087",
+   "text": "Take me from the Windjammer to the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "windjammer",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "a_to_b"
+   ]
+  },
+  {
+   "id": "v088",
+   "text": "Studio B to the casino.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "studio b",
+    "B": "casino",
+    "cabin": null,
+    "A_target": "Studio B",
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v089",
+   "text": "Aqua Theater to Johnny Rockets",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "aqua theater",
+    "B": "johnny rockets",
+    "cabin": null,
+    "A_target": "AquaTheater",
+    "B_target": "Johnny Rockets"
+   },
+   "tags": [
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v090",
+   "text": "Boardwalk two the Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "asr_to"
+   ]
+  },
+  {
+   "id": "v091",
+   "text": "Boardwalk too the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "asr_to"
+   ]
+  },
+  {
+   "id": "v092",
+   "text": "Boardwalk 2 Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "asr_to"
+   ]
+  },
+  {
+   "id": "v093",
+   "text": "How do I get for the Solarium to the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "asr_from"
+   ]
+  },
+  {
+   "id": "v094",
+   "text": "How do I get front the Boardwalk to Central Park?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "central park",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Central Park"
+   },
+   "tags": [
+    "asr_from"
+   ]
+  },
+  {
+   "id": "v095",
+   "text": "Directions for the spa.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "spa",
+    "cabin": null,
+    "B_target": "Vitality Spa"
+   },
+   "tags": [
+    "for_as_to"
+   ]
+  },
+  {
+   "id": "v096",
+   "text": "How do I get the Solarium to the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "dropped_words"
+   ]
+  },
+  {
+   "id": "v097",
+   "text": "Boardwalk the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "dropped_to"
+   ]
+  },
+  {
+   "id": "v098",
+   "text": "Casino Studio B",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "casino",
+    "B": "studio b",
+    "cabin": null,
+    "A_target": "Casino Royale",
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "dropped_to"
+   ]
+  },
+  {
+   "id": "v099",
+   "text": "From the Royal Theater to the Aqua Theater",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "royal theater",
+    "B": "aqua theater",
+    "cabin": null,
+    "A_target": "Royal Theater",
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v100",
+   "text": "Royal Promenade to the Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "royal promenade",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Royal Promenade",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v101",
+   "text": "Promenade to the pool",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "promenade",
+    "B": "pool",
+    "cabin": null,
+    "A_target": "Royal Promenade",
+    "B_target": "Pool Deck"
+   },
+   "tags": [
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v102",
+   "text": "Solarium Bar to the Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium bar",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Solarium Bar",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "bare_a_to_b",
+    "prefix_pitfall"
+   ]
+  },
+  {
+   "id": "v103",
+   "text": "To the Windjammer from the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "reversed"
+   ]
+  },
+  {
+   "id": "v104",
+   "text": "Windjammer from my room",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@mycabin",
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "reversed",
+    "dropped_words",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v105",
+   "text": "How do I get to the Solarium from the Boardwalk?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "reversed"
+   ]
+  },
+  {
+   "id": "v106",
+   "text": "Take me to the pool from Central Park.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "central park",
+    "B": "pool",
+    "cabin": null,
+    "A_target": "Central Park",
+    "B_target": "Pool Deck"
+   },
+   "tags": [
+    "reversed"
+   ]
+  },
+  {
+   "id": "v107",
+   "text": "Casino from the Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "casino",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "reversed"
+   ]
+  },
+  {
+   "id": "v108",
+   "text": "How do I get to Studio B starting from the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "windjammer",
+    "B": "studio b",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace",
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "reversed"
+   ]
+  },
+  {
+   "id": "v109",
+   "text": "Directions to the Royal Theater from here.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "royal theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "reversed",
+    "here"
+   ]
+  },
+  {
+   "id": "v110",
+   "text": "How far is the Solarium from the casino?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "casino",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Casino Royale",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "reversed",
+    "question_distance"
+   ]
+  },
+  {
+   "id": "v111",
+   "text": "Directions from here to the casino.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "here"
+   ]
+  },
+  {
+   "id": "v112",
+   "text": "How do I get from this place to Studio B?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "studio b",
+    "cabin": null,
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "here"
+   ]
+  },
+  {
+   "id": "v113",
+   "text": "How do I get to my cabin?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v114",
+   "text": "Take me home.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v115",
+   "text": "How do I get back to my room?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v116",
+   "text": "How do I get to my cabin from the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "windjammer",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "my_cabin",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v117",
+   "text": "Windjammer to my cabin",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "windjammer",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "my_cabin",
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v118",
+   "text": "From my room to the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@mycabin",
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v119",
+   "text": "Our cabin to the casino",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@mycabin",
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v120",
+   "text": "How do I get to the stateroom?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v121",
+   "text": "Get me back to the room.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v122",
+   "text": "How do I get home from the Aqua Theater?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "aqua theater",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "AquaTheater"
+   },
+   "tags": [
+    "my_cabin",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v123",
+   "text": "My room from Central Park",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "central park",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Central Park"
+   },
+   "tags": [
+    "my_cabin",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v124",
+   "text": "Take me to our suite.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v125",
+   "text": "Solarium to cabin",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v126",
+   "text": "How do I get back to the cab in?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin",
+    "asr_cabin"
+   ]
+  },
+  {
+   "id": "v127",
+   "text": "How do I get back?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin",
+    "decision_D6"
+   ]
+  },
+  {
+   "id": "v128",
+   "text": "Take me back to my stateroom.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v129",
+   "text": "How do I get to the Card Room from my room?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@mycabin",
+    "B": "card room",
+    "cabin": null,
+    "B_target": "Card Room"
+   },
+   "tags": [
+    "my_cabin",
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v130",
+   "text": "How do I get to cabin 9850?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@cabin:9850",
+    "cabin": "9850"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v131",
+   "text": "Cabin 8924 to the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "solarium",
+    "cabin": "8924",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v132",
+   "text": "Cabin 8924 two the Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "solarium",
+    "cabin": "8924",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "cabin_number",
+    "asr_to",
+    "to_vs_two"
+   ]
+  },
+  {
+   "id": "v133",
+   "text": "Cabin 89242 the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "solarium",
+    "cabin": "8924",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "cabin_number",
+    "asr_to",
+    "to_vs_two"
+   ]
+  },
+  {
+   "id": "v134",
+   "text": "Cabin eight nine two four to the Windjammer.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "windjammer",
+    "cabin": "8924",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "cabin_number",
+    "word_digits"
+   ]
+  },
+  {
+   "id": "v135",
+   "text": "Cabin eight nine two four two the Windjammer.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "windjammer",
+    "cabin": "8924",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "cabin_number",
+    "word_digits",
+    "to_vs_two"
+   ]
+  },
+  {
+   "id": "v136",
+   "text": "From stateroom 10930 to the casino.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:10930",
+    "B": "casino",
+    "cabin": "10930",
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v137",
+   "text": "How do I get from room 6902 to the Boardwalk?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:6902",
+    "B": "boardwalk",
+    "cabin": "6902",
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v138",
+   "text": "Take me to cabin 11844 from the pool.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "pool",
+    "B": "@cabin:11844",
+    "cabin": "11844",
+    "A_target": "Pool Deck"
+   },
+   "tags": [
+    "cabin_number",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v139",
+   "text": "From cabin 8924 to cabin 6902.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "@cabin:6902",
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v140",
+   "text": "8924 to 6902",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "@cabin:6902",
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "to_vs_two"
+   ]
+  },
+  {
+   "id": "v141",
+   "text": "Windjammer to cabin one oh nine three oh",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "windjammer",
+    "B": "@cabin:10930",
+    "cabin": "10930",
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "cabin_number",
+    "word_digits",
+    "oh_zero"
+   ]
+  },
+  {
+   "id": "v142",
+   "text": "Directions to stateroom 14906.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@cabin:14906",
+    "cabin": "14906"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v143",
+   "text": "Take me to the Solarium from cabin eight nine two four",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "solarium",
+    "cabin": "8924",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "cabin_number",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v144",
+   "text": "How do I get to cabin 8924 from the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "windjammer",
+    "B": "@cabin:8924",
+    "cabin": "8924",
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "cabin_number",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v145",
+   "text": "From 8924 to the Aqua Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:8924",
+    "B": "aqua theater",
+    "cabin": "8924",
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "cabin_number",
+    "bare_number"
+   ]
+  },
+  {
+   "id": "v146",
+   "text": "Which way is the Windjammer from cabin 9850?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:9850",
+    "B": "windjammer",
+    "cabin": "9850",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "cabin_number",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v147",
+   "text": "Room 6902 to Windjammer",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:6902",
+    "B": "windjammer",
+    "cabin": "6902",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v148",
+   "text": "I'm at the Solarium.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "solarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v149",
+   "text": "I'm at the Solarium",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "solarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v150",
+   "text": "Im at the boardwalk",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "boardwalk",
+    "B": null,
+    "cabin": null,
+    "A_target": "Boardwalk"
+   },
+   "tags": [
+    "location",
+    "asr_iam"
+   ]
+  },
+  {
+   "id": "v151",
+   "text": "I am at Central Park.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "central park",
+    "B": null,
+    "cabin": null,
+    "A_target": "Central Park"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v152",
+   "text": "We're on the Boardwalk.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "boardwalk",
+    "B": null,
+    "cabin": null,
+    "A_target": "Boardwalk"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v153",
+   "text": "I'm near the casino.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "casino",
+    "B": null,
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v154",
+   "text": "I'm sitting at the Schooner Bar.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "schooner bar",
+    "B": null,
+    "cabin": null,
+    "A_target": "Schooner Bar"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v155",
+   "text": "I'm add the Solarium.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "solarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "location",
+    "asr_iam"
+   ]
+  },
+  {
+   "id": "v156",
+   "text": "Aim at the Royal Theater.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "royal theater",
+    "B": null,
+    "cabin": null,
+    "A_target": "Royal Theater"
+   },
+   "tags": [
+    "location",
+    "asr_iam"
+   ]
+  },
+  {
+   "id": "v157",
+   "text": "We are at the Windjammer.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "windjammer",
+    "B": null,
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v158",
+   "text": "I'm next to Johnny Rockets.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "johnny rockets",
+    "B": null,
+    "cabin": null,
+    "A_target": "Johnny Rockets"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v159",
+   "text": "I'm outside Studio B.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "studio b",
+    "B": null,
+    "cabin": null,
+    "A_target": "Studio B"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v160",
+   "text": "I'm by the Carousel.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "carousel",
+    "B": null,
+    "cabin": null,
+    "A_target": "Carousel"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v161",
+   "text": "At the Aqua Theater.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "aqua theater",
+    "B": null,
+    "cabin": null,
+    "A_target": "AquaTheater"
+   },
+   "tags": [
+    "location",
+    "dropped_iam"
+   ]
+  },
+  {
+   "id": "v162",
+   "text": "I'm currently in the Solarium.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "solarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v163",
+   "text": "Set my location to Central Park.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "central park",
+    "B": null,
+    "cabin": null,
+    "A_target": "Central Park"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v164",
+   "text": "Hey Pebble, I'm at the escape room.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "escape room",
+    "B": null,
+    "cabin": null,
+    "A_target": "The Puzzle Break"
+   },
+   "tags": [
+    "location",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v165",
+   "text": "I'm in the casino right now.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "casino",
+    "B": null,
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v166",
+   "text": "I'm at the main dining room on deck 4.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "main dining room",
+    "B": null,
+    "cabin": null,
+    "A_target": "Main Dining Room 4"
+   },
+   "tags": [
+    "location",
+    "deck_qualifier"
+   ]
+  },
+  {
+   "id": "v167",
+   "text": "I'm on deck 8 near Central Park.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "central park",
+    "B": null,
+    "cabin": null,
+    "A_target": "Central Park"
+   },
+   "tags": [
+    "location",
+    "deck_qualifier"
+   ]
+  },
+  {
+   "id": "v168",
+   "text": "I'm in front of the Royal Theater.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "royal theater",
+    "B": null,
+    "cabin": null,
+    "A_target": "Royal Theater"
+   },
+   "tags": [
+    "location"
+   ]
+  },
+  {
+   "id": "v169",
+   "text": "I'm back in the room.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@mycabin",
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "location",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v170",
+   "text": "I'm home.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@mycabin",
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "location",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v171",
+   "text": "We're back in our cabin.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@mycabin",
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "location",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v172",
+   "text": "I'm at the Boardwalk, near the carousel.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "carousel",
+    "B": null,
+    "cabin": null,
+    "A_target": "Carousel"
+   },
+   "tags": [
+    "location",
+    "two_places"
+   ]
+  },
+  {
+   "id": "v173",
+   "text": "I'm in the Royal Promenade.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "royal promenade",
+    "B": null,
+    "cabin": null,
+    "A_target": "Royal Promenade"
+   },
+   "tags": [
+    "location",
+    "decision_D8"
+   ]
+  },
+  {
+   "id": "v174",
+   "text": "I'm at the Windjammer. Thanks.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "windjammer",
+    "B": null,
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "location",
+    "multi_sentence"
+   ]
+  },
+  {
+   "id": "v175",
+   "text": "I'm in cabin 9850.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:9850",
+    "B": null,
+    "cabin": "9850"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v176",
+   "text": "I'm in cabin 8924",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v177",
+   "text": "I'm in cabin eight nine two four.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "word_digits"
+   ]
+  },
+  {
+   "id": "v178",
+   "text": "I'm in cabin eighty-nine twenty-four.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "grouped"
+   ]
+  },
+  {
+   "id": "v179",
+   "text": "I'm in cabin eighty nine twenty four",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "grouped"
+   ]
+  },
+  {
+   "id": "v180",
+   "text": "I'm in cabin 89 24.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "grouped"
+   ]
+  },
+  {
+   "id": "v181",
+   "text": "I'm in cabin 8,924.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "thousands_comma"
+   ]
+  },
+  {
+   "id": "v182",
+   "text": "I'm in room 6902.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:6902",
+    "B": null,
+    "cabin": "6902"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v183",
+   "text": "We're in stateroom 10930.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:10930",
+    "B": null,
+    "cabin": "10930"
+   },
+   "tags": [
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v184",
+   "text": "I'm in cabin one oh nine three oh.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:10930",
+    "B": null,
+    "cabin": "10930"
+   },
+   "tags": [
+    "cabin_number",
+    "oh_zero"
+   ]
+  },
+  {
+   "id": "v185",
+   "text": "I'm in cabin ten nine thirty.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:10930",
+    "B": null,
+    "cabin": "10930"
+   },
+   "tags": [
+    "cabin_number",
+    "grouped"
+   ]
+  },
+  {
+   "id": "v186",
+   "text": "I'm in cabin seventeen ninety-two.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:1792",
+    "B": null,
+    "cabin": "1792"
+   },
+   "tags": [
+    "cabin_number",
+    "grouped",
+    "suite_deck"
+   ]
+  },
+  {
+   "id": "v187",
+   "text": "I'm in 8924.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "bare_number"
+   ]
+  },
+  {
+   "id": "v188",
+   "text": "I'm in cab in 8924.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "asr_cabin"
+   ]
+  },
+  {
+   "id": "v189",
+   "text": "I'm in cabinet 9850.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:9850",
+    "B": null,
+    "cabin": "9850"
+   },
+   "tags": [
+    "cabin_number",
+    "asr_cabin"
+   ]
+  },
+  {
+   "id": "v190",
+   "text": "I'm in cabin 8 9 2 4.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "spaced_digits"
+   ]
+  },
+  {
+   "id": "v191",
+   "text": "I'm in cabin eight nine to four.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "to_vs_two"
+   ]
+  },
+  {
+   "id": "v192",
+   "text": "I'm on deck 8, cabin 924.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "deck_prefixed"
+   ]
+  },
+  {
+   "id": "v193",
+   "text": "I'm in cabin 924 on deck 8.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "deck_prefixed"
+   ]
+  },
+  {
+   "id": "v194",
+   "text": "I'm in cabin eight thousand nine hundred twenty four.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "cabin_number",
+    "compound"
+   ]
+  },
+  {
+   "id": "v195",
+   "text": "I'm in cabin 8923.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:8923",
+    "B": null,
+    "cabin": "8923"
+   },
+   "tags": [
+    "cabin_number",
+    "invalid_cabin"
+   ]
+  },
+  {
+   "id": "v196",
+   "text": "I'm in cabin eight nine two.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:892",
+    "B": null,
+    "cabin": "892"
+   },
+   "tags": [
+    "cabin_number",
+    "partial"
+   ]
+  },
+  {
+   "id": "v197",
+   "text": "I'm in cabin 9999.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:9999",
+    "B": null,
+    "cabin": "9999"
+   },
+   "tags": [
+    "cabin_number",
+    "invalid_cabin"
+   ]
+  },
+  {
+   "id": "v198",
+   "text": "Cabin 9850.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@cabin:9850",
+    "cabin": "9850"
+   },
+   "tags": [
+    "cabin_number",
+    "bare_place",
+    "decision_D2"
+   ]
+  },
+  {
+   "id": "v199",
+   "text": "I'm in cabin 8924 to the Solarium",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "@cabin:8924",
+    "B": "solarium",
+    "cabin": "8924",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "cabin_number",
+    "combined"
+   ]
+  },
+  {
+   "id": "v200",
+   "text": "I'm at the Solarium. How do I get to the Windjammer?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "combined"
+   ]
+  },
+  {
+   "id": "v201",
+   "text": "I'm in cabin 8924, how do I get to the Solarium?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "@cabin:8924",
+    "B": "solarium",
+    "cabin": "8924",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "combined",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v202",
+   "text": "I'm at Central Park and I want to go to the Boardwalk.",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "central park",
+    "B": "boardwalk",
+    "cabin": null,
+    "A_target": "Central Park",
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "combined",
+    "one_sentence"
+   ]
+  },
+  {
+   "id": "v203",
+   "text": "How do I get to the casino? I'm at the Solarium.",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "solarium",
+    "B": "casino",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "combined",
+    "reversed_order"
+   ]
+  },
+  {
+   "id": "v204",
+   "text": "I'm at the escape room how do I get to the Aqua theater",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "escape room",
+    "B": "aqua theater",
+    "cabin": null,
+    "A_target": "The Puzzle Break",
+    "B_target": "AquaTheater"
+   },
+   "tags": [
+    "combined",
+    "no_punctuation"
+   ]
+  },
+  {
+   "id": "v205",
+   "text": "We're at Studio B. Take me to the Royal Theater.",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "studio b",
+    "B": "royal theater",
+    "cabin": null,
+    "A_target": "Studio B",
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "combined"
+   ]
+  },
+  {
+   "id": "v206",
+   "text": "I'm at the Boardwalk to the Solarium.",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "combined",
+    "one_sentence"
+   ]
+  },
+  {
+   "id": "v207",
+   "text": "I'm at the Windjammer. Where's the FlowRider?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "windjammer",
+    "B": "flowrider",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace",
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "combined",
+    "question_where"
+   ]
+  },
+  {
+   "id": "v208",
+   "text": "I'm in room 6902. Where's the casino?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "@cabin:6902",
+    "B": "casino",
+    "cabin": "6902",
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "combined",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v209",
+   "text": "I'm at the Solarium. How do I get from the Boardwalk to the casino?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "casino",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "combined",
+    "conflict"
+   ]
+  },
+  {
+   "id": "v210",
+   "text": "I'm on the Boardwalk. Take me home.",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "boardwalk",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Boardwalk"
+   },
+   "tags": [
+    "combined",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v211",
+   "text": "Closest restroom.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v212",
+   "text": "Where's the bathroom?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v213",
+   "text": "Nearest restroom to the Solarium.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "solarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v214",
+   "text": "Closest bathroom from my cabin.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "@mycabin",
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v215",
+   "text": "Restroom near Studio B.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "studio b",
+    "B": null,
+    "cabin": null,
+    "A_target": "Studio B"
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v216",
+   "text": "Where's the closest toilet?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v217",
+   "text": "I need the bathroom.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v218",
+   "text": "Where is the men's room?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom",
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v219",
+   "text": "Ladies room near the casino?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "casino",
+    "B": null,
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "restroom",
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v220",
+   "text": "Closest rest room to the Windjammer.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "windjammer",
+    "B": null,
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "restroom",
+    "asr_restroom",
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v221",
+   "text": "Where's the nearest loo?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v222",
+   "text": "How do I get to the restroom from the Boardwalk?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "boardwalk",
+    "B": null,
+    "cabin": null,
+    "A_target": "Boardwalk"
+   },
+   "tags": [
+    "restroom",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v223",
+   "text": "How do I get from the Royal Theater to the bathroom?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "royal theater",
+    "B": null,
+    "cabin": null,
+    "A_target": "Royal Theater"
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v224",
+   "text": "Casino to the bathroom.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "casino",
+    "B": null,
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "restroom",
+    "bare_a_to_b"
+   ]
+  },
+  {
+   "id": "v225",
+   "text": "Nearest restroom to me.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom",
+    "here"
+   ]
+  },
+  {
+   "id": "v226",
+   "text": "Where's the head?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom",
+    "head_pitfall"
+   ]
+  },
+  {
+   "id": "v227",
+   "text": "Closest washroom from cabin 8924.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "@cabin:8924",
+    "B": null,
+    "cabin": "8924"
+   },
+   "tags": [
+    "restroom",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v228",
+   "text": "Take me to the nearest bathroom.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v229",
+   "text": "Bathroom.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom",
+    "bare_place"
+   ]
+  },
+  {
+   "id": "v230",
+   "text": "Is there a restroom near the Aqua Theater?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "aqua theater",
+    "B": null,
+    "cabin": null,
+    "A_target": "AquaTheater"
+   },
+   "tags": [
+    "restroom"
+   ]
+  },
+  {
+   "id": "v231",
+   "text": "Closest bathroom on deck 5",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "deck": 5
+   },
+   "tags": [
+    "restroom",
+    "deck_qualifier",
+    "decision_D10"
+   ]
+  },
+  {
+   "id": "v232",
+   "text": "I'm at the pool, where's the closest restroom?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "pool",
+    "B": null,
+    "cabin": null,
+    "A_target": "Pool Deck"
+   },
+   "tags": [
+    "restroom",
+    "combined"
+   ]
+  },
+  {
+   "id": "v233",
+   "text": "I'm at the zip line. Where's the nearest bathroom?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "zip line",
+    "B": null,
+    "cabin": null,
+    "A_target": "Zip Line"
+   },
+   "tags": [
+    "restroom",
+    "combined"
+   ]
+  },
+  {
+   "id": "v234",
+   "text": "Where's the closest bathroom to cabin 6902?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "@cabin:6902",
+    "B": null,
+    "cabin": "6902"
+   },
+   "tags": [
+    "restroom",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v235",
+   "text": "Um, the restrooms, where are they?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "restroom",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v236",
+   "text": "I'm at the restroom.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@restroom",
+    "B": null,
+    "cabin": null,
+    "reason": "restroom"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v237",
+   "text": "I'm in the bathroom.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@restroom",
+    "B": null,
+    "cabin": null,
+    "reason": "restroom"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v238",
+   "text": "I'm at the toilets.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@restroom",
+    "B": null,
+    "cabin": null,
+    "reason": "restroom"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v239",
+   "text": "I'm by the elevators.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@elevator",
+    "B": null,
+    "cabin": null,
+    "reason": "elevator"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v240",
+   "text": "I'm at the aft elevators.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@aftelev",
+    "B": null,
+    "cabin": null,
+    "reason": "elevator"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v241",
+   "text": "I'm near the stairs.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@stairs",
+    "B": null,
+    "cabin": null,
+    "reason": "stairs"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v242",
+   "text": "I'm on deck 5.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@deck:5",
+    "B": null,
+    "cabin": null,
+    "reason": "deck"
+   },
+   "tags": [
+    "refused",
+    "numbers_not_cabin"
+   ]
+  },
+  {
+   "id": "v243",
+   "text": "From the bathroom to the Solarium.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@restroom",
+    "B": null,
+    "cabin": null,
+    "reason": "restroom"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v244",
+   "text": "How do I get from the elevator to the casino?",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@elevator",
+    "B": null,
+    "cabin": null,
+    "reason": "elevator"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v245",
+   "text": "I'm at the forward elevator on deck 5.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@forelev",
+    "B": null,
+    "cabin": null,
+    "reason": "elevator"
+   },
+   "tags": [
+    "refused",
+    "decision_D7"
+   ]
+  },
+  {
+   "id": "v246",
+   "text": "Stairs to the Windjammer",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@stairs",
+    "B": null,
+    "cabin": null,
+    "reason": "stairs"
+   },
+   "tags": [
+    "refused"
+   ]
+  },
+  {
+   "id": "v247",
+   "text": "I'm on the running track.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "running track",
+    "B": null,
+    "cabin": null,
+    "reason": "multi_spot"
+   },
+   "tags": [
+    "refused",
+    "decision_D8"
+   ]
+  },
+  {
+   "id": "v248",
+   "text": "I'm at the restroom. How do I get to the Solarium?",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@restroom",
+    "B": null,
+    "cabin": null,
+    "reason": "restroom"
+   },
+   "tags": [
+    "refused",
+    "combined"
+   ]
+  },
+  {
+   "id": "v249",
+   "text": "Where are the aft elevators?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@aftelev",
+    "cabin": null,
+    "B_target": "Aft elevators"
+   },
+   "tags": [
+    "elevator_dest"
+   ]
+  },
+  {
+   "id": "v250",
+   "text": "How do I get to the forward elevators?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@forelev",
+    "cabin": null,
+    "B_target": "Fore elevators"
+   },
+   "tags": [
+    "elevator_dest"
+   ]
+  },
+  {
+   "id": "v251",
+   "text": "Take me to the after elevators.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@aftelev",
+    "cabin": null,
+    "B_target": "Aft elevators"
+   },
+   "tags": [
+    "elevator_dest",
+    "asr_aft"
+   ]
+  },
+  {
+   "id": "v252",
+   "text": "Nearest elevator.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@elevator",
+    "cabin": null
+   },
+   "tags": [
+    "elevator_dest",
+    "decision_D5"
+   ]
+  },
+  {
+   "id": "v253",
+   "text": "How do I get to deck 15?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@deck:15",
+    "cabin": null
+   },
+   "tags": [
+    "deck_dest",
+    "decision_D5"
+   ]
+  },
+  {
+   "id": "v254",
+   "text": "How far is Deck 5?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@deck:5",
+    "cabin": null
+   },
+   "tags": [
+    "deck_dest",
+    "decision_D5"
+   ]
+  },
+  {
+   "id": "v255",
+   "text": "Where are the stairs?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@stairs",
+    "cabin": null
+   },
+   "tags": [
+    "stairs_dest",
+    "decision_D5"
+   ]
+  },
+  {
+   "id": "v256",
+   "text": "How do I get to the pool on deck 15?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "pool",
+    "cabin": null,
+    "B_target": "Pool Deck"
+   },
+   "tags": [
+    "deck_qualifier"
+   ]
+  },
+  {
+   "id": "v257",
+   "text": "What's next?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v258",
+   "text": "What's on tonight?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v259",
+   "text": "When is the ice show?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v260",
+   "text": "Where is trivia?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule",
+    "where_event"
+   ]
+  },
+  {
+   "id": "v261",
+   "text": "How do I get to the comedy show?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule",
+    "where_event"
+   ]
+  },
+  {
+   "id": "v262",
+   "text": "What time does the Windjammer open?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "hours"
+   },
+   "tags": [
+    "hours"
+   ]
+  },
+  {
+   "id": "v263",
+   "text": "Is the Solarium open?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "hours"
+   },
+   "tags": [
+    "hours"
+   ]
+  },
+  {
+   "id": "v264",
+   "text": "When does Johnny Rockets close?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "hours"
+   },
+   "tags": [
+    "hours"
+   ]
+  },
+  {
+   "id": "v265",
+   "text": "What time is dinner?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v266",
+   "text": "My cabin is 8924.",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "stateroom"
+   },
+   "tags": [
+    "stateroom"
+   ]
+  },
+  {
+   "id": "v267",
+   "text": "Set my stateroom to 9850.",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "stateroom"
+   },
+   "tags": [
+    "stateroom"
+   ]
+  },
+  {
+   "id": "v268",
+   "text": "What's happening on the pool deck?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v269",
+   "text": "Pebble, what's up next?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v270",
+   "text": "Where is the sail away party?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule",
+    "where_event"
+   ]
+  },
+  {
+   "id": "v271",
+   "text": "What time is all aboard?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v272",
+   "text": "Is there trivia tonight?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "schedule"
+   ]
+  },
+  {
+   "id": "v273",
+   "text": "How do I get to",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial"
+   ]
+  },
+  {
+   "id": "v274",
+   "text": "Take me",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial"
+   ]
+  },
+  {
+   "id": "v275",
+   "text": "I'm at",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial"
+   ]
+  },
+  {
+   "id": "v276",
+   "text": "How do I get from the Solarium?",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial"
+   ]
+  },
+  {
+   "id": "v277",
+   "text": "How do I get there?",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial"
+   ]
+  },
+  {
+   "id": "v278",
+   "text": "Directions.",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial"
+   ]
+  },
+  {
+   "id": "v279",
+   "text": "Where is",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial"
+   ]
+  },
+  {
+   "id": "v280",
+   "text": "Um, take me to, uh...",
+   "expect": {
+    "intent": "INCOMPLETE",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "partial",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v281",
+   "text": "",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "empty"
+   ]
+  },
+  {
+   "id": "v282",
+   "text": "Hello?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "empty",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v283",
+   "text": "Is it going to rain today?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "gibberish"
+   ]
+  },
+  {
+   "id": "v284",
+   "text": "Blah blah blah",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "gibberish"
+   ]
+  },
+  {
+   "id": "v285",
+   "text": "I'm lost.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "gibberish"
+   ]
+  },
+  {
+   "id": "v286",
+   "text": "Play some music.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "gibberish",
+    "venue_word_pitfall"
+   ]
+  },
+  {
+   "id": "v287",
+   "text": "What's the weather like?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "gibberish"
+   ]
+  },
+  {
+   "id": "v288",
+   "text": "Call my wife.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "gibberish"
+   ]
+  },
+  {
+   "id": "v289",
+   "text": "How do I get to the moon?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "unknown_place"
+   ]
+  },
+  {
+   "id": "v290",
+   "text": "Take me to the Titanic.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "unknown_place"
+   ]
+  },
+  {
+   "id": "v291",
+   "text": "Where's the bar?",
+   "expect": {
+    "intent": "CLOSEST_BAR",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "unknown_place",
+    "closest_bar",
+    "category"
+   ]
+  },
+  {
+   "id": "v292",
+   "text": "How do I get to the Entertainment Place?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "unknown_place",
+    "neighborhood"
+   ]
+  },
+  {
+   "id": "v293",
+   "text": "What deck am I on?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "gibberish"
+   ]
+  },
+  {
+   "id": "v294",
+   "text": "From the Solarium to the Boardwalk to the Windjammer.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "three_places"
+   ]
+  },
+  {
+   "id": "v295",
+   "text": "The wind jam are two cabin",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "wind jam are",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "mock_no_match",
+    "asr_venue",
+    "asr_to"
+   ]
+  },
+  {
+   "id": "v296",
+   "text": "How do I get to the Solarium, no, the Windjammer.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "correction"
+   ]
+  },
+  {
+   "id": "v297",
+   "text": "Take me to Studio B. Sorry, the Royal Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "royal theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "correction"
+   ]
+  },
+  {
+   "id": "v298",
+   "text": "I'm at the Solarium, I mean the Boardwalk.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "boardwalk",
+    "B": null,
+    "cabin": null,
+    "A_target": "Boardwalk"
+   },
+   "tags": [
+    "correction"
+   ]
+  },
+  {
+   "id": "v299",
+   "text": "How do I get to the Solarium? No wait, the Solarium Bar.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium bar",
+    "cabin": null,
+    "B_target": "Solarium Bar"
+   },
+   "tags": [
+    "correction"
+   ]
+  },
+  {
+   "id": "v300",
+   "text": "How do I get to the how do I get to the Solarium?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "stutter"
+   ]
+  },
+  {
+   "id": "v301",
+   "text": "Take me take me to the casino.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "casino",
+    "cabin": null,
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "stutter"
+   ]
+  },
+  {
+   "id": "v302",
+   "text": "how do i get to the solarium how do i get to the windjammer",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "stutter",
+    "no_punctuation"
+   ]
+  },
+  {
+   "id": "v303",
+   "text": "Where's the Living Room?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "living room",
+    "cabin": null,
+    "B_target": "The Living Room"
+   },
+   "tags": [
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v304",
+   "text": "How do I get to the main dining room?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "main dining room",
+    "cabin": null,
+    "B_target": "Main Dining Room 3|Main Dining Room 4|Main Dining Room 5"
+   },
+   "tags": [
+    "ambiguous",
+    "decision_D3"
+   ],
+   "note": "Reconciled 2026-09-28: a group target; the route goes to the nearest floor (decision D3)."
+  },
+  {
+   "id": "v305",
+   "text": "Main Dining Room 5 to my cabin",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "main dining room 5",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Main Dining Room 5"
+   },
+   "tags": [
+    "numbers_not_cabin",
+    "room_pitfall"
+   ]
+  },
+  {
+   "id": "v306",
+   "text": "How do I get to main dining room five?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "main dining room 5",
+    "cabin": null,
+    "B_target": "Main Dining Room 5"
+   },
+   "tags": [
+    "numbers_not_cabin",
+    "to_vs_two"
+   ]
+  },
+  {
+   "id": "v307",
+   "text": "Where's Play?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "play",
+    "cabin": null,
+    "B_target": "Play"
+   },
+   "tags": [
+    "venue_word_pitfall"
+   ]
+  },
+  {
+   "id": "v308",
+   "text": "How do I get to the theater?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "ambiguous",
+    "decision_D3"
+   ]
+  },
+  {
+   "id": "v309",
+   "text": "Boardwalk. To the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "pause_split"
+   ]
+  },
+  {
+   "id": "v310",
+   "text": "Solarium? Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "windjammer",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "pause_split",
+    "bare_place"
+   ]
+  },
+  {
+   "id": "v311",
+   "text": "Deck 5.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@deck:5",
+    "cabin": null
+   },
+   "tags": [
+    "deck_dest",
+    "bare_place",
+    "decision_D5"
+   ]
+  },
+  {
+   "id": "v312",
+   "text": "How do I get to the FlowRider? Thank you.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "flowrider",
+    "cabin": null,
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "politeness",
+    "multi_sentence"
+   ]
+  },
+  {
+   "id": "v313",
+   "text": "Where's Johnny Rocket?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "johnny rocket",
+    "cabin": null,
+    "B_target": "Johnny Rockets"
+   },
+   "tags": [
+    "asr_venue"
+   ]
+  },
+  {
+   "id": "v314",
+   "text": "How do I get to the Vitality Spa?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "vitality spa",
+    "cabin": null,
+    "B_target": "Vitality Spa"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v315",
+   "text": "Where's the Solarian?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarian",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "asr_venue"
+   ]
+  },
+  {
+   "id": "v316",
+   "text": "How do I get to Boleros?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "boleros",
+    "cabin": null,
+    "B_target": "Boleros"
+   },
+   "tags": [
+    "question_how"
+   ]
+  },
+  {
+   "id": "v317",
+   "text": "Get to the Boot and Bonnet.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "boot and bonnet",
+    "cabin": null,
+    "B_target": "Boot & Bonnet Pub"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v318",
+   "text": "Take me to Playmakers.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "playmakers",
+    "cabin": null,
+    "B_target": "Playmakers Sports Bar & Arcade"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v319",
+   "text": "How do I get to CocoCay?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "cococay",
+    "cabin": null,
+    "B_target": "Perfect Day at CocoCay"
+   },
+   "tags": [
+    "ashore"
+   ]
+  },
+  {
+   "id": "v320",
+   "text": "Solarium to the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "same_place"
+   ]
+  },
+  {
+   "id": "v321",
+   "text": "How do I get to the Wind Jammer from the Aqua Theatre?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "aqua theatre",
+    "B": "wind jammer",
+    "cabin": null,
+    "A_target": "AquaTheater",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "reversed",
+    "asr_venue",
+    "spelling"
+   ]
+  },
+  {
+   "id": "v322",
+   "text": "Hey, uh, which way to the escape room from my cabin?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@mycabin",
+    "B": "escape room",
+    "cabin": null,
+    "B_target": "The Puzzle Break"
+   },
+   "tags": [
+    "reversed",
+    "my_cabin",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v323",
+   "text": "Where do I find the kids club?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "kids club",
+    "cabin": null,
+    "B_target": "Adventure Ocean Theater"
+   },
+   "tags": [
+    "question_where"
+   ]
+  },
+  {
+   "id": "v324",
+   "text": "Take me to the mini golf.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "mini golf",
+    "cabin": null,
+    "B_target": "Harmony Dunes"
+   },
+   "tags": [
+    "imperative"
+   ]
+  },
+  {
+   "id": "v325",
+   "text": "How do I get to the head of the ship?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "head_pitfall",
+    "unknown_place"
+   ]
+  },
+  {
+   "id": "v326",
+   "text": "How do I get to the Solarium from cabin 10932?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:10932",
+    "B": "solarium",
+    "cabin": "10932",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "holdout",
+    "cabin_number",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v327",
+   "text": "Where's the nearest ladies room from the Royal Theater?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "royal theater",
+    "B": null,
+    "cabin": null,
+    "A_target": "Royal Theater"
+   },
+   "tags": [
+    "holdout",
+    "restroom"
+   ]
+  },
+  {
+   "id": "v328",
+   "text": "I'm standing by Starbucks.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "starbucks",
+    "B": null,
+    "cabin": null,
+    "A_target": "Starbucks"
+   },
+   "tags": [
+    "holdout",
+    "location"
+   ]
+  },
+  {
+   "id": "v329",
+   "text": "Can you take me to the Boardwalk from Central Park please",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "central park",
+    "B": "boardwalk",
+    "cabin": null,
+    "A_target": "Central Park",
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "holdout",
+    "reversed",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v330",
+   "text": "Directions to my cabin from the pool.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "pool",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Pool Deck"
+   },
+   "tags": [
+    "holdout",
+    "my_cabin",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v331",
+   "text": "I'm at the Rising Tide. How far is the Solarium?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "rising tide",
+    "B": "solarium",
+    "cabin": null,
+    "A_target": "Rising Tide Bar",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "holdout",
+    "combined"
+   ]
+  },
+  {
+   "id": "v332",
+   "text": "Which way to the bathroom from the casino?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "casino",
+    "B": null,
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "holdout",
+    "restroom"
+   ]
+  },
+  {
+   "id": "v333",
+   "text": "Um. Johnny Rockets to cabin 9850.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "johnny rockets",
+    "B": "@cabin:9850",
+    "cabin": "9850",
+    "A_target": "Johnny Rockets"
+   },
+   "tags": [
+    "holdout",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v334",
+   "text": "How do I get from cabin six nine oh two to the Windjammer?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:6902",
+    "B": "windjammer",
+    "cabin": "6902",
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "holdout",
+    "cabin_number",
+    "oh_zero"
+   ]
+  },
+  {
+   "id": "v335",
+   "text": "We're in cabin ten nine thirty two.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:10932",
+    "B": null,
+    "cabin": "10932"
+   },
+   "tags": [
+    "holdout",
+    "cabin_number",
+    "grouped"
+   ]
+  },
+  {
+   "id": "v336",
+   "text": "What's playing at the Aqua Theater tonight?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "holdout",
+    "schedule"
+   ]
+  },
+  {
+   "id": "v337",
+   "text": "When does the Solarium Bistro open?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "hours"
+   },
+   "tags": [
+    "holdout",
+    "hours"
+   ]
+  },
+  {
+   "id": "v338",
+   "text": "I'm at the aft stairs.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@stairs",
+    "B": null,
+    "cabin": null,
+    "reason": "stairs"
+   },
+   "tags": [
+    "holdout",
+    "refused"
+   ]
+  },
+  {
+   "id": "v339",
+   "text": "Take me to the Fore elevators.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@forelev",
+    "cabin": null,
+    "B_target": "Fore elevators"
+   },
+   "tags": [
+    "holdout",
+    "elevator_dest"
+   ]
+  },
+  {
+   "id": "v340",
+   "text": "Where is the ice rink?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "ice rink",
+    "cabin": null,
+    "B_target": "Studio B"
+   },
+   "tags": [
+    "holdout",
+    "question_where"
+   ]
+  },
+  {
+   "id": "v341",
+   "text": "How do I get to the Sports Court?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "sports court",
+    "cabin": null,
+    "B_target": "Sports Court"
+   },
+   "tags": [
+    "holdout"
+   ]
+  },
+  {
+   "id": "v342",
+   "text": "How do I get to the Arcade?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "arcade",
+    "cabin": null,
+    "B_target": "Arcade|Video Arcade"
+   },
+   "tags": [
+    "holdout"
+   ],
+   "note": "Reconciled 2026-09-28: two arcades on HM, a group target; route to the nearest (decision D3)."
+  },
+  {
+   "id": "v343",
+   "text": "Hey Pebble, how do I get to Jamie's Italian?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "jamies italian",
+    "cabin": null,
+    "B_target": "Jamie's Italian"
+   },
+   "tags": [
+    "holdout",
+    "politeness"
+   ]
+  },
+  {
+   "id": "v344",
+   "text": "Is there a bathroom close to Central Park?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "central park",
+    "B": null,
+    "cabin": null,
+    "A_target": "Central Park"
+   },
+   "tags": [
+    "holdout",
+    "restroom"
+   ]
+  },
+  {
+   "id": "v345",
+   "text": "Where's the closest restroom from here?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout",
+    "restroom",
+    "here"
+   ]
+  },
+  {
+   "id": "v346",
+   "text": "The Boardwalk from the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "boardwalk",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "holdout",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v347",
+   "text": "How do I get to the Boardwalk? I'm in cabin 8924.",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "@cabin:8924",
+    "B": "boardwalk",
+    "cabin": "8924",
+    "B_target": "Boardwalk"
+   },
+   "tags": [
+    "holdout",
+    "combined",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v348",
+   "text": "Navigate from Studio B to my room.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "studio b",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Studio B"
+   },
+   "tags": [
+    "holdout",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v349",
+   "text": "I'm at the Windjammer, how do I get back to my cabin?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "windjammer",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "holdout",
+    "combined",
+    "my_cabin"
+   ]
+  },
+  {
+   "id": "v350",
+   "text": "Get me to the Ultimate Abyss.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "ultimate abyss",
+    "cabin": null,
+    "B_target": "The Ultimate Abyss"
+   },
+   "tags": [
+    "holdout"
+   ]
+  },
+  {
+   "id": "v351",
+   "text": "Directions to the medical center.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "medical center",
+    "cabin": null,
+    "B_target": "Medical Center"
+   },
+   "tags": [
+    "holdout"
+   ]
+  },
+  {
+   "id": "v352",
+   "text": "What time is the parade?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "holdout",
+    "schedule"
+   ]
+  },
+  {
+   "id": "v353",
+   "text": "I'm at the Park Cafe.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "park cafe",
+    "B": null,
+    "cabin": null,
+    "A_target": "Park Cafe"
+   },
+   "tags": [
+    "holdout",
+    "location"
+   ]
+  },
+  {
+   "id": "v354",
+   "text": "How do I get to the Wipe Out Bar?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "wipe out bar",
+    "cabin": null,
+    "B_target": "Wipe Out Bar"
+   },
+   "tags": [
+    "holdout"
+   ]
+  },
+  {
+   "id": "v355",
+   "text": "Take me to the loo from the Boardwalk.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "boardwalk",
+    "B": null,
+    "cabin": null,
+    "A_target": "Boardwalk"
+   },
+   "tags": [
+    "holdout",
+    "restroom"
+   ]
+  },
+  {
+   "id": "v356",
+   "text": "I'm in the elevator.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@elevator",
+    "B": null,
+    "cabin": null,
+    "reason": "elevator"
+   },
+   "tags": [
+    "holdout",
+    "refused"
+   ]
+  },
+  {
+   "id": "v357",
+   "text": "Cabin 11844 to the Royal Theater.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:11844",
+    "B": "royal theater",
+    "cabin": "11844",
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "holdout",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v358",
+   "text": "How do I get to the Solarium to.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium to",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "holdout",
+    "trailing_noise"
+   ]
+  },
+  {
+   "id": "v359",
+   "text": "Where can we find the Schooner Bar?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "schooner bar",
+    "cabin": null,
+    "B_target": "Schooner Bar"
+   },
+   "tags": [
+    "holdout",
+    "question_where"
+   ]
+  },
+  {
+   "id": "v360",
+   "text": "I'd like directions to Central Park.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "central park",
+    "cabin": null,
+    "B_target": "Central Park"
+   },
+   "tags": [
+    "holdout",
+    "intention"
+   ]
+  },
+  {
+   "id": "v361",
+   "text": "How do I walk to the FlowRider from the Solarium?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "solarium",
+    "B": "flowrider",
+    "cabin": null,
+    "A_target": "Solarium",
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "holdout",
+    "reversed"
+   ]
+  },
+  {
+   "id": "v362",
+   "text": "Pebble closest restroom",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout",
+    "restroom"
+   ]
+  },
+  {
+   "id": "v363",
+   "text": "How far away is Chops?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "chops",
+    "cabin": null,
+    "B_target": "Chops Grille"
+   },
+   "tags": [
+    "holdout",
+    "question_distance"
+   ]
+  },
+  {
+   "id": "v364",
+   "text": "I'm right outside the casino.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "casino",
+    "B": null,
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "holdout",
+    "location"
+   ]
+  },
+  {
+   "id": "v365",
+   "text": "Take me to the Solarium. Please.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium",
+    "cabin": null,
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "holdout",
+    "multi_sentence"
+   ]
+  },
+  {
+   "id": "v366",
+   "text": "How do I get to the Solarium Bistro?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium bistro",
+    "cabin": null,
+    "B_target": "Solarium Bistro"
+   },
+   "tags": [
+    "holdout",
+    "prefix_pitfall"
+   ]
+  },
+  {
+   "id": "v367",
+   "text": "What's the fastest route to the Royal Theater from my cabin?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@mycabin",
+    "B": "royal theater",
+    "cabin": null,
+    "B_target": "Royal Theater"
+   },
+   "tags": [
+    "holdout",
+    "my_cabin",
+    "question_which"
+   ]
+  },
+  {
+   "id": "v368",
+   "text": "I'm by cabin 9804.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:9804",
+    "B": null,
+    "cabin": "9804"
+   },
+   "tags": [
+    "holdout",
+    "cabin_number"
+   ]
+  },
+  {
+   "id": "v369",
+   "text": "Where's guest services from here?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "guest services",
+    "cabin": null,
+    "B_target": "Guest Services"
+   },
+   "tags": [
+    "holdout",
+    "here"
+   ]
+  },
+  {
+   "id": "v370",
+   "text": "Room nine eight five oh to the Solarium.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:9850",
+    "B": "solarium",
+    "cabin": "9850",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "holdout",
+    "cabin_number",
+    "word_digits"
+   ]
+  }
+ ]
+}

@@ -27,6 +27,8 @@ Read before making changes:
 - `tools/shipmap/` — builds the Ship GPS map data (`src/pkjs/data/*-HM.js`:
   cabins, places, walkways) from Royal's deck-plan SVGs. See its README; the
   data files are generated, never edited by hand.
+- `tools/voice/` — builds the voice lexicon (`src/pkjs/data/voice-HM.js`,
+  generated) from `venue-mishearings-HM.json` and `venues.js`. See its README.
 - `docs/` — brief, design, data format.
 - Watch app: `package.json` + `wscript` at the root, `src/c/` watch code,
   `src/pkjs/` phone companion (and later the settings page). Targets the Pebble

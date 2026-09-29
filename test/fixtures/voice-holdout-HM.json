@@ -1,0 +1,702 @@
+{
+ "about": "Held-out voice utterances written 2026-09-28 by the final reviewer BEFORE the combined parser/matcher was built or tuned; scored once as written. Cabin numbers are made up (not on the HM plans) and live in the test fixture cabins. Same expect format and scoring as voice-corpus-HM.json.",
+ "written_before_tuning": true,
+ "cases": [
+  {
+   "id": "h01",
+   "text": "How do I get to the Windjammer marketplace?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "windjammer marketplace",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h02",
+   "text": "Wind jammer to my room.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "wind jammer",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h03",
+   "text": "Take me to the win jammer",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "win jammer",
+    "cabin": null,
+    "B_target": "Windjammer Marketplace"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h04",
+   "text": "How do I get to Sorento's?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "sorentos",
+    "cabin": null,
+    "B_target": "Sorrento's"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h05",
+   "text": "Where is the chops grill",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "chops grill",
+    "cabin": null,
+    "B_target": "Chops Grille"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h06",
+   "text": "I'm at the Boleros.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "boleros",
+    "B": null,
+    "cabin": null,
+    "A_target": "Boleros"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h07",
+   "text": "I'm at bowlers. How do I get to the casino?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "bowlers",
+    "B": "casino",
+    "cabin": null,
+    "A_target": "Boleros",
+    "B_target": "Casino Royale"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h08",
+   "text": "Closest bathroom from the rock climbing wall.",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "rock climbing wall",
+    "B": null,
+    "cabin": null,
+    "A_target": "Rock Climbing Wall"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h09",
+   "text": "Where's the nearest restroom?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h10",
+   "text": "I'm in cabin 7646.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:7646",
+    "B": null,
+    "cabin": "7646"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h11",
+   "text": "Cabin seven six four six to the Solarium",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:7646",
+    "B": "solarium",
+    "cabin": "7646",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h12",
+   "text": "How do I get from the Flow rider to cabin 12990?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "flow rider",
+    "B": "@cabin:12990",
+    "cabin": "12990",
+    "A_target": "FlowRider"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h13",
+   "text": "I'm in cabin twelve nine ninety.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "@cabin:12990",
+    "B": null,
+    "cabin": "12990"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h14",
+   "text": "Take me back to my stateroom.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "@mycabin",
+    "cabin": null
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h15",
+   "text": "How do I get to the zip line from the Boardwalk?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "zip line",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Zip Line"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h16",
+   "text": "Ultimate abyss",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "ultimate abyss",
+    "cabin": null,
+    "B_target": "The Ultimate Abyss"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h17",
+   "text": "How do I get to the Solarium bar?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "solarium bar",
+    "cabin": null,
+    "B_target": "Solarium Bar"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h18",
+   "text": "Where is the Starbucks?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "starbucks",
+    "cabin": null,
+    "B_target": "Starbucks"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h19",
+   "text": "I'm near the carousel, where's the closest toilet?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": "carousel",
+    "B": null,
+    "cabin": null,
+    "A_target": "Carousel"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h20",
+   "text": "How do I get to the bathroom?",
+   "expect": {
+    "intent": "CLOSEST_RESTROOM",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h21",
+   "text": "I'm at the elevators.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@elevator",
+    "B": null,
+    "cabin": null,
+    "reason": "elevator"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h22",
+   "text": "I'm on deck 12.",
+   "expect": {
+    "intent": "LOCATION_REFUSED",
+    "A": "@deck:12",
+    "B": null,
+    "cabin": null,
+    "reason": "deck"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h23",
+   "text": "What's on at the AquaTheater tonight?",
+   "expect": {
+    "intent": "OUT_OF_SCOPE_KNOWN",
+    "A": null,
+    "B": null,
+    "cabin": null,
+    "topic": "schedule"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h24",
+   "text": "Set an alarm for 7.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h25",
+   "text": "Text my sister I'm on my way.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h26",
+   "text": "How many steps to the Pool deck?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "pool deck",
+    "cabin": null,
+    "B_target": "Pool Deck"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h27",
+   "text": "How do I get to Izumi?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "izumi",
+    "cabin": null,
+    "B_target": "Izumi"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h28",
+   "text": "How do I get to is oomi?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "is oomi",
+    "cabin": null,
+    "B_target": "Izumi"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h29",
+   "text": "Directions to the Giovanni's wine bar.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "giovannis wine bar",
+    "cabin": null,
+    "B_target": "Giovanni's Wine Bar"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h30",
+   "text": "How do I get to the kids club?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "kids club",
+    "cabin": null,
+    "B_target": "Adventure Ocean Theater"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h31",
+   "text": "I'm at the Adventure Ocean. Take me to the sports court.",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "adventure ocean",
+    "B": "sports court",
+    "cabin": null,
+    "A_target": "Adventure Ocean Theater",
+    "B_target": "Sports Court"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h32",
+   "text": "How do I get to the Ping pong tables?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "ping pong tables",
+    "cabin": null,
+    "B_target": "Table Tennis Court"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h33",
+   "text": "Guest services to the medical center.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "guest services",
+    "B": "medical center",
+    "cabin": null,
+    "A_target": "Guest Services",
+    "B_target": "Medical Center"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h34",
+   "text": "How do I get to the front desk",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "front desk",
+    "cabin": null,
+    "B_target": "Guest Services"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h35",
+   "text": "Where's the Schooner bar from the theater?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "theater",
+    "B": "schooner bar",
+    "cabin": null,
+    "A_target": "Royal Theater",
+    "B_target": "Schooner Bar"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h36",
+   "text": "Take me to the Trellis bar.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "trellis bar",
+    "cabin": null,
+    "B_target": "Trellis Bar"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h37",
+   "text": "How do I get to the Lime and coconut?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "lime and coconut",
+    "cabin": null,
+    "B_target": "The Lime & Coconut"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h38",
+   "text": "Hey Pebble how do I get to Playmakers",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "playmakers",
+    "cabin": null,
+    "B_target": "Playmakers Sports Bar & Arcade"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h39",
+   "text": "I'm at the Studio be.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "studio be",
+    "B": null,
+    "cabin": null,
+    "A_target": "Studio B"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h40",
+   "text": "Where's the Perfect Storm?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "perfect storm",
+    "cabin": null,
+    "B_target": "The Perfect Storm Waterslides"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h41",
+   "text": "Take me to the escape room from cabin 10930.",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "@cabin:10930",
+    "B": "escape room",
+    "cabin": "10930",
+    "B_target": "The Puzzle Break"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h42",
+   "text": "Where can I find the Vitality Spa",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "vitality spa",
+    "cabin": null,
+    "B_target": "Vitality Spa"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h43",
+   "text": "I am at the casino. How do I get back to the room?",
+   "expect": {
+    "intent": "ROUTE_COMBINED",
+    "A": "casino",
+    "B": "@mycabin",
+    "cabin": null,
+    "A_target": "Casino Royale"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h44",
+   "text": "How do I get to the dog house?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "dog house",
+    "cabin": null,
+    "B_target": "Boardwalk Dog House"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h45",
+   "text": "I'm at main dining room three.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "main dining room 3",
+    "B": null,
+    "cabin": null,
+    "A_target": "Main Dining Room 3"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h46",
+   "text": "How do I get to the Flow Ryder?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "flow ryder",
+    "cabin": null,
+    "B_target": "FlowRider"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h47",
+   "text": "I'm at the pesky parrots.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "pesky parrots",
+    "B": null,
+    "cabin": null,
+    "A_target": "Pesky Parrot"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h48",
+   "text": "How do I get to the Cartier store?",
+   "expect": {
+    "intent": "ROUTE",
+    "A": null,
+    "B": "cartier store",
+    "cabin": null,
+    "B_target": "Cartier"
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h49",
+   "text": "Where did I park?",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  },
+  {
+   "id": "h50",
+   "text": "Play the next song.",
+   "expect": {
+    "intent": "NO_MATCH",
+    "A": null,
+    "B": null,
+    "cabin": null
+   },
+   "tags": [
+    "holdout_final"
+   ]
+  }
+ ]
+}
