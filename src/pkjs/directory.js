@@ -24,6 +24,7 @@ var REF_CABIN = 400;   // Route screen only: to your stateroom (voice, docs/WATC
 var REF_REST_HERE = 401;  // Route screen only: to the closest restroom from where you are (voice)
 var REF_PLACE = 1000;  // + index in places()
 var REF_TO_CABIN = 100000;  // Route screen only: + a cabin number said by voice (never stored)
+var REF_REST_DECK = 500;    // Route screen only: + a deck, the closest restroom on it from where you are (voice, D10)
 var REF_FLAG = 30000;  // + a place page's ref: Flag a map problem (Map check)
 
 // Row kinds.
@@ -351,6 +352,62 @@ function stops(ctx, sailDays, today) {
   return out;
 }
 
+// A spoken start (voice, `I'm at X`) as the phone saves it: {sail (the bundle's
+// sail date), at (cruise minutes), name, and venue (a directory place's name),
+// cabin (a spoken cabin number, kept only while it lasts, §9.6) or mine (your
+// stateroom, whatever it is then)}. `place`: {venue} | {cabin} | {mine: true}.
+function spokenStart(place, ctx) {
+  var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
+  var out = {sail: ctx.bundle.sailDate, at: slice.cruiseMinutes(sailDays, ctx.now || new Date()), name: place.name || ''};
+  if (place.mine) {
+    out.mine = true;
+  } else if (place.cabin) {
+    out.cabin = String(place.cabin);
+  } else {
+    out.venue = place.venue;
+  }
+  return out;
+}
+
+// A saved spoken start in routestart.js's form ({at, venue} or {at, cabin}),
+// or null for none or another sailing's.
+function spokenOf(ctx, room) {
+  var sp = ctx.spoken;
+  if (!sp || !ctx.bundle || sp.sail !== ctx.bundle.sailDate || (sp.mine && !room)) {
+    return null;
+  }
+  return sp.mine ? {at: sp.at, cabin: room} : sp.cabin ? {at: sp.at, cabin: sp.cabin} : {at: sp.at, venue: sp.venue};
+}
+
+// Why the saved spoken start `ctx.spoken` no longer counts (routestart.spokenEnd,
+// or 'another sailing'), or null while it does.
+function spokenEnded(ctx) {
+  if (!ctx.spoken) {
+    return null;
+  }
+  if (!ctx.bundle || !ctx.bundle.sailDate || ctx.spoken.sail !== ctx.bundle.sailDate) {
+    return 'another sailing';
+  }
+  var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
+  var now = slice.cruiseMinutes(sailDays, ctx.now || new Date());
+  return routestart.spokenEnd({at: ctx.spoken.at}, stops(ctx, sailDays, slice.cruiseDayIndex(now)), now);
+}
+
+// routestart.start for ctx: the stops, the saved spoken start (ctx.spoken) and
+// a start said in the question (ctx.from: {venue} | {cabin} | {mine}). Your own
+// cabin said as a start is the cabin start (`FROM YOUR CABIN`), marked `said`.
+function startOf(ctx, target, room) {
+  var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
+  var now = slice.cruiseMinutes(sailDays, ctx.now);
+  var from = ctx.from ? (ctx.from.mine ? (room ? {cabin: room} : null) : ctx.from) : null;
+  var st = routestart.start({stops: stops(ctx, sailDays, slice.cruiseDayIndex(now)), now: now, target: target,
+                             cabin: room, spoken: spokenOf(ctx, room), from: from});
+  if ((st.kind === 'spoken' || st.kind === 'said') && st.cabin && st.cabin === room) {
+    return {kind: 'cabin', cabin: room, said: st.kind};
+  }
+  return st;
+}
+
 // The route from where routestart.js says you are now (§9.4), or with `target`
 // (an event {start}) where you'll be before it, to the nearest of the spots
 // `to`: {start, header, from (the spot it leaves), route}, or {flags} with
@@ -359,14 +416,12 @@ function bestRoute(to, ctx, cabin, target) {
   var ship = ctx.shipCode;
   var finder = venues.bundleFinder(ctx.bundle, ctx.settings);
   var room = stateroom(ctx);
-  var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
-  var now = slice.cruiseMinutes(sailDays, ctx.now);
-  var start = routestart.start({stops: stops(ctx, sailDays, slice.cruiseDayIndex(now)), now: now, target: target,
-                                cabin: room});
-  var from = start.venue ? spotsOf(ship, finder.entry(start.venue), cabin) : [];
+  var start = startOf(ctx, target, room);
+  var from = start.venue ? spotsOf(ship, finder.entry(start.venue), cabin) :
+    start.cabin && start.kind !== 'cabin' ? [shipmap.cabin(ship, start.cabin)].filter(Boolean) : [];
   if (!from.length && room) {
     // At a stop that isn't on the map (ashore, say): from the cabin.
-    start = {kind: 'cabin', cabin: room};
+    start = {kind: 'cabin', cabin: room, said: start.kind === 'cabin' ? start.said : undefined};
     from = [shipmap.cabin(ship, room)].filter(Boolean);
   }
   if (!room && !from.length) {
@@ -395,11 +450,18 @@ function startReason(ctx, target) {
   if (!ctx.bundle) {
     return 'nowhere';
   }
-  var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
-  var now = slice.cruiseMinutes(sailDays, ctx.now);
   var room = stateroom(ctx);
-  var s = routestart.start({stops: stops(ctx, sailDays, slice.cruiseDayIndex(now)), now: now, target: target,
-                            cabin: room});
+  var s = startOf({bundle: ctx.bundle, settings: ctx.settings, stars: ctx.stars, now: ctx.now || new Date(),
+                   spoken: ctx.spoken, from: ctx.from}, target, room);
+  if (s.kind === 'spoken' || s.kind === 'said' || s.said) {
+    // 'said "I'm at" Solarium at 14:05' or 'said in the question: Cabin 8200'.
+    var what = s.kind === 'cabin' ? 'your cabin' : s.cabin ? 'Cabin ' + s.cabin : s.venue;
+    if ((s.said || s.kind) === 'said') {
+      return 'said in the question: ' + what;
+    }
+    var t0 = ((ctx.spoken.at % 1440) + 1440) % 1440;
+    return 'said "I\'m at" ' + what + ' at ' + Math.floor(t0 / 60) + ':' + (t0 % 60 < 10 ? '0' : '') + (t0 % 60);
+  }
   if (s.kind === 'stop') {
     var p = s.stop;
     var t = ((p.start % 1440) + 1440) % 1440;
@@ -596,11 +658,11 @@ function cabinRoutePage(s, ctx) {
     if (best.flags) {
       page = routeMessage('Your cabin', 'No route found');
     } else if (best.start.kind === 'cabin') {
-      page = routeMessage('Your cabin', 'No starred event on now to start from');
+      page = routeMessage('Your cabin', best.start.said ? 'You\'re at your cabin' : 'No starred event on now to start from');
     } else {
       page = placeRoute({name: 'Your cabin', short: 'Your cabin'}, best,
                         {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)});
-      page.from = venues.bundleFinder(ctx.bundle, s.c.settings).short(best.start.venue) || best.start.venue || '';
+      page.from = startName(best.start, ctx.bundle, s.c.settings);
     }
   }
   page.ref = REF_CABIN;
@@ -611,7 +673,8 @@ function cabinRoutePage(s, ctx) {
 // The Route screen to the closest restroom from where routestart.js says you
 // are (`Nearest bathroom`): from a starred event on now, else the cabin.
 // `from` is where it starts, as for cabinRoutePage.
-function restHerePage(s, ctx) {
+// With `deck` (`closest restroom on deck 5`, D10), the closest one on that deck.
+function restHerePage(s, ctx, deck) {
   var ship = s.c.shipCode;
   var page = null;
   if (!ctx.bundle || !shipmap.data(ship)) {
@@ -619,11 +682,10 @@ function restHerePage(s, ctx) {
   } else {
     var finder = venues.bundleFinder(ctx.bundle, s.c.settings);
     var room = stateroom(s.c);
-    var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
-    var now = slice.cruiseMinutes(sailDays, s.c.now);
-    var start = routestart.start({stops: stops(s.c, sailDays, slice.cruiseDayIndex(now)), now: now, cabin: room});
-    var at = start.venue ? spotsOf(ship, finder.entry(start.venue), s.cabin)[0] : null;
-    var name = start.venue ? finder.short(start.venue) || start.venue : '';
+    var start = startOf(s.c, undefined, room);
+    var at = start.venue ? spotsOf(ship, finder.entry(start.venue), s.cabin)[0] :
+      start.cabin && start.kind !== 'cabin' ? shipmap.cabin(ship, start.cabin) : null;
+    var name = at ? startName(start, ctx.bundle, s.c.settings) : '';
     if (!at && room) {
       at = shipmap.cabin(ship, room);
       name = 'Your cabin';
@@ -633,11 +695,11 @@ function restHerePage(s, ctx) {
     } else {
       // "1 deck below your cabin", "CLOSEST TO YOUR CABIN".
       page = restroomRoute({name: name, short: name === 'Your cabin' ? 'your cabin' : name}, at, ship,
-                           {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)});
+                           {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship), deck: deck});
       page.from = name;
     }
   }
-  page.ref = REF_REST_HERE;
+  page.ref = deck ? REF_REST_DECK + deck : REF_REST_HERE;
   page.rest = false;
   return page;
 }
@@ -661,6 +723,29 @@ function routeTarget(s, ref, rest) {
     return {name: name, short: name, to: [shipmap.cabin(ship, ref - REF_TO_CABIN)].filter(Boolean)};
   }
   return null;
+}
+
+// Where a route starts, as a FROM row says it: `Your cabin`, `Cabin 8200` (said)
+// or a venue's short name.
+function startName(start, bundle, settings) {
+  if (start.kind === 'cabin') {
+    return 'Your cabin';
+  }
+  if (start.cabin) {
+    return 'Cabin ' + start.cabin;
+  }
+  return venues.bundleFinder(bundle, settings).short(start.venue) || start.venue || '';
+}
+
+// Where routes start now, as a FROM row says it, or '' for nowhere.
+function startNow(ctx) {
+  if (!ctx.bundle || !ctx.bundle.sailDate) {
+    return '';
+  }
+  var s = setup(ctx);
+  var room = stateroom(s.c);
+  var st = startOf(s.c, undefined, room);
+  return st.kind === 'none' ? '' : startName(st, ctx.bundle, s.c.settings);
 }
 
 // Voice (voicecard.js): the nearest of the Route screen refs `refs` (places,
@@ -700,11 +785,10 @@ function nearestRef(refs, ctx) {
     });
   }
   var finder = venues.bundleFinder(ctx.bundle, s.c.settings);
-  var cabinStart = best.start.kind === 'cabin';
-  var entry = cabinStart || !best.start.venue ? null : finder.entry(best.start.venue);
-  return {ref: owner[i], name: names[owner[i]], flags: 0, header: best.header,
-          from: cabinStart ? 'Your cabin' : finder.short(best.start.venue) || best.start.venue || '',
-          at: entry ? entry.name : ''};
+  var entry = best.start.kind === 'cabin' || !best.start.venue ? null : finder.entry(best.start.venue);
+  return {ref: owner[i], name: names[owner[i]], flags: 0, header: best.header, kind: best.start.kind,
+          from: startName(best.start, ctx.bundle, s.c.settings),
+          at: entry ? entry.name : best.start.cabin && best.start.kind !== 'cabin' ? 'Cabin ' + best.start.cabin : ''};
 }
 
 // The Route screen ref for a directory place or elevator bank named `name`, or -1.
@@ -735,6 +819,9 @@ function routePage(ref, rest, ctx) {
   }
   if (ref === REF_REST_HERE) {
     return restHerePage(s, ctx);
+  }
+  if (ref > REF_REST_DECK && ref < REF_REST_DECK + 100) {
+    return restHerePage(s, ctx, ref - REF_REST_DECK);
   }
   var ship = s.c.shipCode;
   var opts = {units: s.c.settings.units, sides: s.c.sides, banks: shipmap.banks(ship)};
@@ -849,9 +936,9 @@ function placeRoute(target, best, opts) {
 // ROYAL THEATER`, and under the steps the restroom's deck and position.
 function restroomRoute(target, at, ship, opts) {
   var title = 'Restroom';
-  var found = shipmap.restroom(ship, at);
+  var found = shipmap.restroom(ship, at, opts.deck ? {deck: opts.deck} : undefined);
   if (!found) {
-    return routeMessage(title, 'No restroom found');
+    return routeMessage(title, opts.deck ? 'No restroom on Deck ' + opts.deck + ' on the map' : 'No restroom found');
   }
   var r = found.route;
   if (!r.to) {
@@ -859,7 +946,7 @@ function restroomRoute(target, at, ship, opts) {
   }
   var o = {units: opts.units, sides: opts.sides, banks: opts.banks, name: title};
   var where = 'Deck ' + found.deck + (opts.banks ? DOT + gpstext.zone(found.a, opts.banks) : '');
-  return {title: title, header: 'CLOSEST TO ' + target.short.toUpperCase(), lead: '',
+  return {title: title, header: (opts.deck ? 'DECK ' + opts.deck + ' FROM ' : 'CLOSEST TO ') + target.short.toUpperCase(), lead: '',
           steps: capSteps(gpstext.steps(r, at, o)), big: where,
           small: {decks: 0, text: deckFrom(found.deck - at.deck, target.short)},
           flags: gpstext.reduced(r) ? ROUTE_REDUCED : 0};
@@ -906,7 +993,7 @@ function setup(ctx) {
   }
   return {
     c: {bundle: ctx.bundle, settings: settings, stars: ctx.stars || {}, now: ctx.now || new Date(),
-        shipCode: shipCode, sides: sides.confirmed === true},
+        shipCode: shipCode, sides: sides.confirmed === true, spoken: ctx.spoken, from: ctx.from},
     list: places(shipCode, (settings.venues || {})[shipCode]),
     banks: banksOf(shipCode),
     cabin: L.cabinDeck((settings.me || {}).deck)
@@ -1038,7 +1125,8 @@ function encodeBank(b) {
 module.exports = {
   REF_DECKS: REF_DECKS, REF_AREAS: REF_AREAS, REF_DECK: REF_DECK, REF_AREA: REF_AREA, REF_PLACE: REF_PLACE,
   REF_ELEVATORS: REF_ELEVATORS, REF_BANK: REF_BANK, REF_FLAG: REF_FLAG, REF_CABIN: REF_CABIN, REF_REST_HERE: REF_REST_HERE,
-  REF_TO_CABIN: REF_TO_CABIN, stateroomOf: stateroom, nearestRef: nearestRef, refOf: refOf, bankRefs: bankRefs,
+  REF_TO_CABIN: REF_TO_CABIN, REF_REST_DECK: REF_REST_DECK, stateroomOf: stateroom, spokenStart: spokenStart,
+  spokenEnded: spokenEnded, startNow: startNow, nearestRef: nearestRef, refOf: refOf, bankRefs: bankRefs,
   ROW_HEADER: ROW_HEADER, ROW_ITEM: ROW_ITEM, ROW_EVENT: ROW_EVENT, ROW_PLACE: ROW_PLACE, ROW_MUTED: ROW_MUTED,
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
   GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,

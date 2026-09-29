@@ -14,8 +14,15 @@
 // groups, cabins, elevators, the closest bar or coffee, a snack, and the
 // answers for what it can't do (docs/DESIGN_V1_1.md §9.6, VOICE_FINAL_PLAN
 // decisions D1-D22). The commands above keep precedence. Routes use the Route
-// screen refs (directory.js); a spoken start (`I'm at X`, `from X to Y`) is not
-// used yet: those routes start where routes start now (§9.4) and say so.
+// screen refs (directory.js).
+//
+// Where routes start (1.5.9, §9.4, routestart.js): `I'm at X` answers YOU'RE AT
+// X and Select sets the spoken start (the card's `start`, saved by index.js;
+// 90 minutes, D22); `Forget where I am` clears it the same way (`forget`). A
+// start said in the question (`from X to Y`) routes from X: the card's `start`
+// goes with the route, and index.js uses it for that Route screen; with `I'm at
+// X, how do I get to Y` Select also sets it (D4). Only one-spot places and
+// cabins can be a start (D7, D8, D12, D19).
 'use strict';
 
 var pack = require('./pack');
@@ -199,6 +206,15 @@ function musterCard(heard, ctx) {
           title: place.name, header: ''};
 }
 
+// ctx with a start said in the question (`place`: {venue} | {cabin} | {mine}):
+// directory.js routes from it (routestart.js `from`).
+function withFrom(ctx, place) {
+  var out = {};
+  Object.keys(ctx).forEach(function(k) { out[k] = ctx[k]; });
+  out.from = place;
+  return out;
+}
+
 // "Take me to my cabin": the route from where routestart.js says you are.
 function cabinCard(heard, ctx) {
   var page = directory.routePage(directory.REF_CABIN, false, ctx);
@@ -214,19 +230,24 @@ function cabinCard(heard, ctx) {
 // now (a starred event on now, else the cabin). A place named in the question
 // ("restroom near the theater") needs the matcher; until then the FROM row
 // shows where it starts.
-function restroomCard(heard, ctx) {
-  var page = directory.routePage(directory.REF_REST_HERE, false, ctx);
+// With `deck` (D10): the closest one on that deck.
+function restroomCard(heard, ctx, deck) {
+  var ref = deck ? directory.REF_REST_DECK + deck : directory.REF_REST_HERE;
+  var page = directory.routePage(ref, false, ctx);
+  var to = {label: 'TO', value: 'Closest restroom' + (deck ? ' on Deck ' + deck : '')};
   if (!page.steps.length) {
-    return {action: ACT_NONE, rows: [heard, {label: 'TO', value: 'Closest restroom'}], hint: page.lead};
+    return {action: ACT_NONE, rows: [heard, to], hint: page.lead};
   }
-  return {action: ACT_ROUTE, ref: directory.REF_REST_HERE,
-          rows: [heard, {label: 'FROM', value: page.from}, {label: 'TO', value: 'Closest restroom'}],
+  return {action: ACT_ROUTE, ref: ref,
+          rows: [heard, {label: 'FROM', value: page.from}, to],
           hint: 'Select: route \u00b7 Hold: ask again', title: 'Restroom', header: page.header};
 }
 
 var HINT_ROUTE = 'Select: route · Hold: ask again';
 var HINT_AGAIN = 'Select to ask again';
-var HINT_FROM_NOW = 'Starts where you are now · Select: route';
+var HINT_ROUTE_SET = 'Select: route, and routes start there';
+var HINT_SET = 'Select: set · Hold: ask again';
+var HINT_FORGET = 'Select: forget it · Hold: ask again';
 var TRY_PLACE = 'How do I get to the Windjammer?';
 
 function quoted(text) {
@@ -272,9 +293,9 @@ function shortName(name, ctx) {
   return venues.venueFinder(ship, (s.venues || {})[ship], (s.me || {}).deck).short(name) || name;
 }
 
-// The route to the nearest of `refs` from where routes start now. o: {label
-// (the TO row's), suffix (after the name), extra (rows after TO), hint, spoken
-// (a start that was said but isn't used yet)}.
+// The route to the nearest of `refs` from where routes start now (or from
+// ctx.from). o: {label (the TO row's), suffix (after the name), extra (rows
+// after TO), hint}.
 function routeCard(heard, refs, ctx, o) {
   o = o || {};
   var n = directory.nearestRef(refs, ctx);
@@ -292,7 +313,7 @@ function routeCard(heard, refs, ctx, o) {
     return note(heard, [to, 'You\'re already there']);
   }
   return {action: ACT_ROUTE, ref: n.ref, rows: [heard, {label: 'FROM', value: n.from}, to].concat(o.extra || []),
-          hint: o.hint || (o.spoken ? HINT_FROM_NOW : HINT_ROUTE), title: n.name, header: n.header};
+          hint: o.hint || HINT_ROUTE, title: n.name, header: n.header};
 }
 
 // "Closest restroom from Studio B": the restroom route from that place page
@@ -331,7 +352,132 @@ function spokenCabinCard(heard, n, p, ctx) {
   if (n === directory.stateroomOf(ctx)) {
     return cabinCard(heard, ctx);
   }
-  return routeCard(heard, [directory.REF_TO_CABIN + (+n)], ctx, {spoken: !!p.A});
+  return routeCard(heard, [directory.REF_TO_CABIN + (+n)], ctx);
+}
+
+// A spoken cabin number as a start: {cabin} or {mine} for your stateroom, or
+// a card saying why not (D13).
+function cabinStart(heard, n, ctx, label) {
+  if (n.length < 4) {
+    return {card: note(heard, [{label: label, value: 'Cabin ' + n}, 'Say all 4 or 5 digits'])};
+  }
+  if (!cabins.find(shipCode(ctx), n)) {
+    return {card: note(heard, ['No cabin ' + n + ' on ' + shipShort(ctx)])};
+  }
+  return n === directory.stateroomOf(ctx) ? {place: {mine: true}, name: 'Your cabin'} :
+    {place: {cabin: n}, name: 'Cabin ' + n};
+}
+
+var START_REFUSED = {'@restroom': 'restroom', '@elevator': 'elevator', '@forelev': 'elevator', '@aftelev': 'elevator',
+                     '@stairs': 'stairs'};
+
+// Where a spoken start (slot A: `I'm at X`, `from X`) is: {place ({venue} |
+// {cabin} | {mine}), name (as the card says it)}, {card} when it can't be a
+// start (only one-spot places and cabins, §9.6: D7, D8, D12, D19), or null
+// with no A. `label` names it on a card ('YOU\'RE AT' or 'FROM').
+function startFrom(heard, p, ctx, label) {
+  var a = p.A || '';
+  if (!a) {
+    return null;
+  }
+  if (a === '@mycabin') {
+    return directory.stateroomOf(ctx) ? {place: {mine: true}, name: 'Your cabin'} :
+      {card: note(heard, [{label: label, value: 'Your cabin'}, 'Set your stateroom on the phone'], 'Me tab in the Pebble app settings')};
+  }
+  var cab = /^@cabin:(\d+)$/.exec(a);
+  if (cab) {
+    return cabinStart(heard, cab[1], ctx, label);
+  }
+  if (a.charAt(0) === '@') {
+    return {card: refusedCard(heard, {reason: START_REFUSED[a] || (/^@deck:/.test(a) ? 'deck' : 'restroom')}, ctx)};
+  }
+  if (p.A_spot) {
+    return {card: refusedCard(heard, {reason: p.A_spot, A_target: p.A_target}, ctx)};
+  }
+  var place = p.A_target ? placeOf(p.A_target, ctx) : null;
+  if (!place) {
+    return {card: note(heard, [{label: label, value: p.A_target || a}, 'Not on the map yet'])};
+  }
+  if (place.v.neighborhood === venues.ASHORE) {
+    return {card: refusedCard(heard, {reason: 'ashore', A_target: place.v.name}, ctx)};
+  }
+  return {place: {venue: place.v.name}, name: shortName(place.v.name, ctx)};
+}
+
+// "I'm at X": YOU'RE AT X; Select sets the spoken start (index.js).
+function setLocationCard(heard, p, ctx) {
+  var sf = startFrom(heard, p, ctx, 'YOU\'RE AT');
+  if (!sf) {
+    return note(heard, ['Which place?', tryRow('I\'m at Studio B')]);
+  }
+  if (sf.card) {
+    return sf.card;
+  }
+  if (!ctx.bundle || !ctx.bundle.sailDate) {
+    return note(heard, [{label: 'YOU\'RE AT', value: sf.name}, 'No cruise on the phone yet']);
+  }
+  return {action: ACT_CONFIRM, rows: [heard, {label: 'YOU\'RE AT', value: sf.name},
+                                      {label: '', value: 'Routes start here for 90 min'}],
+          hint: HINT_SET, start: {place: sf.place, name: sf.name, set: true}};
+}
+
+// "Forget where I am": Select clears the spoken start (index.js).
+var FORGET = /\bforget (?:where (?:i|we) ?'? ?(?:am|are|m|re)(?: at)?|my (?:location|spot|place)|(?:the |my )?start)\b|\b(?:clear|reset) (?:my |the )?(?:location|start)\b/;
+
+function forgetCard(heard, ctx) {
+  var active = ctx.spoken && !directory.spokenEnded(ctx);
+  var after = directory.startNow(withoutSpoken(ctx));
+  if (!active) {
+    return note(heard, ['Nothing to forget'].concat(after ? [{label: 'ROUTES FROM', value: after}] : []));
+  }
+  return {action: ACT_CONFIRM, forget: true,
+          rows: [heard, {label: 'YOU\'RE AT', value: ctx.spoken.name || ''}].concat(
+            after ? [{label: 'THEN FROM', value: after}] : []),
+          hint: HINT_FORGET};
+}
+
+function withoutSpoken(ctx) {
+  var out = withFrom(ctx, null);
+  delete out.from;
+  delete out.spoken;
+  return out;
+}
+
+// A route card from a start said in the question: routed from it, and it goes
+// with the route (index.js); with "I'm at" (atA) Select also sets it (D4).
+function fromCard(heard, p, ctx, build) {
+  var sf = startFrom(heard, p, ctx, 'FROM');
+  if (!sf) {
+    return build(ctx);
+  }
+  if (sf.card) {
+    return sf.card;
+  }
+  var card = build(withFrom(ctx, sf.place));
+  if (card.action === ACT_ROUTE) {
+    card.start = {place: sf.place, name: sf.name, set: !!p.atA};
+    if (p.atA) {
+      card.hint = HINT_ROUTE_SET;
+    }
+  }
+  return card;
+}
+
+// The closest restroom: from a place named in the question (its restroom
+// route), from a cabin said, or from where you are, on deck N when said (D10).
+function restroomAnswer(heard, p, ctx) {
+  if (p.atA && p.A_spot) {
+    return startFrom(heard, p, ctx, 'YOU\'RE AT').card;
+  }
+  var place = restroomFromCard(heard, p, ctx);
+  if (place) {
+    if (p.atA && place.action === ACT_ROUTE) {
+      place.start = {place: {venue: placeOf(p.A_target, ctx).v.name}, name: shortName(p.A_target, ctx), set: true};
+      place.hint = HINT_ROUTE_SET;
+    }
+    return place;
+  }
+  return fromCard(heard, p, ctx, function(c) { return restroomCard(heard, c, p.deck); });
 }
 
 // A place target from the lexicon ("Windjammer Marketplace", or a group
@@ -356,13 +502,11 @@ function placeCard(heard, p, ctx, extra) {
   if (found.length === 1 && v && v.neighborhood === venues.ASHORE) {
     return note(heard, [shortName(v.name, ctx) + ' is ashore'], 'No ship route');
   }
-  var spoken = !!p.A;
-  if (spoken && p.A_target && p.A_target === p.B_target) {
+  if (p.A && p.A_target && p.A_target === p.B_target) {
     return note(heard, ['You\'re already there']);
   }
   return routeCard(heard, found.map(function(x) { return x.ref; }), ctx,
-                   {suffix: found.length > 1 ? ' (nearest)' : yours ? ' (yours)' : '',
-                    extra: extra, spoken: spoken});
+                   {suffix: found.length > 1 ? ' (nearest)' : yours ? ' (yours)' : '', extra: extra});
 }
 
 var REFUSED = {
@@ -391,49 +535,60 @@ function refusedCard(heard, p, ctx) {
               'Say a place near you');
 }
 
+// ROUTE and ROUTE_COMBINED: to B, from A when said.
+function routeAnswer(heard, p, ctx, b) {
+  if (b === '@mycabin') {
+    return fromCard(heard, p, ctx, function(c) { return cabinCard(heard, c); });  // "Take me back" (D6)
+  }
+  if (b === '@elevator') {  // the nearest bank (D5)
+    var banks = directory.bankRefs(ctx);
+    return banks.length ? fromCard(heard, p, ctx, function(c) {
+      return routeCard(heard, banks, c, {suffix: ' (nearest)'});
+    }) : note(heard, ['Elevators stop on many decks']);
+  }
+  if (b === '@stairs' || /^@deck:/.test(b)) {  // not one spot (D5)
+    var deck = p.deck || (/^@deck:(\d+)$/.exec(b) || [])[1];
+    var there = deck ? placeOnDeck(+deck, ctx) : '';
+    return note(heard, [b === '@stairs' ? 'Stairs are in many spots' : 'A deck is not one spot'].concat(
+      there ? [tryRow('How do I get to ' + there + '?')] : []),
+      deck ? 'Say a place on Deck ' + deck : 'Say a place near them');
+  }
+  if (/^@cabin:/.test(b)) {
+    return fromCard(heard, p, ctx, function(c) { return spokenCabinCard(heard, b.slice(7), p, c); });
+  }
+  if (p.B_target) {
+    if (p.A && p.A_target && p.A_target === p.B_target) {
+      return note(heard, ['You\'re already there']);
+    }
+    return fromCard(heard, p, ctx, function(c) {
+      return placeCard(heard, p, c, p.via === 'snack' ? [{label: '', value: 'Open 24 hours'}] : null);
+    });
+  }
+  return note(heard, ['Which place?', tryRow(TRY_PLACE)]);
+}
+
 // The card for a voice.parse result.
 function matchedCard(heard, p, ctx) {
   var b = p.B || '';
   switch (p.intent) {
     case 'CLOSEST_RESTROOM':
-      return restroomFromCard(heard, p, ctx) || restroomCard(heard, ctx);
+      return restroomAnswer(heard, p, ctx);
     case 'CLOSEST_BAR':
     case 'CLOSEST_COFFEE':
       var bar = p.intent === 'CLOSEST_BAR';
       var refs = (bar ? voice.bars : voice.coffee)(shipCode(ctx)).map(function(n) {
         return directory.refOf(n, ctx);
       }).filter(function(r) { return r !== -1; });
-      return refs.length ? routeCard(heard, refs, ctx, {label: bar ? 'CLOSEST BAR' : 'CLOSEST COFFEE', spoken: !!p.A}) :
-        note(heard, ['Not on the map yet']);
+      return refs.length ? fromCard(heard, p, ctx, function(c) {
+        return routeCard(heard, refs, c, {label: bar ? 'CLOSEST BAR' : 'CLOSEST COFFEE'});
+      }) : note(heard, ['Not on the map yet']);
     case 'SET_LOCATION':
-      var at = p.cabin ? 'Cabin ' + p.cabin : p.A === '@mycabin' ? 'Your cabin' : p.A_target || p.A || '';
-      return note(heard, [{label: 'YOU\'RE AT', value: at}, 'Not yet'], 'Routes start here in the next update');
+      return setLocationCard(heard, p, ctx);
     case 'LOCATION_REFUSED':
       return refusedCard(heard, p, ctx);
     case 'ROUTE':
     case 'ROUTE_COMBINED':
-      if (b === '@mycabin') {
-        return cabinCard(heard, ctx);  // "Take me back" (D6)
-      }
-      if (b === '@elevator') {  // the nearest bank (D5)
-        var banks = directory.bankRefs(ctx);
-        return banks.length ? routeCard(heard, banks, ctx, {suffix: ' (nearest)', spoken: !!p.A}) :
-          note(heard, ['Elevators stop on many decks']);
-      }
-      if (b === '@stairs' || /^@deck:/.test(b)) {  // not one spot (D5)
-        var deck = p.deck || (/^@deck:(\d+)$/.exec(b) || [])[1];
-        var there = deck ? placeOnDeck(+deck, ctx) : '';
-        return note(heard, [b === '@stairs' ? 'Stairs are in many spots' : 'A deck is not one spot'].concat(
-          there ? [tryRow('How do I get to ' + there + '?')] : []),
-          deck ? 'Say a place on Deck ' + deck : 'Say a place near them');
-      }
-      if (/^@cabin:/.test(b)) {
-        return spokenCabinCard(heard, b.slice(7), p, ctx);
-      }
-      if (p.B_target) {
-        return placeCard(heard, p, ctx, p.via === 'snack' ? [{label: '', value: 'Open 24 hours'}] : null);
-      }
-      return note(heard, ['Which place?', tryRow(TRY_PLACE)]);
+      return routeAnswer(heard, p, ctx, b);
     case 'OUT_OF_SCOPE_KNOWN':
       if (p.topic === 'stateroom') {
         return note(heard, ['Set your stateroom on the phone'], 'Me tab in the Pebble app settings');
@@ -483,10 +638,15 @@ function answer(text, ctx, isDemo, state) {
     return card;
   }
   var ship = shipCode(ctx) || 'HM';
-  var p = voice.parse(text || '', {ship: ship, isCabin: function(n) { return !!cabins.find(ship, n); }});
+  var p = parseText(text || '', ctx);
   card = matchedCard(heard, p, ctx);
   card.log = matchText(p);
   return card;
+}
+
+function parseText(text, ctx) {
+  var ship = shipCode(ctx) || 'HM';
+  return voice.parse(text, {ship: ship, isCabin: function(n) { return !!cabins.find(ship, n); }});
 }
 
 // The commands that need no place names (the top of this file), or null.
@@ -494,17 +654,24 @@ function fixedAnswer(t, heard, ctx, state) {
   var card = null, log = '';
   var on = onboardIntent(t);
   var hasCruise = !!(ctx.bundle && ctx.bundle.sailDate);
+  var p;
   if (on !== null) {
     card = onboardCard(on, heard, ctx, state);
     log = on ? 'on board' : 'ashore';
-  } else if (hasCruise && CABIN.test(t)) {
+  } else if (FORGET.test(t)) {
+    card = forgetCard(heard, ctx);
+    log = 'forget where I am';
+  } else if (hasCruise && CABIN.test(t) && !(p = parseText(t, ctx)).A) {
+    // "From the Solarium to my cabin" goes to the matcher (a start said).
     card = cabinCard(heard, ctx);
     log = 'my cabin';
   } else if (hasCruise && RESTROOM.test(t)) {
-    // "Restroom near the theater": now the matcher names the place.
-    var p = voice.parse(t, {ship: shipCode(ctx) || 'HM'});
-    card = (p.intent === 'CLOSEST_RESTROOM' && restroomFromCard(heard, p, ctx)) || restroomCard(heard, ctx);
-    log = 'restroom' + (card.rest ? ' from A=' + p.A_target + ' (' + p.A_how + ')' : '');
+    // "Restroom near the theater", "on deck 5", "I'm at X, where's the restroom".
+    p = parseText(t, ctx);
+    card = p.intent === 'CLOSEST_RESTROOM' ? restroomAnswer(heard, p, ctx) :
+      p.intent === 'LOCATION_REFUSED' ? refusedCard(heard, p, ctx) : restroomCard(heard, ctx);
+    log = 'restroom' + (card.rest ? ' from A=' + p.A_target + ' (' + p.A_how + ')' : card.start ? ' A=' + card.start.name : '') +
+      (p.deck && !p.A ? ' deck ' + p.deck : '');
   } else if (hasCruise && MUSTER.test(t)) {
     card = musterCard(heard, ctx);
     log = 'muster';
@@ -521,8 +688,27 @@ function fixedAnswer(t, heard, ctx, state) {
   return card;
 }
 
+// A card as text lines, for the settings page's voice test box (Help): the
+// rows as the watch shows them, the hint, what Select would do, what matched.
+function cardLines(card) {
+  var out = card.rows.map(function(r) { return (r.label ? r.label + '  ' : '') + r.value; });
+  out.push('Hint: ' + (card.hint || ''));
+  var st = card.start;
+  var sel = card.action === ACT_ROUTE ?
+    'opens the route to ' + (card.title || '') + (st ? ' from ' + st.name : '') +
+      (st && st.set ? ', and routes start at ' + st.name + ' for 90 min' : '') :
+    card.action === ACT_CONFIRM ? (card.forget ? 'forgets where you are' :
+                                   'routes start at ' + (st ? st.name : '') + ' for 90 min') :
+    card.action === ACT_ONBOARD ? (card.onboard ? 'sets I\'m on board' : 'clears I\'m on board') : 'asks again';
+  out.push('Select ' + sel);
+  if (card.log) {
+    out.push('Matched: ' + card.log);
+  }
+  return out;
+}
+
 module.exports = {
   ACT_NONE: ACT_NONE, ACT_ROUTE: ACT_ROUTE, ACT_CONFIRM: ACT_CONFIRM, ACT_ONBOARD: ACT_ONBOARD,
   FLAG_REST: FLAG_REST, FLAG_ONBOARD: FLAG_ONBOARD, STATE_ONBOARD: STATE_ONBOARD, STATE_24H: STATE_24H, clock: clock,
-  packCard: packCard, placeRef: placeRef, answer: answer, onboardIntent: onboardIntent
+  packCard: packCard, placeRef: placeRef, answer: answer, onboardIntent: onboardIntent, cardLines: cardLines
 };

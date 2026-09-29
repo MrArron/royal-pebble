@@ -188,6 +188,13 @@ function seaCtx(hour) {
   return {bundle: sea.bundle, settings: sea.settings, stars: sea.stars, now: new Date(2027, 2, 8, hour, 0)};
 }
 
+function withFrom(c, place) {
+  var out = {};
+  Object.keys(c).forEach(function(k) { out[k] = c[k]; });
+  out.from = place;
+  return out;
+}
+
 // Transcript -> {action, ref (a number, or a place / bank name), rows: [label:value, ...] after HEARD,
 // hint (a prefix), log (a prefix), rest}.
 var TABLE = [
@@ -232,16 +239,42 @@ var TABLE = [
   ['how do I get to cococay', {action: 0, rows: ['CocoCay is ashore'], hint: 'No ship route'}],
   ['take me to the hot tub', {action: 0, rows: ['TO:Hot tub', 'Not on the map yet'], log: 'NO_MATCH not_mapped'}],
   ['solarium to the solarium', {action: 0, rows: ["You're already there"]}],
-  // A spoken start isn't used yet (V3b): the route starts where routes start now and says so.
-  ['from the solarium to the windjammer', {action: 1, ref: 'Windjammer Marketplace', rows: ['FROM:Your cabin', 'TO:Windjammer Marketplace'],
-                                           hint: 'Starts where you are now', log: 'ROUTE A=Solarium (exact) B=Windjammer Marketplace (exact)'}],
-  ["I'm at the solarium. How do I get to the windjammer", {action: 1, ref: 'Windjammer Marketplace', log: 'ROUTE_COMBINED'}],
-  ["I'm at the solarium", {action: 0, rows: ["YOU'RE AT:Solarium", 'Not yet'], log: 'SET_LOCATION A=Solarium'}],
-  // Refused locations.
+  // A start said in the question (1.5.9): that route starts there; "I'm at X, ..." also sets it on Select (D4).
+  ['from the solarium to the windjammer', {action: 1, ref: 'Windjammer Marketplace', rows: ['FROM:Solarium', 'TO:Windjammer Marketplace'],
+                                           hint: 'Select: route', start: 'Solarium', log: 'ROUTE A=Solarium (exact) B=Windjammer Marketplace (exact)'}],
+  ["I'm at the solarium. How do I get to the windjammer", {action: 1, ref: 'Windjammer Marketplace', rows: ['FROM:Solarium', 'TO:Windjammer Marketplace'],
+                                                          hint: 'Select: route, and routes start there', start: 'Solarium', set: true, log: 'ROUTE_COMBINED'}],
+  ['from cabin 8200 to the solarium', {action: 1, ref: 'Solarium', rows: ['FROM:Cabin 8200', 'TO:Solarium'], start: 'Cabin 8200'}],
+  ['from the solarium to my cabin', {action: 1, ref: directory.REF_CABIN, rows: ['FROM:Solarium', 'TO:Your cabin'], start: 'Solarium'}],
+  ["I'm at the solarium. Where is the closest bar", {action: 1, rows: ['FROM:Solarium', /^CLOSEST BAR:/], start: 'Solarium', set: true}],
+  ["I'm at the solarium, where is the nearest bathroom", {action: 1, ref: 'Solarium', rest: true, rows: ['FROM:Solarium', 'TO:Closest restroom'],
+                                                          start: 'Solarium', set: true}],
+  ['from the arcade to the solarium', {action: 0, rows: ['Which one?', 'Arcade or Video Arcade']}],
+  // "I'm at X": YOU'RE AT, Select sets it (confirm). One-spot big venues are fine (D8).
+  ["I'm at the solarium", {action: 2, rows: ["YOU'RE AT:Solarium", 'Routes start here for 90 min'], hint: 'Select: set',
+                           start: 'Solarium', set: true, log: 'SET_LOCATION A=Solarium'}],
+  ["I'm at the promenade", {action: 2, rows: ["YOU'RE AT:Royal Promenade"], set: true}],
+  ["I'm on the boardwalk", {action: 2, rows: ["YOU'RE AT:Boardwalk"], set: true}],
+  ["I'm in central park", {action: 2, rows: ["YOU'RE AT:Central Park"], set: true}],
+  ["I'm at the pool deck", {action: 2, rows: ["YOU'RE AT:Pool Deck"], set: true}],
+  ["I'm in cabin 8200", {action: 2, rows: ["YOU'RE AT:Cabin 8200"], start: 'Cabin 8200', set: true}],
+  ["I'm at my cabin", {action: 2, rows: ["YOU'RE AT:Your cabin"], set: true}],
+  ["I'm in cabin 1234", {action: 0, rows: ['No cabin 1234 on Harmony']}],
+  ["I'm in cabin 820", {action: 0, rows: ["YOU'RE AT:Cabin 820", 'Say all 4 or 5 digits']}],
+  // Refused locations: D8 (Running Track), D7 (elevators, even on a deck), D12 (groups), D19 (the bar).
+  ["I'm at the running track", {action: 0, rows: ['Running Track is in many spots', /^TRY:/]}],
+  ["I'm at the forward elevators on deck 5", {action: 0, rows: ['Elevators stop on many decks', /^TRY:/]}],
   ["I'm at the bar", {action: 0, rows: ['There are many bars', /^TRY:/]}],
+  ["I'm at the restroom", {action: 0, rows: ['There are many restrooms', /^TRY:/]}],
   ["I'm by the elevators", {action: 0, rows: ['Elevators stop on many decks', /^TRY:/]}],
   ["I'm at the arcade", {action: 0, rows: ['Which one?', 'Arcade or Video Arcade']}],
+  ["I'm at the arcade, how do I get to the solarium", {action: 0, rows: ['Which one?']}],
   ["I'm at cococay", {action: 0, rows: ['CocoCay is ashore']}],
+  // D10: the closest restroom on a deck.
+  ['closest restroom on deck 5', {action: 1, ref: directory.REF_REST_DECK + 5, rows: ['FROM:Your cabin', 'TO:Closest restroom on Deck 5'],
+                                  log: 'fixed restroom deck 5'}],
+  // Forget where I am, with nothing said.
+  ['forget where I am', {action: 0, rows: ['Nothing to forget', 'ROUTES FROM:Your cabin'], log: 'fixed forget'}],
   // Out of scope, incomplete, no match (D17: the library isn't on Harmony).
   ["what's next", {action: 0, rows: [/^NOT YET:Voice can't read the schedule/, /^TRY:/]}],
   ['when does the windjammer open', {action: 0, rows: [/^NOT YET:Opening times/, 'TRY:“Where is the Windjammer?”']}],
@@ -267,6 +300,9 @@ test('voice matcher cards (table)', function() {
       assert.strictEqual(card.ref, ref, t + ': ref ' + card.ref);
     }
     assert.strictEqual(!!card.rest, !!want.rest, t + ': rest');
+    assert.strictEqual(card.start ? card.start.name : undefined, want.start || (card.start && want.set ? card.start.name : undefined),
+                       t + ': start');
+    assert.strictEqual(!!(card.start && card.start.set), !!want.set, t + ': sets the start');
     (want.rows || []).forEach(function(w, i) {
       assert.ok(w instanceof RegExp ? w.test(got[i]) : got[i] === w, t + ': row ' + (i + 1) + ' ' + JSON.stringify(got));
     });
@@ -283,7 +319,8 @@ test('voice matcher cards (table)', function() {
     assert.strictEqual(back.hint, card.hint, t + ': hint cut');
     if (card.action === voicecard.ACT_ROUTE) {
       // Select opens a Route screen the phone can answer.
-      var page = directory.routePage(card.ref, !!card.rest, c);
+      // With a start said, index.js hands it to that Route screen (ctx.from).
+      var page = directory.routePage(card.ref, !!card.rest, card.start ? withFrom(c, card.start.place) : c);
       assert.ok(page.steps.length > 0, t + ': route ' + page.lead);
       assert.strictEqual(page.steps[page.steps.length - 1].glyph, 4, t + ': ends with the arrival');
       assert.strictEqual(back.title, card.title, t + ': title cut');
@@ -315,6 +352,172 @@ test('voice: nearest from the current start, and your stateroom', function() {
   var page = directory.routePage(directory.REF_TO_CABIN + 8200, false, c);
   assert.strictEqual(page.title, 'Cabin 8200');
   assert.strictEqual(directory.routePage(directory.REF_TO_CABIN + 8200, true, c).title, 'Not found', 'no restroom route');
+});
+
+
+// ---- The spoken start (1.5.9, routestart.js, D22). The demo sea day has a
+// starred show at Studio B at 14:00; cabin 8200 is a made-up number on the plans.
+var routestart = require('../../src/pkjs/routestart');
+var log = require('../../src/pkjs/log');
+
+function at(c, hour, min) {
+  var out = withFrom(c, undefined);
+  delete out.from;
+  out.now = new Date(2027, 2, 8, hour, min || 0);
+  return out;
+}
+
+function said(place, hour, min) {
+  var c = at(seaCtx(13), hour, min);
+  return directory.spokenStart(place, c);
+}
+
+test('spoken start: set, used by voice, Route screens and place pages', function() {
+  var sp = said({venue: 'Solarium', name: 'Solarium'}, 13, 0);
+  assert.strictEqual(sp.venue, 'Solarium');
+  assert.strictEqual(sp.name, 'Solarium');
+  assert.strictEqual(sp.sail, seaCtx(13).bundle.sailDate);
+  var c = at(seaCtx(13), 13, 20);
+  c.spoken = sp;
+  assert.strictEqual(directory.spokenEnded(c), null);
+  var card = voicecard.answer('how do I get to the windjammer', c, false, 0);
+  assert.strictEqual(card.rows[1].label + ':' + card.rows[1].value, 'FROM:Solarium');
+  assert.strictEqual(card.start, undefined, 'nothing said in the question');
+  var page = directory.routePage(card.ref, false, c);
+  assert.strictEqual(page.header, 'FROM SOLARIUM');
+  assert.ok(page.steps.length > 0);
+  assert.strictEqual(directory.startReason(c), 'said "I\'m at" Solarium at 13:00');
+  // A place page's FROM line too, and the restroom and cabin routes.
+  var dir = directory.buildPage(directory.refOf('Windjammer Marketplace', c), c);
+  assert.strictEqual(dir.gps.header, 'FROM SOLARIUM');
+  assert.strictEqual(voicecard.answer('nearest bathroom', c, false, 0).rows[1].value, 'Solarium');
+  assert.strictEqual(directory.routePage(directory.REF_REST_HERE, false, c).header, 'CLOSEST TO SOLARIUM');
+  var home = voicecard.answer('take me to my cabin', c, false, 0);
+  assert.strictEqual(home.action, voicecard.ACT_ROUTE, 'from the Solarium, not the cabin');
+  assert.strictEqual(home.rows[1].value, 'Solarium');
+  // Asking for the place you're at.
+  assert.strictEqual(voicecard.answer('take me to the solarium', c, false, 0).rows[2].value, 'You\'re already there');
+  // Another sailing's start is ignored.
+  var other = at(seaCtx(13), 13, 20);
+  other.spoken = JSON.parse(JSON.stringify(sp));
+  other.spoken.sail = '2020-01-01';
+  assert.strictEqual(directory.spokenEnded(other), 'another sailing');
+  assert.strictEqual(voicecard.answer('how do I get to the windjammer', other, false, 0).rows[1].value, 'Your cabin');
+});
+
+test('spoken start: ends after 90 minutes, at the next starred event and at 04:00 (fake clock)', function() {
+  function from(sp, hour, min) {
+    var c = at(seaCtx(13), hour, min);
+    c.spoken = sp;
+    return {end: directory.spokenEnded(c), from: voicecard.answer('how do I get to the windjammer', c, false, 0).rows[1].value};
+  }
+  var morning = said({venue: 'Solarium', name: 'Solarium'}, 10, 0);
+  assert.deepStrictEqual(from(morning, 11, 29), {end: null, from: 'Solarium'});
+  assert.deepStrictEqual(from(morning, 11, 30), {end: '90 min', from: 'Your cabin'});
+  // The starred show at Studio B starts at 14:00: it ends the start, and routes leave from the show.
+  var lunch = said({venue: 'Solarium', name: 'Solarium'}, 13, 0);
+  assert.deepStrictEqual(from(lunch, 13, 59), {end: null, from: 'Solarium'});
+  assert.deepStrictEqual(from(lunch, 14, 0), {end: 'next stop', from: 'Studio B'});
+  // Said during the show: it wins over the show.
+  var show = said({venue: 'Solarium', name: 'Solarium'}, 14, 10);
+  assert.deepStrictEqual(from(show, 14, 20), {end: null, from: 'Solarium'});
+  // 04:00, the watch's day change.
+  var late = said({venue: 'Solarium', name: 'Solarium'}, 3, 0);
+  assert.deepStrictEqual(from(late, 3, 59), {end: null, from: 'Solarium'});
+  assert.strictEqual(from(late, 4, 0).end, '04:00');
+  // A clock set back.
+  assert.strictEqual(from(lunch, 12, 0).end, 'clock');
+  // routestart on its own.
+  assert.strictEqual(routestart.spokenEnd(null, [], 0), 'not said');
+  assert.deepStrictEqual(routestart.start({now: 600, cabin: '8200', spoken: {at: 590, venue: 'Solarium'},
+                                           from: {venue: 'Boardwalk'}}), {kind: 'said', venue: 'Boardwalk'});
+});
+
+test('spoken start: a cabin, your cabin, and Forget where I am', function() {
+  var c = at(seaCtx(13), 13, 10);
+  c.spoken = said({cabin: '8200', name: 'Cabin 8200'}, 13, 0);
+  assert.strictEqual(c.spoken.cabin, '8200');
+  var card = voicecard.answer('how do I get to the windjammer', c, false, 0);
+  assert.strictEqual(card.rows[1].value, 'Cabin 8200');
+  assert.strictEqual(directory.routePage(card.ref, false, c).header, 'FROM CABIN 8200');
+  assert.strictEqual(voicecard.answer('take me to cabin 8200', c, false, 0).rows[2].value, 'You\'re already there');
+  // "I'm at my cabin" during the show: from the cabin, which isn't a route to the cabin.
+  var mine = at(seaCtx(13), 14, 20);
+  mine.spoken = said({mine: true, name: 'Your cabin'}, 14, 10);
+  assert.strictEqual(voicecard.answer('how do I get to the windjammer', mine, false, 0).rows[1].value, 'Your cabin');
+  var home = voicecard.answer('take me to my cabin', mine, false, 0);
+  assert.strictEqual(home.action, voicecard.ACT_NONE);
+  assert.strictEqual(home.hint, 'You\'re at your cabin');
+  assert.ok(/^said "I'm at" your cabin/.test(directory.startReason(mine)));
+  // Forget where I am: Select clears it (index.js); the card says where routes start then.
+  ['forget where I am', 'Forget where I\'m at', 'clear my location'].forEach(function(t) {
+    var f = voicecard.answer(t, c, false, 0);
+    assert.strictEqual(f.action, voicecard.ACT_CONFIRM, t);
+    assert.ok(f.forget, t);
+    assert.deepStrictEqual(f.rows.slice(1).map(function(r) { return r.label + ':' + r.value; }),
+                           ['YOU\'RE AT:Cabin 8200', 'THEN FROM:Your cabin'], t);
+    assert.strictEqual(f.log, 'fixed forget where I am');
+  });
+  var during = at(seaCtx(13), 14, 20);
+  during.spoken = said({venue: 'Solarium', name: 'Solarium'}, 14, 10);
+  assert.strictEqual(voicecard.answer('forget where I am', during, false, 0).rows[2].value, 'Studio B', 'then from the show');
+  unpack(voicecard.packCard(voicecard.answer('forget where I am', c, false, 0)));
+});
+
+test('D10: the closest restroom on a deck', function() {
+  var c = seaCtx(13);
+  var any = directory.routePage(directory.REF_REST_HERE, false, c);
+  [5, 15].forEach(function(deck) {
+    var card = voicecard.answer('closest restroom on deck ' + deck, c, false, 0);
+    assert.strictEqual(card.ref, directory.REF_REST_DECK + deck);
+    var page = directory.routePage(card.ref, false, c);
+    assert.strictEqual(page.big.indexOf('Deck ' + deck), 0, page.big);
+    assert.strictEqual(page.header, 'DECK ' + deck + ' FROM YOUR CABIN');
+    assert.strictEqual(page.steps[page.steps.length - 1].glyph, 4);
+  });
+  assert.notStrictEqual(any.big.indexOf('Deck 15'), 0, 'without a deck: the closest anywhere');
+  // A deck with no restroom on the map (Deck 12, so far) says so.
+  var none = voicecard.answer('where is the nearest bathroom on deck 12', c, false, 0);
+  assert.strictEqual(none.action, voicecard.ACT_NONE);
+  assert.strictEqual(none.hint, 'No restroom on Deck 12 on the map');
+});
+
+test('ref widths: voice refs travel as int32 and never meet the 16-bit row refs', function() {
+  var c = seaCtx(13);
+  var places = directory.places('HM');
+  var maxPlace = directory.REF_PLACE + places.length - 1;
+  // Directory rows carry uint16 refs: the flag row is the largest.
+  assert.ok(directory.REF_FLAG + maxPlace < 65536, 'flag ref fits uint16');
+  assert.ok(maxPlace < directory.REF_FLAG, 'places stay under the flag refs');
+  assert.ok(directory.REF_BANK + directory.bankRefs(c).length <= directory.REF_CABIN);
+  assert.ok(directory.REF_REST_DECK + 99 < directory.REF_PLACE);
+  assert.ok(directory.REF_FLAG + maxPlace < directory.REF_TO_CABIN, 'no flag ref reaches the cabin refs');
+  // A 5-digit cabin: the card's int32 ref, the ROUTE_PAGE dir_ref and the log.
+  var ref = directory.REF_TO_CABIN + 99999;
+  assert.ok(ref < 2 * directory.REF_TO_CABIN && ref < 0x7fffffff);
+  var back = unpack(voicecard.packCard({action: voicecard.ACT_ROUTE, ref: ref, rows: [], hint: '', title: 'x', header: ''}));
+  assert.strictEqual(back.ref, ref);
+  var cab = voicecard.answer('take me to cabin 8200', c, false, 0);
+  assert.strictEqual(unpack(voicecard.packCard(cab)).ref, 108200);
+  var msg = directory.routeMsg(directory.routePage(cab.ref, false, c));
+  assert.strictEqual(msg.dir_ref, 108200, 'sent whole: PebbleKit JS sends numbers as int32');
+  assert.ok(msg.dir_ref > 65535, 'would not survive a 16-bit field');
+  assert.strictEqual(directory.buildPage(108200, c).title !== undefined, true, 'a stray dir page request is harmless');
+  var entry = log.watchEntry({at: 0, code: 3, x: 7, a: 0, b: 5, c: 108200}, null);
+  assert.ok(/Route to cabin 8200 \(said\)/.test(entry.detail), entry.detail);
+  assert.ok(/on deck 5/.test(log.watchEntry({at: 0, code: 3, x: 7, a: 0, b: 5, c: 505}, null).detail));
+});
+
+test('settings test box: a card as text lines', function() {
+  var c = seaCtx(13);
+  var lines = voicecard.cardLines(voicecard.answer('I\'m at the solarium', c, false, 0));
+  assert.deepStrictEqual(lines, ['HEARD  “I\'m at the solarium”', 'YOU\'RE AT  Solarium', 'Routes start here for 90 min',
+                                 'Hint: Select: set · Hold: ask again', 'Select routes start at Solarium for 90 min',
+                                 'Matched: SET_LOCATION A=Solarium (exact)']);
+  lines = voicecard.cardLines(voicecard.answer('I\'m at the solarium. How do I get to the windjammer', c, false, 0));
+  assert.strictEqual(lines[4], 'Select opens the route to Windjammer Marketplace from Solarium, and routes start at Solarium for 90 min');
+  lines = voicecard.cardLines(voicecard.answer('play some music', c, false, 0));
+  assert.strictEqual(lines[lines.length - 2], 'Select asks again');
 });
 
 var failed = 0;

@@ -365,6 +365,82 @@ test('download with login: a refused sign-in saves nothing; no booking keeps the
   assert.ok(paths.every(function(p) { return !/access_token/.test(p); }), paths.join(' '));
 });
 
+
+// Voice (1.5.9): "I'm at" is set by Select, kept in phone storage, used by later
+// routes, logged, and cleared by Forget where I am. Cabin 8200 is made up.
+test('voice: the spoken start is set on Select, survives a restart and is forgotten', function() {
+  var c = companion({bundle: JSON.stringify(savedCruise()), settings: JSON.stringify({me: {stateroom: '8200'}})});
+  c.handlers.ready();
+  function ask(seq, text) {
+    c.sent.length = 0;
+    c.handlers.appmessage({payload: {msg_type: 19, voice_seq: seq, voice_text: text, voice_state: 0}});
+    c.run();
+    var m = c.sent.filter(function(x) { return x.msg_type === 20; })[0];
+    var b = m.voice_card;
+    return {action: b[0], ref: b[2] | (b[3] << 8) | (b[4] << 16) | (b[5] << 24)};
+  }
+  function route(ref) {
+    c.handlers.appmessage({payload: {msg_type: 16, dir_ref: ref, route_rest: 0}});
+    c.run();
+  }
+  var card = ask(1, "I'm at the solarium");
+  assert.strictEqual(card.action, 2, 'confirm');
+  assert.strictEqual(c.store.spokenStart, undefined, 'nothing set before Select');
+  c.handlers.appmessage({payload: {msg_type: 19, voice_seq: 1}});
+  var sp = JSON.parse(c.store.spokenStart);
+  assert.strictEqual(sp.venue, 'Solarium');
+  var lines = c.log();
+  assert.ok(has(lines, /^voice  turn 1 heard "I'm at the solarium" -> SET_LOCATION A=Solarium \(exact\): confirm setting start Solarium/),
+            lines.join('\n'));
+  assert.ok(has(lines, /^voice  turn 1 confirmed on the watch: start set to Solarium for 90 min$/), lines.join('\n'));
+  // A later route starts there, also after the phone script restarts.
+  var to = ask(2, 'how do I get to the windjammer');
+  route(to.ref);
+  assert.ok(has(c.log(), /^route  to place \d+: "Windjammer Marketplace", FROM SOLARIUM, .*start: said "I'm at" Solarium at/),
+            c.log().join('\n'));
+  var store = JSON.parse(JSON.stringify(c.store));
+  c = companion(store);
+  c.handlers.ready();
+  route(to.ref);
+  assert.ok(has(c.log(), /FROM SOLARIUM/), 'kept in phone storage');
+  // "From X to Y" routes from X for that route only; "I'm at X, ..." sets X when the route opens (D4).
+  var from = ask(3, 'from the boardwalk to the windjammer');
+  route(from.ref);
+  assert.ok(has(c.log(), /"Windjammer Marketplace", FROM BOARDWALK, .*start: said in the question: Boardwalk/), c.log().join('\n'));
+  assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Solarium', 'not set by "from"');
+  var both = ask(4, "I'm at the boardwalk. How do I get to the solarium");
+  route(both.ref);
+  assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Boardwalk');
+  assert.ok(has(c.log(), /^voice  turn 4 route opened: start set to Boardwalk for 90 min$/), c.log().join('\n'));
+  // Forget where I am.
+  assert.strictEqual(ask(5, 'forget where I am').action, 2);
+  c.handlers.appmessage({payload: {msg_type: 19, voice_seq: 5}});
+  assert.strictEqual(c.store.spokenStart, undefined);
+  assert.ok(has(c.log(), /^voice  turn 5 confirmed on the watch: start Boardwalk cleared \(Forget where I am\)$/));
+  // A start that has ended is removed and logged when next read.
+  c.store.spokenStart = JSON.stringify({sail: sp.sail, at: sp.at - 91, name: 'Solarium', venue: 'Solarium'});
+  ask(6, 'how do I get to the windjammer');
+  assert.strictEqual(c.store.spokenStart, undefined);
+  assert.ok(has(c.log(), /^voice  start Solarium ended \(90 min\)$/), c.log().join('\n'));
+});
+
+test('settings: Help > Try a voice phrase answers on the phone and shows next time', function() {
+  var c = companion({bundle: JSON.stringify(savedCruise()), settings: JSON.stringify({me: {stateroom: '8200'}})});
+  c.handlers.showConfiguration();
+  var result = {action: 'save', me: {stateroom: '8200'}, usage: {on: true, label: '', clear: false},
+                voiceTest: "I'm at the solarium"};
+  c.handlers.webviewclosed({response: encodeURIComponent(JSON.stringify(result))});
+  var saved = JSON.parse(c.store.voiceTest);
+  assert.strictEqual(saved.lines[1], 'YOU\'RE AT  Solarium');
+  assert.strictEqual(c.store.spokenStart, undefined, 'a test sets nothing');
+  assert.ok(has(c.log(), /^voice  test on the phone: heard "I'm at the solarium" -> SET_LOCATION A=Solarium \(exact\) \(YOU'RE AT Solarium/),
+            c.log().join('\n'));
+  c.handlers.showConfiguration();
+  var html = decodeURIComponent(c.opened[1].slice('data:text/html;charset=utf-8,'.length));
+  assert.ok(html.indexOf('Try a voice phrase') !== -1);
+  assert.ok(html.indexOf('Routes start here for 90 min') !== -1, 'the last card is on the page');
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {

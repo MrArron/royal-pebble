@@ -449,7 +449,8 @@ function walkMetres(ship, p, q) {
 }
 
 // Closest restroom anywhere on the ship, by real route cost (stairs and elevators
-// included). opts: {gender: 'm' | 'w', all: true to include the kids'-area ones}.
+// included). opts: {gender: 'm' | 'w', all: true to include the kids'-area ones,
+// deck: only the ones on that deck (voice, `closest restroom on deck 5`)}.
 // Returns {deck, a, x, g, metres (walking), cost, route} or null.
 function restroom(ship, from, opts) {
   opts = opts || {};
@@ -459,6 +460,9 @@ function restroom(ship, from, opts) {
   }
   var list = [];
   Object.keys(w.restrooms).forEach(function(d) {
+    if (opts.deck && parseInt(d, 10) !== opts.deck) {
+      return;
+    }
     w.restrooms[d].forEach(function(r) {
       if ((r[4] === 'kids' && !opts.all) || (opts.gender && r[3].indexOf(opts.gender) === -1 && r[3] !== 'mw?')) {
         return;

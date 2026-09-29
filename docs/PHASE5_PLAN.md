@@ -215,14 +215,16 @@ left after it), and E goes on the list for Phase 6.
 | PR | What | Version |
 |---|---|---|
 | V1 | Docs: VOICE_FINAL_PLAN into `DESIGN_V1_1.md` §9.6, voice messages drafted in `WATCH_PROTOCOL.md` with byte limits (transcript <= 256 B, each confirm string <= 48 B), the generic card screen from proposal B | none |
-| V2 | Lexicon + parser: `tools/voice/`, `src/pkjs/data/voice-HM.js`, `src/pkjs/voice.js`, tests and fixtures (from `voice-phase5/`), not wired | 1.5.2 |
-| V3 | Phone wiring: transcript message in, parse, resolve (group to nearest, cabin check, stateroom, ashore, same place), confirm rows out, spoken start via `routestart.js`, `voice` log lines; a settings-page test box to type a phrase without the watch | 1.5.3 |
+| V2 | Lexicon + parser: `tools/voice/`, `src/pkjs/data/voice-HM.js`, `src/pkjs/voice.js`, tests and fixtures (from `voice-phase5/`), not wired | **Done, 1.5.7** |
+| V3 | Phone wiring: transcript message in, parse, resolve (group to nearest, cabin check, stateroom, ashore, same place), confirm rows out, spoken start via `routestart.js`, `voice` log lines; a settings-page test box to type a phrase without the watch | **Done, 1.5.8** (place names, part 1) **and 1.5.9** (`I'm at`, `from X to Y`, `Forget where I am`, D10, Help > Try a voice phrase) |
 
 Since this plan: B (1.5.2), `I'm on board` / `I'm ashore` (1.5.3) and
 departure, tomorrow, muster station and `Take me to my cabin` (1.5.4) went in
 ahead of V2, so the version numbers above move up. V2/V3 keep these commands
 (`src/pkjs/voicecard.js`) when the matcher takes over the other answers, and V3
-adds `Forget where I am` with the spoken start.
+adds `Forget where I am` with the spoken start. Both done on the phone (1.5.7 to
+1.5.9); the watch side (Ask) was already in from 1.5.2, so nothing in Stage 3
+changed the watch. Not yet tried on the watch: see the 1.5.9 commit.
 
 ### Stage 4: voice on the watch
 

@@ -3,7 +3,9 @@
 // The watch records, the Pebble app turns speech into text on the phone (no
 // internet at sea), and this module turns that text into one command:
 //   parse(text, opts) -> {intent, A, B, cabin, A_target, B_target, A_how, B_how,
-//                         reason?, topic?, deck?}
+//                         reason?, topic?, deck?, via?, A_spot?, atA?}
+//   A_spot: 'group' | 'multi_spot' | 'ashore' when A isn't one spot (no start);
+//   atA: A came from "I'm at" (it also sets the spoken start, D4).
 //   opts.ship     ship code (default 'HM'), picks the lexicon
 //   opts.isCabin  function(number string) -> true when it's a cabin on the
 //                 plans; index.js passes cabins.find, tests pass a made-up list
@@ -995,6 +997,10 @@ function resolve(p, match) {
             reason: a.flags.indexOf('A') !== -1 ? 'ashore' : a.flags.indexOf('L') !== -1 ? 'multi_spot' : 'group'};
   }
   out.A_target = a ? a.t : null;
+  if (a && (/[LA]/.test(a.flags) || a.t.indexOf('|') !== -1)) {
+    // A start that isn't one spot (voicecard.js refuses it as a start, §9.6).
+    out.A_spot = a.flags.indexOf('A') !== -1 ? 'ashore' : a.flags.indexOf('L') !== -1 ? 'multi_spot' : 'group';
+  }
   out.B_target = b ? b.t : null;
   out.A_how = a ? a.how : null;
   out.B_how = b ? b.how : null;
@@ -1056,6 +1062,8 @@ function merge(items, match) {
     c.A_target = loc.A_target;
     c.A_how = loc.A_how;
     c.cabin = act.cabin || loc.cabin;
+    c.A_spot = loc.A_spot;
+    c.atA = true;  // A came from "I'm at": it also sets the spoken start (D4)
     if (act.intent === 'ROUTE') {
       c.intent = 'ROUTE_COMBINED';
     }
@@ -1088,7 +1096,10 @@ function parse(text, opts) {
   var r = merge(items, match);
   var out = {intent: r.intent, A: r.A || null, B: r.B || null, cabin: r.cabin || null,
              A_target: r.A_target || null, B_target: r.B_target || null, A_how: r.A_how || null, B_how: r.B_how || null};
-  ['reason', 'topic', 'deck', 'via'].forEach(function(k) {
+  if (r.intent === 'ROUTE_COMBINED') {
+    r.atA = true;
+  }
+  ['reason', 'topic', 'deck', 'via', 'A_spot', 'atA'].forEach(function(k) {
     if (r[k]) {
       out[k] = r[k];
     }

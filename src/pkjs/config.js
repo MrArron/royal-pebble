@@ -15,6 +15,7 @@
 //           the sign-in and nothing keeps it, docs/PHASE4_PLAN.md),
 //    venues: {ship, overrides} (all venue edits for that ship, only when changed),
 //    usage: {on, label, clear} (Me > Usage log),
+//    voiceTest: text (Help > Try a voice phrase; the phone answers it for the next open),
 //    testAlerts: true | false (Me > Test alerts, only when the switch was flipped),
 //    mapCheck: {ship, clear, notes: {id: {answer, deck, pos, side, note, place} | null},
 //               added: [{place, deck, pos, side, note}]} (Me > Map check, mapped ships only)}
@@ -353,6 +354,9 @@ var HELP_NOTES = [
     'before.',
   'Routes start at your stateroom, or at a starred event or your own entry that is on now or ended less than ' +
     '15 minutes before. They go back to the stateroom by themselves.',
+  'Say <b>I\'m at</b> a place or cabin number and routes start there for 90 minutes, until your next starred ' +
+    'event or entry starts, or until 4:00 am. <b>Forget where I am</b> ends it sooner. Restrooms, bars, ' +
+    'elevators and decks can\'t be a start: they\'re in many spots.',
   'Every distance and route is approximate: the ship map is measured from Royal\'s deck plans, not surveyed. ' +
     'Follow the ship\'s signs where they disagree.',
   '<b>Spot approximate</b> on a place page means the deck plans don\'t show that venue, so its spot is a rough ' +
@@ -379,6 +383,13 @@ var HELP_HTML = [
   '<div class="card"><h2>Good to know</h2><ul class="notes">',
   HELP_NOTES.map(function(n) { return '<li>' + n + '</li>'; }).join(''),
   '</ul></div>',
+  '<div class="card" id="voiceCard"><h2>Try a voice phrase</h2>',
+  '<p class="muted">What the watch would show for something you say, answered by the phone with your ',
+  'cruise, no watch needed. Nothing is set or opened.</p>',
+  '<label for="voiceTry">Phrase</label><input id="voiceTry" maxlength="255" placeholder="How do I get to the Windjammer?">',
+  '<p class="help">Save and test saves this page, and the answer shows here next time you open it.</p>',
+  '<button class="pill tonal wide" id="voiceTryGo">Save and test</button>',
+  '<div class="rows" id="voiceLast" hidden></div></div>',
   '<div class="card"><h2>Ships with Ship GPS</h2><ul class="notes" id="gpsShips"></ul>',
   '<p class="muted">On other ships everything else works (the schedule, alerts, the ship directory with ',
   'decks), with no walking distances or routes.</p></div>',
@@ -1621,6 +1632,13 @@ function pageMain(S, V, CL, SH) {
     return switchOn('hints');
   }
   $('gpsShips').innerHTML = (S.gpsShips || []).map(function(n) { return '<li>' + esc(n) + '</li>'; }).join('');
+  // Help > Try a voice phrase: the last test's card (voicecard.cardLines).
+  if (S.voiceTest && S.voiceTest.lines) {
+    $('voiceTry').value = S.voiceTest.text || '';
+    $('voiceLast').hidden = false;
+    $('voiceLast').innerHTML = '<p class="rhead">LAST TEST' + (S.voiceTest.demo ? ' (DEMO DATA)' : '') + '</p>' +
+      S.voiceTest.lines.map(function(l) { return '<div class="chg"><span>' + esc(l) + '</span></div>'; }).join('');
+  }
 
   // Port and starboard (§9.7): only for a ship with a map, to set the sides right
   // on the first sailing with it.
@@ -3833,6 +3851,9 @@ function pageMain(S, V, CL, SH) {
     if (imported) {
       r.imported = imported;
     }
+    if (voiceTry) {
+      r.voiceTest = voiceTry;
+    }
     if (VS && vChanged) {
       r.venues = {ship: VS.ship, overrides: vOver};
     }
@@ -3878,6 +3899,13 @@ function pageMain(S, V, CL, SH) {
     document.location = returnUrl() + encodeURIComponent(text);
   }
   $('save').addEventListener('click', function() { close('save'); });
+  var voiceTry = '';
+  $('voiceTryGo').addEventListener('click', function() {
+    voiceTry = $('voiceTry').value.trim();
+    if (voiceTry) {
+      close('save');
+    }
+  });
   $('download').addEventListener('click', function() { close('download'); });
   $('downloadLogin').addEventListener('click', function() { close('download-login'); });
   if (S.watchStorage) {

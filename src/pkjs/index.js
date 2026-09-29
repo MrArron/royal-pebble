@@ -11,6 +11,7 @@ var royal = require('./royal');
 var config = require('./config');
 var venues = require('./venues');
 var directory = require('./directory');
+var routestart = require('./routestart');
 var voicecard = require('./voicecard');
 var gpstext = require('./gpstext');
 var shipmap = require('./shipmap');
@@ -61,6 +62,12 @@ var SHIPS_MAX_AGE_MS = 30 * 24 * 3600 * 1000;
 // The demo is built around the time it was first shown and kept for 12 hours,
 // so a launch caused by one of its alerts doesn't move every time again.
 var STORE_DEMO = 'demo';  // {variant, at}
+// Voice `I'm at X` (routestart.js, D22): {sail, at, name, venue | cabin | mine}
+// from directory.spokenStart, removed when it ends. A spoken cabin number is kept
+// only while it's the start (§9.6).
+var STORE_SPOKEN = 'spokenStart';
+// Help > Try a voice phrase: the last phrase and the card it gave {text, lines, at}.
+var STORE_VOICE_TEST = 'voiceTest';
 var DEMO_MAX_AGE_MS = 12 * 3600 * 1000;
 
 var s_demoVariant = (load(STORE_DEMO, {}).variant) || 0;
@@ -72,7 +79,9 @@ var s_ack = null;        // star ack to send: {seq, resend}
 var s_dirRef = null;     // ship directory page the watch asked for
 var s_route = null;      // route the watch asked for: {ref, rest} or {start, venue}
 var s_voice = null;      // voice turn to answer: {seq, text, state}
-var s_voiceRoute = null; // the last voice card's route, until Select opens it: {seq, ref, rest}
+var s_voiceRoute = null; // the last voice card's route, until Select opens it: {seq, ref, rest, start}
+var s_voiceConfirm = null; // the last voice card's confirm (`I'm at`, Forget where I am): {seq, start, forget}
+var s_routeFrom = null;  // a start said in the question, for that Route screen: {ref, rest, place}
 
 function load(key, fallback) {
   try {
@@ -85,6 +94,41 @@ function load(key, fallback) {
 
 function save(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+// The spoken start while it lasts (routestart.js, D22), else null; one that
+// has ended is removed and logged.
+function spokenNow(data) {
+  var saved = load(STORE_SPOKEN, null);
+  if (!saved) {
+    return null;
+  }
+  var why = directory.spokenEnded({bundle: data.bundle, settings: data.settings, stars: data.stars,
+                                   now: new Date(), spoken: saved});
+  if (why) {
+    localStorage.removeItem(STORE_SPOKEN);
+    usage.add('voice', 'start ' + saved.name + ' ended (' + why + ')');
+    return null;
+  }
+  return saved;
+}
+
+// The context directory.js and voicecard.js work from, with the spoken start.
+function ctxOf(data) {
+  return {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date(), spoken: spokenNow(data)};
+}
+
+// Saves a voice card's start ({place, name}) as the spoken start (Select on
+// `I'm at X`, or on the route of `I'm at X, how do I get to Y`, D4).
+function setSpoken(start, seq, how) {
+  var data = currentData();
+  if (!data.bundle || !data.bundle.sailDate) {
+    return;
+  }
+  var place = {name: start.name, venue: start.place.venue, cabin: start.place.cabin, mine: start.place.mine};
+  var sp = directory.spokenStart(place, ctxOf(data));
+  save(STORE_SPOKEN, sp);
+  usage.add('voice', 'turn ' + seq + ' ' + how + ': start set to ' + sp.name + ' for ' + routestart.SPOKEN_FOR + ' min');
 }
 
 // ---- Usage log (log.js). The saved cruise's sail date gives each entry its
@@ -348,7 +392,7 @@ function sendDirPage() {
   s_dirRef = null;
   var built = Date.now();
   var data = currentData();
-  var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
+  var ctx = ctxOf(data);
   if (ref >= directory.REF_FLAG) {
     flagFromWatch(ref - directory.REF_FLAG, ctx, data.isDemo);
   }
@@ -362,7 +406,7 @@ function sendDirPage() {
     s_sending = false;
     // A place page shows its walking distance and where it's measured from.
     var gps = page.gps && page.gps.text ? ', gps "' + (page.gps.header || '') + ' ' + page.gps.text + '" (start: ' +
-      directory.startReason({bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()}) + ')' :
+      directory.startReason(ctx) + ')' :
       page.gps && page.gps.flags ? ', gps flags ' + page.gps.flags : '';
     usage.add('dir', 'page ' + ref + ' "' + page.title + (page.label ? ' ' + page.label : '') + '": ' +
               page.rows.length + ' rows' + gps + ', built in ' + built + ' ms, ' + sendText(ok, info));
@@ -378,17 +422,21 @@ function sendVoiceCard() {
   var turn = s_voice;
   s_voice = null;
   var data = currentData();
-  var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
+  var ctx = ctxOf(data);
   var card = voicecard.answer(turn.text, ctx, data.isDemo, turn.state);
   s_sending = true;
   sendQueue([{msg_type: MSG_VOICE_CARD, voice_seq: turn.seq, voice_card: voicecard.packCard(card)}],
             function(ok, info) {
     s_sending = false;
     // Spoken cabin numbers may appear here (owner, 2026-09-26); the log never goes into the repo.
-    s_voiceRoute = ok && card.action === voicecard.ACT_ROUTE ? {seq: turn.seq, ref: card.ref | 0, rest: !!card.rest} : null;
+    s_voiceRoute = ok && card.action === voicecard.ACT_ROUTE ?
+      {seq: turn.seq, ref: card.ref | 0, rest: !!card.rest, start: card.start || null} : null;
+    s_voiceConfirm = ok && card.action === voicecard.ACT_CONFIRM && (card.start || card.forget) ?
+      {seq: turn.seq, start: card.start || null, forget: !!card.forget} : null;
     usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' + card.log + ': ' +
               ['nothing to do', 'route', 'confirm', card.onboard ? 'set on board' : 'back ashore'][card.action] +
               (card.ref ? ' ' + card.ref + (card.rest ? ' restroom' : '') : '') +
+              (card.start ? (card.start.set ? ' setting start ' : ' from ') + card.start.name : '') +
               ' (' + card.rows.slice(1).map(function(r) { return (r.label ? r.label + ' ' : '') + r.value; }).join(', ') + '), ' +
               sendText(ok, info));
     sendNext();
@@ -402,7 +450,10 @@ function sendRoute() {
   s_route = null;
   var built = Date.now();
   var data = currentData();
-  var ctx = {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date()};
+  var ctx = ctxOf(data);
+  if (s_routeFrom && req.venue === undefined && s_routeFrom.ref === req.ref && s_routeFrom.rest === req.rest) {
+    ctx.from = s_routeFrom.place;  // "from X to Y": this route starts at X
+  }
   var page = req.venue !== undefined ? directory.eventRoutePage(req, ctx) : directory.routePage(req.ref, req.rest, ctx);
   mapProblem(page, data.isDemo);
   var msg = directory.routeMsg(page);
@@ -596,6 +647,8 @@ function pageState(ships) {
     gpsShips: shipmap.shipNames(),
     // For Me > Map check: only on a ship with a map.
     mapCheck: mapCheckState(bundle),
+    // Help > Try a voice phrase: the last test's card.
+    voiceTest: load(STORE_VOICE_TEST, null),
     api: royal.API,
     appKey: royal.APPKEY
   };
@@ -862,11 +915,26 @@ function settingsClosed(text) {
     }
   }
   sendSlice();
+  voiceTest(r.voiceTest);
 
   if (r.download && r.download.ship && r.download.ship.code && r.download.sailDate) {
     startDownload(r.download, r.action === 'download-login' ? login : null);
   }
   login = null;
+}
+
+// Help > Try a voice phrase: the card the watch would get for `text`, saved for
+// the page's next open and logged. Nothing is set or opened (no Select).
+function voiceTest(text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    return;
+  }
+  text = text.trim().slice(0, 255);
+  var data = currentData();
+  var card = voicecard.answer(text, ctxOf(data), data.isDemo, 0);
+  var lines = voicecard.cardLines(card);
+  save(STORE_VOICE_TEST, {text: text, lines: lines, at: Date.now(), demo: data.isDemo});
+  usage.add('voice', 'test on the phone: heard "' + text + '" -> ' + card.log + ' (' + lines.slice(1, card.log ? -1 : lines.length).join(' / ') + ')');
 }
 
 // `login`: {email, password} for the Advanced download, or null. The log gets
@@ -952,10 +1020,21 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
     case MSG_ROUTE_REQUEST:
       s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || '')}
                                             : {ref: p.dir_ref | 0, rest: !!p.route_rest};
+      if (s_routeFrom && (p.route_start !== undefined || s_routeFrom.ref !== (p.dir_ref | 0) ||
+                          s_routeFrom.rest !== !!p.route_rest)) {
+        s_routeFrom = null;  // another route: back to where routes start
+      }
       if (s_voiceRoute && p.route_start === undefined && s_voiceRoute.ref === (p.dir_ref | 0) &&
           s_voiceRoute.rest === !!p.route_rest) {
         // What the user did with a voice card (VOICE_FINAL_PLAN §10.1).
         usage.add('voice', 'turn ' + s_voiceRoute.seq + ' Select: route opened');
+        var st = s_voiceRoute.start;
+        if (st) {
+          s_routeFrom = {ref: s_voiceRoute.ref, rest: s_voiceRoute.rest, place: st.place};
+          if (st.set) {
+            setSpoken(st, s_voiceRoute.seq, 'route opened');  // D4
+          }
+        }
         s_voiceRoute = null;
       }
       if (!s_sending) {
@@ -964,9 +1043,22 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
       break;
     case MSG_VOICE:
       if (p.voice_text === undefined) {
-        usage.add('voice', 'turn ' + (p.voice_seq | 0) + ' confirmed on the watch');
+        var conf = s_voiceConfirm && s_voiceConfirm.seq === (p.voice_seq | 0) ? s_voiceConfirm : null;
+        s_voiceConfirm = null;
+        if (conf && conf.start) {
+          setSpoken(conf.start, conf.seq, 'confirmed on the watch');
+        } else if (conf && conf.forget) {
+          var had = load(STORE_SPOKEN, null);
+          localStorage.removeItem(STORE_SPOKEN);
+          usage.add('voice', 'turn ' + conf.seq + ' confirmed on the watch: start ' +
+                    (had ? had.name + ' cleared (Forget where I am)' : 'already gone'));
+        } else {
+          usage.add('voice', 'turn ' + (p.voice_seq | 0) + ' confirmed on the watch');
+        }
         break;
       }
+      s_voiceConfirm = null;
+      s_routeFrom = null;
       if (s_voiceRoute) {
         usage.add('voice', 'turn ' + s_voiceRoute.seq + ' route not opened (asked again or Back)');
         s_voiceRoute = null;

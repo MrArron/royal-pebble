@@ -6,9 +6,13 @@
 //   before the target starts, or overlaps it. For a route asked for now (a place
 //   page), that means one on now or ended less than FROM_GAP minutes ago. An
 //   event with no length ends FINISHED_GRACE minutes after it starts.
-// - A spoken location ("I'm at the Solarium", voice, later): for SPOKEN_FOR
-//   minutes, until a starred event or entry starts after it, and never past the
-//   04:00 day change.
+// - A spoken location ("I'm at the Solarium", voice, 1.5.9): for SPOKEN_FOR
+//   minutes, until a starred, booked or reserved event or personal entry starts
+//   after it (booked and reserved ones are starred), and never past the 04:00
+//   day change (VOICE_FINAL_PLAN D22). The phone keeps it (index.js, saved
+//   while it lasts); directory.js passes it in as `spoken`.
+// - A start said in the question ("from the Solarium to the Windjammer"): that
+//   route only, before everything else (`from`).
 // Chosen by the owner on 2026-09-26: a stop hours earlier doesn't count (a 9:00p
 // show doesn't start the route to an 11:00p event).
 //
@@ -54,12 +58,28 @@ function currentStop(stops, now) {
   return cur;
 }
 
+// Why a spoken location is no longer the start at `now`, or null while it is:
+// 'not said' (none), 'clock' (said after now: the clock moved back), '90 min',
+// '04:00' or 'next stop' (a starred event or entry started after it).
+function spokenEnd(spoken, stops, now) {
+  if (!spoken) {
+    return 'not said';
+  }
+  if (spoken.at > now) {
+    return 'clock';
+  }
+  if (watchDay(spoken.at) !== watchDay(now)) {
+    return '04:00';
+  }
+  if (now - spoken.at >= SPOKEN_FOR) {
+    return SPOKEN_FOR + ' min';
+  }
+  return (stops || []).some(function(p) { return p.start > spoken.at && p.start <= now; }) ? 'next stop' : null;
+}
+
 // Is a spoken location still the start at `now`? spoken: {at, ...}.
 function spokenValid(spoken, stops, now) {
-  if (!spoken || spoken.at > now || now - spoken.at >= SPOKEN_FOR || watchDay(spoken.at) !== watchDay(now)) {
-    return false;
-  }
-  return !stops.some(function(p) { return p.start > spoken.at && p.start <= now; });
+  return !spokenEnd(spoken, stops, now);
 }
 
 // Where a route starts. opts:
@@ -68,9 +88,13 @@ function spokenValid(spoken, stops, now) {
 //   target  optional event {start}: the route to it (Home's NEXT, reminders);
 //           without it, the route starts from where you are now (place pages)
 //   spoken  optional {at, venue} or {at, cabin}
+//   from    optional {venue} or {cabin}: said in the question, this route only
 //   cabin   optional stateroom number
-// Returns {kind: 'spoken' | 'stop' | 'cabin' | 'none', venue?, cabin?, stop?}.
+// Returns {kind: 'said' | 'spoken' | 'stop' | 'cabin' | 'none', venue?, cabin?, stop?}.
 function start(opts) {
+  if (opts.from && (opts.from.venue || opts.from.cabin)) {
+    return opts.from.cabin ? {kind: 'said', cabin: String(opts.from.cabin)} : {kind: 'said', venue: opts.from.venue};
+  }
   var stops = opts.stops || [];
   var now = opts.now;
   var stop = opts.target ? previousStop(stops, opts.target) : currentStop(stops, now);
@@ -94,6 +118,7 @@ module.exports = {
   SPOKEN_FOR: SPOKEN_FOR,
   previousStop: previousStop,
   currentStop: currentStop,
+  spokenEnd: spokenEnd,
   spokenValid: spokenValid,
   start: start
 };
