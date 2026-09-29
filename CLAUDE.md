@@ -27,6 +27,8 @@ Read before making changes:
 - `tools/shipmap/` — builds the Ship GPS map data (`src/pkjs/data/*-HM.js`:
   cabins, places, walkways) from Royal's deck-plan SVGs. See its README; the
   data files are generated, never edited by hand.
+- `tools/voice/` — builds the voice lexicon (`src/pkjs/data/voice-HM.js`,
+  generated) from `venue-mishearings-HM.json` and `venues.js`. See its README.
 - `docs/` — brief, design, data format.
 - Watch app: `package.json` + `wscript` at the root, `src/c/` watch code,
   `src/pkjs/` phone companion (and later the settings page). Targets the Pebble
@@ -95,7 +97,7 @@ Read before making changes:
 - Voice on the emulator: start `pebble transcribe "how do I get to the theater"
   --emulator emery` in the background (one at a time; it answers the next
   dictation), then Hold Select on Home. `--error no-speech-detected` tries a
-  failure. With demo data the phone's stand-in answers show each card.
+  failure. Demo data is answered like real data (the voice matcher, 1.5.8).
 - Emulator input: `pebble emu-button click select --duration 900 --emulator emery`
   is a long press (`--repeat` moved the Today cursor only one row). After a `pebble
   kill` and reinstall, the firmware may show "wakeup events occurred"; press Back

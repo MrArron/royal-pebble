@@ -1,0 +1,6555 @@
+[
+ {
+  "target": "Main Dining Room 3",
+  "kind": "venue",
+  "spoken": [
+   "main dining room three",
+   "main dining room deck three",
+   "dining room deck 3",
+   "main dining 3"
+  ],
+  "asr": [
+   {
+    "text": "main dining room 3",
+    "type": "number",
+    "likelihood": "high"
+   },
+   {
+    "text": "main dining room free",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "main dining room tree",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "main dining room on three",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "main dinning room three",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "m d r three",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "mdr 3",
+    "type": "letter",
+    "likelihood": "medium"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "main dining room",
+    "note": "Bare 'main dining room' without a deck number is its own category: ask which deck."
+   },
+   {
+    "with": "Main Dining Room 4",
+    "note": "Only the trailing number differs."
+   },
+   {
+    "with": "Main Dining Room 5",
+    "note": "Only the trailing number differs."
+   }
+  ],
+  "notes": "Deck number is the only discriminator; parse number words and digits after 'dining room'."
+ },
+ {
+  "target": "Main Dining Room 4",
+  "kind": "venue",
+  "spoken": [
+   "main dining room four",
+   "main dining room deck four",
+   "dining room deck 4",
+   "main dining 4"
+  ],
+  "asr": [
+   {
+    "text": "main dining room 4",
+    "type": "number",
+    "likelihood": "high"
+   },
+   {
+    "text": "main dining room for",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "main dining room fore",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "main dining room or",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "m d r four",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "mdr 4",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "main dining room floor",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Fore",
+    "note": "'four' comes back as 'for'/'fore'; 'fore' is also the position word (Fore elevators, fore stairs)."
+   },
+   {
+    "with": "for",
+    "note": "'main dining room for' can also be the start of a normal phrase ('...for dinner'); read the number only when it ends the venue phrase."
+   },
+   {
+    "with": "Main Dining Room 3",
+    "note": "Only the trailing number differs."
+   },
+   {
+    "with": "Main Dining Room 5",
+    "note": "Only the trailing number differs."
+   }
+  ]
+ },
+ {
+  "target": "Main Dining Room 5",
+  "kind": "venue",
+  "spoken": [
+   "main dining room five",
+   "main dining room deck five",
+   "dining room deck 5",
+   "main dining 5"
+  ],
+  "asr": [
+   {
+    "text": "main dining room 5",
+    "type": "number",
+    "likelihood": "high"
+   },
+   {
+    "text": "main dining room fine",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "main dining room fife",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "m d r five",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "mdr 5",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "main dining room fi",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Main Dining Room 3",
+    "note": "Only the trailing number differs."
+   },
+   {
+    "with": "Main Dining Room 4",
+    "note": "Only the trailing number differs."
+   }
+  ],
+  "notes": "Royal's code SILK is also titled 'Main Dining Room 5' (open conflict in the repo); guests may say 'Silk' but it is not added until that is settled."
+ },
+ {
+  "target": "Royal Theater",
+  "kind": "venue",
+  "spoken": [
+   "royal theater",
+   "the main theater",
+   "the main show theater",
+   "theater",
+   "the theater",
+   "theatre"
+  ],
+  "asr": [
+   {
+    "text": "royal theatre",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "royal theaters",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal feeder",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal the ater",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "roy all theater",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal theater's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal the other",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Adventure Ocean Theater",
+    "note": "Also ends in 'theater'."
+   },
+   {
+    "with": "Royal Promenade",
+    "note": "Shares 'royal'; never match on 'royal' alone."
+   },
+   {
+    "with": "Royal Shops",
+    "note": "Shares 'royal'."
+   },
+   {
+    "with": "Casino Royale",
+    "note": "'royale' normalises close to 'royal'."
+   },
+   {
+    "with": "AquaTheater",
+    "note": "Bare 'theater' goes to Royal Theater (owner decision D3 default); 'aqua theater' is its own phrase and longer."
+   }
+  ]
+ },
+ {
+  "target": "Izumi",
+  "kind": "venue",
+  "spoken": [
+   "izumi",
+   "izumi hibachi",
+   "izumi sushi",
+   "the sushi place",
+   "hibachi",
+   "the hibachi restaurant",
+   "sushi"
+  ],
+  "asr": [
+   {
+    "text": "is oomi",
+    "type": "brand",
+    "likelihood": "high"
+   },
+   {
+    "text": "is zoomy",
+    "type": "brand",
+    "likelihood": "high"
+   },
+   {
+    "text": "a zoomy",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "is you me",
+    "type": "brand",
+    "likelihood": "high"
+   },
+   {
+    "text": "easy me",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "izzy me",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "e zoomy",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "izoomi",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "ezumi",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "is umi",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "zoomy",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "izumi's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "hi bachi",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "he bachi",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "hibachis",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "sue she",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "is",
+    "note": "'is you me' / 'is oomi' start with 'is': strip question scaffolding ('where is ...') before matching or 'where is you me' still works but 'where is' alone must not."
+   },
+   {
+    "with": "easy",
+    "note": "'easy me' contains the common word 'easy'; match only the two-word form."
+   }
+  ],
+  "notes": "Japanese brand word; most local ASR models lack it. Expect split outputs beginning with 'is'/'a'/'e'."
+ },
+ {
+  "target": "Casino Royale",
+  "kind": "venue",
+  "spoken": [
+   "the casino",
+   "casino",
+   "casino royale"
+  ],
+  "asr": [
+   {
+    "text": "casino royal",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "cassino",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "casino roy al",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "casino royalty",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "casinos",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "the casino royale",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "cuisino",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Royal Theater",
+    "note": "'royal' shared; 'casino' is the reliable part."
+   },
+   {
+    "with": "Loyalty Desk",
+    "note": "'royalty' is also a mishearing of 'loyalty'."
+   }
+  ]
+ },
+ {
+  "target": "Studio B",
+  "kind": "venue",
+  "spoken": [
+   "studio b",
+   "the ice rink",
+   "ice rink",
+   "the ice show",
+   "ice skating",
+   "the rink",
+   "skating rink"
+  ],
+  "asr": [
+   {
+    "text": "studio be",
+    "type": "letter",
+    "likelihood": "high"
+   },
+   {
+    "text": "studio bee",
+    "type": "letter",
+    "likelihood": "high"
+   },
+   {
+    "text": "studio v",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "studio d",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "studio p",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "studio e",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "studio t",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "studio bea",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "studio bay",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "studio 3",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "i spring",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "ice ring",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "ice skate",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "ice shows",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "studio",
+    "type": "truncation",
+    "likelihood": "medium"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "studio",
+    "note": "Bare 'studio' (letter dropped) is ambiguous only in theory: no other HM target contains it. Keep, but confirm."
+   },
+   {
+    "with": "Studio B vs letter commands",
+    "note": "Letters b/d/e/p/t/v are all heard for 'B'; accept any single letter after 'studio'."
+   }
+  ],
+  "notes": "Accept 'studio' + any one-letter token. Users mostly say 'ice rink' / 'ice show'."
+ },
+ {
+  "target": "Art Gallery",
+  "kind": "venue",
+  "spoken": [
+   "art gallery",
+   "the art gallery",
+   "art auction"
+  ],
+  "asr": [
+   {
+    "text": "our gallery",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "art galley",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "heart gallery",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "art galleries",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "art auctions",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "arts gallery",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Focus Photo Gallery",
+    "note": "Both are 'gallery'; bare 'gallery' is ambiguous, do not match it alone."
+   },
+   {
+    "with": "galley",
+    "note": "'galley' is a ship word (kitchen) but not a target."
+   }
+  ]
+ },
+ {
+  "target": "Vitality Spa",
+  "kind": "venue",
+  "spoken": [
+   "the spa",
+   "vitality spa",
+   "vitality at sea spa",
+   "vitality at sea"
+  ],
+  "asr": [
+   {
+    "text": "vitality spar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "vitality spot",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the spar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "vitality at c",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "vitality at see",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "vitalities",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "vitality's spa",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "vitality spa's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "the spaw",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Vitality Cafe",
+    "note": "Bare 'vitality' could be the cafe; it is not mapped alone."
+   },
+   {
+    "with": "Fitness Center",
+    "note": "Alias 'Vitality at Sea Fitness Center' shares 'vitality at sea'."
+   },
+   {
+    "with": "at",
+    "note": "'vitality at sea' contains 'at': 'I'm at vitality at sea' must not split on the second 'at'."
+   }
+  ]
+ },
+ {
+  "target": "Royal Promenade",
+  "kind": "venue",
+  "spoken": [
+   "the promenade",
+   "royal promenade",
+   "the royal promenade",
+   "promenade"
+  ],
+  "asr": [
+   {
+    "text": "royal prominade",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "royal promenod",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal prom",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "royal promenades",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the prom",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "promenaid",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "prominade",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "promenod",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Cafe Promenade",
+    "note": "Shares 'promenade'; 'cafe promenade' must win when 'cafe' is present."
+   },
+   {
+    "with": "Promenade Shops",
+    "note": "Shares 'promenade'."
+   },
+   {
+    "with": "Royal Theater",
+    "note": "Shares 'royal'."
+   }
+  ],
+  "notes": "Area-sized target (whole deck 5 length); fine as a destination, vague as 'I'm at'."
+ },
+ {
+  "target": "Running Track",
+  "kind": "venue",
+  "spoken": [
+   "running track",
+   "jogging track",
+   "the running track"
+  ],
+  "asr": [
+   {
+    "text": "running tracks",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "run track",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "running truck",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "jogging tract",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "jogging truck",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "jog track",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "track",
+    "note": "Bare 'track' is generic; only with 'running'/'jogging' or 'the track' as a full destination."
+   }
+  ],
+  "location": false,
+  "notes": "Four separate spots on deck 5: fine as a destination, refused as a location (commands D8)."
+ },
+ {
+  "target": "Rising Tide Bar",
+  "kind": "venue",
+  "spoken": [
+   "rising tide",
+   "the rising tide",
+   "rising tide bar",
+   "the moving bar",
+   "the elevator bar"
+  ],
+  "asr": [
+   {
+    "text": "rising tied",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "rising time",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "rising side",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "rising tides",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "rising tight",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "rising tie",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "risin tide",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "the moving bars",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "elevator",
+    "note": "'the elevator bar' contains 'elevator': prefer the longest phrase so it doesn't route to an elevator bank."
+   },
+   {
+    "with": "Rising Tide on two decks",
+    "note": "Entrances on decks 5 and 8; routing already picks one."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Cafe Promenade",
+  "kind": "venue",
+  "spoken": [
+   "cafe promenade",
+   "the promenade cafe",
+   "promenade cafe"
+  ],
+  "asr": [
+   {
+    "text": "cafe prominade",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "café promenade",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "caffe promenade",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "cafe promenad",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "calf a promenade",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "cafe prom",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Royal Promenade",
+    "note": "Shares 'promenade'."
+   },
+   {
+    "with": "Park Cafe",
+    "note": "Shares 'cafe'; bare 'cafe' is ambiguous (Park Cafe, Vitality Cafe, Cafe Promenade)."
+   },
+   {
+    "with": "Vitality Cafe",
+    "note": "Shares 'cafe'."
+   }
+  ],
+  "coffee": true,
+  "notes": "Open 24 hours (owner, 2026-09-28): the SNACK request goes here."
+ },
+ {
+  "target": "Sorrento's",
+  "kind": "venue",
+  "spoken": [
+   "sorrento's",
+   "sorrento's pizza",
+   "the pizza place",
+   "pizza"
+  ],
+  "asr": [
+   {
+    "text": "sorrentos",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "sorrento",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "sorento",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "sorentos",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "so rento's",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sir rentos",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "toronto's",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "toronto",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "sorrento pizza",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "so wrong toes",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "pizza place",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Toronto",
+    "note": "'Toronto's' is a real-word substitute; safe (no target) but confirm."
+   },
+   {
+    "with": "to",
+    "note": "'so rento's' contains no command word, but 'toronto' starts like 'to': tokenise before looking for 'to'."
+   }
+  ]
+ },
+ {
+  "target": "Pesky Parrot",
+  "kind": "venue",
+  "spoken": [
+   "pesky parrot",
+   "the pesky parrot",
+   "the tiki bar"
+  ],
+  "asr": [
+   {
+    "text": "pesky parrots",
+    "type": "other",
+    "likelihood": "high"
+   },
+   {
+    "text": "pesky carrot",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "pesky pirate",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "pesky parent",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "pesky pair it",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "pest key parrot",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "pesky perrot",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "pesky",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "peski parrot",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "tiki",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "pesky",
+    "note": "Bare 'pesky' is rare in commands and unique to this venue; keep."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Boleros",
+  "kind": "venue",
+  "spoken": [
+   "boleros",
+   "the latin bar"
+  ],
+  "asr": [
+   {
+    "text": "bolero",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "bolero's",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "bowlers",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "bow leros",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "bolaros",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "boleros bar",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "bull arrows",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "volaris",
+    "type": "brand",
+    "likelihood": "low"
+   },
+   {
+    "text": "below rose",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "bolera's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "the latin bars",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "bowling",
+    "note": "'bowlers' is a near-word; no bowling venue on HM, so safe."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "On Air",
+  "kind": "venue",
+  "spoken": [
+   "on air",
+   "on air club",
+   "the on air club",
+   "karaoke",
+   "the karaoke bar"
+  ],
+  "asr": [
+   {
+    "text": "on-air",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "on air clubs",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "honor club",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "honor",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "on a club",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "on air cloud",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "one air",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "on their club",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "carry okay",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "kerry oki",
+    "type": "brand",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "on",
+    "note": "'on' is a common word; match 'on air' only as a whole phrase, never 'on' alone."
+   },
+   {
+    "with": "honor",
+    "note": "'honor' alone is too generic to act on without confirm."
+   }
+  ],
+  "notes": "'On Air' is two common words; require the exact bigram or 'on air club'.",
+  "bar": true
+ },
+ {
+  "target": "Boot & Bonnet Pub",
+  "kind": "venue",
+  "spoken": [
+   "boot and bonnet",
+   "boot and bonnet pub",
+   "the pub",
+   "the english pub",
+   "the british pub"
+  ],
+  "asr": [
+   {
+    "text": "boot n bonnet",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "boot & bonnet",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "boots and bonnets",
+    "type": "other",
+    "likelihood": "high"
+   },
+   {
+    "text": "boot and bonnie",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "boot in bonnet",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "boot and bonnet pubs",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "boot and bonnets",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "boot an bonnet",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "boo tim bonnet",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "put and bonnet",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the pup",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the pubs",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "pub",
+    "note": "Only one pub on HM; 'the pub' is safe as a destination."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "NextCruise Office",
+  "kind": "venue",
+  "spoken": [
+   "next cruise",
+   "next cruise office",
+   "the next cruise desk",
+   "future cruise office"
+  ],
+  "asr": [
+   {
+    "text": "nextcruise",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "next crews",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "next cruz",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "next cruises",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "next crew's office",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "next cruise offices",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "text cruise",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "next cruise desk",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "future cruises",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "next",
+    "note": "'what's next' is a future schedule command; require 'next cruise' as a bigram."
+   },
+   {
+    "with": "Loyalty Desk",
+    "note": "Guests confuse the two desks; not an ASR issue."
+   }
+  ]
+ },
+ {
+  "target": "Port & Shopping Desk",
+  "kind": "venue",
+  "spoken": [
+   "port and shopping",
+   "port and shopping desk",
+   "port shopping",
+   "the shopping desk"
+  ],
+  "asr": [
+   {
+    "text": "port & shopping",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "port n shopping",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "port in shopping",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "porn shopping",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "port shopping desk",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sport and shopping",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "port and shop",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "port and shopping guide",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Port Merchants",
+    "note": "Both start with 'port'; never match bare 'port'."
+   },
+   {
+    "with": "port",
+    "note": "'port' is also the side word (Cross to port) and 'port day'."
+   }
+  ]
+ },
+ {
+  "target": "Shore Excursions",
+  "kind": "venue",
+  "spoken": [
+   "shore excursions",
+   "shore excursions desk",
+   "the excursions desk",
+   "shorex"
+  ],
+  "asr": [
+   {
+    "text": "sure excursions",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "shore excursion",
+    "type": "other",
+    "likelihood": "high"
+   },
+   {
+    "text": "short excursions",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sure excursion",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "shore ex",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "shore x",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "shore extortions",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "excursions",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "excursion desk",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "sure",
+    "note": "'sure' is also a reply word; require 'excursion(s)'."
+   }
+  ]
+ },
+ {
+  "target": "Loyalty Desk",
+  "kind": "venue",
+  "spoken": [
+   "loyalty desk",
+   "the loyalty desk",
+   "crown and anchor desk",
+   "loyalty"
+  ],
+  "asr": [
+   {
+    "text": "royalty desk",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "loyalty desks",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "loyal tea desk",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "royalty",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "crown n anchor desk",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "crown & anchor desk",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "loyalty death",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Royal Theater",
+    "note": "'royalty' shares 'royal' with Royal Theater / Royal Promenade / Royal Shops / Casino Royale; match 'royalty' only as a whole token."
+   },
+   {
+    "with": "Crown Lounge",
+    "note": "'crown and anchor' + 'desk' = Loyalty Desk; + 'lounge' = Crown Lounge; bare 'crown and anchor' ambiguous."
+   }
+  ]
+ },
+ {
+  "target": "Promenade Shops",
+  "kind": "venue",
+  "spoken": [
+   "promenade shops",
+   "the shops on the promenade"
+  ],
+  "asr": [
+   {
+    "text": "promenade shop",
+    "type": "other",
+    "likelihood": "high"
+   },
+   {
+    "text": "prominade shops",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "promenade chops",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "promenade shopping",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Royal Shops",
+    "note": "Both are generic shop targets; bare 'the shops' is not mapped."
+   },
+   {
+    "with": "Chops Grille",
+    "note": "'shops' ~ 'chops' (sh/ch) is a real two-way ASR confusion."
+   },
+   {
+    "with": "Royal Promenade",
+    "note": "Shares 'promenade'."
+   }
+  ]
+ },
+ {
+  "target": "Kate Spade",
+  "kind": "venue",
+  "spoken": [
+   "kate spade",
+   "the kate spade store"
+  ],
+  "asr": [
+   {
+    "text": "kate spayed",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "kate's paid",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "kate spades",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "k spade",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "gate spade",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "cake spade",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "kate space",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "kates spade",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": []
+ },
+ {
+  "target": "Royal Shops",
+  "kind": "venue",
+  "spoken": [
+   "royal shops",
+   "royal shop",
+   "the royal shop"
+  ],
+  "asr": [
+   {
+    "text": "royal chops",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal shopping",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "roy all shops",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Promenade Shops",
+    "note": "Both generic shop names."
+   },
+   {
+    "with": "Chops Grille",
+    "note": "sh/ch confusion."
+   },
+   {
+    "with": "Royal Theater",
+    "note": "Shares 'royal'."
+   }
+  ]
+ },
+ {
+  "target": "Port Merchants",
+  "kind": "venue",
+  "spoken": [
+   "port merchants",
+   "port merchant"
+  ],
+  "asr": [
+   {
+    "text": "poor merchants",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sport merchants",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "porch merchants",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "port merchandise",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "port merchant's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "court merchants",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Port & Shopping Desk",
+    "note": "Both start with 'port'."
+   }
+  ]
+ },
+ {
+  "target": "Regalia Fine Jewelry",
+  "kind": "venue",
+  "spoken": [
+   "regalia jewelry",
+   "regalia fine jewelry",
+   "the jewelry store"
+  ],
+  "asr": [
+   {
+    "text": "regalia fine jewellery",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "regalia jewellery",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "regale ya",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "rigalia",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "regal ia",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "regalia's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "regalia fine jewelers",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "regalia fine jury",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the jewellery store",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "regaleia",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Regalia Watches",
+    "note": "Bare 'regalia' is ambiguous between the two Regalia stores; confirm."
+   },
+   {
+    "with": "Bulgari",
+    "note": "Also sells jewellery; 'jewelry store' prefers Regalia."
+   }
+  ]
+ },
+ {
+  "target": "Regalia Watches",
+  "kind": "venue",
+  "spoken": [
+   "regalia watches",
+   "the watch store"
+  ],
+  "asr": [
+   {
+    "text": "regalia watch",
+    "type": "other",
+    "likelihood": "high"
+   },
+   {
+    "text": "regale ya watches",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "rigalia watches",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "regalia washes",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "regalia wages",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Regalia Fine Jewelry",
+    "note": "Shares 'regalia'."
+   },
+   {
+    "with": "Omega",
+    "note": "'the watch store' could mean Omega, Hublot, Breitling or Cartier; confirm."
+   }
+  ]
+ },
+ {
+  "target": "Solera",
+  "kind": "venue",
+  "spoken": [
+   "solera"
+  ],
+  "asr": [
+   {
+    "text": "cholera",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "so lera",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "solara",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sol era",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "salera",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "soleras",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "so layer",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "solaria",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Solarium",
+    "note": "'solaria' / 'solera' sit between Solera and a clipped 'Solarium'; confirm either way."
+   },
+   {
+    "with": "cholera",
+    "note": "Real-word substitute; safe but show the match."
+   }
+  ],
+  "notes": "Rare word; a truncated 'solarium' can land here."
+ },
+ {
+  "target": "Prince & Greene",
+  "kind": "venue",
+  "spoken": [
+   "prince and greene"
+  ],
+  "asr": [
+   {
+    "text": "prince and green",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "prince & green",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "prince n green",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "prints and green",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "prince in green",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "prince green",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "prince's and green",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "prints in green",
+    "type": "homophone",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "in",
+    "note": "'prince in green' contains 'in' (as in 'I'm in cabin'); only the cabin phrase is 'in cabin'."
+   }
+  ]
+ },
+ {
+  "target": "Pandora",
+  "kind": "venue",
+  "spoken": [
+   "pandora",
+   "the pandora store"
+  ],
+  "asr": [
+   {
+    "text": "pan dora",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "pandoras",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "panda ra",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "pandora's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "panorama",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": []
+ },
+ {
+  "target": "Kids Shop",
+  "kind": "venue",
+  "spoken": [
+   "kids shop",
+   "the kids store",
+   "kid shop"
+  ],
+  "asr": [
+   {
+    "text": "kids' shop",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "kid's shop",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "kids shops",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "kids chop",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "kitchen shop",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "kids stop",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Kids' Avenue",
+    "note": "Both start with 'kids'; never match bare 'kids'."
+   }
+  ],
+  "notes": "Deck, position and area are unconfirmed in the repo ('dpn')."
+ },
+ {
+  "target": "Fitness Center",
+  "kind": "venue",
+  "spoken": [
+   "the gym",
+   "gym",
+   "fitness center",
+   "the fitness center"
+  ],
+  "asr": [
+   {
+    "text": "the jim",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "jim",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "fitness centre",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "fitness centers",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "fitness",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "fit ness center",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "the gem",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "vitality fitness center",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Vitality Spa",
+    "note": "Alias 'Vitality at Sea Fitness Center'; 'vitality fitness' should go here, bare 'vitality' to the spa."
+   },
+   {
+    "with": "Jim",
+    "note": "A person's name; fine in destination slots only."
+   }
+  ]
+ },
+ {
+  "target": "Vitality Cafe",
+  "kind": "venue",
+  "spoken": [
+   "vitality cafe",
+   "the spa cafe",
+   "the healthy cafe"
+  ],
+  "asr": [
+   {
+    "text": "vitality café",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "vitality calf a",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "vitality coffee",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "vitality caffe",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "vitality cafes",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Vitality Spa",
+    "note": "Shares 'vitality'."
+   },
+   {
+    "with": "Park Cafe",
+    "note": "Shares 'cafe'."
+   }
+  ]
+ },
+ {
+  "target": "Schooner Bar",
+  "kind": "venue",
+  "spoken": [
+   "schooner bar",
+   "the schooner bar",
+   "the schooner",
+   "the piano bar"
+  ],
+  "asr": [
+   {
+    "text": "sooner bar",
+    "type": "near-word",
+    "likelihood": "high"
+   },
+   {
+    "text": "schooner",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "scooner bar",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "shooner bar",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "schooners bar",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "school bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "tuna bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "spooner bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the sooner",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the piano bars",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "sooner",
+    "note": "'sooner' is a common word; match 'sooner bar' (with 'bar') or 'the schooner'."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Focus Photo Gallery",
+  "kind": "venue",
+  "spoken": [
+   "photo gallery",
+   "the photo gallery",
+   "focus",
+   "focus photo",
+   "the photo shop"
+  ],
+  "asr": [
+   {
+    "text": "focus foto",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "folks is photo",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "focus photos",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "photo galleries",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "focus photo galleries",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "photograph gallery",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the photos",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Art Gallery",
+    "note": "'gallery' shared."
+   },
+   {
+    "with": "Picture This",
+    "note": "Both about photos; 'photo' goes to Focus, 'picture' to Picture This."
+   },
+   {
+    "with": "focus",
+    "note": "Common verb; accept 'focus' only when it is the whole destination."
+   }
+  ]
+ },
+ {
+  "target": "Picture This",
+  "kind": "venue",
+  "spoken": [
+   "picture this"
+  ],
+  "asr": [
+   {
+    "text": "pictures this",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "picture these",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "picture dis",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "picture it",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "picture this's",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Focus Photo Gallery",
+    "note": "Photo-themed pair."
+   },
+   {
+    "with": "picture",
+    "note": "Everyday phrase; match only the exact 'picture this'."
+   }
+  ],
+  "notes": "Deck, position and area are unconfirmed in the repo ('dpn')."
+ },
+ {
+  "target": "Boardwalk",
+  "kind": "venue",
+  "spoken": [
+   "the boardwalk",
+   "boardwalk"
+  ],
+  "asr": [
+   {
+    "text": "board walk",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "bored walk",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "board work",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "boardwalks",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "bored walks",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "board wok",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "the board",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Boardwalk Dog House",
+    "note": "Contains 'boardwalk'; 'dog house' must win when present."
+   },
+   {
+    "with": "Carousel",
+    "note": "Alias 'Boardwalk Carousel'."
+   }
+  ],
+  "notes": "Observed 2026-09-28: 'Boardwalk to the Solarium' transcribed correctly."
+ },
+ {
+  "target": "AquaTheater",
+  "kind": "venue",
+  "spoken": [
+   "aqua theater",
+   "the aqua theater",
+   "aquatheater",
+   "the aqua show",
+   "the diving show",
+   "acqua theater",
+   "aquatic theater"
+  ],
+  "asr": [
+   {
+    "text": "aqua theatre",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "aquatheatre",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "aqua theaters",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "a qua theater",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "aqua the ater",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "aqua fear",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "aqua",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "akwa theater",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "aquarium",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "a quarter theater",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Royal Theater",
+    "note": "'theater' shared; 'aqua' is the discriminator."
+   },
+   {
+    "with": "Adventure Ocean Theater",
+    "note": "'theater' shared; 'ocean' vs 'aqua'."
+   }
+  ],
+  "notes": "Observed 2026-09-28: 'How do I get to the Aqua Theater?' transcribed correctly (US 'Theater', two words). The canonical is one word, so the matcher must join/split."
+ },
+ {
+  "target": "Starbucks",
+  "kind": "venue",
+  "spoken": [
+   "starbucks",
+   "the starbucks"
+  ],
+  "asr": [
+   {
+    "text": "star bucks",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "starbuck",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "starbuck's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "star box",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "star books",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "star bux",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Cafe Promenade",
+    "note": "Guests may say 'coffee'; 'coffee' alone is not mapped."
+   }
+  ],
+  "coffee": true
+ },
+ {
+  "target": "Playmakers Sports Bar & Arcade",
+  "kind": "venue",
+  "spoken": [
+   "playmakers",
+   "playmakers sports bar",
+   "the sports bar"
+  ],
+  "asr": [
+   {
+    "text": "play makers",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "playmaker",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "playmaker's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "play maker's",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "playmakers sports bar and arcade",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "pay makers",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "place makers",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "playmates",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the sports bars",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Play",
+    "note": "'play makers' starts with 'Play' (a kids venue); prefer the longer match."
+   },
+   {
+    "with": "Arcade",
+    "note": "Canonical contains 'Arcade'; bare 'arcade' must not route here."
+   },
+   {
+    "with": "Sports Court",
+    "note": "'sports' shared."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Johnny Rockets",
+  "kind": "venue",
+  "spoken": [
+   "johnny rockets",
+   "the burger place",
+   "burgers"
+  ],
+  "asr": [
+   {
+    "text": "johnny rocket",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "johnny rocket's",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "jonny rockets",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "johnny's rockets",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "john e rockets",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "joni rockets",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "johnnie rockets",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "johnny rockers",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Jamie's Italian",
+    "note": "'Giovanni's' is often heard as 'johnny's'; bare 'johnny's' is ambiguous, confirm."
+   },
+   {
+    "with": "Rock Climbing Wall",
+    "note": "'rock' substring; match whole tokens only."
+   }
+  ]
+ },
+ {
+  "target": "Boardwalk Dog House",
+  "kind": "venue",
+  "spoken": [
+   "dog house",
+   "the dog house",
+   "hot dogs",
+   "the hot dog stand"
+  ],
+  "asr": [
+   {
+    "text": "doghouse",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "dog houses",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "dawg house",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "dog's house",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "duck house",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "dog hose",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "boardwalk doghouse",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "hot dog",
+    "type": "truncation",
+    "likelihood": "medium"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Boardwalk",
+    "note": "Contains 'boardwalk'."
+   }
+  ]
+ },
+ {
+  "target": "Carousel",
+  "kind": "venue",
+  "spoken": [
+   "the carousel",
+   "carousel",
+   "the merry-go-round",
+   "boardwalk carousel"
+  ],
+  "asr": [
+   {
+    "text": "carousal",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "carrousel",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "carol cell",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "carousels",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "care a cell",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "merry go round",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "carosel",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Boardwalk",
+    "note": "Alias 'Boardwalk Carousel'."
+   }
+  ]
+ },
+ {
+  "target": "Luckey Climber",
+  "kind": "venue",
+  "spoken": [
+   "the lucky climber",
+   "the climbing frame"
+  ],
+  "asr": [
+   {
+    "text": "lucky climber",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "lucky climbing",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "lucky climbers",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "lucky's climber",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "lucky climate",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "lucky clymer",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "lucky climb",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Rock Climbing Wall",
+    "note": "'climb' shared; 'lucky' is the discriminator."
+   }
+  ],
+  "notes": "Spelled 'Luckey' (the maker's name); everyone says and ASR writes 'lucky'."
+ },
+ {
+  "target": "Arcade",
+  "kind": "venue",
+  "spoken": [
+   "the boardwalk arcade"
+  ],
+  "asr": [
+   {
+    "text": "our cade",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "arcaid",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "arcadia",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Video Arcade",
+    "note": "Two arcades on HM (deck 6 Boardwalk and deck 15); bare 'arcade' must confirm."
+   },
+   {
+    "with": "Playmakers Sports Bar & Arcade",
+    "note": "Canonical ends in 'Arcade'."
+   }
+  ],
+  "notes": "Duplicate-looking pair with Video Arcade; see report."
+ },
+ {
+  "target": "Rock Climbing Wall",
+  "kind": "venue",
+  "spoken": [
+   "rock wall",
+   "the rock wall",
+   "climbing wall",
+   "rock climbing",
+   "the rock climbing wall"
+  ],
+  "asr": [
+   {
+    "text": "rock climbing walls",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "rock climb in wall",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "rock walls",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "rock waul",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "rot climbing wall",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "climbing walls",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "rock climbing well",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Luckey Climber",
+    "note": "'climb' shared."
+   }
+  ]
+ },
+ {
+  "target": "Central Park",
+  "kind": "venue",
+  "spoken": [
+   "central park",
+   "the park"
+  ],
+  "asr": [
+   {
+    "text": "centre park",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "central parks",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "central part",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "central",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sentral park",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "the parks",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "150 Central Park",
+    "note": "Contains 'central park'; the leading number decides."
+   },
+   {
+    "with": "Park Cafe",
+    "note": "'park' shared; bare 'park' / 'the park' is not mapped."
+   },
+   {
+    "with": "park",
+    "note": "'park' alone is not matched."
+   }
+  ]
+ },
+ {
+  "target": "Chops Grille",
+  "kind": "venue",
+  "spoken": [
+   "chops",
+   "chops grille",
+   "the steakhouse",
+   "chops steakhouse"
+  ],
+  "asr": [
+   {
+    "text": "chops grill",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "chop grill",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "chop's grill",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "chops girl",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "shops grill",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "chomps grill",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "chopped grill",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "chops grille steakhouse",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the steak house",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "chop shop",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Promenade Shops",
+    "note": "'shops grill' contains 'shops'; the 'grill' token must win."
+   },
+   {
+    "with": "Royal Shops",
+    "note": "sh/ch confusion."
+   }
+  ]
+ },
+ {
+  "target": "150 Central Park",
+  "kind": "venue",
+  "spoken": [
+   "one fifty central park",
+   "150 central park",
+   "one fifty"
+  ],
+  "asr": [
+   {
+    "text": "one hundred fifty central park",
+    "type": "number",
+    "likelihood": "high"
+   },
+   {
+    "text": "a hundred and fifty central park",
+    "type": "number",
+    "likelihood": "medium"
+   },
+   {
+    "text": "one five oh central park",
+    "type": "number",
+    "likelihood": "low"
+   },
+   {
+    "text": "1 50 central park",
+    "type": "number",
+    "likelihood": "medium"
+   },
+   {
+    "text": "150",
+    "type": "number",
+    "likelihood": "medium"
+   },
+   {
+    "text": "one 50 central park",
+    "type": "number",
+    "likelihood": "medium"
+   },
+   {
+    "text": "150 central",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "one fifty central",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "115 central park",
+    "type": "number",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Central Park",
+    "note": "Contains 'central park'; the number decides."
+   },
+   {
+    "with": "cabin number",
+    "note": "'150' could be read as a cabin number; HM cabins are 4-5 digits, so 3 digits is safe, but 'I'm in 150' should not set a cabin."
+   }
+  ],
+  "notes": "Numbers must be normalised (words, 'one fifty', '1 50') before matching."
+ },
+ {
+  "target": "Park Cafe",
+  "kind": "venue",
+  "spoken": [
+   "park cafe",
+   "the park cafe"
+  ],
+  "asr": [
+   {
+    "text": "park café",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "parked cafe",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "park caffe",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "park coffee",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "park kaffee",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "parka fay",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "park cafes",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Central Park",
+    "note": "'park' shared."
+   },
+   {
+    "with": "Cafe Promenade",
+    "note": "'cafe' shared."
+   },
+   {
+    "with": "Vitality Cafe",
+    "note": "'cafe' shared."
+   }
+  ],
+  "coffee": true
+ },
+ {
+  "target": "Jamie's Italian",
+  "kind": "venue",
+  "spoken": [
+   "jamie's",
+   "jamie's italian",
+   "jamie oliver's",
+   "the italian restaurant",
+   "giovanni's italian kitchen",
+   "giovanni's kitchen"
+  ],
+  "asr": [
+   {
+    "text": "jamies italian",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "jamie italian",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "jaime's italian",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "james italian",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "amy's italian",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "jamie's italians",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "jamie oliver",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "giovanni's italian",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "giovanni italian kitchen",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "geo vanni's kitchen",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "gio vanni's kitchen",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "jo vanni's kitchen",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "johnny's kitchen",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "johnny's italian",
+    "type": "near-word",
+    "likelihood": "medium"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Giovanni's Wine Bar",
+    "note": "'giovanni's' is shared: 'kitchen'/'italian' -> here, 'wine bar' -> the wine bar; bare 'giovanni's' confirm."
+   },
+   {
+    "with": "Johnny Rockets",
+    "note": "'Giovanni's' is commonly heard as 'johnny's'."
+   },
+   {
+    "with": "Coastal Kitchen",
+    "note": "'kitchen' shared."
+   },
+   {
+    "with": "Sorrento's",
+    "note": "'italian' and 'pizza' overlap in guests' minds, not in ASR."
+   }
+  ],
+  "notes": "Royal's code GIOV maps here; Royal renamed Jamie's Italian to Giovanni's Italian Kitchen on several ships (open naming conflict in the repo). Accept both."
+ },
+ {
+  "target": "Trellis Bar",
+  "kind": "venue",
+  "spoken": [
+   "trellis bar",
+   "the trellis bar",
+   "trellis"
+  ],
+  "asr": [
+   {
+    "text": "trellis bars",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "trellace bar",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "tell us bar",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "trails bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "trellis's bar",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "trelis bar",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "treble's bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "tellis bar",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "tell",
+    "note": "'tell us bar' contains 'tell'; only match with 'bar' present."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Vintages",
+  "kind": "venue",
+  "spoken": [
+   "vintages",
+   "vintages wine bar"
+  ],
+  "asr": [
+   {
+    "text": "vintage",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "vintage's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "vin tages",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "vintages wine bars",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "vantages",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "vintage is",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "vintage wine bar",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "fin tages",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Giovanni's Wine Bar",
+    "note": "'wine bar' shared; guests may call either 'the wine bar'."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Giovanni's Wine Bar",
+  "kind": "venue",
+  "spoken": [
+   "giovanni's wine bar"
+  ],
+  "asr": [
+   {
+    "text": "giovanni wine bar",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "giovannis wine bar",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "giovani's wine bar",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "johnny's wine bar",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "gio vanni's wine bar",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "geo vanni's wine bar",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "joe vanni's wine bar",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "gio's wine bar",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "giovanni's wine",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Jamie's Italian",
+    "note": "'giovanni's' shared (Giovanni's Italian Kitchen)."
+   },
+   {
+    "with": "Vintages",
+    "note": "bare 'wine bar' is ambiguous between Vintages and Giovanni's; not mapped."
+   },
+   {
+    "with": "Johnny Rockets",
+    "note": "'johnny's' substitute."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Hublot",
+  "kind": "venue",
+  "spoken": [
+   "hublot"
+  ],
+  "asr": [
+   {
+    "text": "hub lot",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "who blow",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "oo blow",
+    "type": "brand",
+    "likelihood": "medium"
+   },
+   {
+    "text": "ooh blow",
+    "type": "brand",
+    "likelihood": "low"
+   },
+   {
+    "text": "hubble",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "hub lock",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "hublow",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "uber low",
+    "type": "brand",
+    "likelihood": "low"
+   },
+   {
+    "text": "hublot's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "hoo blo",
+    "type": "brand",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "French brand ('oo-BLOH'); guests say it both ways, so both 'hub lot' and 'oo blow' shapes appear."
+ },
+ {
+  "target": "Omega",
+  "kind": "venue",
+  "spoken": [
+   "omega",
+   "the omega store"
+  ],
+  "asr": [
+   {
+    "text": "o mega",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "a mega",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "oh mega",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "omegas",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "omega's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "o meg a",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Regalia Watches",
+    "note": "'the watch store' is ambiguous."
+   }
+  ]
+ },
+ {
+  "target": "Cartier",
+  "kind": "venue",
+  "spoken": [
+   "cartier"
+  ],
+  "asr": [
+   {
+    "text": "car tier",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "cartier's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "courtier",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "carte a",
+    "type": "brand",
+    "likelihood": "low"
+   },
+   {
+    "text": "car tea a",
+    "type": "brand",
+    "likelihood": "low"
+   },
+   {
+    "text": "cart ear",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "cartie",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "car tier's",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "carty a",
+    "type": "brand",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "French brand ('kar-tee-AY'); 'car tier' dominates in tests of similar models."
+ },
+ {
+  "target": "Bulgari",
+  "kind": "venue",
+  "spoken": [
+   "bulgari"
+  ],
+  "asr": [
+   {
+    "text": "bulgaria",
+    "type": "near-word",
+    "likelihood": "high"
+   },
+   {
+    "text": "bvlgari",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "bulgary",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "bull gary",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "bulgar e",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "bulgari's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "vulgari",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "bulgarian",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": []
+ },
+ {
+  "target": "Breitling",
+  "kind": "venue",
+  "spoken": [
+   "breitling"
+  ],
+  "asr": [
+   {
+    "text": "bright ling",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "brightling",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "brightly",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "bright link",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "breitlings",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "bridling",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "bright lane",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "breitling's",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "Deck and area unconfirmed in the repo ('dn')."
+ },
+ {
+  "target": "Messika Boutique",
+  "kind": "venue",
+  "spoken": [
+   "messika",
+   "messika boutique"
+  ],
+  "asr": [
+   {
+    "text": "messica",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "mesika",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "mess eka",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "messy ka",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "meseca",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "messika boo teak",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "mexica",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "mess seek a",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "messica boutique",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "monica boutique",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "Rare brand; expect heavy mangling. Deck and area unconfirmed ('dn')."
+ },
+ {
+  "target": "Roberto Coin Boutique",
+  "kind": "venue",
+  "spoken": [
+   "roberto coin",
+   "roberto coin boutique"
+  ],
+  "asr": [
+   {
+    "text": "roberto coins",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "robert o coin",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "robert coin",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "roberto quinn",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "roberto con",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "roberto corn",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "roberto coin boo teak",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "Deck and area unconfirmed ('dn')."
+ },
+ {
+  "target": "Dazzles",
+  "kind": "venue",
+  "spoken": [
+   "dazzles",
+   "the dazzles lounge"
+  ],
+  "asr": [
+   {
+    "text": "dazzle",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "dazzle's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "dazzlers",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "tassels",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "dazzle is",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "the zeal's",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "dazles",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "dazzles lounges",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": []
+ },
+ {
+  "target": "Card Room",
+  "kind": "venue",
+  "spoken": [
+   "card room",
+   "the card room",
+   "the cardroom",
+   "the game room"
+  ],
+  "asr": [
+   {
+    "text": "cardroom",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "car room",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "cord room",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "guard room",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "card rooms",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "car troom",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "the games room",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Arcade",
+    "note": "'game room' might be meant as the arcade; mapped here only because Royal's card room doubles as the game room."
+   }
+  ]
+ },
+ {
+  "target": "Adventure Ocean Theater",
+  "kind": "venue",
+  "spoken": [
+   "adventure ocean",
+   "the kids club",
+   "kids club",
+   "adventure ocean theater",
+   "a o",
+   "kid club"
+  ],
+  "asr": [
+   {
+    "text": "adventure oceans",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "adventures ocean",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "adventure ocean theatre",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "adventure motion",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "adventure ocean's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "kids clubs",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "kid's club",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "the kids' club",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "AO Workshop",
+    "note": "'a o' / 'AO' shared; 'workshop' decides."
+   },
+   {
+    "with": "Adventure Science",
+    "note": "'adventure' prefix shared; bare 'adventure' must confirm."
+   },
+   {
+    "with": "Adventure Art",
+    "note": "'adventure' prefix shared."
+   },
+   {
+    "with": "Royal Theater",
+    "note": "'theater' shared."
+   }
+  ],
+  "notes": "'Adventure Ocean' is an alias to this row, though it names the whole kids' area."
+ },
+ {
+  "target": "Kids' Avenue",
+  "kind": "venue",
+  "spoken": [
+   "kids avenue",
+   "kids' avenue"
+  ],
+  "asr": [
+   {
+    "text": "kid's avenue",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "kids ave",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "kid avenue",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "kids avenues",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "kids of anew",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "kids havana",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "kids' ave",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Kids Shop",
+    "note": "'kids' shared."
+   }
+  ]
+ },
+ {
+  "target": "Play",
+  "kind": "venue",
+  "spoken": [
+   "play",
+   "the play area"
+  ],
+  "asr": [
+   {
+    "text": "the play",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "play area",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "plays",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Playmakers Sports Bar & Arcade",
+    "note": "'play makers' begins with 'play'; prefer the longest match."
+   },
+   {
+    "with": "play",
+    "note": "Common verb. Match only when 'play' (or 'the play area') is the entire destination slot."
+   }
+  ],
+  "notes": "The most generic canonical name in the table; see report."
+ },
+ {
+  "target": "Adventure Science",
+  "kind": "venue",
+  "spoken": [
+   "adventure science",
+   "the science lab"
+  ],
+  "asr": [
+   {
+    "text": "adventure signs",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "adventure sciences",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "adventure silence",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "adventure sign",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "adventure scion",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "science lab",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Adventure Ocean Theater",
+    "note": "'adventure' prefix."
+   }
+  ]
+ },
+ {
+  "target": "Adventure Art",
+  "kind": "venue",
+  "spoken": [
+   "adventure art",
+   "the art room"
+  ],
+  "asr": [
+   {
+    "text": "adventure arts",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "adventure heart",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "adventure are",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "adventurer",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "adventure at",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Adventure Ocean Theater",
+    "note": "'adventure' prefix."
+   },
+   {
+    "with": "Art Gallery",
+    "note": "'art' shared."
+   },
+   {
+    "with": "at",
+    "note": "'adventure at' ends with the command word 'at'; only accept at the end of the utterance."
+   }
+  ]
+ },
+ {
+  "target": "Nursery",
+  "kind": "venue",
+  "spoken": [
+   "nursery",
+   "the nursery",
+   "royal babies and tots",
+   "babies and tots"
+  ],
+  "asr": [
+   {
+    "text": "nursing",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "nurseries",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "nursey",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal babies and tots nursery",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "babies n tots",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "royal babies",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Royal Theater",
+    "note": "'royal babies' shares 'royal'."
+   }
+  ]
+ },
+ {
+  "target": "The Puzzle Break",
+  "kind": "venue",
+  "spoken": [
+   "escape room",
+   "the escape room",
+   "puzzle break",
+   "the puzzle break",
+   "puzzle room"
+  ],
+  "asr": [
+   {
+    "text": "puzzle brake",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "puzzle breaks",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "puzzle brick",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "puzzles break",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "puzzle bake",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "escape rooms",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "a scape room",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "the scape room",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "escape rome",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "escape",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "escape",
+    "note": "'escape' alone is a normal word; require 'escape room' unless it is the whole slot."
+   }
+  ],
+  "notes": "Observed 2026-09-28: 'I'm at the escape room' transcribed correctly; users say 'escape room', not the brand. Royal's code is royal-escape-room."
+ },
+ {
+  "target": "AO Workshop",
+  "kind": "venue",
+  "spoken": [
+   "a o workshop",
+   "the ao workshop",
+   "adventure ocean workshop"
+  ],
+  "asr": [
+   {
+    "text": "ao workshop",
+    "type": "letter",
+    "likelihood": "high"
+   },
+   {
+    "text": "a oh workshop",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "hey oh workshop",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "eh oh workshop",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "a.o. workshop",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "a o workshops",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the workshop",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Adventure Ocean Theater",
+    "note": "'a o' shared."
+   }
+  ],
+  "notes": "Deck unconfirmed ('d')."
+ },
+ {
+  "target": "Arena & Hangouts (Ages 6-12)",
+  "kind": "venue",
+  "spoken": [
+   "the arena",
+   "arena",
+   "arena and hangouts",
+   "hangouts"
+  ],
+  "asr": [
+   {
+    "text": "arena & hangouts",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "arena and hangout",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "arena in hangouts",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "marina",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "arenas",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the hangout",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "a arena",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "arena n hangouts",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "The Living Room",
+    "note": "'hangout' also describes the teen lounge."
+   },
+   {
+    "with": "Ages 6-12",
+    "note": "The parenthetical is never spoken; strip '(Ages ...)' from canonical names before matching."
+   }
+  ],
+  "notes": "Deck unconfirmed ('d')."
+ },
+ {
+  "target": "Solarium",
+  "kind": "venue",
+  "spoken": [
+   "the solarium",
+   "solarium",
+   "the adults only pool",
+   "the adult pool"
+  ],
+  "asr": [
+   {
+    "text": "solaria",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sol arium",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "solarian",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "solar room",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "solarium's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "so larium",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "celarium",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "solariums",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the adults pool",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "salarium",
+    "type": "near-word",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "solari",
+    "type": "truncation",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "solar",
+    "type": "truncation",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "sailboat",
+    "type": "near-word",
+    "likelihood": "high",
+    "observed": true
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Solarium Bar",
+    "note": "Contains 'solarium'; 'bar' decides."
+   },
+   {
+    "with": "Solarium Bistro",
+    "note": "Contains 'solarium'; 'bistro' decides."
+   },
+   {
+    "with": "Solera",
+    "note": "A clipped 'solaria' sits near 'Solera'."
+   }
+  ],
+  "notes": "Observed 2026-09-28: 'Boardwalk to the Solarium' transcribed correctly."
+ },
+ {
+  "target": "Pool Deck",
+  "kind": "venue",
+  "spoken": [
+   "the pool deck",
+   "pool deck",
+   "the pool",
+   "the pools",
+   "the casitas"
+  ],
+  "asr": [
+   {
+    "text": "pooled deck",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "full deck",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "pool decks",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "pool dec",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "the pool's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "cassie does",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "casitas",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "pool check",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Main Pool",
+    "note": "'pool' shared; 'the pool' goes here (the area), named pools win when named."
+   },
+   {
+    "with": "Beach Pool",
+    "note": "'pool' shared."
+   },
+   {
+    "with": "Sports Pool",
+    "note": "'pool' shared."
+   },
+   {
+    "with": "deck",
+    "note": "'pool deck fifteen' contains 'deck' + number; a 'deck N' parser must not eat it."
+   }
+  ]
+ },
+ {
+  "target": "The Lime & Coconut",
+  "kind": "venue",
+  "spoken": [
+   "lime and coconut",
+   "the lime and coconut",
+   "lime & coconut"
+  ],
+  "asr": [
+   {
+    "text": "lime n coconut",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "lime in the coconut",
+    "type": "near-word",
+    "likelihood": "high"
+   },
+   {
+    "text": "lime in coconut",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "line and coconut",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "lyme and coconut",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "time and coconut",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "lime and coconuts",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "lime coconut",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "lyme n coconut",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "lime and cocoa nut",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Zip Line",
+    "note": "'zip lime' contains 'lime'; match 'lime' only with 'coconut'."
+   },
+   {
+    "with": "in",
+    "note": "'lime in the coconut' (the song) contains 'in'; the cabin command is 'in cabin'."
+   }
+  ]
+ },
+ {
+  "target": "Sand Bar",
+  "kind": "venue",
+  "spoken": [
+   "sand bar",
+   "the sand bar"
+  ],
+  "asr": [
+   {
+    "text": "sandbar",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "sam bar",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sand bars",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "stand bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "san bar",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "sand bah",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "bar": true
+ },
+ {
+  "target": "Sports Pool",
+  "kind": "venue",
+  "spoken": [
+   "sports pool",
+   "the sports pool"
+  ],
+  "asr": [
+   {
+    "text": "sport pool",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "sports pull",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "sports pools",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "spore pool",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "sport's pool",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Sports Court",
+    "note": "'sports' shared."
+   },
+   {
+    "with": "Pool Deck",
+    "note": "'pool' shared."
+   }
+  ]
+ },
+ {
+  "target": "PADI Shop",
+  "kind": "venue",
+  "spoken": [
+   "the dive shop",
+   "padi shop",
+   "dive shop",
+   "the scuba shop"
+  ],
+  "asr": [
+   {
+    "text": "paddy shop",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "patty shop",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "p a d i shop",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "party shop",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "potty shop",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "pad eye shop",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "padi",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "dive shops",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "diving shop",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "restroom",
+    "note": "'potty' is a restroom word; 'potty shop' must require 'shop' to route here and should never trigger the restroom category."
+   }
+  ]
+ },
+ {
+  "target": "Harmony Dunes",
+  "kind": "venue",
+  "spoken": [
+   "mini golf",
+   "the mini golf",
+   "harmony dunes",
+   "the golf course",
+   "putt putt"
+  ],
+  "asr": [
+   {
+    "text": "harmony doons",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "harmony dune",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "harmony tunes",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "harmony dues",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "harmony june's",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "minigolf",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "mini-golf",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "many golf",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "mini gulf",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the golf",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Harmony of the Seas",
+    "note": "'Harmony' is the ship's name; never match bare 'harmony'."
+   }
+  ]
+ },
+ {
+  "target": "Sports Court",
+  "kind": "venue",
+  "spoken": [
+   "sports court",
+   "basketball court",
+   "the basketball court",
+   "the sports court",
+   "basketball"
+  ],
+  "asr": [
+   {
+    "text": "sport court",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "sports cord",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "sports caught",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "sports courts",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "basketball courts",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "sport scored",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Table Tennis Court",
+    "note": "'court' shared."
+   },
+   {
+    "with": "Sports Pool",
+    "note": "'sports' shared."
+   }
+  ]
+ },
+ {
+  "target": "Table Tennis Court",
+  "kind": "venue",
+  "spoken": [
+   "ping pong",
+   "ping pong tables",
+   "table tennis",
+   "the ping pong tables"
+  ],
+  "asr": [
+   {
+    "text": "ping-pong",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "pingpong",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "ping pong table",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "table tennis courts",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "table ten is",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "tables tennis",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "king kong",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "ping-pong tables",
+    "type": "spelling",
+    "likelihood": "medium"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Sports Court",
+    "note": "'court' shared."
+   }
+  ]
+ },
+ {
+  "target": "El Loco Fresh",
+  "kind": "venue",
+  "spoken": [
+   "el loco",
+   "el loco fresh",
+   "the taco place",
+   "tacos"
+  ],
+  "asr": [
+   {
+    "text": "el local fresh",
+    "type": "near-word",
+    "likelihood": "high"
+   },
+   {
+    "text": "el local",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "hello co fresh",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "a loco fresh",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "l loco fresh",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "loco fresh",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "el loco's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "el loko fresh",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "yellow co fresh",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "el loco flesh",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "local",
+    "note": "'local' is a common word; require the 'el'/'fresh' context."
+   }
+  ],
+  "notes": "Spanish words; English models substitute 'local' and 'hello'."
+ },
+ {
+  "target": "Crown Lounge",
+  "kind": "venue",
+  "spoken": [
+   "crown lounge",
+   "crown and anchor lounge",
+   "the crown and anchor lounge"
+  ],
+  "asr": [
+   {
+    "text": "crown n anchor lounge",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "crown & anchor lounge",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "crown in anchor lounge",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "clown lounge",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "brown lounge",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "crowd lounge",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "crown lunge",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "crown lounges",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Loyalty Desk",
+    "note": "'crown and anchor desk' goes there; bare 'crown and anchor' is ambiguous."
+   },
+   {
+    "with": "Suite Lounge",
+    "note": "'lounge' shared."
+   },
+   {
+    "with": "Teen Lounge",
+    "note": "'lounge' shared."
+   }
+  ],
+  "notes": "Probably the loyalty lounge (Diamond/Crown & Anchor); the name may be worth checking on board."
+ },
+ {
+  "target": "Video Arcade",
+  "kind": "venue",
+  "spoken": [
+   "video arcade",
+   "the video arcade",
+   "the video games"
+  ],
+  "asr": [
+   {
+    "text": "video arcades",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "video arcaid",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "video our cade",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "video games room",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the video game",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Arcade",
+    "note": "Two arcades; confirm bare 'arcade'."
+   }
+  ]
+ },
+ {
+  "target": "Teen Center",
+  "kind": "venue",
+  "spoken": [
+   "teen center",
+   "the teen club",
+   "teen club",
+   "the teen center"
+  ],
+  "asr": [
+   {
+    "text": "teen centre",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "teens center",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "team center",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "tween center",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "teen clubs",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "team club",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "teen centers",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Teen Lounge",
+    "note": "Overlapping teen targets."
+   },
+   {
+    "with": "The Living Room",
+    "note": "Overlapping teen targets."
+   },
+   {
+    "with": "Fuel Teen Disco",
+    "note": "Contains 'teen'."
+   }
+  ]
+ },
+ {
+  "target": "Teen Lounge",
+  "kind": "venue",
+  "spoken": [
+   "teen lounge",
+   "the teen lounge"
+  ],
+  "asr": [
+   {
+    "text": "team lounge",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "teens lounge",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "teen lounges",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "tween lounge",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "teen lunge",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Teen Center",
+    "note": "Overlapping teen targets."
+   },
+   {
+    "with": "Crown Lounge",
+    "note": "'lounge' shared."
+   }
+  ]
+ },
+ {
+  "target": "The Living Room",
+  "kind": "venue",
+  "spoken": [
+   "the living room",
+   "living room"
+  ],
+  "asr": [
+   {
+    "text": "the living rooms",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "living rooms",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the leaving room",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "livin room",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Teen Center",
+    "note": "Overlapping teen targets."
+   },
+   {
+    "with": "Arena & Hangouts (Ages 6-12)",
+    "note": "'hangout' describes both."
+   },
+   {
+    "with": "living room",
+    "note": "Ordinary phrase, but rare in a route command; keep with confirm."
+   }
+  ]
+ },
+ {
+  "target": "Fuel Teen Disco",
+  "kind": "venue",
+  "spoken": [
+   "fuel",
+   "the teen disco",
+   "fuel teen disco",
+   "fuel nightclub"
+  ],
+  "asr": [
+   {
+    "text": "fuels",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "fuel teen",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "full teen disco",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "few elteen disco",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "fuel team disco",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "fuel teen disco's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "feel teen disco",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the teen discos",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Teen Center",
+    "note": "'teen' shared."
+   },
+   {
+    "with": "fuel",
+    "note": "Common word; accept bare 'fuel' only as the whole destination slot."
+   }
+  ]
+ },
+ {
+  "target": "Social100 (Ages 13-17)",
+  "kind": "venue",
+  "spoken": [
+   "social one hundred",
+   "social hundred"
+  ],
+  "asr": [
+   {
+    "text": "social 100",
+    "type": "number",
+    "likelihood": "high"
+   },
+   {
+    "text": "social one hundreds",
+    "type": "number",
+    "likelihood": "low"
+   },
+   {
+    "text": "social one oh oh",
+    "type": "number",
+    "likelihood": "low"
+   },
+   {
+    "text": "social 1 0 0",
+    "type": "number",
+    "likelihood": "low"
+   },
+   {
+    "text": "social a hundred",
+    "type": "number",
+    "likelihood": "medium"
+   },
+   {
+    "text": "social100",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "social hundreds",
+    "type": "number",
+    "likelihood": "low"
+   },
+   {
+    "text": "social",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "cabin number",
+    "note": "'100' must not be read as a cabin number."
+   },
+   {
+    "with": "Ages 13-17",
+    "note": "Strip the parenthetical before matching."
+   }
+  ],
+  "notes": "Deck unconfirmed ('d')."
+ },
+ {
+  "target": "FlowRider",
+  "kind": "venue",
+  "spoken": [
+   "flowrider",
+   "the flowrider",
+   "the surf simulator",
+   "the surfing"
+  ],
+  "asr": [
+   {
+    "text": "flow rider",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "flo rider",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "flow writer",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "float rider",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "slow rider",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "flow riders",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "flo rida",
+    "type": "brand",
+    "likelihood": "low"
+   },
+   {
+    "text": "flow ride",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "the surfing machine",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": []
+ },
+ {
+  "target": "Wipe Out Bar",
+  "kind": "venue",
+  "spoken": [
+   "wipe out bar",
+   "the wipeout bar"
+  ],
+  "asr": [
+   {
+    "text": "wipeout bar",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "wipe-out bar",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "white out bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "wipe up bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "wipe out bars",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "wipeout",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "white bar",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "bar": true
+ },
+ {
+  "target": "The Ultimate Abyss",
+  "kind": "venue",
+  "spoken": [
+   "the ultimate abyss",
+   "ultimate abyss",
+   "the abyss",
+   "the big slide",
+   "the dry slide"
+  ],
+  "asr": [
+   {
+    "text": "ultimate a bliss",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "ultimate abyss's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "ultimate abbess",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "ultimate of this",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "ultimate abis",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "ultimate a biss",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "the abbess",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the a biss",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "ultimate abyss slide",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "ultimate",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "The Perfect Storm Waterslides",
+    "note": "'slide' shared; 'the big slide' is ambiguous, confirm."
+   }
+  ]
+ },
+ {
+  "target": "Zip Line",
+  "kind": "venue",
+  "spoken": [
+   "the zip line",
+   "zip line"
+  ],
+  "asr": [
+   {
+    "text": "zipline",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "zip lining",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "zip lime",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sip line",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "zip lion",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "zip lines",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "zip lying",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "The Lime & Coconut",
+    "note": "'zip lime' contains 'lime'."
+   },
+   {
+    "with": "line",
+    "note": "'line' alone (queue) is not matched."
+   }
+  ]
+ },
+ {
+  "target": "Mast Bar",
+  "kind": "venue",
+  "spoken": [
+   "mast bar",
+   "the mast bar"
+  ],
+  "asr": [
+   {
+    "text": "mass bar",
+    "type": "near-word",
+    "likelihood": "high"
+   },
+   {
+    "text": "must bar",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "mars bar",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "mask bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "mast bars",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "mas bar",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "masked bar",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Mars bar",
+    "note": "Real-word substitute; safe but confirm."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Solarium Bar",
+  "kind": "venue",
+  "spoken": [
+   "solarium bar",
+   "the solarium bar"
+  ],
+  "asr": [
+   {
+    "text": "solaria bar",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sol arium bar",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "solar room bar",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "solarium bars",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Solarium",
+    "note": "Contains 'solarium'."
+   }
+  ],
+  "bar": true
+ },
+ {
+  "target": "Coastal Kitchen",
+  "kind": "venue",
+  "spoken": [
+   "coastal kitchen",
+   "coastal"
+  ],
+  "asr": [
+   {
+    "text": "costal kitchen",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "coastal kitchens",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "postal kitchen",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "castle kitchen",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "coast kitchen",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "close to kitchen",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "coastal kitchen's",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Jamie's Italian",
+    "note": "'kitchen' shared (Giovanni's Italian Kitchen)."
+   },
+   {
+    "with": "to",
+    "note": "'close to kitchen' contains 'to'; low likelihood."
+   }
+  ],
+  "notes": "Suite guests only; area unconfirmed ('n')."
+ },
+ {
+  "target": "Suite Lounge",
+  "kind": "venue",
+  "spoken": [
+   "suite lounge",
+   "the suite lounge"
+  ],
+  "asr": [
+   {
+    "text": "sweet lounge",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "suit lounge",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sweet lunge",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "suites lounge",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "suite lounges",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Suite Sun Deck",
+    "note": "'suite' shared."
+   },
+   {
+    "with": "Crown Lounge",
+    "note": "'lounge' shared."
+   }
+  ]
+ },
+ {
+  "target": "Suite Sun Deck",
+  "kind": "venue",
+  "spoken": [
+   "suite sun deck",
+   "the suite sun deck",
+   "the suite deck"
+  ],
+  "asr": [
+   {
+    "text": "sweet sun deck",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "suite sundeck",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "suit sun deck",
+    "type": "homophone",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sweet son deck",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "sweet sundeck",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "suite sun decks",
+    "type": "other",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Suite Lounge",
+    "note": "'suite' shared."
+   },
+   {
+    "with": "Solarium",
+    "note": "Guests may say 'the sun deck' for any open deck; bare 'sun deck' not mapped."
+   },
+   {
+    "with": "deck",
+    "note": "Contains 'deck'; the 'deck N' parser must not take it."
+   }
+  ]
+ },
+ {
+  "target": "The Perfect Storm Waterslides",
+  "kind": "venue",
+  "spoken": [
+   "the perfect storm",
+   "perfect storm",
+   "the waterslides",
+   "the water slides",
+   "the slides"
+  ],
+  "asr": [
+   {
+    "text": "perfect storms",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "perfect store",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "perfect stone",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "perfect form",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "perfect storm water slides",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "water slide",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "the waterslide",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "perfect star",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Perfect Day at CocoCay",
+    "note": "'perfect' shared; never match bare 'perfect'."
+   },
+   {
+    "with": "The Ultimate Abyss",
+    "note": "'slide' shared."
+   }
+  ]
+ },
+ {
+  "target": "Perfect Day at CocoCay",
+  "kind": "venue",
+  "spoken": [
+   "cococay",
+   "coco cay",
+   "perfect day",
+   "perfect day at cococay",
+   "the private island"
+  ],
+  "asr": [
+   {
+    "text": "coco key",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "cocoa key",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "koko key",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "coco k",
+    "type": "letter",
+    "likelihood": "medium"
+   },
+   {
+    "text": "coco kay",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "cocoa cay",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "coco quay",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "perfect day at coco key",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "perfect days",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "co co cay",
+    "type": "split",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "The Perfect Storm Waterslides",
+    "note": "'perfect' shared."
+   },
+   {
+    "with": "at",
+    "note": "The canonical contains 'at'; 'I'm at perfect day at coco key' must not split on the second 'at'."
+   }
+  ],
+  "notes": "Ashore (not routable on the ship map); a match should answer 'ashore'. 'Cay' is said 'key'."
+ },
+ {
+  "target": "Guest Services",
+  "kind": "place",
+  "spoken": [
+   "guest services",
+   "the front desk",
+   "guest relations",
+   "customer service",
+   "the purser's desk"
+  ],
+  "asr": [
+   {
+    "text": "guess services",
+    "type": "homophone",
+    "likelihood": "high"
+   },
+   {
+    "text": "guest service",
+    "type": "other",
+    "likelihood": "high"
+   },
+   {
+    "text": "just services",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "guest serves",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "guest's services",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "the front desks",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "customer services",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "guest relation",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the purser",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "the pursers desk",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": []
+ },
+ {
+  "target": "Medical Center",
+  "kind": "place",
+  "spoken": [
+   "medical center",
+   "the medical center",
+   "the doctor",
+   "the infirmary",
+   "medical"
+  ],
+  "asr": [
+   {
+    "text": "medical centre",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "the medical centre",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "medical centers",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the doctors",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "the doctor's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "infirmery",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "metal center",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "medic center",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "Deck 2, position and area unconfirmed ('dpn')."
+ },
+ {
+  "target": "Windjammer Marketplace",
+  "kind": "place",
+  "spoken": [
+   "the windjammer",
+   "windjammer",
+   "windjammer cafe",
+   "the buffet",
+   "windjammer marketplace"
+  ],
+  "asr": [
+   {
+    "text": "wind jammer",
+    "type": "split",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "windjam",
+    "type": "truncation",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "windmill",
+    "type": "near-word",
+    "likelihood": "medium",
+    "observed": true
+   },
+   {
+    "text": "windjammers",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "wind jam",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "wind jammers",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "when jammer",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "win jammer",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "wind hammer",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "windjammer market place",
+    "type": "split",
+    "likelihood": "medium"
+   },
+   {
+    "text": "the buffay",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "the buffets",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "wind jammer cafe",
+    "type": "split",
+    "likelihood": "medium"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "windmill",
+    "note": "Real-word substitute (observed). No HM target is a windmill, so it is safe to map, with the Heard/Matched confirm."
+   },
+   {
+    "with": "Cafe Promenade",
+    "note": "'windjammer cafe' contains 'cafe'; the 'windjammer' token wins."
+   }
+  ],
+  "notes": "Observed 2026-09-28: 'Windjammer' said as one word came back as 'Wind Jammer', 'wind jammer', 'windjam', and sometimes 'windmill'. All four are here; 'windjam' and 'windmill' should be treated as whole tokens."
+ },
+ {
+  "target": "Main Pool",
+  "kind": "place",
+  "spoken": [
+   "main pool",
+   "the main pool"
+  ],
+  "asr": [
+   {
+    "text": "mane pool",
+    "type": "homophone",
+    "likelihood": "low"
+   },
+   {
+    "text": "main pull",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "main pools",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "the main pools",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "maine pool",
+    "type": "homophone",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Pool Deck",
+    "note": "'pool' shared."
+   },
+   {
+    "with": "main dining room",
+    "note": "'main' shared; never match bare 'main'."
+   }
+  ]
+ },
+ {
+  "target": "Beach Pool",
+  "kind": "place",
+  "spoken": [
+   "beach pool",
+   "the beach pool"
+  ],
+  "asr": [
+   {
+    "text": "peach pool",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "beach pools",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "beach full",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "each pool",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "beach pull",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Pool Deck",
+    "note": "'pool' shared."
+   }
+  ]
+ },
+ {
+  "target": "Splashaway Bay",
+  "kind": "place",
+  "spoken": [
+   "splashaway bay",
+   "the splash pad",
+   "the kids water park",
+   "kids pool"
+  ],
+  "asr": [
+   {
+    "text": "splash away bay",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "splash away",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "splashaway",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "splash a way bay",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "splash way bay",
+    "type": "truncation",
+    "likelihood": "low"
+   },
+   {
+    "text": "splash away baby",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "splash bay",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "splash pad",
+    "type": "truncation",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": []
+ },
+ {
+  "target": "Solarium Bistro",
+  "kind": "place",
+  "spoken": [
+   "solarium bistro",
+   "the solarium bistro",
+   "the bistro"
+  ],
+  "asr": [
+   {
+    "text": "solaria bistro",
+    "type": "truncation",
+    "likelihood": "medium"
+   },
+   {
+    "text": "solarium bistros",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "sol arium bistro",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "solarium beast row",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "the bistro's",
+    "type": "spelling",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Solarium",
+    "note": "Contains 'solarium'."
+   }
+  ]
+ },
+ {
+  "target": "main dining room",
+  "kind": "group",
+  "spoken": [
+   "main dining room",
+   "the dining room",
+   "the m d r",
+   "main dining"
+  ],
+  "asr": [
+   {
+    "text": "mdr",
+    "type": "letter",
+    "likelihood": "high"
+   },
+   {
+    "text": "m d r",
+    "type": "letter",
+    "likelihood": "high"
+   },
+   {
+    "text": "main dinning room",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "main dying room",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "the dining rooms",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "main dining rooms",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "empty are",
+    "type": "letter",
+    "likelihood": "low"
+   },
+   {
+    "text": "main diner",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [
+   {
+    "with": "Main Dining Room 3",
+    "note": "No deck: ask which floor (3, 4 or 5), or use the guest's assigned floor if known."
+   },
+   {
+    "with": "Main Dining Room 4",
+    "note": "See above."
+   },
+   {
+    "with": "Main Dining Room 5",
+    "note": "See above."
+   },
+   {
+    "with": "to",
+    "note": "'main dining room to the solarium': 'to' is the A-to-B separator, never the number two (there is no MDR 2)."
+   }
+  ],
+  "notes": "No floor said: route to the nearest floor (the confirm screen names it). \"on deck N\" or a number picks the floor.",
+  "members": [
+   "Main Dining Room 3",
+   "Main Dining Room 4",
+   "Main Dining Room 5"
+  ]
+ },
+ {
+  "target": "hot tub",
+  "kind": "category",
+  "spoken": [
+   "hot tub",
+   "the hot tubs",
+   "jacuzzi",
+   "whirlpool"
+  ],
+  "asr": [
+   {
+    "text": "hot tubs",
+    "type": "other",
+    "likelihood": "high"
+   },
+   {
+    "text": "hot top",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "jacuzzis",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "jacuzzi's",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "hot tob",
+    "type": "spelling",
+    "likelihood": "low"
+   },
+   {
+    "text": "whirlpools",
+    "type": "other",
+    "likelihood": "low"
+   },
+   {
+    "text": "world pool",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "places-HM.js has 'whirlpool:15' under 'other' (two spots on deck 15), but the app does not use 'other' yet. Declared so the matcher can answer instead of mis-matching 'hot tub' to Pool Deck. route: false until the map has hot tub spots the planner uses.",
+  "route": false
+ },
+ {
+  "target": "arcade",
+  "kind": "group",
+  "members": [
+   "Arcade",
+   "Video Arcade"
+  ],
+  "spoken": [
+   "arcade",
+   "the arcade",
+   "arcades",
+   "the arcades"
+  ],
+  "asr": [],
+  "collisions": [],
+  "notes": "Two arcades on HM (deck 6 Boardwalk, deck 15). Route to the nearest; confirm names it."
+ },
+ {
+  "target": "giovanni's",
+  "kind": "group",
+  "members": [
+   "Jamie's Italian",
+   "Giovanni's Wine Bar"
+  ],
+  "spoken": [
+   "giovanni's",
+   "giovannis",
+   "giovanni"
+  ],
+  "asr": [],
+  "collisions": [],
+  "notes": "Jamie's Italian (GIOV = Giovanni's Italian Kitchen) and Giovanni's Wine Bar share the name."
+ },
+ {
+  "target": "johnny's",
+  "kind": "group",
+  "members": [
+   "Johnny Rockets",
+   "Jamie's Italian"
+  ],
+  "spoken": [
+   "johnny's",
+   "johnnys"
+  ],
+  "asr": [],
+  "collisions": [],
+  "notes": "'Giovanni's' is often heard as 'johnny's'."
+ },
+ {
+  "target": "crown and anchor",
+  "kind": "group",
+  "members": [
+   "Crown Lounge",
+   "Loyalty Desk"
+  ],
+  "spoken": [
+   "crown and anchor",
+   "crown n anchor"
+  ],
+  "asr": [],
+  "collisions": [],
+  "notes": "'desk' or 'lounge' decides when said."
+ }
+]

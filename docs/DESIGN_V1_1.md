@@ -875,7 +875,10 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
   count: a show ending at 9:00p doesn't start the route to an 11:00p event.
 - **A spoken location** (`I'm at the Solarium`, 9.6) for **1.5 hours**, until a
   starred event or entry starts after it, and never past the **04:00 day
-  change**. A stop that starts after you said where you were wins.
+  change**. A stop that starts after you said where you were wins. Built in
+  1.5.9: booked and reserved events count (they're starred), `I'm at my cabin`
+  makes the cabin the start (over a show on now), and a start said in the
+  question (`from X to Y`) is used for that route only.
 - The Route header and the place page's FROM block always name the start
   (`FROM YOUR CABIN`, `FROM SOLARIUM`, `FROM ROYAL THEATER`).
 - The phone keeps the start and its timer (it already knows the starred events
@@ -953,15 +956,56 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
       names a place on the map, else `Not a place on the map`.
     - `Take me to my cabin` / `back to my room`: the route to the stateroom
       from where routes start now (§9.4): a starred event on now, later a
-      spoken `I'm at`. With nothing but the cabin to start from: `No starred
+      spoken `I'm at` (1.5.9). With nothing but the cabin to start from: `No starred
       event on now to start from`.
   - `Nearest bathroom` / `closest restroom` (1.5.5): the restroom route from
     where routes start now (a starred event on now, else the cabin); the card
     shows `FROM` so a place named in the question (`near the theater`, which
     needs the matcher) isn't mistaken for the start. `I'm sure.` on its own
     counts as `I'm ashore` (the watch heard it that way, 2026-09-28).
-  - `Forget where I am` (owner, 2026-09-28) comes with the spoken start in V3:
-    until then there's no spoken location to forget.
+  - `Forget where I am` (owner, 2026-09-28; 1.5.9): `YOU'RE AT X` and `THEN
+    FROM` (where routes start after it), Select forgets it; `Nothing to forget`
+    with `ROUTES FROM` when there's no spoken start.
+  - **Place names (1.5.8, Phase 5 V3 part 1):** everything the fixed commands
+    above don't answer goes to the voice matcher (`src/pkjs/voice.js`), and
+    `voicecard.js` turns its result into a card with the decided defaults
+    (VOICE_FINAL_PLAN D1-D22): `HEARD`, `FROM` (where routes start now) and
+    `TO`, Select opens the Route screen. A group or elevator bank routes to the
+    nearest member, named with `(nearest)`; `dining room` is yours from the Me
+    tab (`(yours)`); `CLOSEST BAR` / `CLOSEST COFFEE` the nearest flagged
+    place; a snack is Cafe Promenade (`Open 24 hours`); `Take me back` your
+    cabin; a spoken cabin is checked against the plans (`No cabin N on
+    Harmony`, `Say all 4 or 5 digits`) and kept only in the route's ref;
+    `Restroom near the theater` is that place's restroom route. Answers with
+    nothing to do: `CocoCay is ashore`, `Not on the map yet`, `You're already
+    there`, `Stairs are in many spots` / `A deck is not one spot` (`Say a
+    place on Deck N` with a `TRY` place there), refused locations, `Which
+    place?`, `No place matched`, `Not something I know`, `NOT YET` for
+    schedule and opening-time questions, each with a `TRY` example.
+  - **Where routes start (1.5.9, Phase 5 V3 part 2):** `I'm at X` answers
+    `YOU'RE AT X` / `Routes start here for 90 min` and sets the spoken start
+    as soon as the card is shown (9.4; D22; 1.5.10, owner decision after the
+    first watch test, where Hold to ask the next question kept nothing), which
+    the FROM rows, Route screens and place pages then use. Select or Hold keep
+    it; the watch doesn't tell the phone about Back, so the hint says how to
+    undo it (`Saved · Undo: say “Forget where I am”`). `from X to Y` routes
+    from X (`FROM X`) for that route only; `I'm at X, how do I get to Y` (and
+    `I'm at X. Where's the closest bar`) also sets X when the card is shown (D4,
+    hint `Select: route · Undo: say Forget where I am`). `No place “word”`
+    names the side that matched nothing when the other side did (1.5.10).
+    A start must be one spot: a place, a big one-spot venue (Royal Promenade,
+    Boardwalk, Central Park, Pool Deck; D8) or a cabin (`I'm in cabin 8200`,
+    `I'm at my cabin`); the Running Track (`is in many spots`), elevators even
+    on a deck (D7), restrooms, stairs, decks, the bar (D19) and groups (`Which
+    one?`, D12) are refused, also as the `from` of a route. `Closest restroom
+    on deck 5` is the closest one on that deck (D10; `No restroom on Deck 12 on
+    the map` where the map has none).
+  - **Help > Try a voice phrase** (settings page, 1.5.9): type a phrase and tap
+    `Save and test`; the phone answers it as it would the watch (with the
+    saved cruise and start, nothing set or opened) and the card's rows, hint,
+    what Select would do and what matched show in that card the next time the
+    page opens (the page can't ask the phone while it's open). Also in the
+    usage log (`voice test on the phone`).
 - **Hold Select on Home always asks by voice** (owner, 2026-09-28), also on
   embark and port days, where `I'm on board` is said. With the phone away,
   Hold Select opens the `On board?` screen while it's offered.
