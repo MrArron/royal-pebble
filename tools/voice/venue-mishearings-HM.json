@@ -4396,6 +4396,30 @@
     "text": "the adults pool",
     "type": "other",
     "likelihood": "low"
+   },
+   {
+    "text": "salarium",
+    "type": "near-word",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "solari",
+    "type": "truncation",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "solar",
+    "type": "truncation",
+    "likelihood": "high",
+    "observed": true
+   },
+   {
+    "text": "sailboat",
+    "type": "near-word",
+    "likelihood": "high",
+    "observed": true
    }
   ],
   "collisions": [

@@ -629,12 +629,13 @@ restroom route (`flags` 1), 400, 500 + a deck, or 100000 + a spoken cabin
 number. Demo data is answered like real data.
 
 Where routes start (1.5.9, `docs/DESIGN_V1_1.md` §9.4 and §9.6): `I'm at X` is
-an action 2 card (`YOU'RE AT X`); its confirm (VOICE without text for that
-`voice_seq`) makes the phone save X as the spoken start, and `Forget where I am`
-clears it the same way. `from X to Y` is an action 1 card from X: when the
+an action 2 card (`YOU'RE AT X`); the phone saves X as the spoken start as
+soon as the card is sent (1.5.10), and its confirm (VOICE without text for that
+`voice_seq`) or a new turn keeps it. Back isn't sent to the phone, so the card
+says to undo with `Forget where I am`, which clears it on its confirm. `from X to Y` is an action 1 card from X: when the
 watch then asks for that ref's Route screen, the phone plans it from X (for as
 long as the watch keeps asking for that route); with `I'm at X, how do I get to
-Y` opening the route also saves X. The watch knows none of this: it sends the
+Y` X is saved when the card is sent. The watch knows none of this: it sends the
 same messages as for any card.
 
 ## Usage log

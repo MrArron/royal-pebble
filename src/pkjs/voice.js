@@ -3,9 +3,10 @@
 // The watch records, the Pebble app turns speech into text on the phone (no
 // internet at sea), and this module turns that text into one command:
 //   parse(text, opts) -> {intent, A, B, cabin, A_target, B_target, A_how, B_how,
-//                         reason?, topic?, deck?, via?, A_spot?, atA?}
+//                         reason?, topic?, deck?, via?, A_spot?, atA?, miss?}
 //   A_spot: 'group' | 'multi_spot' | 'ashore' when A isn't one spot (no start);
 //   atA: A came from "I'm at" (it also sets the spoken start, D4).
+//   miss: NO_MATCH no_place, the slot that matched no place: 'A', 'B' or 'AB'.
 //   opts.ship     ship code (default 'HM'), picks the lexicon
 //   opts.isCabin  function(number string) -> true when it's a cabin on the
 //                 plans; index.js passes cabins.find, tests pass a made-up list
@@ -44,6 +45,8 @@ var GRAMMAR = {
     ['(?:^| )howd(?= |$)', ' how do'], ['(?:^| )wanna(?= |$)', ' want to'], ['(?:^| )gotta(?= |$)', ' have to'],
     ['(?:^| )lets(?= |$)', ' let us'], ['(?:^| )id like(?= |$)', ' i would like']
   ],
+  // "I'm at the ..." as dictation heard it on the watch; used only when a place follows.
+  misheardAt: '(?:i|we) (?:have|of|add)(?: at)?|ive(?: at)?|weve(?: at)?',
   corrections: ['no wait', 'wait no', 'no no', 'or rather', 'scratch that', 'make that', 'i meant', 'i mean', 'sorry',
     'actually', 'no', 'wait'],
   fillers: ['hey pebble', 'ok pebble', 'okay pebble', 'hi pebble', 'pebble', 'hey there', 'can you please tell me',
@@ -97,7 +100,8 @@ var GRAMMAR = {
   whereTriggers: ['where(?= the | a )', 'where (?:is|are)', 'where (?:can|do|would|could) (?:i|we) find',
     'what (?:deck|floor) is', 'which (?:deck|floor) is'],
   backTriggers: ['how (?:do|can) (?:i|we) get back', 'take (?:me|us) back', 'get (?:me|us) back', 'go back'],
-  clauseStarters: ['how do', 'how can', 'how to get', 'how far', 'where is', 'where are', 'which way', 'take me', 'take us',
+  clauseStarters: ['how do', 'how can', 'how to get', 'how far', 'where is', 'where are', 'where can', 'where do',
+    'where could', 'which way', 'take me', 'take us',
     'get me', 'bring me', 'directions', 'navigate', 'show me', 'iam at', 'iam in', 'iam on', 'iam near', 'iam by',
     'what is next', 'when is', 'closest', 'nearest', 'i want to', 'i need to', 'we want to', 'want to go', 'can i get',
     'iam going', 'iam heading', 'going to', 'heading to'],
@@ -185,7 +189,9 @@ var RX = {
   stateroom: G.stateroom.map(function(s) { return new RegExp(s); }),
   event: wordsRx(G.eventWords, ''),
   starter: new RegExp(' (?:(?:and|so|but|then) )?(?=(?:' + G.clauseStarters.map(esc).join('|') + ')(?: |$))', 'g'),
+  starterAt: new RegExp('^(?:(?:and|so|but|then) )?(?:' + G.clauseStarters.map(esc).join('|') + ')(?: |$)'),
   locOther: G.locationOther.map(function(s) { return new RegExp(s); }),
+  misheardAt: new RegExp('^(?:' + G.misheardAt + ') the (.+)$'),
   contractions: G.contractions.map(function(p) { return [new RegExp(p[0], 'g'), p[1]]; })
 };
 var LEAD = G.leadStrip.slice().sort(function(a, b) { return b.length - a.length; });
@@ -434,14 +440,35 @@ function splitClauses(s) {
 }
 
 // Transcript -> clauses [{text, correction}].
+function contract(sen) {
+  RX.contractions.forEach(function(p) { sen = trim(sen.replace(p[0], p[1])); });
+  return sen;
+}
+
+// Sentences, and a comma before a new question or "I'm at" ("I'm at the
+// Solarium, where can I get a drink"); other commas stay (dictation adds them anywhere).
+function sentences(text) {
+  var out = [];
+  text.split(/[.?!;:\u2026]+(?=\s|$)/).forEach(function(sen) {
+    sen.split(/,(?=\s|$)/).forEach(function(part, k) {
+      var w = contract(words(part));
+      if (k && !RX.starterAt.test(w) && !anyTest(RX.route, w)) {
+        out[out.length - 1] += ' ' + part;
+      } else {
+        out.push(part);
+      }
+    });
+  });
+  return out;
+}
+
 function normalise(raw, isCabin) {
   var clauses = [];
-  clean(raw).split(/[.?!;:\u2026]+(?=\s|$)/).forEach(function(sen) {
-    sen = words(sen);
+  sentences(clean(raw)).forEach(function(sen) {
+    sen = contract(words(sen));
     if (!sen) {
       return;
     }
-    RX.contractions.forEach(function(p) { sen = trim(sen.replace(p[0], p[1])); });
     sen = numbers(sen, isCabin);
     // A correction word at the start flags the sentence; one inside splits it.
     var pieces = [], corr = false, m;
@@ -517,7 +544,7 @@ var matchers = {};
 //  2. the longest run of words that is a phrase, when the rest is only noise
 //     words or 3 letters ("the wind jam are", "the Cartier store");
 //  3. fuzzy, 5+ letters, only when one target is clearly closest: most of one
-//     target's phrase (70%+), 1 edit (5-7 letters) or 2 (8+), or a 7+ letter
+//     target's phrase (70%+; phrases that only add words to it don't count), 1 edit (5-7 letters) or 2 (8+), or a 7+ letter
 //     phrase followed by up to 3 letters of noise.
 function makeMatcher(lex) {
   var map = {};
@@ -564,11 +591,16 @@ function makeMatcher(lex) {
       return -1;
     }
     // A clipped name: most of a phrase ("splashawayb"), from one target only
-    // ("solar" could be Solarium, Solarium Bar or Solarium Bistro: none).
+    // ("solar" could be Solarium or Solera: none). Longer phrases that only add
+    // words to a phrase it covers don't count ("solari": Solarium, not
+    // Solarium Bar or Solarium Bistro).
     var starts = keys.filter(function(k) { return k.indexOf(c) === 0; });
     if (starts.length) {
-      var most = starts.every(function(k) { return c.length >= 0.7 * k.length; });
-      return most ? unique(starts) : -1;
+      var most = starts.filter(function(k) { return c.length >= 0.7 * k.length; });
+      var rest = starts.every(function(k) {
+        return most.some(function(m) { return k.indexOf(m) === 0; });
+      });
+      return most.length && rest ? unique(most) : -1;
     }
     var max = c.length >= 8 ? 2 : 1;
     var best = -1, bestD = max + 1, second = max + 2;
@@ -981,7 +1013,9 @@ function resolve(p, match) {
     if (!p.bare && RX.event.test((out.A || '') + ' ' + (out.B || ''))) {
       return {intent: 'OUT_OF_SCOPE_KNOWN', topic: 'schedule', A: out.A, B: out.B, cabin: out.cabin};
     }
-    return {intent: 'NO_MATCH', reason: p.bare ? 'no_command' : 'no_place', A: out.A, B: out.B, cabin: out.cabin};
+    var missA = unresolved(out.A, a), missB = unresolved(out.B, b);
+    return {intent: 'NO_MATCH', reason: p.bare ? 'no_command' : 'no_place', A: out.A, B: out.B, cabin: out.cabin,
+            miss: missA && missB ? 'AB' : missA ? 'A' : 'B'};
   }
   // A bare phrase ("Play some music") only counts when it matched outright.
   if (p.bare && b && b.how !== 'exact') {
@@ -1091,7 +1125,18 @@ function parse(text, opts) {
   var match = matcher(opts.ship);
   var items = normalise(text, isCabin).map(function(c) {
     var p = parseClause(c.text);
-    return {p: p, r: resolve(p, match), correction: c.correction};
+    var r = resolve(p, match);
+    var m = IN_SCOPE[r.intent] ? null : RX.misheardAt.exec(c.text);
+    if (m) {
+      // "I have the Solarium" was "I'm at the Solarium": only when a place matches.
+      var p2 = parseClause('iam at the ' + m[1]);
+      var r2 = resolve(p2, match);
+      if (r2.intent === 'SET_LOCATION' && r2.A_target) {
+        p = p2;
+        r = r2;
+      }
+    }
+    return {p: p, r: r, correction: c.correction};
   });
   var r = merge(items, match);
   var out = {intent: r.intent, A: r.A || null, B: r.B || null, cabin: r.cabin || null,
@@ -1099,7 +1144,7 @@ function parse(text, opts) {
   if (r.intent === 'ROUTE_COMBINED') {
     r.atA = true;
   }
-  ['reason', 'topic', 'deck', 'via', 'A_spot', 'atA'].forEach(function(k) {
+  ['reason', 'topic', 'deck', 'via', 'A_spot', 'atA', 'miss'].forEach(function(k) {
     if (r[k]) {
       out[k] = r[k];
     }

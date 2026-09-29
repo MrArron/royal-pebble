@@ -239,11 +239,11 @@ var TABLE = [
   ['how do I get to cococay', {action: 0, rows: ['CocoCay is ashore'], hint: 'No ship route'}],
   ['take me to the hot tub', {action: 0, rows: ['TO:Hot tub', 'Not on the map yet'], log: 'NO_MATCH not_mapped'}],
   ['solarium to the solarium', {action: 0, rows: ["You're already there"]}],
-  // A start said in the question (1.5.9): that route starts there; "I'm at X, ..." also sets it on Select (D4).
+  // A start said in the question (1.5.9): that route starts there; "I'm at X, ..." also sets it when shown (D4, 1.5.10).
   ['from the solarium to the windjammer', {action: 1, ref: 'Windjammer Marketplace', rows: ['FROM:Solarium', 'TO:Windjammer Marketplace'],
                                            hint: 'Select: route', start: 'Solarium', log: 'ROUTE A=Solarium (exact) B=Windjammer Marketplace (exact)'}],
   ["I'm at the solarium. How do I get to the windjammer", {action: 1, ref: 'Windjammer Marketplace', rows: ['FROM:Solarium', 'TO:Windjammer Marketplace'],
-                                                          hint: 'Select: route, and routes start there', start: 'Solarium', set: true, log: 'ROUTE_COMBINED'}],
+                                                          hint: 'Select: route · Undo: say Forget where I am', start: 'Solarium', set: true, log: 'ROUTE_COMBINED'}],
   ['from cabin 8200 to the solarium', {action: 1, ref: 'Solarium', rows: ['FROM:Cabin 8200', 'TO:Solarium'], start: 'Cabin 8200'}],
   ['from the solarium to my cabin', {action: 1, ref: directory.REF_CABIN, rows: ['FROM:Solarium', 'TO:Your cabin'], start: 'Solarium'}],
   ["I'm at the solarium. Where is the closest bar", {action: 1, rows: ['FROM:Solarium', /^CLOSEST BAR:/], start: 'Solarium', set: true}],
@@ -251,7 +251,7 @@ var TABLE = [
                                                           start: 'Solarium', set: true}],
   ['from the arcade to the solarium', {action: 0, rows: ['Which one?', 'Arcade or Video Arcade']}],
   // "I'm at X": YOU'RE AT, Select sets it (confirm). One-spot big venues are fine (D8).
-  ["I'm at the solarium", {action: 2, rows: ["YOU'RE AT:Solarium", 'Routes start here for 90 min'], hint: 'Select: set',
+  ["I'm at the solarium", {action: 2, rows: ["YOU'RE AT:Solarium", 'Routes start here for 90 min'], hint: 'Saved · Undo',
                            start: 'Solarium', set: true, log: 'SET_LOCATION A=Solarium'}],
   ["I'm at the promenade", {action: 2, rows: ["YOU'RE AT:Royal Promenade"], set: true}],
   ["I'm on the boardwalk", {action: 2, rows: ["YOU'RE AT:Boardwalk"], set: true}],
@@ -280,8 +280,19 @@ var TABLE = [
   ['when does the windjammer open', {action: 0, rows: [/^NOT YET:Opening times/, 'TRY:“Where is the Windjammer?”']}],
   ['how do I get to', {action: 0, rows: ['Which place?', /^TRY:/], log: 'INCOMPLETE'}],
   ['How do I get to the library?', {action: 0, rows: ['No place matched', 'TRY:“How do I get to the Windjammer?”'],
-                                    log: 'NO_MATCH no_place B=library'}],
-  ['uh', {action: 0, rows: ['Nothing heard']}]
+                                    log: 'NO_MATCH no_place miss=B B=library'}],
+  ['uh', {action: 0, rows: ['Nothing heard']}],
+  // One side matched: name the word that didn't (1.5.10).
+  ['From the boardwalk to the zebra', {action: 0, rows: ['No place “zebra”', /^TRY:/], log: 'NO_MATCH no_place miss=B A=boardwalk B=zebra'}],
+  ['From the zebra to the boardwalk', {action: 0, rows: ['No place “zebra”', /^TRY:/]}],
+  ['From the zebra to the giraffe', {action: 0, rows: ['No place matched', /^TRY:/], log: 'NO_MATCH no_place miss=AB'}],
+  // The owner's first watch test (1.5.10).
+  ['I have the salarium. Where can I get a drink?', {action: 1, rows: ['FROM:Solarium', /^CLOSEST BAR:/], start: 'Solarium', set: true}],
+  ["I'm at the Solari.", {action: 2, rows: ["YOU'RE AT:Solarium"], set: true}],
+  ['From the boardwalk to the sailboat', {action: 1, ref: 'Solarium', rows: ['FROM:Boardwalk', 'TO:Solarium'], start: 'Boardwalk'}],
+  ['From the boardwalk to the solar', {action: 1, ref: 'Solarium', rows: ['FROM:Boardwalk', 'TO:Solarium'], start: 'Boardwalk'}],
+  ["I'm at the solarium, where can I get a drink", {action: 1, rows: ['FROM:Solarium', /^CLOSEST BAR:/], start: 'Solarium', set: true}],
+  ['I am at the Solarium.', {action: 2, rows: ["YOU'RE AT:Solarium"], hint: 'Saved · Undo', set: true}]
 ];
 
 test('voice matcher cards (table)', function() {
@@ -512,10 +523,12 @@ test('settings test box: a card as text lines', function() {
   var c = seaCtx(13);
   var lines = voicecard.cardLines(voicecard.answer('I\'m at the solarium', c, false, 0));
   assert.deepStrictEqual(lines, ['HEARD  “I\'m at the solarium”', 'YOU\'RE AT  Solarium', 'Routes start here for 90 min',
-                                 'Hint: Select: set · Hold: ask again', 'Select routes start at Solarium for 90 min',
+                                 'Hint: Saved · Undo: say “Forget where I am”',
+                                 'Select closes (routes start at Solarium for 90 min, set when the card shows)',
                                  'Matched: SET_LOCATION A=Solarium (exact)']);
   lines = voicecard.cardLines(voicecard.answer('I\'m at the solarium. How do I get to the windjammer', c, false, 0));
-  assert.strictEqual(lines[4], 'Select opens the route to Windjammer Marketplace from Solarium, and routes start at Solarium for 90 min');
+  assert.strictEqual(lines[4], 'Select opens the route to Windjammer Marketplace from Solarium (routes start at Solarium for 90 min, ' +
+                     'set when the card shows)');
   lines = voicecard.cardLines(voicecard.answer('play some music', c, false, 0));
   assert.strictEqual(lines[lines.length - 2], 'Select asks again');
 });

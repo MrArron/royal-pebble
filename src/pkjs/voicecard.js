@@ -17,12 +17,15 @@
 // screen refs (directory.js).
 //
 // Where routes start (1.5.9, §9.4, routestart.js): `I'm at X` answers YOU'RE AT
-// X and Select sets the spoken start (the card's `start`, saved by index.js;
-// 90 minutes, D22); `Forget where I am` clears it the same way (`forget`). A
-// start said in the question (`from X to Y`) routes from X: the card's `start`
-// goes with the route, and index.js uses it for that Route screen; with `I'm at
-// X, how do I get to Y` Select also sets it (D4). Only one-spot places and
-// cabins can be a start (D7, D8, D12, D19).
+// X and sets the spoken start as soon as the card is shown (the card's `start`
+// with `set`, saved by index.js; 90 minutes, D22; 1.5.10, owner: Hold to ask the
+// next question kept nothing before). Select or Hold keep it; the watch doesn't
+// report Back, so the hint says to undo with `Forget where I am`, which clears
+// it (Select on its card, `forget`). A start said in the question (`from X to
+// Y`) routes from X: the card's `start` goes with the route, and index.js uses it
+// for that Route screen; with `I'm at X, how do I get to Y` the start is saved
+// when the card shows too (D4). Only one-spot places and cabins can be a start
+// (D7, D8, D12, D19).
 'use strict';
 
 var pack = require('./pack');
@@ -245,8 +248,10 @@ function restroomCard(heard, ctx, deck) {
 
 var HINT_ROUTE = 'Select: route · Hold: ask again';
 var HINT_AGAIN = 'Select to ask again';
-var HINT_ROUTE_SET = 'Select: route, and routes start there';
-var HINT_SET = 'Select: set · Hold: ask again';
+// A start from "I'm at" is saved when its card is shown (index.js, 1.5.10); the
+// watch doesn't tell the phone about Back, so the hint says how to undo it.
+var HINT_ROUTE_SET = 'Select: route · Undo: say Forget where I am';
+var HINT_SET = 'Saved · Undo: say “Forget where I am”';
 var HINT_FORGET = 'Select: forget it · Hold: ask again';
 var TRY_PLACE = 'How do I get to the Windjammer?';
 
@@ -404,7 +409,7 @@ function startFrom(heard, p, ctx, label) {
   return {place: {venue: place.v.name}, name: shortName(place.v.name, ctx)};
 }
 
-// "I'm at X": YOU'RE AT X; Select sets the spoken start (index.js).
+// "I'm at X": YOU'RE AT X; the spoken start is saved when the card shows (index.js).
 function setLocationCard(heard, p, ctx) {
   var sf = startFrom(heard, p, ctx, 'YOU\'RE AT');
   if (!sf) {
@@ -444,7 +449,7 @@ function withoutSpoken(ctx) {
 }
 
 // A route card from a start said in the question: routed from it, and it goes
-// with the route (index.js); with "I'm at" (atA) Select also sets it (D4).
+// with the route (index.js); with "I'm at" (atA) it is also saved when the card shows (D4).
 function fromCard(heard, p, ctx, build) {
   var sf = startFrom(heard, p, ctx, 'FROM');
   if (!sf) {
@@ -610,6 +615,12 @@ function matchedCard(heard, p, ctx) {
       if (p.reason === 'no_command') {
         return note(heard, ['Not something I know', tryRow('Closest restroom')]);
       }
+      if ((p.miss === 'A' && p.B) || (p.miss === 'B' && p.A)) {
+        // One side matched: say which word didn't ("from the Boardwalk to the sailboat").
+        var word = pack.cutText(p.miss === 'A' ? p.A : p.B, VALUE_MAX - 15);
+        return note(heard, ['No place ' + quoted(word), tryRow(TRY_PLACE)],
+                    'Short phrases work best in noisy places');
+      }
       return note(heard, ['No place matched', tryRow(TRY_PLACE)], 'Short phrases work best in noisy places');
   }
 }
@@ -617,7 +628,8 @@ function matchedCard(heard, p, ctx) {
 // What the matcher made of `text`, for the usage log (VOICE_FINAL_PLAN §10.1):
 // `ROUTE B=Windjammer Marketplace (part)`.
 function matchText(p) {
-  var out = p.intent + (p.reason ? ' ' + p.reason : '') + (p.topic ? ' ' + p.topic : '') + (p.via ? ' via ' + p.via : '');
+  var out = p.intent + (p.reason ? ' ' + p.reason : '') + (p.miss ? ' miss=' + p.miss : '') +
+    (p.topic ? ' ' + p.topic : '') + (p.via ? ' via ' + p.via : '');
   [['A', p.A, p.A_target, p.A_how], ['B', p.B, p.B_target, p.B_how]].forEach(function(s) {
     if (s[1] || s[2]) {
       out += ' ' + s[0] + '=' + (s[2] || s[1]) + (s[2] ? ' (' + (s[3] || 'none') + ')' : '');
@@ -696,9 +708,9 @@ function cardLines(card) {
   var st = card.start;
   var sel = card.action === ACT_ROUTE ?
     'opens the route to ' + (card.title || '') + (st ? ' from ' + st.name : '') +
-      (st && st.set ? ', and routes start at ' + st.name + ' for 90 min' : '') :
+      (st && st.set ? ' (routes start at ' + st.name + ' for 90 min, set when the card shows)' : '') :
     card.action === ACT_CONFIRM ? (card.forget ? 'forgets where you are' :
-                                   'routes start at ' + (st ? st.name : '') + ' for 90 min') :
+                                   'closes (routes start at ' + (st ? st.name : '') + ' for 90 min, set when the card shows)') :
     card.action === ACT_ONBOARD ? (card.onboard ? 'sets I\'m on board' : 'clears I\'m on board') : 'asks again';
   out.push('Select ' + sel);
   if (card.log) {

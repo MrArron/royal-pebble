@@ -1,7 +1,7 @@
 {
  "about": "Test utterances as the phone's local speech-to-text might return them (capitalised, punctuated, ASR errors, filler), with the expected parse. A/B hold the normalised span (lowercase, no leading article) or a special token (@mycabin, @cabin:N, @restroom, @elevator, @forelev, @aftelev, @stairs, @deck:N); A = null means the current route start. *_target is the canonical venues.js name the matcher should resolve to. Cabin numbers are made up and are NOT on the HM deck plans (repo rule); tests inject them as a fake cabin fixture: 8924, 6902, 9850, 10930, 10932, 11844, 14906, 9804, 1792, 7646, 12990. 8923, 892 and 9999 are deliberately not in the fixture. Decision-dependent cases are tagged decision_Dn (see voice-commands.md).",
  "scoring": "intent must match; cabin must match; for A/B: when *_target is given the resolved target must match, otherwise the span must match after removing spaces/punctuation (special tokens exactly). LOCATION_REFUSED also compares reason; OUT_OF_SCOPE_KNOWN compares topic. Slots are not compared for INCOMPLETE / NO_MATCH / OUT_OF_SCOPE_KNOWN.",
- "count": 370,
+ "count": 376,
  "cases": [
   {
    "id": "v001",
@@ -5339,6 +5339,98 @@
     "holdout",
     "cabin_number",
     "word_digits"
+   ]
+  },
+  {
+   "id": "v371",
+   "text": "I have the salarium. Where can I get a drink?",
+   "expect": {
+    "intent": "CLOSEST_BAR",
+    "A": "salarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "observed",
+    "watch_test"
+   ]
+  },
+  {
+   "id": "v372",
+   "text": "I'm at the Solari.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "solari",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "observed",
+    "watch_test"
+   ]
+  },
+  {
+   "id": "v373",
+   "text": "From the boardwalk to the sailboat",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "sailboat",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "observed",
+    "watch_test"
+   ]
+  },
+  {
+   "id": "v374",
+   "text": "From the boardwalk to the solar",
+   "expect": {
+    "intent": "ROUTE",
+    "A": "boardwalk",
+    "B": "solar",
+    "cabin": null,
+    "A_target": "Boardwalk",
+    "B_target": "Solarium"
+   },
+   "tags": [
+    "observed",
+    "watch_test"
+   ]
+  },
+  {
+   "id": "v375",
+   "text": "I'm at the solarium, where can I get a drink",
+   "expect": {
+    "intent": "CLOSEST_BAR",
+    "A": "solarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "observed",
+    "watch_test"
+   ]
+  },
+  {
+   "id": "v376",
+   "text": "I am at the Solarium.",
+   "expect": {
+    "intent": "SET_LOCATION",
+    "A": "solarium",
+    "B": null,
+    "cabin": null,
+    "A_target": "Solarium"
+   },
+   "tags": [
+    "observed",
+    "watch_test"
    ]
   }
  ]

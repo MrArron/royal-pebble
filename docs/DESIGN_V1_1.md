@@ -983,11 +983,16 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
     place?`, `No place matched`, `Not something I know`, `NOT YET` for
     schedule and opening-time questions, each with a `TRY` example.
   - **Where routes start (1.5.9, Phase 5 V3 part 2):** `I'm at X` answers
-    `YOU'RE AT X` / `Routes start here for 90 min`, and Select sets the spoken
-    start (9.4; D22), which the FROM rows, Route screens and place pages then
-    use. `from X to Y` routes from X (`FROM X`) for that route only; `I'm at X,
-    how do I get to Y` (and `I'm at X. Where's the closest bar`) also sets X when
-    Select opens the route (D4, hint `Select: route, and routes start there`).
+    `YOU'RE AT X` / `Routes start here for 90 min` and sets the spoken start
+    as soon as the card is shown (9.4; D22; 1.5.10, owner decision after the
+    first watch test, where Hold to ask the next question kept nothing), which
+    the FROM rows, Route screens and place pages then use. Select or Hold keep
+    it; the watch doesn't tell the phone about Back, so the hint says how to
+    undo it (`Saved · Undo: say “Forget where I am”`). `from X to Y` routes
+    from X (`FROM X`) for that route only; `I'm at X, how do I get to Y` (and
+    `I'm at X. Where's the closest bar`) also sets X when the card is shown (D4,
+    hint `Select: route · Undo: say Forget where I am`). `No place “word”`
+    names the side that matched nothing when the other side did (1.5.10).
     A start must be one spot: a place, a big one-spot venue (Royal Promenade,
     Boardwalk, Central Park, Pool Deck; D8) or a cabin (`I'm in cabin 8200`,
     `I'm at my cabin`); the Running Track (`is in many spots`), elevators even

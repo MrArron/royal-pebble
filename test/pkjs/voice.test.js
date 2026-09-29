@@ -104,6 +104,31 @@ test('the other observed phrases', function() {
   assert.deepStrictEqual([r.intent, r.A_target, r.B_target], ['ROUTE', 'Boardwalk', 'Solarium']);
 });
 
+// The owner's first test on the watch (Android dictation, 1.5.10). The corpus has
+// them too (tag watch_test); this checks what the corpus doesn't: the start.
+test('first watch test: Solarium mishearings, "I have the", commas', function() {
+  function p(t) {
+    var r = voice.parse(t, OPTS);
+    return [r.intent, r.A_target, r.B_target, !!r.atA];
+  }
+  assert.deepStrictEqual(p('I have the salarium. Where can I get a drink?'), ['CLOSEST_BAR', 'Solarium', null, true]);
+  assert.deepStrictEqual(p("I'm at the Solari."), ['SET_LOCATION', 'Solarium', null, false]);
+  assert.deepStrictEqual(p('From the boardwalk to the sailboat'), ['ROUTE', 'Boardwalk', 'Solarium', false]);
+  assert.deepStrictEqual(p('From the boardwalk to the solar'), ['ROUTE', 'Boardwalk', 'Solarium', false]);
+  assert.deepStrictEqual(p("I'm at the solarium, where can I get a drink"), ['CLOSEST_BAR', 'Solarium', null, true]);
+  assert.deepStrictEqual(p("I'm at the solarium where can I get a drink"), ['CLOSEST_BAR', 'Solarium', null, true]);
+  assert.deepStrictEqual(p('I am at the Solarium.'), ['SET_LOCATION', 'Solarium', null, false]);
+  assert.deepStrictEqual(p("I've at the Solarium, how do I get to the boardwalk"), ['ROUTE_COMBINED', 'Solarium', 'Boardwalk', true]);
+  // "I have the ..." only when a place follows; other commas don't split.
+  assert.strictEqual(voice.parse('I have the question', OPTS).intent, 'NO_MATCH');
+  assert.strictEqual(voice.parse('I have the arcade', OPTS).intent, 'NO_MATCH', 'a group is no "I\'m at"');
+  assert.deepStrictEqual(p('From the boardwalk, to the solarium'), ['ROUTE', 'Boardwalk', 'Solarium', false]);
+  // The slot that matched nothing, for the card and the log.
+  assert.strictEqual(voice.parse('From the boardwalk to the zebra', OPTS).miss, 'B');
+  assert.strictEqual(voice.parse('From the zebra to the boardwalk', OPTS).miss, 'A');
+  assert.strictEqual(voice.parse('From the zebra to the giraffe', OPTS).miss, 'AB');
+});
+
 test('matcher: exact, part and fuzzy, and when it refuses', function() {
   var m = voice.matcher('HM');
   assert.strictEqual(m('the wind jam are').how, 'part');
@@ -112,7 +137,13 @@ test('matcher: exact, part and fuzzy, and when it refuses', function() {
   assert.strictEqual(m('solarim').t, 'Solarium');
   assert.strictEqual(m('main dining room', 5).t, 'Main Dining Room 5');
   assert.strictEqual(m('the arcade').t, 'Arcade|Video Arcade', 'a group: route to the nearest');
-  assert.strictEqual(m('solar'), null, 'prefix of Solarium, Solarium Bar and Solarium Bistro');
+  assert.strictEqual(m('solar').how, 'exact', 'heard on the watch (1.5.10), stored');
+  assert.strictEqual(m('solari').t, 'Solarium', 'heard on the watch (1.5.10)');
+  // A clipped name: longer phrases that only add words to it don't count; another place does.
+  var mini = voice.makeMatcher({t: ['Solarium', 'Solarium Bar', 'Solarium Bistro', 'Solera'], p: ['', '', '', 'solara'], f: {}});
+  assert.deepStrictEqual([mini('solari').t, mini('solari').how], ['Solarium', 'fuzzy']);
+  assert.strictEqual(mini('solar'), null, 'Solarium or Solera');
+  assert.strictEqual(mini('solariumb'), null, 'Solarium Bar or Solarium Bistro');
   assert.strictEqual(m('bar'), null);
   assert.strictEqual(m('wine bar'), null);
   assert.strictEqual(m('play some music'), null);

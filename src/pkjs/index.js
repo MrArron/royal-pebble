@@ -118,8 +118,9 @@ function ctxOf(data) {
   return {bundle: data.bundle, settings: data.settings, stars: data.stars, now: new Date(), spoken: spokenNow(data)};
 }
 
-// Saves a voice card's start ({place, name}) as the spoken start (Select on
-// `I'm at X`, or on the route of `I'm at X, how do I get to Y`, D4).
+// Saves a voice card's start ({place, name}) as the spoken start: when the card
+// of `I'm at X`, or of `I'm at X, how do I get to Y` (D4), is shown (1.5.10). The
+// watch doesn't report Back on it, so undo is `Forget where I am`.
 function setSpoken(start, seq, how) {
   var data = currentData();
   if (!data.bundle || !data.bundle.sailDate) {
@@ -433,12 +434,16 @@ function sendVoiceCard() {
       {seq: turn.seq, ref: card.ref | 0, rest: !!card.rest, start: card.start || null} : null;
     s_voiceConfirm = ok && card.action === voicecard.ACT_CONFIRM && (card.start || card.forget) ?
       {seq: turn.seq, start: card.start || null, forget: !!card.forget} : null;
+    var saveStart = ok && card.start && card.start.set;
     usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' + card.log + ': ' +
               ['nothing to do', 'route', 'confirm', card.onboard ? 'set on board' : 'back ashore'][card.action] +
               (card.ref ? ' ' + card.ref + (card.rest ? ' restroom' : '') : '') +
               (card.start ? (card.start.set ? ' setting start ' : ' from ') + card.start.name : '') +
               ' (' + card.rows.slice(1).map(function(r) { return (r.label ? r.label + ' ' : '') + r.value; }).join(', ') + '), ' +
               sendText(ok, info));
+    if (saveStart) {
+      setSpoken(card.start, turn.seq, 'card shown');  // Select or Hold keep it; undo: Forget where I am
+    }
     sendNext();
   });
 }
@@ -1031,9 +1036,7 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
         var st = s_voiceRoute.start;
         if (st) {
           s_routeFrom = {ref: s_voiceRoute.ref, rest: s_voiceRoute.rest, place: st.place};
-          if (st.set) {
-            setSpoken(st, s_voiceRoute.seq, 'route opened');  // D4
-          }
+          // With "I'm at" (st.set, D4) it was saved when the card was shown.
         }
         s_voiceRoute = null;
       }
@@ -1046,7 +1049,8 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
         var conf = s_voiceConfirm && s_voiceConfirm.seq === (p.voice_seq | 0) ? s_voiceConfirm : null;
         s_voiceConfirm = null;
         if (conf && conf.start) {
-          setSpoken(conf.start, conf.seq, 'confirmed on the watch');
+          // Saved when the card was shown.
+          usage.add('voice', 'turn ' + conf.seq + ' Select: start ' + conf.start.name + ' kept');
         } else if (conf && conf.forget) {
           var had = load(STORE_SPOKEN, null);
           localStorage.removeItem(STORE_SPOKEN);
@@ -1056,6 +1060,9 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
           usage.add('voice', 'turn ' + (p.voice_seq | 0) + ' confirmed on the watch');
         }
         break;
+      }
+      if (s_voiceConfirm && s_voiceConfirm.start) {
+        usage.add('voice', 'turn ' + s_voiceConfirm.seq + ' asked again: start ' + s_voiceConfirm.start.name + ' kept');
       }
       s_voiceConfirm = null;
       s_routeFrom = null;

@@ -366,9 +366,10 @@ test('download with login: a refused sign-in saves nothing; no booking keeps the
 });
 
 
-// Voice (1.5.9): "I'm at" is set by Select, kept in phone storage, used by later
-// routes, logged, and cleared by Forget where I am. Cabin 8200 is made up.
-test('voice: the spoken start is set on Select, survives a restart and is forgotten', function() {
+// Voice (1.5.9): "I'm at" is set when its card is shown (1.5.10; Select or Hold
+// keep it), kept in phone storage, used by later routes, logged, and cleared by
+// Forget where I am. Cabin 8200 is made up.
+test('voice: the spoken start is set when shown, survives a restart and is forgotten', function() {
   var c = companion({bundle: JSON.stringify(savedCruise()), settings: JSON.stringify({me: {stateroom: '8200'}})});
   c.handlers.ready();
   function ask(seq, text) {
@@ -385,14 +386,15 @@ test('voice: the spoken start is set on Select, survives a restart and is forgot
   }
   var card = ask(1, "I'm at the solarium");
   assert.strictEqual(card.action, 2, 'confirm');
-  assert.strictEqual(c.store.spokenStart, undefined, 'nothing set before Select');
-  c.handlers.appmessage({payload: {msg_type: 19, voice_seq: 1}});
   var sp = JSON.parse(c.store.spokenStart);
-  assert.strictEqual(sp.venue, 'Solarium');
+  assert.strictEqual(sp.venue, 'Solarium', 'set when the card is shown');
+  c.handlers.appmessage({payload: {msg_type: 19, voice_seq: 1}});
+  assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Solarium', 'Select keeps it');
   var lines = c.log();
   assert.ok(has(lines, /^voice  turn 1 heard "I'm at the solarium" -> SET_LOCATION A=Solarium \(exact\): confirm setting start Solarium/),
             lines.join('\n'));
-  assert.ok(has(lines, /^voice  turn 1 confirmed on the watch: start set to Solarium for 90 min$/), lines.join('\n'));
+  assert.ok(has(lines, /^voice  turn 1 card shown: start set to Solarium for 90 min$/), lines.join('\n'));
+  assert.ok(has(lines, /^voice  turn 1 Select: start Solarium kept$/), lines.join('\n'));
   // A later route starts there, also after the phone script restarts.
   var to = ask(2, 'how do I get to the windjammer');
   route(to.ref);
@@ -403,20 +405,26 @@ test('voice: the spoken start is set on Select, survives a restart and is forgot
   c.handlers.ready();
   route(to.ref);
   assert.ok(has(c.log(), /FROM SOLARIUM/), 'kept in phone storage');
-  // "From X to Y" routes from X for that route only; "I'm at X, ..." sets X when the route opens (D4).
+  // "From X to Y" routes from X for that route only; "I'm at X, ..." sets X when its card shows (D4).
   var from = ask(3, 'from the boardwalk to the windjammer');
   route(from.ref);
   assert.ok(has(c.log(), /"Windjammer Marketplace", FROM BOARDWALK, .*start: said in the question: Boardwalk/), c.log().join('\n'));
   assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Solarium', 'not set by "from"');
-  var both = ask(4, "I'm at the boardwalk. How do I get to the solarium");
-  route(both.ref);
-  assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Boardwalk');
-  assert.ok(has(c.log(), /^voice  turn 4 route opened: start set to Boardwalk for 90 min$/), c.log().join('\n'));
+  ask(4, "I'm at the boardwalk. How do I get to the solarium");
+  assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Boardwalk', 'set before the route opens');
+  assert.ok(has(c.log(), /^voice  turn 4 card shown: start set to Boardwalk for 90 min$/), c.log().join('\n'));
+  // "I'm at X" then Hold to ask the next question (the first watch test): X stays.
+  ask(7, "I am at the Solarium.");
+  ask(8, 'where can I get a drink');
+  assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Solarium', 'Hold keeps it');
+  assert.ok(has(c.log(), /^voice  turn 7 asked again: start Solarium kept$/), c.log().join('\n'));
+  assert.ok(has(c.log(), /^voice  turn 8 heard "where can I get a drink" -> CLOSEST_BAR: route \d+ \(FROM Solarium, /),
+            c.log().join('\n'));
   // Forget where I am.
   assert.strictEqual(ask(5, 'forget where I am').action, 2);
   c.handlers.appmessage({payload: {msg_type: 19, voice_seq: 5}});
   assert.strictEqual(c.store.spokenStart, undefined);
-  assert.ok(has(c.log(), /^voice  turn 5 confirmed on the watch: start Boardwalk cleared \(Forget where I am\)$/));
+  assert.ok(has(c.log(), /^voice  turn 5 confirmed on the watch: start Solarium cleared \(Forget where I am\)$/));
   // A start that has ended is removed and logged when next read.
   c.store.spokenStart = JSON.stringify({sail: sp.sail, at: sp.at - 91, name: 'Solarium', venue: 'Solarium'});
   ask(6, 'how do I get to the windjammer');
