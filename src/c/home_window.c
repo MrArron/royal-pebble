@@ -836,9 +836,14 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
 
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
   bool offered = offers_onboard(now_cruise());
-  usage_press(BUTTON_ID_SELECT, USAGE_LONG | (offered ? 0 : USAGE_NOTHING), -1);
-  if (offered) {
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
+  // Ask by voice (§9.6), where "I'm on board" is one of the commands (owner,
+  // 2026-09-28). With the phone away there's no voice, so the "On board?"
+  // screen takes Hold Select while it's offered.
+  if (offered && !connection_service_peek_pebble_app_connection()) {
     onboard_window_push();
+  } else {
+    ask_window_push();
   }
 }
 

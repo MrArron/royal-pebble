@@ -9,7 +9,7 @@ function shareLib() {
   var START = 'RPPLAN';
   var END = ':END';
   var DAY_FIELDS = ['allAboard', 'shift', 'buffer', 'warn', 'offset', 'edit'];
-  var CABIN_FIELDS = ['stateroom', 'deck', 'stairs', 'muster'];
+  var CABIN_FIELDS = ['stateroom', 'deck', 'stairs', 'muster', 'dining'];
   var RES = 'R|';
 
   function same(a, b) {
@@ -39,7 +39,7 @@ function shareLib() {
   }
 
   // mine: {ship, sailDate, stars: {key: true}, personal: [..], days: {date: {..}},
-  // venues: {name: override}, cabin: {stateroom, deck, stairs, muster}}.
+  // venues: {name: override}, cabin: {stateroom, deck, stairs, muster, dining}}.
   // Cabin details go in only with `withCabin`, and only the ones that are set.
   function build(mine, withCabin) {
     var plan = {v: VERSION, ship: mine.ship, sail: mine.sailDate, stars: starList(mine.stars)};

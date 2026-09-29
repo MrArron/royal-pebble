@@ -2,11 +2,11 @@
 
 static bool s_ready;
 static uint16_t s_slice_id;
-static SliceMeta s_meta = {.show_featured = true};
-static Day s_day = {.kind = DAY_NONE, .all_aboard = NO_TIME, .arrive = NO_TIME, .depart = NO_TIME};
-static Tomorrow s_tomorrow = {.kind = DAY_NONE};
-static MyInfo s_info;
-// On the heap (data_init): as a static array the events pushed the app past the
+// The header, events and alerts live on the heap (data_init): the SDK caps code
+// plus static data at 64 KB (PebbleProcessInfo.virtual_size is 16 bits), and
+// they take the same RAM either way. The header alone was 500 bytes of .data.
+static SliceHead *s_head;
+// As a static array the events pushed the app past the
 // SDK's limit on code plus static data, 64 KB (PebbleProcessInfo.virtual_size is
 // 16 bits). It takes the same RAM either way.
 static Event *s_events;
@@ -16,6 +16,12 @@ static Alarm *s_alarms;
 static int s_alarm_count;
 
 void data_init(void) {
+  s_head = calloc(1, sizeof(SliceHead));
+  if (s_head) {
+    s_head->meta.show_featured = true;
+    s_head->day.kind = s_head->tomorrow.kind = DAY_NONE;
+    s_head->day.all_aboard = s_head->day.arrive = s_head->day.depart = NO_TIME;
+  }
   s_events = calloc(MAX_EVENTS, sizeof(Event));
   s_alarms = calloc(MAX_ALARMS, sizeof(Alarm));
   if (!s_events || !s_alarms) {
@@ -24,23 +30,20 @@ void data_init(void) {
 }
 
 bool data_ready(void) { return s_ready; }
-const Day *data_day(void) { return &s_day; }
-const Tomorrow *data_tomorrow(void) { return &s_tomorrow; }
-const MyInfo *data_my_info(void) { return &s_info; }
-const SliceMeta *data_meta(void) { return &s_meta; }
+const Day *data_day(void) { return &s_head->day; }
+const Tomorrow *data_tomorrow(void) { return &s_head->tomorrow; }
+const MyInfo *data_my_info(void) { return &s_head->info; }
+const SliceMeta *data_meta(void) { return &s_head->meta; }
+const SliceHead *data_head(void) { return s_head; }
 uint16_t data_slice_id(void) { return s_slice_id; }
 int data_event_count(void) { return s_event_count; }
 Event *data_event(int index) { return &s_events[index]; }
 int data_alarm_count(void) { return s_alarm_count; }
 Alarm *data_alarm(int index) { return &s_alarms[index]; }
 
-void data_commit(uint16_t slice_id, const SliceMeta *meta, const Day *day, const Tomorrow *tomorrow,
-                 const MyInfo *info, int event_count, int alarm_count) {
+void data_commit(uint16_t slice_id, const SliceHead *head, int event_count, int alarm_count) {
   s_slice_id = slice_id;
-  s_meta = *meta;
-  s_day = *day;
-  s_tomorrow = *tomorrow;
-  s_info = *info;
+  *s_head = *head;
   s_event_count = event_count < MAX_EVENTS ? event_count : MAX_EVENTS;
   s_alarm_count = alarm_count < MAX_ALARMS ? alarm_count : MAX_ALARMS;
   s_ready = true;
@@ -102,7 +105,7 @@ void data_set_reminder(const Event *e, bool on) {
   // Directions from the cabin until the phone's next plan works out the rest.
   // Before the arrive-by time when the event asks to come early.
   Alarm a = {
-    .at = e->start - e->early - s_meta.reminder_lead,
+    .at = e->start - e->early - s_head->meta.reminder_lead,
     .ref = e->start,
     .extra = (int16_t)e->minutes,
     .kind = ALARM_REMINDER,
@@ -236,7 +239,7 @@ int32_t now_cruise(void) {
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
   int32_t today = days_from_civil(t->tm_year + 1900, t->tm_mon + 1, t->tm_mday);
-  return (today - s_meta.sail_days) * MINUTES_PER_DAY + t->tm_hour * 60 + t->tm_min;
+  return (today - s_head->meta.sail_days) * MINUTES_PER_DAY + t->tm_hour * 60 + t->tm_min;
 }
 
 int32_t cruise_day_index(int32_t cruise_min) {

@@ -25,6 +25,14 @@ def configure(ctx):
 
 def build(ctx):
     ctx.load('pebble_sdk')
+    # Link-time optimisation: about 2.3 KB less code (docs/PHASE5_PLAN.md,
+    # proposal C). Code + data + static buffers must stay under 64 KB.
+    for platform in ctx.env.TARGET_PLATFORMS:
+        env = ctx.all_envs[platform]
+        env.append_value('CFLAGS', ['-flto=auto'])
+        # Without the -u, LTO drops the SDK's app header (appinfo.auto.c): nothing
+        # in the code refers to it, and the install then fails.
+        env.append_value('LINKFLAGS', ['-flto=auto', '-Wl,-u,__pbl_app_info'])
 
     build_worker = os.path.exists('worker_src')
     binaries = []

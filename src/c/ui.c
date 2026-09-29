@@ -566,6 +566,13 @@ void draw_chevron(GContext *ctx, GColor color, int x, int y) {
   graphics_context_set_stroke_width(ctx, 1);
 }
 
+void draw_label(GContext *ctx, const char *text, int y, int width) {
+  graphics_context_set_text_color(ctx, g_theme->muted);
+  graphics_draw_text(ctx, text, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                     GRect(PAD, y, width - 2 * PAD, 16), GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentLeft, NULL);
+}
+
 int draw_hint_right(GContext *ctx, const char *text, int right, int y) {
   GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
   int text_w = text_size(text, font).w;

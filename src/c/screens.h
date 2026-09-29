@@ -54,6 +54,14 @@ void route_window_push(int32_t ref, bool rest, const char *title, const char *he
 // under the steps.
 void route_window_push_event(const Event *e);
 void route_window_refresh(void);
+// Closes the Route screen if it's open (a voice route replaces it).
+void route_window_close(void);
+
+// Ask (docs/DESIGN_V1_1.md §9.6): starts dictation and shows the phone's
+// answer; from Hold Select on Home and Route screens. Pushed again while open,
+// it asks again.
+void ask_window_push(void);
+void ask_window_refresh(void);
 
 void details_window_push(int event_index);
 // Draws event `index` as its details page does (title down to the tags, not the

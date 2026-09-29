@@ -170,6 +170,11 @@ Sails 4:00p                              Gothic 14 bold, muted
 On embark day and port days the user can say they're on board or done ashore.
 Home then shows the **sea-day layout** (the NEXT card) for the rest of the day.
 
+- **By voice (1.5.3):** `I'm on board` and `I'm ashore` on the Ask screen
+  (`docs/DESIGN_V1_1.md` §9.6) set and clear the same flag, with the same
+  buzz, log entry and alert changes. From 1.5.4, Hold Select on Home opens Ask
+  (say `I'm on board`); the `On board?` screen stays for when the phone is away.
+
 - **Where: Hold Select on Home**, only while Home shows the terminal arrival
   card (§22.5) or the all-aboard countdown. Select does nothing on those
   layouts today (`route_target` is only for the NEXT card), and a hold can't
@@ -442,6 +447,18 @@ free text.
   option in the drop-down. My info follows the same rules, so a filled-in
   muster or deck follows a newer sync and an empty one falls back to the
   booking and the cabin table.
+- **Main dining room** (owner, 2026-09-28; built in 1.4.8): a `Dining` card
+  after Safety with a drop-down of the ship's main dining rooms from the venue
+  table (Harmony: `Main Dining Room 3`, `4`, `5`; a ship without them gets a
+  plain `Main Dining Room`) and `Not set`. Royal assigns every stateroom a
+  dining room; it's on the SeaPass and in the Royal app. Typed in for now:
+  whether Royal's booking data holds it is to be checked once the owner's
+  sailing has its schedule (`docs/ROYAL_LOGIN_DATA.md`); if it does, the
+  Advanced download fills it like muster (`From booking`). Stored as
+  `me.dining` with a `src` like the other fields, shared with the cabin
+  details in Share my plan, and shown on the watch's My info as `DINING ROOM`
+  under the muster station (`Not set` when empty). Planned use: voice and
+  directions send a plain "dining room" there (Phase 5).
 
 ### 24.2 Ready to sail (`Phone24Ready`, Cruise tab)
 

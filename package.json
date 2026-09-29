@@ -1,7 +1,7 @@
 {
   "name": "cruise-watch",
   "author": "MrArron",
-  "version": "1.4.7",
+  "version": "1.5.5",
   "keywords": [
     "pebble-app"
   ],
@@ -36,6 +36,7 @@
       "info_deck",
       "info_stairs",
       "info_muster",
+      "info_dining",
       "info_clock",
       "info_sync",
       "event_first",
@@ -87,7 +88,11 @@
       "log_dropped",
       "terminal",
       "terminal_text",
-      "warn_period"
+      "warn_period",
+      "voice_seq",
+      "voice_text",
+      "voice_card",
+      "voice_state"
     ],
     "resources": {
       "media": []

@@ -146,6 +146,10 @@ test('My info: booking and cabin table fill empty fields, hand edits win', funct
   b.mine = {};
   i = info({});
   assert.deepStrictEqual([i.stateroom, i.deck, i.stairs, i.muster], ['-', '', '', 'Not set']);
+  // Main dining room: typed in only (no booking source yet); Not set when empty.
+  assert.strictEqual(i.dining, 'Not set');
+  i = info({dining: 'Main Dining Room 4', src: {dining: 'edited'}});
+  assert.strictEqual(i.dining, 'Main Dining Room 4');
 });
 
 test('all-aboard uses depart, buffer and ship offset', function() {

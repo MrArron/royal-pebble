@@ -237,6 +237,7 @@ function make(now, variant) {
       date: today, time: hhmm(dinner % (24 * 60))
     }],
     me: {stateroom: '9254', deck: 'Deck 9', stairs: 'Fwd stairs', muster: 'B4 - Royal Promenade',
+         dining: 'Main Dining Room 4',
          clockNote: 'Demo data - open settings'}
   };
 

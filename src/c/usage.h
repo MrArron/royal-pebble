@@ -21,6 +21,7 @@ enum {
   USAGE_STORAGE_ERROR = 13,
   USAGE_ONBOARD = 14,
   USAGE_SYNC = 15,
+  USAGE_VOICE = 16,  // x: DictationSessionStatus (255 started), a: transcript bytes, b: free heap, c: the voice turn (as the phone logs it)
 };
 
 // USAGE_SYNC's `x`: the morning sync (docs/DESIGN_PHASE3.md §25).
@@ -51,6 +52,7 @@ typedef enum {
   SCREEN_NOTICE = 11,
   SCREEN_ONBOARD = 12,
   SCREEN_UNSTAR = 13,
+  SCREEN_ASK = 14,
 } UsageScreen;
 
 // USAGE_BUTTON's `a`: the button (0 Back, 1 Up, 2 Select, 3 Down) plus these.

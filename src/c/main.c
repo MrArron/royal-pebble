@@ -63,6 +63,7 @@ static void refresh_all(void) {
   notice_window_refresh();
   summary_window_refresh();
   onboard_window_refresh();
+  ask_window_refresh();
 }
 
 // After each save: tell the phone what didn't fit (for its settings page), and
@@ -202,8 +203,8 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 static void init(void) {
+  data_init();  // first: everything else reads the slice header
   usage_init();
-  data_init();
   stars_init();
   bool stored = store_load();
   if (stored) {

@@ -18,9 +18,10 @@
 // The first starred event or alert that doesn't fit is then the "cutoff": the
 // phone has to be back before then.
 
-#define STORE_VERSION 9  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown;
-                         // 7: tomorrow's to-reserve count; 8: terminal arrival; 9: event details
-                         // bytes (age, arrive-early, tags) and the alarm's early byte
+#define STORE_VERSION 10  // 4: one packed blob, chosen by priority; 5: summary fields; 6: countdown;
+                          // 7: tomorrow's to-reserve count; 8: terminal arrival; 9: event details
+                          // bytes (age, arrive-early, tags) and the alarm's early byte; 10: My
+                          // info's dining room
 #define STORE_MAX_KEYS 40
 #define STORE_MAX_BUDGET (STORE_MAX_KEYS * PERSIST_DATA_MAX_LENGTH)
 #define STORE_MIN_BUDGET (4 * PERSIST_DATA_MAX_LENGTH)
@@ -32,12 +33,6 @@ enum {
   KEY_LENGTH = 2,
   KEY_SHOWN = 5,  // the cutoff last shown to the user
   KEY_BLOB = 40,  // 40..79
-  OLD_KEY_EVENTS = 10,  // version 3: events in 10..13
-  OLD_EVENT_KEYS = 4,
-  // Version 3 kept the header in 2, My info in 3 and alerts in 20..27.
-  OLD_KEY_INFO = 3,
-  OLD_KEY_ALARMS = 20,
-  OLD_ALARM_KEYS = 8,
 };
 
 // Header: int32 sail_days, uint8 bits (1 dark, 2 featured, 4 demo, 8 hints,
@@ -48,25 +43,26 @@ enum {
 // tomorrow's uint8 kind, int32 arrive, depart, all-aboard and first start,
 // uint8 starred, featured, last kind and to-reserve count, then the day's int32
 // terminal arrival. Then the texts: the day's status and location, My info's
-// six, the ship name, tomorrow's status, location, first and last, the sail
+// seven, the ship name, tomorrow's status, location, first and last, the sail
 // port and the terminal arrival text.
 #define HEADER_FIXED 59
-#define HEADER_TEXTS 15
+#define HEADER_TEXTS 16
 
-// On the heap, not static: the app's code, data and static buffers must stay
-// under 64 KB (the SDK stores that size in a uint16), and the heap has room.
-static uint8_t *s_blob;
+// The blob is on the heap only while saving or loading (10 KB with a large
+// storage cap): it isn't needed in between, and the heap is what voice and deep
+// directory pages share. Static, it would also count towards the SDK's 64 KB
+// limit on code plus static data.
 static int32_t s_cutoff = NO_TIME;
 static int s_length;
 
-static bool blob_ready(void) {
-  if (!s_blob) {
-    s_blob = malloc(STORE_MAX_BUDGET);
-    if (!s_blob) {
-      APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for the stored slice");
-    }
+// Logs a failed allocation like a failed write (docs/WATCH_PROTOCOL.md, code 13).
+static uint8_t *blob_alloc(int size) {
+  uint8_t *blob = malloc(size);
+  if (!blob) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "No memory for the stored slice");
+    usage_add(USAGE_STORAGE_ERROR, USAGE_STORE_SCHEDULE, E_OUT_OF_MEMORY, 0, size);
   }
-  return s_blob != NULL;
+  return blob;
 }
 
 int32_t store_cutoff(void) { return s_cutoff; }
@@ -88,6 +84,7 @@ static int info_size(const MyInfo *info, const Day *day) {
          codec_str_len(info->deck, sizeof(info->deck) - 1) +
          codec_str_len(info->stairs, sizeof(info->stairs) - 1) +
          codec_str_len(info->muster, sizeof(info->muster) - 1) +
+         codec_str_len(info->dining, sizeof(info->dining) - 1) +
          codec_str_len(info->clock_note, sizeof(info->clock_note) - 1) +
          codec_str_len(info->last_sync, sizeof(info->last_sync) - 1) +
          codec_str_len(meta->ship_name, sizeof(meta->ship_name) - 1) +
@@ -138,6 +135,7 @@ static uint8_t *write_header(uint8_t *p, int alarms, int events) {
   p = codec_write_str(p, info->deck, sizeof(info->deck) - 1);
   p = codec_write_str(p, info->stairs, sizeof(info->stairs) - 1);
   p = codec_write_str(p, info->muster, sizeof(info->muster) - 1);
+  p = codec_write_str(p, info->dining, sizeof(info->dining) - 1);
   p = codec_write_str(p, info->clock_note, sizeof(info->clock_note) - 1);
   p = codec_write_str(p, info->last_sync, sizeof(info->last_sync) - 1);
   p = codec_write_str(p, meta->ship_name, sizeof(meta->ship_name) - 1);
@@ -170,17 +168,18 @@ static bool event_wanted(const Event *e, int32_t now) {
 }
 
 void store_save(void) {
-  if (!data_ready() || !blob_ready()) {
+  int limit = budget();
+  // The blob, then one keep flag per alert and per event.
+  uint8_t *blob = data_ready() ? blob_alloc(limit + MAX_ALARMS + MAX_EVENTS) : NULL;
+  if (!blob) {
     return;
   }
   int32_t now = now_cruise();
-  int limit = budget();
   int alarm_count = data_alarm_count();
   int event_count = data_event_count();
-  static bool keep_alarm[MAX_ALARMS];
-  static bool keep_event[MAX_EVENTS];
-  memset(keep_alarm, 0, sizeof(keep_alarm));
-  memset(keep_event, 0, sizeof(keep_event));
+  uint8_t *keep_alarm = blob + limit;
+  uint8_t *keep_event = keep_alarm + MAX_ALARMS;
+  memset(keep_alarm, 0, MAX_ALARMS + MAX_EVENTS);
 
   // The header is written last (it holds the counts and cutoff), but its size
   // is known now; a cutoff is always four bytes.
@@ -255,7 +254,7 @@ void store_save(void) {
   }
   s_cutoff = cutoff;
 
-  uint8_t *p = write_header(s_blob, alarms, events);
+  uint8_t *p = write_header(blob, alarms, events);
   for (int i = 0; i < alarm_count; i++) {
     if (keep_alarm[i]) {
       p = codec_write_alarm(p, data_alarm(i));
@@ -266,7 +265,7 @@ void store_save(void) {
       p = codec_write_event(p, data_event(i));
     }
   }
-  int length = p - s_blob;
+  int length = p - blob;
   s_length = length;
 
   persist_write_int(KEY_VERSION, STORE_VERSION);
@@ -280,45 +279,30 @@ void store_save(void) {
       continue;
     }
     int n = length - start < PERSIST_DATA_MAX_LENGTH ? length - start : PERSIST_DATA_MAX_LENGTH;
-    int written = persist_write_data(KEY_BLOB + k, s_blob + start, n);
+    int written = persist_write_data(KEY_BLOB + k, blob + start, n);
     if (written < n) {
       APP_LOG(APP_LOG_LEVEL_ERROR, "Saving slice part %d failed: %d", k, written);
       usage_add(USAGE_STORAGE_ERROR, USAGE_STORE_SCHEDULE, (int16_t)written, KEY_BLOB + k, 0);
     }
   }
-  // Version 3 values that the blob doesn't reuse.
-  if (persist_exists(OLD_KEY_INFO)) {
-    persist_delete(OLD_KEY_INFO);
-    for (int k = 0; k < OLD_EVENT_KEYS; k++) {
-      persist_delete(OLD_KEY_EVENTS + k);
-    }
-    for (int k = 0; k < OLD_ALARM_KEYS; k++) {
-      persist_delete(OLD_KEY_ALARMS + k);
-    }
-  }
+  free(blob);
   APP_LOG(APP_LOG_LEVEL_INFO, "Saved %s: %d of %d alerts, %d of %d events, %d of %d bytes, cutoff %d",
           full_day ? "the whole day" : "by priority", alarms, alarm_count, events, event_count,
           length, limit, (int)cutoff);
 }
 
-bool store_load(void) {
-  if (!persist_exists(KEY_VERSION) || persist_read_int(KEY_VERSION) != STORE_VERSION) {
-    return false;
-  }
-  int length = persist_read_int(KEY_LENGTH);
-  if (length < HEADER_FIXED || length > STORE_MAX_BUDGET || !blob_ready()) {
-    return false;
-  }
+static bool load(uint8_t *blob, int length) {
   for (int start = 0, k = 0; start < length; start += PERSIST_DATA_MAX_LENGTH, k++) {
     int n = length - start < PERSIST_DATA_MAX_LENGTH ? length - start : PERSIST_DATA_MAX_LENGTH;
-    if (persist_read_data(KEY_BLOB + k, s_blob + start, n) != n) {
+    if (persist_read_data(KEY_BLOB + k, blob + start, n) != n) {
       return false;
     }
   }
 
-  const uint8_t *p = s_blob;
-  const uint8_t *end = s_blob + length;
-  SliceMeta meta = {
+  const uint8_t *p = blob;
+  const uint8_t *end = blob + length;
+  SliceHead h;
+  h.meta = (SliceMeta){
     .sail_days = codec_read_int32(p),
     .dark_theme = (p[4] & 1) != 0,
     .show_featured = (p[4] & 2) != 0,
@@ -329,7 +313,7 @@ bool store_load(void) {
     .cruise_starred = p[25],
   };
   uint16_t slice_id = (uint16_t)(p[6] | (p[7] << 8));
-  Day day = {
+  h.day = (Day){
     .index = codec_read_int32(p + 8),
     .kind = (DayKind)p[12],
     .all_aboard = codec_read_int32(p + 13),
@@ -339,7 +323,7 @@ bool store_load(void) {
     .terminal = codec_read_int32(p + 55),
     .warn_period = (uint8_t)(30 * (((p[4] >> 4) & 3) + 1)),
   };
-  Tomorrow tomorrow = {
+  h.tomorrow = (Tomorrow){
     .kind = (DayKind)p[34],
     .arrive = codec_read_int32(p + 35),
     .depart = codec_read_int32(p + 39),
@@ -354,22 +338,22 @@ bool store_load(void) {
   int alarms = p[23] < MAX_ALARMS ? p[23] : MAX_ALARMS;
   int events = p[24] < MAX_EVENTS ? p[24] : MAX_EVENTS;
   p += HEADER_FIXED;
-  MyInfo info;
-  if (!codec_read_str(&p, end, day.status, sizeof(day.status)) ||
-      !codec_read_str(&p, end, day.location, sizeof(day.location)) ||
-      !codec_read_str(&p, end, info.stateroom, sizeof(info.stateroom)) ||
-      !codec_read_str(&p, end, info.deck, sizeof(info.deck)) ||
-      !codec_read_str(&p, end, info.stairs, sizeof(info.stairs)) ||
-      !codec_read_str(&p, end, info.muster, sizeof(info.muster)) ||
-      !codec_read_str(&p, end, info.clock_note, sizeof(info.clock_note)) ||
-      !codec_read_str(&p, end, info.last_sync, sizeof(info.last_sync)) ||
-      !codec_read_str(&p, end, meta.ship_name, sizeof(meta.ship_name)) ||
-      !codec_read_str(&p, end, tomorrow.status, sizeof(tomorrow.status)) ||
-      !codec_read_str(&p, end, tomorrow.location, sizeof(tomorrow.location)) ||
-      !codec_read_str(&p, end, tomorrow.first, sizeof(tomorrow.first)) ||
-      !codec_read_str(&p, end, tomorrow.last, sizeof(tomorrow.last)) ||
-      !codec_read_str(&p, end, meta.sail_port, sizeof(meta.sail_port)) ||
-      !codec_read_str(&p, end, day.terminal_text, sizeof(day.terminal_text))) {
+  if (!codec_read_str(&p, end, h.day.status, sizeof(h.day.status)) ||
+      !codec_read_str(&p, end, h.day.location, sizeof(h.day.location)) ||
+      !codec_read_str(&p, end, h.info.stateroom, sizeof(h.info.stateroom)) ||
+      !codec_read_str(&p, end, h.info.deck, sizeof(h.info.deck)) ||
+      !codec_read_str(&p, end, h.info.stairs, sizeof(h.info.stairs)) ||
+      !codec_read_str(&p, end, h.info.muster, sizeof(h.info.muster)) ||
+      !codec_read_str(&p, end, h.info.dining, sizeof(h.info.dining)) ||
+      !codec_read_str(&p, end, h.info.clock_note, sizeof(h.info.clock_note)) ||
+      !codec_read_str(&p, end, h.info.last_sync, sizeof(h.info.last_sync)) ||
+      !codec_read_str(&p, end, h.meta.ship_name, sizeof(h.meta.ship_name)) ||
+      !codec_read_str(&p, end, h.tomorrow.status, sizeof(h.tomorrow.status)) ||
+      !codec_read_str(&p, end, h.tomorrow.location, sizeof(h.tomorrow.location)) ||
+      !codec_read_str(&p, end, h.tomorrow.first, sizeof(h.tomorrow.first)) ||
+      !codec_read_str(&p, end, h.tomorrow.last, sizeof(h.tomorrow.last)) ||
+      !codec_read_str(&p, end, h.meta.sail_port, sizeof(h.meta.sail_port)) ||
+      !codec_read_str(&p, end, h.day.terminal_text, sizeof(h.day.terminal_text))) {
     return false;
   }
   int a = 0;
@@ -380,10 +364,24 @@ bool store_load(void) {
   while (e < events && codec_read_event(&p, end, data_event(e))) {
     e++;
   }
-  data_commit(slice_id, &meta, &day, &tomorrow, &info, e, a);
+  data_commit(slice_id, &h, e, a);
   APP_LOG(APP_LOG_LEVEL_INFO, "Loaded stored slice: %d events, %d alerts, %d bytes (storage max %d)",
           e, a, length, (int)persist_get_max_size());
   return true;
+}
+
+bool store_load(void) {
+  if (!persist_exists(KEY_VERSION) || persist_read_int(KEY_VERSION) != STORE_VERSION) {
+    return false;
+  }
+  int length = persist_read_int(KEY_LENGTH);
+  if (length < HEADER_FIXED || length > STORE_MAX_BUDGET) {
+    return false;
+  }
+  uint8_t *blob = blob_alloc(length);
+  bool loaded = blob && load(blob, length);
+  free(blob);
+  return loaded;
 }
 
 bool store_should_warn(void) {

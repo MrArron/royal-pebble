@@ -44,7 +44,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | `msg_type` | Name | Other keys |
 |---|---|---|
 | 1 | BEGIN | `sail_date` (int `YYYYMMDD`), `day_index`, `day_kind` (0 port, 1 sea, 2 none), `day_status`, `day_location`, `all_aboard` (cruise minutes, −1 none), `local_offset` (minutes, local = ship + offset), `arrive`, `depart` (cruise minutes in ship time, −1 none), `terminal`, `terminal_text` (embark day's terminal arrival, below), `warn_period` (minutes before `all_aboard` of the first all-aboard alert and the bar's red section: 30, 60, 90 or 120; 30 when missing), `ship_name`, `sail_port` (the embark port's short name, empty when unknown), `cruise_starred` (starred events and personal entries in the whole cruise, ≤ 255), `event_count`, `theme` (0 light, 1 dark), `show_featured` (0/1), `is_demo` (0/1), `button_hints` (0/1: Home's button hints at every open), `reminder_lead` (minutes), `alarm_count`, and tomorrow's block (below) |
-| 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_clock`, `info_sync` (display strings) |
+| 2 | INFO | `info_stateroom`, `info_deck`, `info_stairs`, `info_muster`, `info_dining`, `info_clock`, `info_sync` (display strings) |
 | 3 | EVENTS | `event_first` (index of the first event in this chunk), `events` (bytes, below) |
 | 5 | ALARMS | `alarm_first`, `alarms` (bytes, below) |
 | 4 | END | — |
@@ -52,6 +52,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | 7 | STAR_ACK | `star_ack`: the phone saved every star change up to this `seq`. No `slice_id`. |
 | 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_gps` (place pages with a Ship GPS block), `dir_rows`. No `slice_id`; see Ship directory. |
 | 17 | ROUTE_PAGE | A Route screen: `dir_ref` and `route_rest` (echoing the request), `route_start` (echoed, event routes only), `route` (bytes). No `slice_id`; see Route screen. |
+| 20 | VOICE_CARD | The answer to a voice turn: `voice_seq` (echoing VOICE), `voice_card` (bytes). No `slice_id`; see Voice. |
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
 e.g. `SAILS MAR 6` or `CRUISE ENDED`. Before the cruise, Home shows the
@@ -113,8 +114,9 @@ buffers.
 | 13 | STAR_CHANGES | `star_count`, `star_changes` (bytes, below): stars changed on the watch and not yet acked |
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
-| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank); `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
+| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom and 401 for the route to the closest restroom from where you are; `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
 | 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
+| 19 | VOICE | `voice_seq` (the watch's turn number), `voice_text` (what dictation heard, ≤ 255 bytes) and `voice_state` (bit 0: today's `I'm on board` flag is set; bit 1: the watch shows 24-hour time, so card times match it). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
 
 (11 was an index-based STAR message, replaced by STAR_CHANGES.)
 
@@ -384,9 +386,10 @@ above, spread over 256-byte values (keys 40 on):
    the cruise's starred count, then arrive and depart, and tomorrow's kind, arrive, depart, all-aboard,
    first start, starred and featured counts, last kind and to-reserve count,
    then the terminal arrival), then the day's status and location, My info's
-   six texts, the ship name, and tomorrow's status, location, first and last,
-   then the sail port and the terminal arrival text. (Storage version 9
-   since 1.4.2, whose events and alerts carry the Phase 4 bytes, so a blob
+   seven texts (the dining room after the muster station), the ship name, and
+   tomorrow's status, location, first and last, then the sail port and the
+   terminal arrival text. (Storage version 10 since 1.4.8, which added My
+   info's dining room; version 9 from 1.4.2 added the Phase 4 bytes. A blob
    saved by an older version is ignored until the phone sends a slice.)
 2. Alerts, then events, each as packed above, in time order.
 
@@ -542,7 +545,10 @@ to the place and Hold Select for the route from it to its closest restroom: the
 watch sends ROUTE_REQUEST with the page's `dir_ref` and `route_rest`, and the
 phone answers with ROUTE_PAGE (`directory.routePage`). The watch offers Select
 only when the page has a FROM block (`dir_gps` without flags 2 and 4) and Hold
-Select only on a venue with a restroom line. As with directory pages, nothing is
+Select only on a venue with a restroom line. `dir_ref` 400 (`REF_CABIN`, only from a voice
+card) is the route to your stateroom from where routes start now (§9.4), and
+401 (`REF_REST_HERE`) the route from there to the closest restroom; neither
+has a place page. As with directory pages, nothing is
 stored; the watch ignores a page that doesn't match its request, and with the
 phone away (not connected, the request fails, or no answer within 8 seconds) it
 says `Connect your phone`, and Select asks again. A request sent before the
@@ -580,6 +586,38 @@ time and title there itself (it formats the time for its 12/24h setting).
 Both lines under the steps are empty on a `Same area` route; a divider is drawn
 before them only when one is there. Units are the phone's setting, as on place
 pages.
+
+## Voice
+
+Ask (`docs/DESIGN_V1_1.md` §9.6, `src/c/ask_window.c`, `src/pkjs/voicecard.js`).
+Hold Select on Home (when `I'm on board` isn't offered) or on a Route screen
+opens the Ask screen and starts the Pebble app's dictation (its own confirm
+step off). With the phone away the screen says `Voice is heard on the phone`
+and nothing is dictated. What was heard goes to the phone in VOICE with a new
+`voice_seq`; the screen shows `HEARD` and waits up to 10 s. The phone answers
+with a VOICE_CARD for that `voice_seq` (cards for older turns are ignored),
+and the watch draws it as sent: it has no place names or wording of its own.
+A cancelled dictation, or one the system already explained (no speech, no
+connection), closes an Ask screen that has nothing on it yet.
+
+`voice_card`, little-endian:
+
+| Bytes | Field |
+|---|---|
+| 1 | `action`: what Select does. 0 ask again, 1 open the Route screen for `ref`, 2 confirm (VOICE without text, then the screen closes), 3 set or clear `I'm on board` on the watch (`docs/DESIGN_PHASE3.md` §22.6; logged as entry 14), then close |
+| 1 | `flags`: 1 the route is to the closest restroom from `ref`; 2 (action 3) on board, else back ashore |
+| 4 | `ref`: int32, a place page's `dir_ref` (action 1), else 0 |
+| 1 | how many rows (at most 4) |
+| 1 + n, 1 + n | each row: label (`HEARD`, `FROM`, `TO`, `YOU'RE AT`, `TRY`; ≤ 15 bytes, empty for none) and value (≤ 63 bytes; wraps to 3 lines) |
+| 1 + n | the hint line (`Select: route · Hold: ask again`), ≤ 47 bytes |
+| 1 + n, 1 + n | action 1 only: the Route screen's title and header until its page comes (≤ 31 bytes each) |
+
+Select on a route card opens the Route screen in the Ask screen's place (and
+closes a Route screen already open), which asks for its page with
+ROUTE_REQUEST as usual. Hold Select asks again; Back closes. Until the voice
+matcher is in (Phase 5 PR V2/V3), the phone's answer is a stand-in: with demo
+data a few key words show each kind of card (`pebble transcribe "..."` on the
+emulator), with real data `Not yet`.
 
 ## Usage log
 
@@ -621,12 +659,12 @@ text.
 plugged in. **Screens:** 1 Home, 2 summary card, 3 Today, 4 event details,
 5 My info, 6 ship directory page, 7 route to a place, 8 route to a restroom,
 9 route to Home's next event, 10 alert, 11 notice (schedule change or `PHONE
-NEEDED`), 12 `On board?`, 13 `Remove star?`. A screen's **detail**: Home, what its main card shows (below); the
+NEEDED`), 12 `On board?`, 13 `Remove star?`, 14 Ask. A screen's **detail**: Home, what its main card shows (below); the
 summary card, 1 for tomorrow's; event details, the event's start; a directory
 page or a route to a place or restroom, its `dir_ref`; a route to an event, its
 start; an alert, its `at`; `On board?`, 1 once confirmed; `Remove star?`, the
 event's start (the phone's `unstarred on the watch` entry right after the view
-means Hold Down removed the star; none means Back kept it). **Home's card:** 0 loading or no phone, 1 days to
+means Hold Down removed the star; none means Back kept it); Ask, the voice turn. **Home's card:** 0 loading or no phone, 1 days to
 sail, 2 connect your phone (a new day with no slice), 3 no cruise today, 4
 all-aboard countdown, 5 NEXT (starred), 6 FEATURED, 7 NOW (in progress), 8
 nothing starred today, 9 terminal arrival (embark day).
@@ -645,9 +683,10 @@ nothing starred today, 9 terminal arrival (embark day).
 | 10 | battery (hourly while the app is open) | — | battery | — | — |
 | 11 | phone connection | 1 connected, 0 lost | — | — | — |
 | 12 | message error | 0 not delivered, 1 phone's message dropped, 2 outbox busy | `AppMessageResult` | `msg_type` (0 unknown) | — |
-| 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short | persistent key | — |
+| 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short; −5 (`E_OUT_OF_MEMORY`) when the schedule's save or load buffer couldn't be allocated | persistent key (0 for −5) | bytes asked for (−5), else — |
 | 14 | on board (§22.6); the phone writes `onboard set` or `onboard undo` | 1 set, 0 undo | — | ship time (cruise minutes) | — |
 | 15 | morning sync (§25) | 0 set (when it changes), 1 synced, 2 phone unreachable, 3 timed out (phone connected, no slice), 4 fired with the app open | 0 set: the error when none is set; 1-3: seconds until the slice came, or waited | 0 set: when (−1 none) | 1-3: 0 it closed itself, 1 the app stayed open (a notice, or the user left Home), 2 closed with Back before it finished |
+| 16 | voice (Ask, 1.5.2) | `DictationSessionStatus` (0 heard, 1 cancelled, 2 cancelled after an error, 3 stopped by the system, 4 no speech, 5 no connection, 6 turned off, 7 internal error, 8 recognizer error); 255 dictation started | transcript bytes (heard) | free memory (bytes) | the voice turn it is for (`voice_seq`, as in the phone's `voice` line) |
 
 Button presses are logged while the phone is connected; a Select that did
 nothing always is. Screen views are always logged, so with the phone away the

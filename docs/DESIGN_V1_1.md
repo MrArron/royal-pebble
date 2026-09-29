@@ -934,6 +934,37 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
   - `How do I get from <A> to <B>` / `<A> to <B>`;
   - `How do I get to <B>` (from the current start);
   - `my cabin` works as A or B.
+  - `I'm on board` / `We're back on the ship` and `I'm ashore` / `Going
+    ashore` (owner, 2026-09-28): set or clear the on-board flag
+    (`docs/DESIGN_PHASE3.md` §22.6). Only on a port or embark day with an
+    all-aboard time; `At sea today` / `Already on board` / `Already ashore`
+    otherwise. The card shows `YOU'RE On board` with `Select: all-aboard alerts
+    off for today`. These need no place names, so they work before the voice
+    matcher is in (1.5.3). `When is all aboard` is not a command (no `I'm`).
+  - Also with real data before the matcher (owner, 2026-09-28; 1.5.4), times
+    in the watch's 12/24-hour style, with the port's local time when it
+    differs:
+    - `When do we leave?` / `What time do we sail?`: `TODAY` port, `DEPARTS`
+      (or `DEPARTED`), `ALL ABOARD`; `At sea today` on sea days.
+    - `What's tomorrow?` / `Where are we tomorrow?`: `TOMORROW` port,
+      `ARRIVES`, `ALL ABOARD` (or `DEPARTS`); `At sea`.
+    - `Where's my muster station?` (also heard as `mustard`): `MUSTER
+      STATION` from the Me tab or the booking; Select routes there when it
+      names a place on the map, else `Not a place on the map`.
+    - `Take me to my cabin` / `back to my room`: the route to the stateroom
+      from where routes start now (§9.4): a starred event on now, later a
+      spoken `I'm at`. With nothing but the cabin to start from: `No starred
+      event on now to start from`.
+  - `Nearest bathroom` / `closest restroom` (1.5.5): the restroom route from
+    where routes start now (a starred event on now, else the cabin); the card
+    shows `FROM` so a place named in the question (`near the theater`, which
+    needs the matcher) isn't mistaken for the start. `I'm sure.` on its own
+    counts as `I'm ashore` (the watch heard it that way, 2026-09-28).
+  - `Forget where I am` (owner, 2026-09-28) comes with the spoken start in V3:
+    until then there's no spoken location to forget.
+- **Hold Select on Home always asks by voice** (owner, 2026-09-28), also on
+  embark and port days, where `I'm on board` is said. With the phone away,
+  Hold Select opens the `On board?` screen while it's offered.
 - **Only one-spot places can be a location:** landmark venues and cabins.
   Restrooms, elevators and stairs are refused (`There are 26 restrooms` / `Say a
   venue or a cabin number near you instead`); they're fine as destinations.
@@ -944,6 +975,16 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
 - A spoken cabin number is used for routing only: never stored beyond the
   current start. The usage log may record it (owner, 2026-09-26); the log
   never goes into the repo.
+- **Built (1.5.2, Phase 5 proposal B):** the `Ask` screen draws whatever card
+  the phone sends: up to four label/value rows (`HEARD`, `FROM`, `TO`, `YOU'RE
+  AT`, `TRY`), a sea-accent hint line, and what Select does (open the route,
+  confirm, or ask again). All wording and matching live on the phone
+  (`src/pkjs/voicecard.js`), so they change without a watch update. The watch
+  writes only what it must say itself: `Voice is heard on the phone` (phone
+  away), `Matching on the phone...` and `No answer from the phone` (10 s).
+  On embark day, while `I'm on board` is offered, Hold Select on Home keeps
+  that job; Ask is on Hold Select the rest of the time. A Route screen opened
+  from Ask replaces an open one. Byte format: `docs/WATCH_PROTOCOL.md`, Voice.
 
 ### 9.7 Phone settings page (not mocked)
 

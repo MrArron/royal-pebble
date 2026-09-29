@@ -1317,11 +1317,21 @@ function cutoffWhen(sailDate, cutoff, now) {
 // settings: {theme, showFeatured, alwaysHints, hiddenCats, ageFilters,
 //            days: {date: {offset, buffer, allAboard, shift, warn,
 //                          edit: {type, port, arrive, depart}}},
-//            personal: [...], me: {stateroom, deck, stairs, muster, clockNote},
+//            personal: [...], me: {stateroom, deck, stairs, muster, dining, clockNote},
 //            reminderLead, reserveAlertAt (minutes after midnight),
 //            venues: {shipCode: owner's venue edits}}
 // stars: {starKey: true}
 // testAt: Date when Test alerts was tapped, or null.
+// Today's and tomorrow's days (buildDay) at `now`, with the cruise minute:
+// {day, tomorrow, dayIndex, now}. For answers that only need the days (voice cards).
+function today(bundle, settings, now) {
+  var sailDays = daysFromIso(bundle.sailDate);
+  var min = cruiseMinutes(sailDays, now);
+  var dayIndex = cruiseDayIndex(min);
+  return {day: buildDay(bundle, settings || {}, dayIndex, sailDays),
+          tomorrow: buildDay(bundle, settings || {}, dayIndex + 1, sailDays), dayIndex: dayIndex, now: min};
+}
+
 function buildSlice(bundle, settings, stars, now, testAt) {
   settings = settings || {};
   stars = stars || {};
@@ -1373,12 +1383,15 @@ function myInfo(bundle, me) {
     deck: pick('deck', cabin ? 'Deck ' + cabin.deck : bookDeck ? 'Deck ' + bookDeck : ''),
     stairs: pick('stairs', near.length ? cabins.stairName(ship, near[0]) : ''),
     muster: pick('muster', String(mine.muster || '').trim()) || 'Not set',
+    dining: pick('dining', '') || 'Not set',
     clockNote: me.clockNote || 'Ship time not confirmed',
     lastSync: formatSync(bundle.generated)
   };
 }
 
 module.exports = {
+  today: today,
+  myInfo: myInfo,
   DAY_START: DAY_START,
   NO_TIME: NO_TIME,
   DAY_PORT: DAY_PORT,
