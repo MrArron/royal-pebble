@@ -224,7 +224,9 @@ ahead of V2, so the version numbers above move up. V2/V3 keep these commands
 (`src/pkjs/voicecard.js`) when the matcher takes over the other answers, and V3
 adds `Forget where I am` with the spoken start. Both done on the phone (1.5.7 to
 1.5.9); the watch side (Ask) was already in from 1.5.2, so nothing in Stage 3
-changed the watch. Not yet tried on the watch: see the 1.5.9 commit.
+changed the watch. First watch test of 1.5.9 (owner's Pebble Time 2, 2026-09-28)
+found the Solarium mishearings and the `I'm at` save; fixed in 1.5.10, which the
+owner then tried on the watch and found working.
 
 ### Stage 4: voice on the watch
 
