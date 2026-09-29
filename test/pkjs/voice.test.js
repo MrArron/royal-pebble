@@ -99,7 +99,7 @@ test('observed Windjammer mishearings all resolve (airplane-mode test, 2026-09-2
 
 test('the other observed phrases', function() {
   var r = voice.parse("I'm at the escape room. How do I get to the Aqua Theater?", OPTS);
-  assert.deepStrictEqual([r.intent, r.A_target, r.B_target], ['ROUTE_COMBINED', 'The Puzzle Break', 'AquaTheater']);
+  assert.deepStrictEqual([r.intent, r.A_target, r.B_target], ['ROUTE_COMBINED', 'Royal Escape Room', 'AquaTheater']);
   r = voice.parse('Boardwalk to the Solarium', OPTS);
   assert.deepStrictEqual([r.intent, r.A_target, r.B_target], ['ROUTE', 'Boardwalk', 'Solarium']);
 });
@@ -196,7 +196,7 @@ test('closest bar: voice only, any bar or a drink, the nearest like restrooms (o
   assert.deepStrictEqual([r.intent, r.A_target], ['CLOSEST_BAR', 'Solarium']);
   // A named bar is a venue, not "closest bar"; "the pub" is the one pub.
   assert.strictEqual(voice.parse('Where is Schooner Bar?', OPTS).B_target, 'Schooner Bar');
-  assert.strictEqual(voice.parse('How do I get to the sand bar', OPTS).B_target, 'Sand Bar');
+  assert.strictEqual(voice.parse('How do I get to the sand bar', OPTS).B_target, 'The Lime & Coconut');
   assert.strictEqual(voice.parse('Closest pub', OPTS).B_target, 'Boot & Bonnet Pub');
   // "drink" used to fuzzy-match Studio B.
   assert.strictEqual(voice.parse('drink', OPTS).intent, 'CLOSEST_BAR');
@@ -206,7 +206,7 @@ test('closest bar: voice only, any bar or a drink, the nearest like restrooms (o
   // The candidates: bars open to everyone (no Casino Royale, Crown or Suite Lounge).
   var bars = voice.bars('HM');
   assert.ok(bars.length >= 10 && bars.indexOf('Schooner Bar') !== -1 && bars.indexOf('Solarium Bar') !== -1);
-  ['Casino Royale', 'Crown Lounge', 'Suite Lounge', 'Teen Lounge', 'Starbucks'].forEach(function(n) {
+  ['Casino Royale', 'Crown Lounge', 'Suite Lounge', 'Social100 (Ages 13-17)', 'Starbucks'].forEach(function(n) {
     assert.strictEqual(bars.indexOf(n), -1, n);
   });
 });

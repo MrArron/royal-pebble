@@ -6,7 +6,9 @@
    "main dining room three",
    "main dining room deck three",
    "dining room deck 3",
-   "main dining 3"
+   "main dining 3",
+   "american icon",
+   "the american icon dining room"
   ],
   "asr": [
    {
@@ -68,7 +70,9 @@
    "main dining room four",
    "main dining room deck four",
    "dining room deck 4",
-   "main dining 4"
+   "main dining 4",
+   "grande dining room",
+   "the grande"
   ],
   "asr": [
    {
@@ -133,7 +137,9 @@
    "main dining room five",
    "main dining room deck five",
    "dining room deck 5",
-   "main dining 5"
+   "main dining 5",
+   "silk dining room",
+   "the silk"
   ],
   "asr": [
    {
@@ -165,6 +171,11 @@
     "text": "main dining room fi",
     "type": "truncation",
     "likelihood": "low"
+   },
+   {
+    "text": "silk dining",
+    "type": "truncation",
+    "likelihood": "medium"
    }
   ],
   "collisions": [
@@ -177,7 +188,7 @@
     "note": "Only the trailing number differs."
    }
   ],
-  "notes": "Royal's code SILK is also titled 'Main Dining Room 5' (open conflict in the repo); guests may say 'Silk' but it is not added until that is settled."
+  "notes": "Royal's code SILK is Main Dining Room 5; the app names the floors American Icon (3), Grande (4) and Silk (5)."
  },
  {
   "target": "Royal Theater",
@@ -622,10 +633,6 @@
   ],
   "collisions": [
    {
-    "with": "Vitality Cafe",
-    "note": "Bare 'vitality' could be the cafe; it is not mapped alone."
-   },
-   {
     "with": "Fitness Center",
     "note": "Alias 'Vitality at Sea Fitness Center' shares 'vitality at sea'."
    },
@@ -863,10 +870,6 @@
    {
     "with": "Park Cafe",
     "note": "Shares 'cafe'; bare 'cafe' is ambiguous (Park Cafe, Vitality Cafe, Cafe Promenade)."
-   },
-   {
-    "with": "Vitality Cafe",
-    "note": "Shares 'cafe'."
    }
   ],
   "coffee": true,
@@ -1443,7 +1446,9 @@
    "loyalty desk",
    "the loyalty desk",
    "crown and anchor desk",
-   "loyalty"
+   "loyalty",
+   "crown and anchor member services",
+   "member services"
   ],
   "asr": [
    {
@@ -1491,7 +1496,8 @@
     "with": "Crown Lounge",
     "note": "'crown and anchor' + 'desk' = Loyalty Desk; + 'lounge' = Crown Lounge; bare 'crown and anchor' ambiguous."
    }
-  ]
+  ],
+  "notes": "On deck 6 near the Schooner Bar per Royal's app (Crown & Anchor Member Services); the plans put it on deck 5 (open conflict)."
  },
  {
   "target": "Promenade Shops",
@@ -1536,57 +1542,6 @@
     "note": "Shares 'promenade'."
    }
   ]
- },
- {
-  "target": "Kate Spade",
-  "kind": "venue",
-  "spoken": [
-   "kate spade",
-   "the kate spade store"
-  ],
-  "asr": [
-   {
-    "text": "kate spayed",
-    "type": "homophone",
-    "likelihood": "medium"
-   },
-   {
-    "text": "kate's paid",
-    "type": "split",
-    "likelihood": "medium"
-   },
-   {
-    "text": "kate spades",
-    "type": "other",
-    "likelihood": "medium"
-   },
-   {
-    "text": "k spade",
-    "type": "letter",
-    "likelihood": "medium"
-   },
-   {
-    "text": "gate spade",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "cake spade",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "kate space",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "kates spade",
-    "type": "spelling",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": []
  },
  {
   "target": "Royal Shops",
@@ -1738,10 +1693,6 @@
    {
     "with": "Regalia Watches",
     "note": "Bare 'regalia' is ambiguous between the two Regalia stores; confirm."
-   },
-   {
-    "with": "Bulgari",
-    "note": "Also sells jewellery; 'jewelry store' prefers Regalia."
    }
   ]
  },
@@ -2048,52 +1999,6 @@
    {
     "with": "Jim",
     "note": "A person's name; fine in destination slots only."
-   }
-  ]
- },
- {
-  "target": "Vitality Cafe",
-  "kind": "venue",
-  "spoken": [
-   "vitality cafe",
-   "the spa cafe",
-   "the healthy cafe"
-  ],
-  "asr": [
-   {
-    "text": "vitality café",
-    "type": "spelling",
-    "likelihood": "high"
-   },
-   {
-    "text": "vitality calf a",
-    "type": "split",
-    "likelihood": "low"
-   },
-   {
-    "text": "vitality coffee",
-    "type": "near-word",
-    "likelihood": "medium"
-   },
-   {
-    "text": "vitality caffe",
-    "type": "spelling",
-    "likelihood": "low"
-   },
-   {
-    "text": "vitality cafes",
-    "type": "other",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [
-   {
-    "with": "Vitality Spa",
-    "note": "Shares 'vitality'."
-   },
-   {
-    "with": "Park Cafe",
-    "note": "Shares 'cafe'."
    }
   ]
  },
@@ -2575,7 +2480,7 @@
   ],
   "collisions": [
    {
-    "with": "Jamie's Italian",
+    "with": "Giovanni's Italian Kitchen",
     "note": "'Giovanni's' is often heard as 'johnny's'; bare 'johnny's' is ambiguous, confirm."
    },
    {
@@ -3081,16 +2986,12 @@
    {
     "with": "Cafe Promenade",
     "note": "'cafe' shared."
-   },
-   {
-    "with": "Vitality Cafe",
-    "note": "'cafe' shared."
    }
   ],
   "coffee": true
  },
  {
-  "target": "Jamie's Italian",
+  "target": "Giovanni's Italian Kitchen",
   "kind": "venue",
   "spoken": [
    "jamie's",
@@ -3190,7 +3091,7 @@
     "note": "'italian' and 'pizza' overlap in guests' minds, not in ASR."
    }
   ],
-  "notes": "Royal's code GIOV maps here; Royal renamed Jamie's Italian to Giovanni's Italian Kitchen on several ships (open naming conflict in the repo). Accept both."
+  "notes": "Royal's code GIOV. Replaced Jamie's Italian in the 2026 refit; the old name is still accepted."
  },
  {
   "target": "Trellis Bar",
@@ -3251,67 +3152,12 @@
   "bar": true
  },
  {
-  "target": "Vintages",
-  "kind": "venue",
-  "spoken": [
-   "vintages",
-   "vintages wine bar"
-  ],
-  "asr": [
-   {
-    "text": "vintage",
-    "type": "truncation",
-    "likelihood": "high"
-   },
-   {
-    "text": "vintage's",
-    "type": "spelling",
-    "likelihood": "medium"
-   },
-   {
-    "text": "vin tages",
-    "type": "split",
-    "likelihood": "low"
-   },
-   {
-    "text": "vintages wine bars",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "vantages",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "vintage is",
-    "type": "split",
-    "likelihood": "low"
-   },
-   {
-    "text": "vintage wine bar",
-    "type": "truncation",
-    "likelihood": "medium"
-   },
-   {
-    "text": "fin tages",
-    "type": "split",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [
-   {
-    "with": "Giovanni's Wine Bar",
-    "note": "'wine bar' shared; guests may call either 'the wine bar'."
-   }
-  ],
-  "bar": true
- },
- {
   "target": "Giovanni's Wine Bar",
   "kind": "venue",
   "spoken": [
-   "giovanni's wine bar"
+   "giovanni's wine bar",
+   "vintages",
+   "the wine bar in central park"
   ],
   "asr": [
    {
@@ -3358,23 +3204,35 @@
     "text": "giovanni's wine",
     "type": "truncation",
     "likelihood": "low"
+   },
+   {
+    "text": "vintage",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "vintage's",
+    "type": "spelling",
+    "likelihood": "medium"
+   },
+   {
+    "text": "vintage wine bar",
+    "type": "truncation",
+    "likelihood": "medium"
    }
   ],
   "collisions": [
    {
-    "with": "Jamie's Italian",
+    "with": "Giovanni's Italian Kitchen",
     "note": "'giovanni's' shared (Giovanni's Italian Kitchen)."
-   },
-   {
-    "with": "Vintages",
-    "note": "bare 'wine bar' is ambiguous between Vintages and Giovanni's; not mapped."
    },
    {
     "with": "Johnny Rockets",
     "note": "'johnny's' substitute."
    }
   ],
-  "bar": true
+  "bar": true,
+  "notes": "The plan's VINTAGES room (2026 refit). Royal's code VINT (wine tastings, blank title) and GIOKITWINE map here."
  },
  {
   "target": "Hublot",
@@ -3538,56 +3396,6 @@
   ],
   "collisions": [],
   "notes": "French brand ('kar-tee-AY'); 'car tier' dominates in tests of similar models."
- },
- {
-  "target": "Bulgari",
-  "kind": "venue",
-  "spoken": [
-   "bulgari"
-  ],
-  "asr": [
-   {
-    "text": "bulgaria",
-    "type": "near-word",
-    "likelihood": "high"
-   },
-   {
-    "text": "bvlgari",
-    "type": "spelling",
-    "likelihood": "medium"
-   },
-   {
-    "text": "bulgary",
-    "type": "spelling",
-    "likelihood": "medium"
-   },
-   {
-    "text": "bull gary",
-    "type": "split",
-    "likelihood": "medium"
-   },
-   {
-    "text": "bulgar e",
-    "type": "split",
-    "likelihood": "low"
-   },
-   {
-    "text": "bulgari's",
-    "type": "spelling",
-    "likelihood": "low"
-   },
-   {
-    "text": "vulgari",
-    "type": "spelling",
-    "likelihood": "low"
-   },
-   {
-    "text": "bulgarian",
-    "type": "near-word",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": []
  },
  {
   "target": "Breitling",
@@ -3982,7 +3790,8 @@
   "kind": "venue",
   "spoken": [
    "play",
-   "the play area"
+   "the play area",
+   "play place"
   ],
   "asr": [
    {
@@ -4115,7 +3924,8 @@
    "nursery",
    "the nursery",
    "royal babies and tots",
-   "babies and tots"
+   "babies and tots",
+   "babies"
   ],
   "asr": [
    {
@@ -4157,14 +3967,17 @@
   ]
  },
  {
-  "target": "The Puzzle Break",
+  "target": "Royal Escape Room",
   "kind": "venue",
   "spoken": [
    "escape room",
    "the escape room",
    "puzzle break",
    "the puzzle break",
-   "puzzle room"
+   "puzzle room",
+   "royal escape room",
+   "escape u",
+   "the science lab escape room"
   ],
   "asr": [
    {
@@ -4224,7 +4037,7 @@
     "note": "'escape' alone is a normal word; require 'escape room' unless it is the whole slot."
    }
   ],
-  "notes": "Observed 2026-09-28: 'I'm at the escape room' transcribed correctly; users say 'escape room', not the brand. Royal's code is royal-escape-room."
+  "notes": "Royal's code royal-escape-room ('EscapeU: Science Lab'); the plans still say The Puzzle Break. Observed 2026-09-28: 'I'm at the escape room' transcribed correctly."
  },
  {
   "target": "AO Workshop",
@@ -4331,10 +4144,6 @@
    }
   ],
   "collisions": [
-   {
-    "with": "The Living Room",
-    "note": "'hangout' also describes the teen lounge."
-   },
    {
     "with": "Ages 6-12",
     "note": "The parenthetical is never spoken; strip '(Ages ...)' from canonical names before matching."
@@ -4515,7 +4324,11 @@
   "spoken": [
    "lime and coconut",
    "the lime and coconut",
-   "lime & coconut"
+   "lime & coconut",
+   "sand bar",
+   "the sand bar",
+   "mast bar",
+   "the mast bar"
   ],
   "asr": [
    {
@@ -4567,6 +4380,21 @@
     "text": "lime and cocoa nut",
     "type": "split",
     "likelihood": "low"
+   },
+   {
+    "text": "sandbar",
+    "type": "split",
+    "likelihood": "high"
+   },
+   {
+    "text": "mass bar",
+    "type": "near-word",
+    "likelihood": "high"
+   },
+   {
+    "text": "must bar",
+    "type": "near-word",
+    "likelihood": "medium"
    }
   ],
   "collisions": [
@@ -4578,49 +4406,10 @@
     "with": "in",
     "note": "'lime in the coconut' (the song) contains 'in'; the cabin command is 'in cabin'."
    }
-  ]
- },
- {
-  "target": "Sand Bar",
-  "kind": "venue",
-  "spoken": [
-   "sand bar",
-   "the sand bar"
   ],
-  "asr": [
-   {
-    "text": "sandbar",
-    "type": "split",
-    "likelihood": "high"
-   },
-   {
-    "text": "sam bar",
-    "type": "near-word",
-    "likelihood": "medium"
-   },
-   {
-    "text": "sand bars",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "stand bar",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "san bar",
-    "type": "truncation",
-    "likelihood": "low"
-   },
-   {
-    "text": "sand bah",
-    "type": "spelling",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [],
-  "bar": true
+  "bar": true,
+  "location": false,
+  "notes": "Three bars since the 2026 refit: two on deck 15 (the plans' LIME & COCONUT and SAND BAR) and one on deck 16 (the plans' MAST BAR). Several spots, so refused as 'I'm at'."
  },
  {
   "target": "Sports Pool",
@@ -5037,10 +4826,6 @@
    {
     "with": "Suite Lounge",
     "note": "'lounge' shared."
-   },
-   {
-    "with": "Teen Lounge",
-    "note": "'lounge' shared."
    }
   ],
   "notes": "Probably the loyalty lounge (Diamond/Crown & Anchor); the name may be worth checking on board."
@@ -5051,7 +4836,9 @@
   "spoken": [
    "video arcade",
    "the video arcade",
-   "the video games"
+   "the video games",
+   "challenger's arcade",
+   "challengers arcade"
   ],
   "asr": [
    {
@@ -5078,6 +4865,11 @@
     "text": "the video game",
     "type": "truncation",
     "likelihood": "low"
+   },
+   {
+    "text": "challenger arcade",
+    "type": "spelling",
+    "likelihood": "medium"
    }
   ],
   "collisions": [
@@ -5088,223 +4880,19 @@
   ]
  },
  {
-  "target": "Teen Center",
-  "kind": "venue",
-  "spoken": [
-   "teen center",
-   "the teen club",
-   "teen club",
-   "the teen center"
-  ],
-  "asr": [
-   {
-    "text": "teen centre",
-    "type": "spelling",
-    "likelihood": "high"
-   },
-   {
-    "text": "teens center",
-    "type": "other",
-    "likelihood": "medium"
-   },
-   {
-    "text": "team center",
-    "type": "near-word",
-    "likelihood": "medium"
-   },
-   {
-    "text": "tween center",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "teen clubs",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "team club",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "teen centers",
-    "type": "other",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [
-   {
-    "with": "Teen Lounge",
-    "note": "Overlapping teen targets."
-   },
-   {
-    "with": "The Living Room",
-    "note": "Overlapping teen targets."
-   },
-   {
-    "with": "Fuel Teen Disco",
-    "note": "Contains 'teen'."
-   }
-  ]
- },
- {
-  "target": "Teen Lounge",
-  "kind": "venue",
-  "spoken": [
-   "teen lounge",
-   "the teen lounge"
-  ],
-  "asr": [
-   {
-    "text": "team lounge",
-    "type": "near-word",
-    "likelihood": "medium"
-   },
-   {
-    "text": "teens lounge",
-    "type": "other",
-    "likelihood": "medium"
-   },
-   {
-    "text": "teen lounges",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "tween lounge",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "teen lunge",
-    "type": "near-word",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [
-   {
-    "with": "Teen Center",
-    "note": "Overlapping teen targets."
-   },
-   {
-    "with": "Crown Lounge",
-    "note": "'lounge' shared."
-   }
-  ]
- },
- {
-  "target": "The Living Room",
-  "kind": "venue",
-  "spoken": [
-   "the living room",
-   "living room"
-  ],
-  "asr": [
-   {
-    "text": "the living rooms",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "living rooms",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "the leaving room",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "livin room",
-    "type": "spelling",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [
-   {
-    "with": "Teen Center",
-    "note": "Overlapping teen targets."
-   },
-   {
-    "with": "Arena & Hangouts (Ages 6-12)",
-    "note": "'hangout' describes both."
-   },
-   {
-    "with": "living room",
-    "note": "Ordinary phrase, but rare in a route command; keep with confirm."
-   }
-  ]
- },
- {
-  "target": "Fuel Teen Disco",
-  "kind": "venue",
-  "spoken": [
-   "fuel",
-   "the teen disco",
-   "fuel teen disco",
-   "fuel nightclub"
-  ],
-  "asr": [
-   {
-    "text": "fuels",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "fuel teen",
-    "type": "truncation",
-    "likelihood": "low"
-   },
-   {
-    "text": "full teen disco",
-    "type": "near-word",
-    "likelihood": "medium"
-   },
-   {
-    "text": "few elteen disco",
-    "type": "split",
-    "likelihood": "low"
-   },
-   {
-    "text": "fuel team disco",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "fuel teen disco's",
-    "type": "spelling",
-    "likelihood": "low"
-   },
-   {
-    "text": "feel teen disco",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "the teen discos",
-    "type": "other",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [
-   {
-    "with": "Teen Center",
-    "note": "'teen' shared."
-   },
-   {
-    "with": "fuel",
-    "note": "Common word; accept bare 'fuel' only as the whole destination slot."
-   }
-  ]
- },
- {
   "target": "Social100 (Ages 13-17)",
   "kind": "venue",
   "spoken": [
    "social one hundred",
-   "social hundred"
+   "social hundred",
+   "teen center",
+   "the teen center",
+   "teen club",
+   "the teen club",
+   "teen lounge",
+   "the teen lounge",
+   "the living room",
+   "living room"
   ],
   "asr": [
    {
@@ -5346,6 +4934,26 @@
     "text": "social",
     "type": "truncation",
     "likelihood": "low"
+   },
+   {
+    "text": "teen centre",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "teens center",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "team center",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "team lounge",
+    "type": "near-word",
+    "likelihood": "medium"
    }
   ],
   "collisions": [
@@ -5358,7 +4966,7 @@
     "note": "Strip the parenthetical before matching."
    }
   ],
-  "notes": "Deck unconfirmed ('d')."
+  "notes": "The teen area since the 2026 refit (the plans still say Teen Lounge, The Living Room and Fuel Teen Disco). 'Living room' stays here: the old teen hangout, and without it the fuzzy step sends 'living room' to the dining rooms."
  },
  {
   "target": "FlowRider",
@@ -5590,58 +5198,6 @@
   ]
  },
  {
-  "target": "Mast Bar",
-  "kind": "venue",
-  "spoken": [
-   "mast bar",
-   "the mast bar"
-  ],
-  "asr": [
-   {
-    "text": "mass bar",
-    "type": "near-word",
-    "likelihood": "high"
-   },
-   {
-    "text": "must bar",
-    "type": "near-word",
-    "likelihood": "medium"
-   },
-   {
-    "text": "mars bar",
-    "type": "near-word",
-    "likelihood": "medium"
-   },
-   {
-    "text": "mask bar",
-    "type": "near-word",
-    "likelihood": "low"
-   },
-   {
-    "text": "mast bars",
-    "type": "other",
-    "likelihood": "low"
-   },
-   {
-    "text": "mas bar",
-    "type": "spelling",
-    "likelihood": "low"
-   },
-   {
-    "text": "masked bar",
-    "type": "near-word",
-    "likelihood": "low"
-   }
-  ],
-  "collisions": [
-   {
-    "with": "Mars bar",
-    "note": "Real-word substitute; safe but confirm."
-   }
-  ],
-  "bar": true
- },
- {
   "target": "Solarium Bar",
   "kind": "venue",
   "spoken": [
@@ -5724,7 +5280,7 @@
   ],
   "collisions": [
    {
-    "with": "Jamie's Italian",
+    "with": "Giovanni's Italian Kitchen",
     "note": "'kitchen' shared (Giovanni's Italian Kitchen)."
    },
    {
@@ -6327,7 +5883,10 @@
   "spoken": [
    "solarium bistro",
    "the solarium bistro",
-   "the bistro"
+   "the bistro",
+   "samba grill",
+   "samba",
+   "the brazilian steakhouse"
   ],
   "asr": [
    {
@@ -6354,6 +5913,26 @@
     "text": "the bistro's",
     "type": "spelling",
     "likelihood": "low"
+   },
+   {
+    "text": "samba grille",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "somba grill",
+    "type": "near-word",
+    "likelihood": "medium"
+   },
+   {
+    "text": "sambo grill",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "salsa grill",
+    "type": "near-word",
+    "likelihood": "low"
    }
   ],
   "collisions": [
@@ -6361,7 +5940,8 @@
     "with": "Solarium",
     "note": "Contains 'solarium'."
    }
-  ]
+  ],
+  "notes": "Samba Grill (Royal's code SAMBA) is the Solarium Bistro at dinner."
  },
  {
   "target": "main dining room",
@@ -6510,7 +6090,7 @@
   "target": "giovanni's",
   "kind": "group",
   "members": [
-   "Jamie's Italian",
+   "Giovanni's Italian Kitchen",
    "Giovanni's Wine Bar"
   ],
   "spoken": [
@@ -6527,7 +6107,7 @@
   "kind": "group",
   "members": [
    "Johnny Rockets",
-   "Jamie's Italian"
+   "Giovanni's Italian Kitchen"
   ],
   "spoken": [
    "johnny's",
@@ -6551,5 +6131,75 @@
   "asr": [],
   "collisions": [],
   "notes": "'desk' or 'lounge' decides when said."
+ },
+ {
+  "target": "Chef's Table",
+  "kind": "venue",
+  "spoken": [
+   "chef's table",
+   "the chef's table",
+   "chefs table"
+  ],
+  "asr": [
+   {
+    "text": "chefs table",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "chef table",
+    "type": "truncation",
+    "likelihood": "high"
+   },
+   {
+    "text": "shes table",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "chef stable",
+    "type": "split",
+    "likelihood": "low"
+   },
+   {
+    "text": "jeff's table",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "Royal's code CHEF. Deck 15 aft, in the room the plans label FUEL TEEN DISCO (Royal's app); spot approximate."
+ },
+ {
+  "target": "Laser Tag",
+  "kind": "place",
+  "spoken": [
+   "laser tag",
+   "the laser tag arena"
+  ],
+  "asr": [
+   {
+    "text": "lazer tag",
+    "type": "spelling",
+    "likelihood": "high"
+   },
+   {
+    "text": "laser tags",
+    "type": "other",
+    "likelihood": "medium"
+   },
+   {
+    "text": "laser tack",
+    "type": "near-word",
+    "likelihood": "low"
+   },
+   {
+    "text": "later tag",
+    "type": "near-word",
+    "likelihood": "low"
+   }
+  ],
+  "collisions": [],
+  "notes": "Deck 4 beside Studio B, from Royal's app only (not on the plans); spot approximate."
  }
 ]

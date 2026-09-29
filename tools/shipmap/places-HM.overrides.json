@@ -10,7 +10,14 @@
     {"text": "LAUNCH AREA", "venue": "The Perfect Storm Waterslides"},
     {"text": "BAR", "deck": 17, "venue": "Suite Sun Deck"},
     {"text": "LOUNGE", "deck": 17, "venue": "Suite Sun Deck"},
-    {"text": "CARTIER OMEGA", "venue": ["Cartier", "Omega"]}
+    {"text": "CARTIER OMEGA", "venue": ["Cartier", "Omega"]},
+    {"text": "JAMIE'S ITALIAN", "venue": "Giovanni's Italian Kitchen"},
+    {"text": "VINTAGES", "venue": "Giovanni's Wine Bar"},
+    {"text": "SAND BAR", "venue": "The Lime & Coconut"},
+    {"text": "MAST BAR", "venue": "The Lime & Coconut"},
+    {"text": "TEEN LOUNGE", "venue": "Social100 (Ages 13-17)"},
+    {"text": "THE PUZZLE BREAK", "venue": "Royal Escape Room"},
+    {"text": "SHORE EXCURSIONS", "deck": 5, "venue": "Starbucks"}
   ],
   "kinds": {
     "RETAIL": "shop",
@@ -18,9 +25,8 @@
     "BAR": "bar"
   },
   "split": [
-    {"deck": 5, "text": "PORT SHOPPING LOYALTY", "points": [
-      {"venue": "Port & Shopping Desk", "a": 227.5, "x": 2.5},
-      {"venue": "Loyalty Desk", "a": 230.9, "x": -3.4}]},
+    {"deck": 5, "text": "PORT SHOPPING LOYALTY", "note": "the loyalty half is the VOOM Internet Desk on the app plan; the loyalty desk moved to deck 6", "points": [
+      {"venue": "Port & Shopping Desk", "a": 227.5, "x": 2.5}]},
     {"deck": 6, "text": "PLAYMAKERS SPORTSBAR JOHNNY & ARCADE ROCKETS", "points": [
       {"venue": "Playmakers Sports Bar & Arcade", "a": 301.7, "x": -5.8},
       {"venue": "Johnny Rockets", "a": 301.7, "x": 8.2}]}
@@ -37,14 +43,24 @@
     {"venue": "Regalia Fine Jewelry", "deck": 5, "a": 222.1, "x": -13.8, "note": "from the Royal app plan"},
     {"venue": "Royal Shops", "deck": 5, "a": 144.2, "x": -1.5, "note": "the app shows only 'Promenade Shops' here; same spot; from the Royal app plan"},
     {"venue": "Picture This", "deck": 6, "a": 189.0, "x": 1.9, "note": "app: Picture This Studio; from the Royal app plan"},
-    {"venue": "Giovanni's Wine Bar", "deck": 8, "a": 135.2, "x": 12.2, "note": "the plan's VINTAGES label; the app names this room Giovanni's Wine Bar; from the Royal app plan"},
     {"venue": "Breitling", "deck": 8, "a": 130.9, "x": -13.8, "note": "from the Royal app plan"},
     {"venue": "Messika Boutique", "deck": 8, "a": 126.0, "x": -15.8, "note": "from the Royal app plan"},
     {"venue": "Roberto Coin Boutique", "deck": 8, "a": 123.7, "x": -11.3, "note": "app: Roberto; from the Royal app plan"},
     {"venue": "AO Workshop", "deck": 14, "a": 72.9, "x": 3.0, "note": "app: Workshop; from the Royal app plan"},
     {"venue": "Arena & Hangouts (Ages 6-12)", "deck": 14, "a": 72.2, "x": -7.9, "note": "app: Arena; from the Royal app plan"},
     {"venue": "Arena & Hangouts (Ages 6-12)", "deck": 14, "a": 83.7, "x": -11.0, "note": "app: Hangout; from the Royal app plan"},
-    {"venue": "Social100 (Ages 13-17)", "deck": 15, "a": 272.7, "x": -21.5, "note": "app: Social 100; from the Royal app plan"},
-    {"venue": "Teen Center", "deck": 15, "a": 272.7, "x": -21.5, "note": "not on the app plan; the teen area is Social 100; from the Royal app plan"}
+    {"venue": "Shore Excursions", "deck": 6, "a": 226.0, "x": 4.0, "note": "from the Royal app plan (shore-excursions-deck)"},
+    {"venue": "Loyalty Desk", "deck": 6, "a": 224.0, "x": -8.0, "note": "app: Crown & Anchor Member Services; from the Royal app plan (port-shopping-loyalty)"},
+    {"venue": "Chef's Table", "deck": 15, "a": 270.0, "x": 3.0, "note": "app: Chef's Table in the room the plan labels FUEL TEEN DISCO; from the Royal app plan"},
+    {"venue": "Laser Tag", "deck": 4, "a": 165.0, "x": 16.0, "note": "app: starboard of Studio B, opposite the Art Gallery; not on the plan (laser-tag-spot)"}
+  ],
+  "_about_refit": "Pre-refit labels still on the profile-2396 plans (2026-09-29): renamed or dropped where the schedule (Oct 1-13 sailings), post-refit reports and the Royal app agree (conflicts-HM.json, status 'likely'); app-only moves use the app spot (status 'open').",
+  "drop": [
+    {"deck": 5, "text": "KATE SPADE", "why": "no Kate Spade on the app plan or in the schedule; Pandora has the spot"},
+    {"deck": 6, "text": "STARBUCKS", "why": "the app shows the Logo Shop here and Starbucks on deck 5 (starbucks-deck)"},
+    {"deck": 6, "text": "VITALITY CAFE", "why": "removed in the refit for cabins 6454-6462; juices now at a pop-up in On Air"},
+    {"deck": 8, "text": "BULGARI", "why": "no Bulgari on the app plan or in the schedule; Breitling, Messika and Roberto Coin are here"},
+    {"deck": 15, "text": "THE LIVING ROOM", "why": "the Crown Lounge took part of it; the rest is Social100"},
+    {"deck": 15, "text": "FUEL TEEN DISCO", "why": "not on the app plan; Canvas and Chef's Table are here"}
   ]
 }

@@ -57,7 +57,7 @@
     "A": "escape room",
     "B": "aqua theater",
     "cabin": null,
-    "A_target": "The Puzzle Break",
+    "A_target": "Royal Escape Room",
     "B_target": "AquaTheater"
    },
    "tags": [
@@ -130,7 +130,7 @@
     "A": null,
     "B": "escape room",
     "cabin": null,
-    "B_target": "The Puzzle Break"
+    "B_target": "Royal Escape Room"
    },
    "tags": [
     "question_how",
@@ -399,7 +399,7 @@
     "A": null,
     "B": "mast bar",
     "cabin": null,
-    "B_target": "Mast Bar"
+    "B_target": "The Lime & Coconut"
    },
    "tags": [
     "question_how"
@@ -413,7 +413,7 @@
     "A": null,
     "B": "mass bar",
     "cabin": null,
-    "B_target": "Mast Bar"
+    "B_target": "The Lime & Coconut"
    },
    "tags": [
     "asr_venue"
@@ -753,7 +753,7 @@
     "A": null,
     "B": "escape room",
     "cabin": null,
-    "B_target": "The Puzzle Break"
+    "B_target": "Royal Escape Room"
    },
    "tags": [
     "imperative"
@@ -2364,7 +2364,7 @@
     "A": "escape room",
     "B": null,
     "cabin": null,
-    "A_target": "The Puzzle Break"
+    "A_target": "Royal Escape Room"
    },
    "tags": [
     "location",
@@ -2935,7 +2935,7 @@
     "A": "escape room",
     "B": "aqua theater",
     "cabin": null,
-    "A_target": "The Puzzle Break",
+    "A_target": "Royal Escape Room",
     "B_target": "AquaTheater"
    },
    "tags": [
@@ -4330,7 +4330,7 @@
     "A": null,
     "B": "living room",
     "cabin": null,
-    "B_target": "The Living Room"
+    "B_target": "Social100 (Ages 13-17)"
    },
    "tags": [
     "room_pitfall"
@@ -4610,7 +4610,7 @@
     "A": "@mycabin",
     "B": "escape room",
     "cabin": null,
-    "B_target": "The Puzzle Break"
+    "B_target": "Royal Escape Room"
    },
    "tags": [
     "reversed",
@@ -4928,7 +4928,7 @@
     "A": null,
     "B": "jamies italian",
     "cabin": null,
-    "B_target": "Jamie's Italian"
+    "B_target": "Giovanni's Italian Kitchen"
    },
    "tags": [
     "holdout",

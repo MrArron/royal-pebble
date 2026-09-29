@@ -91,7 +91,7 @@ test('areas page and an area page', function() {
   var p = page(directory.REF_AREAS);
   assert.strictEqual(p.label, 'by area');
   assert.strictEqual(p.rows[0].line1, 'Central Park');
-  assert.strictEqual(p.rows[0].line2, 'Decks 8-9' + DOT + '16');
+  assert.strictEqual(p.rows[0].line2, 'Decks 8-9' + DOT + '14');
   assert.ok(find(p.rows, 'Other places'));
   assert.strictEqual(p.rows[p.rows.length - 1].line1, 'Ashore');
 
