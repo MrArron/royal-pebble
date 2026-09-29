@@ -30,8 +30,8 @@ test('built-in table is well formed', function() {
   Object.keys(HM.codes).forEach(function(c) {
     assert.ok(HM.venues[HM.codes[c]], 'code ' + c + ' target ' + HM.codes[c]);
   });
-  // Left out on purpose (conflicts-HM.json silk-dining-floor).
-  assert.ok(!HM.codes.SILK);
+  // SILK is the deck 5 floor (conflicts-HM.json silk-dining-floor, likely).
+  assert.strictEqual(HM.codes.SILK, 'Main Dining Room 5');
 });
 
 test('venue codes: code wins over name, unknown code falls back to the name', function() {
@@ -40,20 +40,22 @@ test('venue codes: code wins over name, unknown code falls back to the name', fu
   assert.strictEqual(L.lookup(HM, 'On Air', 'ICE_AL'), 'Studio B', 'code wins');
   assert.strictEqual(L.lookup(HM, 'On Air', 'NOPE'), 'On Air');
   assert.strictEqual(L.lookup(HM, 'Main Dining Room 5', 'SILK'), 'Main Dining Room 5');
-  assert.strictEqual(L.lookup(HM, '', 'VINT'), 'Vintages');
+  assert.strictEqual(L.lookup(HM, '', 'VINT'), "Giovanni's Wine Bar");
+  assert.strictEqual(L.lookup(HM, 'Vintages'), "Giovanni's Wine Bar", 'the old name is an alias');
   assert.strictEqual(L.lookup(HM, '', 'NOPE'), null);
   assert.strictEqual(L.lookup(HM, '', null), null);
   assert.strictEqual(L.lookup({venues: HM.venues, aliases: {}}, 'x', 'ICE_AL'), null, 'a table without codes');
 });
 
 test('schedule venues: blank titles filled from the code, codes per name', function() {
-  var sched = {venues: ['', 'Royal Escape Room', 'On Air', '', 'Main Dining Room 5', 'Perfect Day CocoCay',
+  var sched = {venues: ['', 'EscapeU Lab', 'On Air', '', 'Main Dining Room 5', 'Perfect Day CocoCay',
                         'Perfect Day CocoCay', 'Mystery Room'],
                venueCodes: ['VINT', 'royal-escape-room', 'ONAIR', null, 'SILK', 'NOPE', 'PCC', 'NOPE2']};
   var sv = L.scheduleVenues(HM, sched);
-  assert.deepStrictEqual(sv.names, ['Vintages', 'Royal Escape Room', 'On Air', '', 'Main Dining Room 5',
+  assert.deepStrictEqual(sv.names, ["Giovanni's Wine Bar", 'EscapeU Lab', 'On Air', '', 'Main Dining Room 5',
                                     'Perfect Day CocoCay', 'Perfect Day CocoCay', 'Mystery Room']);
-  assert.deepStrictEqual(sv.codes, {Vintages: 'VINT', 'Royal Escape Room': 'royal-escape-room', 'On Air': 'ONAIR',
+  assert.deepStrictEqual(sv.codes, {"Giovanni's Wine Bar": 'VINT', 'EscapeU Lab': 'royal-escape-room', 'On Air': 'ONAIR',
+                                    'Main Dining Room 5': 'SILK',
                                     'Perfect Day CocoCay': 'PCC'});
   // Older bundles have no venueCodes.
   assert.deepStrictEqual(L.scheduleVenues(HM, {venues: ['', 'On Air']}), {names: ['', 'On Air'], codes: {}});
@@ -61,15 +63,15 @@ test('schedule venues: blank titles filled from the code, codes per name', funct
 
   // Ship venues: a name the table knows only by its code isn't listed as missing.
   var names = sv.names.filter(Boolean);
-  assert.ok(find(L.entries(HM, {}, names), 'Royal Escape Room'), 'missing without codes');
-  assert.ok(!find(L.entries(HM, {}, names, sv.codes), 'Royal Escape Room'));
+  assert.ok(find(L.entries(HM, {}, names), 'EscapeU Lab'), 'missing without codes');
+  assert.ok(!find(L.entries(HM, {}, names, sv.codes), 'EscapeU Lab'));
   assert.ok(find(L.entries(HM, {}, names, sv.codes), 'Mystery Room'));
 
   // The finder follows the code.
   var b = {ship: {code: 'HM'}, schedule: sched};
   var f = venues.bundleFinder(b, {me: {deck: 'Deck 9'}});
-  assert.strictEqual(f.entry('Royal Escape Room').name, 'The Puzzle Break');
-  assert.deepStrictEqual(f.where('Vintages'), {deck: 8, deckTo: 0, pos: 2, ashore: false, rel: -1});
+  assert.strictEqual(f.entry('EscapeU Lab').name, 'Royal Escape Room');
+  assert.deepStrictEqual(f.where("Giovanni's Wine Bar"), {deck: 8, deckTo: 0, pos: 2, ashore: false, rel: -1});
   assert.deepStrictEqual(venues.scheduleVenues(b), sv);
 });
 
@@ -268,7 +270,7 @@ test('short names fit the reminder alert', function() {
       assert.ok(pack.utf8(v.short, 99).length <= pack.ALARM_VENUE_MAX, v.short);
     }
   });
-  assert.strictEqual(shortened, 18);
+  assert.strictEqual(shortened, 20);  // + the two Giovanni's (2026 refit names)
   var f = venues.venueFinder('HM', {}, '');
   assert.strictEqual(f.short('Main Dining Room 5'), 'Main Dining 5');
   assert.strictEqual(f.short('Adventure Ocean'), 'Ocean Theater', 'through an alias');
@@ -300,7 +302,7 @@ test('cleanOverrides keeps valid edits only', function() {
 test('the page copy of the rules parses on its own', function() {
   var copy = new Function('return (' + venues.venueLib.toString() + ')();')();
   assert.strictEqual(copy.lookup(HM, 'casino royale non-smoking'), 'Casino Royale');
-  assert.deepStrictEqual(copy.scheduleVenues(HM, {venues: [''], venueCodes: ['VINT']}).names, ['Vintages']);
+  assert.deepStrictEqual(copy.scheduleVenues(HM, {venues: [''], venueCodes: ['VINT']}).names, ["Giovanni's Wine Bar"]);
 });
 
 var failed = 0;

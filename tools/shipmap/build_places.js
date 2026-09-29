@@ -9,7 +9,7 @@
 'use strict';
 var fs = require('fs');
 var path = require('path');
-var venues = require(path.join(__dirname, '../src/pkjs/venues'));
+var venues = require(path.join(__dirname, '../../src/pkjs/venues'));
 
 var labelsFile = process.argv[2];
 var overridesFile = process.argv[3];
@@ -56,8 +56,15 @@ labels.forEach(function(l) {
   }
 });
 
-// 2. Hand-checked splits, renames and generic kinds.
+// 2. Hand-checked drops (pre-refit labels of rooms that are gone), splits,
+// renames and generic kinds.
 labels.forEach(function(l) {
+  if (used[l.id]) { return; }
+  (ov.drop || []).forEach(function(d) {
+    if (d.text === l.text && (d.deck === undefined || d.deck === l.deck)) {
+      used[l.id] = true;
+    }
+  });
   if (used[l.id]) { return; }
   ov.split.forEach(function(s) {
     if (s.deck === l.deck && s.text === l.text) {

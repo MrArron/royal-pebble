@@ -39,6 +39,10 @@ var SHIPS = {
     // Positions were then measured against the elevator banks on the same plans
     // (ship map data), which moved PADI Shop to Aft and Coastal Kitchen, Suite
     // Lounge and The Perfect Storm Waterslides to Mid.
+    // Refit names (2026-09-29): the plans still carry some pre-refit labels.
+    // Where the schedule (4 sailings, Oct 1-13), post-refit reports and Royal's
+    // app agree, the table follows them (tools/shipmap/conflicts-HM.json,
+    // status "likely"); the old names are aliases.
     venues: [
       // Deck 3
       ['Main Dining Room 3', 3, 'Aft', RP, 'n'],
@@ -49,6 +53,7 @@ var SHIPS = {
       ['Casino Royale', 4, 'Mid', EP, ''],
       ['Studio B', 4, 'Mid', EP, ''],
       ['Art Gallery', 4, 'Mid', EP, ''],
+      ['Laser Tag', 4, 'Mid', EP, 'p', 1],
       // Deck 5: Royal Promenade and the spa
       ['Vitality Spa', 5, 'Fore', VS, ''],
       ['Royal Promenade', 5, null, RP, ''],
@@ -62,10 +67,8 @@ var SHIPS = {
       ['Boot & Bonnet Pub', 5, 'Mid', RP, ''],
       ['NextCruise Office', 5, 'Mid', RP, ''],
       ['Port & Shopping Desk', 5, 'Mid', RP, ''],
-      ['Shore Excursions', 5, 'Mid', RP, ''],
-      ['Loyalty Desk', 5, 'Mid', RP, ''],
+      ['Starbucks', 5, 'Mid', RP, ''],
       ['Promenade Shops', 5, 'Mid', RP, ''],
-      ['Kate Spade', 5, 'Mid', RP, ''],
       ['Royal Shops', 5, 'Mid', RP, ''],
       ['Port Merchants', 5, 'Mid', RP, ''],
       ['Regalia Fine Jewelry', 5, 'Mid', RP, ''],
@@ -77,13 +80,13 @@ var SHIPS = {
       ['Main Dining Room 5', 5, 'Aft', RP, 'n'],
       // Deck 6: the Boardwalk aft, Vitality forward
       ['Fitness Center', 6, 'Fore', VS, ''],
-      ['Vitality Cafe', 6, 'Fore', VS, ''],
       ['Schooner Bar', 6, 'Mid', RP, 'n'],
       ['Focus Photo Gallery', 6, 'Mid', RP, 'n'],
+      ['Shore Excursions', 6, 'Mid', RP, 'n'],
+      ['Loyalty Desk', 6, 'Mid', RP, 'n'],
       ['Picture This', 6, 'Mid', RP, 'dpn'],
       ['Boardwalk', 6, 'Aft', BW, ''],
       ['AquaTheater', [5, 6], 'Aft', BW, ''],
-      ['Starbucks', 6, 'Aft', BW, ''],
       ['Playmakers Sports Bar & Arcade', 6, 'Aft', BW, ''],
       ['Johnny Rockets', 6, 'Aft', BW, ''],
       ['Boardwalk Dog House', 6, 'Aft', BW, ''],
@@ -98,14 +101,12 @@ var SHIPS = {
       ['Chops Grille', 8, 'Mid', CP, ''],
       ['150 Central Park', 8, 'Mid', CP, ''],
       ['Park Cafe', 8, 'Mid', CP, ''],
-      ["Jamie's Italian", 8, 'Mid', CP, ''],
+      ["Giovanni's Italian Kitchen", 8, 'Mid', CP, ''],
       ['Trellis Bar', 8, 'Mid', CP, ''],
-      ['Vintages', 8, 'Mid', CP, ''],
       ["Giovanni's Wine Bar", 8, 'Mid', CP, ''],
       ['Hublot', 8, 'Mid', CP, ''],
       ['Omega', 8, 'Mid', CP, ''],
       ['Cartier', 8, 'Mid', CP, ''],
-      ['Bulgari', 8, 'Mid', CP, ''],
       ['Breitling', 8, 'Mid', CP, 'dn'],
       ['Messika Boutique', 8, 'Mid', CP, 'dn'],
       ['Roberto Coin Boutique', 8, 'Mid', CP, 'dn'],
@@ -118,14 +119,13 @@ var SHIPS = {
       ['Adventure Science', 14, 'Fore', YZ, ''],
       ['Adventure Art', 14, 'Fore', YZ, ''],
       ['Nursery', 14, 'Fore', YZ, ''],
-      ['The Puzzle Break', 14, 'Fore', EP, 'n'],
+      ['Royal Escape Room', 14, 'Fore', YZ, ''],
       ['AO Workshop', 14, 'Fore', YZ, 'd'],
       ['Arena & Hangouts (Ages 6-12)', 14, 'Fore', YZ, 'd'],
       // Deck 15: pool deck and teen area
       ['Solarium', 15, 'Fore', PS, ''],
       ['Pool Deck', 15, 'Mid', PS, ''],
-      ['The Lime & Coconut', 15, 'Mid', PS, ''],
-      ['Sand Bar', 15, 'Mid', PS, ''],
+      ['The Lime & Coconut', [15, 16], 'Mid', PS, ''],
       ['Sports Pool', 15, 'Mid', PS, ''],
       ['PADI Shop', 15, 'Aft', PS, ''],
       ['Harmony Dunes', 15, 'Aft', PS, ''],
@@ -134,17 +134,13 @@ var SHIPS = {
       ['El Loco Fresh', 15, 'Aft', PS, ''],
       ['Crown Lounge', 15, 'Aft', PS, 'n'],
       ['Video Arcade', 15, 'Aft', YZ, 'n'],
-      ['Teen Center', 15, 'Aft', YZ, ''],
-      ['Teen Lounge', 15, 'Aft', YZ, ''],
-      ['The Living Room', 15, 'Aft', YZ, ''],
-      ['Fuel Teen Disco', 15, 'Aft', YZ, ''],
-      ['Social100 (Ages 13-17)', 15, 'Aft', YZ, 'd'],
-      // Deck 16: sports deck aft, Mast Bar mid, Solarium Bar forward
+      ['Social100 (Ages 13-17)', 15, 'Aft', YZ, ''],
+      ["Chef's Table", 15, 'Aft', PS, 'p'],
+      // Deck 16: sports deck aft, Solarium Bar forward (the mid bar is a Lime & Coconut)
       ['FlowRider', 16, 'Aft', PS, ''],
       ['Wipe Out Bar', 16, 'Aft', PS, ''],
       ['The Ultimate Abyss', 16, 'Aft', PS, 'n'],
       ['Zip Line', 16, 'Aft', PS, 'n'],
-      ['Mast Bar', 16, 'Mid', PS, ''],
       ['Solarium Bar', 16, 'Fore', PS, ''],
       // Deck 17-18
       ['Coastal Kitchen', 17, 'Mid', PS, 'n'],
@@ -176,6 +172,7 @@ var SHIPS = {
       ['Rising Tide', 'Rising Tide Bar'],
       ["Sorrento's Pizza", "Sorrento's"],
       ['Loyalty', 'Loyalty Desk'],
+      ['Crown & Anchor Member Services', 'Loyalty Desk'],
       ['Shore Excursions Desk', 'Shore Excursions'],
       ['Port Shopping', 'Port & Shopping Desk'],
       ['Vitality at Sea Spa', 'Vitality Spa'],
@@ -186,14 +183,37 @@ var SHIPS = {
       ['Dog House', 'Boardwalk Dog House'],
       ['Boardwalk Carousel', 'Carousel'],
       ['Chops Grille Steakhouse', 'Chops Grille'],
-      ["Jamie's Italian by Jamie Oliver", "Jamie's Italian"],
-      ['Vintages Wine Bar', 'Vintages'],
+      ["Jamie's Italian", "Giovanni's Italian Kitchen"],
+      ["Jamie's Italian by Jamie Oliver", "Giovanni's Italian Kitchen"],
+      ["Giovanni's Italian Kitchen & Wine Bar", "Giovanni's Italian Kitchen"],
+      ['Vintages', "Giovanni's Wine Bar"],
+      ['Vintages Wine Bar', "Giovanni's Wine Bar"],
       ["Royal Babies & Tots Nursery", 'Nursery'],
-      ['Puzzle Break', 'The Puzzle Break'],
+      ['The Puzzle Break', 'Royal Escape Room'],
+      ['Puzzle Break', 'Royal Escape Room'],
+      ['Escape Room', 'Royal Escape Room'],
+      ['EscapeU: Science Lab', 'Royal Escape Room'],
+      ['Play Place', 'Play'],
+      ['Babies', 'Nursery'],
+      ['Arena', 'Arena & Hangouts (Ages 6-12)'],
+      ['Hangout', 'Arena & Hangouts (Ages 6-12)'],
+      ['Workshop', 'AO Workshop'],
+      ['Teen Center', 'Social100 (Ages 13-17)'],
+      ['Teen Lounge', 'Social100 (Ages 13-17)'],
+      ['Social 100', 'Social100 (Ages 13-17)'],
+      ["Challenger's Arcade", 'Video Arcade'],
+      ['Sand Bar', 'The Lime & Coconut'],
+      ['Mast Bar', 'The Lime & Coconut'],
+      ['Samba Grill', 'Solarium Bistro'],
+      ['American Icon', 'Main Dining Room 3'],
+      ['American Icon Main Dining Room', 'Main Dining Room 3'],
+      ['Grande', 'Main Dining Room 4'],
+      ['Grande Main Dining Room', 'Main Dining Room 4'],
+      ['Silk', 'Main Dining Room 5'],
+      ['Silk Main Dining Room', 'Main Dining Room 5'],
       ['Lime & Coconut', 'The Lime & Coconut'],
       ['Ping-Pong Tables', 'Table Tennis Court'],
       ['Crown & Anchor Lounge', 'Crown Lounge'],
-      ['Fuel', 'Fuel Teen Disco'],
       ['Ultimate Abyss', 'The Ultimate Abyss'],
       ['Perfect Storm', 'The Perfect Storm Waterslides'],
       ['The Perfect Storm', 'The Perfect Storm Waterslides'],
@@ -201,10 +221,10 @@ var SHIPS = {
       ['Jogging Track', 'Running Track']
     ],
     // Royal's venue codes (the schedule's venueCodes, docs/DATA_FORMAT.md), from
-    // the products listing for the 2026-10-01 sailing (pulled 2026-09-27). A
-    // code wins over the venue's title. Left out: codes of places not in the
-    // table (CHEF, SAMBA, NVMYTIMEDINE, the port PCN) and SILK,
-    // titled "Main Dining Room 5" (conflicts-HM.json, silk-dining-floor).
+    // the products listing for the 2026-10-01 sailing (pulled 2026-09-27;
+    // checked against the Oct 1-13 sailings on 2026-09-29). A code wins over the
+    // venue's title. Left out: NVMYTIMEDINE (no fixed floor), the port PCN, and
+    // WONDERBAR (a tasting with no title; Wonderland is gone).
     codes: [
       ['150CP', '150 Central Park'],
       ['ADVE', 'Adventure Ocean Theater'],
@@ -214,6 +234,7 @@ var SHIPS = {
       ['BOLER', 'Boleros'],
       ['BRDWLK', 'Boardwalk'],
       ['BREIT', 'Breitling'],
+      ['CHEF', "Chef's Table"],
       ['CARTIER', 'Cartier'],
       ['CASN', 'Casino Royale'],
       ['CENTPRK', 'Central Park'],
@@ -222,7 +243,7 @@ var SHIPS = {
       ['FITNESS', 'Fitness Center'],
       ['FLOW', 'FlowRider'],
       ['GIOKITWINE', "Giovanni's Wine Bar"],
-      ['GIOV', "Jamie's Italian"],  // "Giovanni's Italian Kitchen" (central-park-restaurant-names)
+      ['GIOV', "Giovanni's Italian Kitchen"],
       ['HUBLOT', 'Hublot'],
       ['ICE_AL', 'Studio B'],
       ['IZUM', 'Izumi'],
@@ -239,21 +260,27 @@ var SHIPS = {
       ['PRINCE', 'Prince & Greene'],
       ['PROM', 'Royal Promenade'],
       ['REGJEWELL', 'Regalia Fine Jewelry'],
+      ['SAMBA', 'Solarium Bistro'],  // Samba Grill: the bistro at dinner
       ['ROCK', 'Rock Climbing Wall'],
       ['RYLTHTR', 'Royal Theater'],
       ['SCHOON', 'Schooner Bar'],
+      ['SHOREXD', 'Shore Excursions'],
+      ['SILK', 'Main Dining Room 5'],
       ['SOLARIUM', 'Solarium'],
       ['SOLERA', 'Solera'],
       ['SPSCRT', 'Sports Court'],
       ['TABTC', 'Table Tennis Court'],
-      ['VINT', 'Vintages'],  // the wine tasting, blank title
+      ['VINT', "Giovanni's Wine Bar"],  // the wine tastings, blank title (the old Vintages)
       ['VSPA', 'Vitality Spa'],
       ['casitas', 'Pool Deck'],  // rentable lounges around the pools (owner, 2026-09-27)
       ['harmony-dunes', 'Harmony Dunes'],
       ['pandora', 'Pandora'],
       ['regalia-watches-', 'Regalia Watches'],
       ['roberto-coin-boutique', 'Roberto Coin Boutique'],
-      ['royal-escape-room', 'The Puzzle Break'],  // escape-room-name
+      ['royal-escape-room', 'Royal Escape Room'],
+      ['LIMEANDCOCONUT0', 'The Lime & Coconut'],
+      ['MADR4', 'Main Dining Room 4'],
+      ['casino-royale-smoke-free-at-sea', 'Casino Royale'],
       ['social100', 'Social100 (Ages 13-17)']
     ],
     // Names for the reminder alert, which keeps 17 bytes of each venue name
@@ -271,6 +298,8 @@ var SHIPS = {
       ['Port & Shopping Desk', 'Port & Shopping'],
       ['Regalia Fine Jewelry', 'Regalia Jewelry'],
       ['Focus Photo Gallery', 'Focus Photo'],
+      ["Giovanni's Italian Kitchen", "Giovanni's"],
+      ["Giovanni's Wine Bar", "Giovanni's Wine"],
       ['Rock Climbing Wall', 'Climbing Wall'],
       ['Table Tennis Court', 'Table Tennis'],
       ['The Ultimate Abyss', 'Ultimate Abyss'],

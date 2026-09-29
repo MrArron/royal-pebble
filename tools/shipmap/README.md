@@ -57,10 +57,11 @@ Run from the repo root. The downloads and working files (`tools/shipmap/decks/`,
    It needs `playwright`, `opencv-python`, `pytesseract` and the `tesseract` binary.
 4. `node tools/shipmap/build_places.js tools/shipmap/out/labels.json tools/shipmap/places-HM.overrides.json src/pkjs/data/places-HM.js`
    matches the labels to the venue table (names and aliases). It prints any
-   label it couldn't match and any venue with no spot; Harmony has 0 unmatched and
-   18 without a spot; the overrides' `add` list places those from Royal's app
-   plan (see below), leaving 2 (shown as `Spot approximate`). `places-HM.overrides.json`
-   holds the hand-checked fixes.
+   label it couldn't match and any venue with no spot; for Harmony the overrides'
+   `add` list places those from Royal's app plan (see below), leaving 2 (shown as
+   `Spot approximate`). `places-HM.overrides.json` holds the hand-checked fixes:
+   `rename` (a plan label to a venue), `split`, `add`, and `drop` (pre-refit labels
+   of rooms that are gone, each with its reason).
 5. `sh tools/shipmap/build.sh` builds the walkway graph from
    `walkways-HM.paths.json` (hand-drawn walkable paths, read from the plans).
    - It attaches every elevator lobby door and stairwell to the graph.
@@ -121,6 +122,12 @@ the question to answer on board.
   sailing on the settings page's Me > Map check card (brief, "Map check"),
   and copies the notes afterwards. When an entry is confirmed, set `status` to
   `confirmed` with `truth`, fix the overrides or the venue table, and rebuild.
+- **`likely`** is the one exception: when the schedule, post-refit reports and
+  Royal's app all agree against a stale plan label (the 2026 refit left several
+  on profile 2396), the data follows them, the entry records what changed in
+  `now`, and it leaves the Map check card. Anything seen on board still wins:
+  reopen or confirm it. App-only disagreements stay `open`, even when `using`
+  is `app`.
 - **After any change here**, run `node tools/shipmap/build_conflicts.js`: it
   bundles the open entries into `src/pkjs/data/conflicts-HM.js` for the card
   (the data test fails until it's up to date).
