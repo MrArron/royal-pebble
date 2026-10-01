@@ -438,8 +438,8 @@ Versions start at 1.4.0. Items are in build order after a docs PR and a data PR
     full text on the settings page, up to eight short tags on the watch's event
     details.
 36. **Stable ids for re-sync.** Royal's product id helps a star follow a
-    rescheduled event. Only if the ids hold steady between pulls (check on
-    2026-09-30).
+    rescheduled event. The ids held steady between pulls (checked
+    2026-10-01), so it's in 1.5.12.
 37. **Shore excursions.** Selectable on the settings page like Booked activities,
     with the meeting time on the watch; the sync tool takes booked excursions'
     meeting times from the public listing.
