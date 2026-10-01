@@ -257,6 +257,7 @@ use.
   ambiguous, as today.
 - **Gate:** re-pull the same sailing on 2026-09-30 and compare `productID` by title
   with the 2026-09-27 pull. If ids change between pulls, drop this item.
+  **Passed** (2026-09-28 and 2026-10-01 re-pulls; see Open questions).
 - **Tests:** `slice.test.js` cases for renamed title, same-title different
   product, and the no-`pid` fallback.
 
@@ -348,7 +349,7 @@ Phase 4 starts at 1.4.0 after Phase 3's items 25-28. Each app PR bumps
 | F | 1.4.4 | 3 | Reminder at arrive-by time; fills the alarm byte; alert screen line | Real-time alert-test variant in the emulator, then the watch |
 | G | 1.4.5 | 7 | Selectable excursions; sync tool meet fallback | Node tests, `test_cruise_sync.py`, one `--login` run on the owner's booking |
 | — | 1.4.6 | bugs | Today list scrolls right after opening (#64); the small star drawn as mirrored pixel rows (#65) | emulator, then the Pebble Time 2 |
-| H | 1.4.8 | 5 | `pid` in `reconcileStars` | `slice.test.js`; only if the 2026-09-30 check passes (a first re-pull on 2026-09-28: all 207 shared titles kept their ids) |
+| H | 1.5.12 | 5 | `pid` in `reconcileStars` | `slice.test.js`; the id check passed (2026-09-28: all 207 shared titles kept their ids; 2026-10-01: all 34 fixture products) |
 | K | none (PC tool only) | checks | `--dump-products` (Windows sync tool section); the report compares product ids by title with an earlier dump of the same sailing | `test_cruise_sync.py`, one live run (done 2026-09-27: 326 products, 55 venue codes) |
 | — | throwaway | login | Phone sign-in probe (not merged): passed 2026-09-27 | the owner's phone |
 | I+J | 1.4.7 | login | One PR (owner, 2026-09-28): `DATA_FORMAT.md`, the page design (`DESIGN_PHASE4.md` §7) and text; Advanced download (expands in the Download card), `royal.fetchMine`, log guards | Node tests with made-up bookings (shared fixture), then the owner's real account on the phone |
@@ -492,7 +493,10 @@ using made-up bookings and cabin numbers. The owner combined them into one PR
 
 ## Open questions and risks
 
-- [ ] **Product id stability:** re-pull on 2026-09-30. It gates PR H.
+- [x] **Product id stability: passed.** Re-pulls on 2026-09-28 (all 207 shared
+  titles) and 2026-10-01 (all 34 products in the shared fixture) kept every
+  `productID`. Three fixture titles were missing from the embark-day pull, ids
+  and all (sessions already over, it seems), none renamed. PR H went ahead in 1.5.12.
 - [x] **Paste-in size: no problem (2026-09-27).** A 7-night bundle may grow from
   about 90 KB to about 135 KB, plus excursion sessions. On the owner's Android
   phone, RP Probe sent made-up bundles of 128, 192, 256, 512 and 1,024 KB back

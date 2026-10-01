@@ -1024,6 +1024,74 @@ test('re-sync around midnight', function() {
   assert.strictEqual(r.changes.length, 0);
 });
 
+// A bundle whose schedule has Royal's product id (`pid`) as a 9th field.
+function pidBundle(events) {
+  var b = makeBundle(events);
+  b.schedule.fields = b.schedule.fields.concat(['pid']);
+  return b;
+}
+
+test('re-sync by product id', function() {
+  var now = at('2027-03-07', 12, 0);
+  function starred(row) {
+    var s = {};
+    s[keyOf(row)] = true;
+    return s;
+  }
+
+  // A reworded title still follows its star when the product id matches.
+  var trivia = ['80s Trivia', 1, 0, '2027-03-07', '15:00', 45, 0, 0, 'P-TRIV'];
+  var renamed = ['Totally 80s Trivia', 1, 0, '2027-03-07', '16:00', 45, 0, 0, 'P-TRIV'];
+  var r = slice.reconcileStars(pidBundle([trivia]), pidBundle([renamed]), starred(trivia), {}, now);
+  assert.strictEqual(r.changes.length, 1);
+  assert.strictEqual(r.changes[0].kind, 'moved');
+  assert.deepStrictEqual(r.changes[0].to, {date: '2027-03-07', time: '16:00', venue: 'Boardwalk'});
+  assert.ok(r.stars[keyOf(renamed)] && !r.stars[keyOf(trivia)]);
+
+  // Two products share a title: the star follows its own product, not the other.
+  var guitarA = ['Guitar Melodies', 2, 0, '2027-03-07', '18:00', 60, 0, 0, 'P-GA'];
+  var guitarAMoved = ['Guitar Melodies', 2, 0, '2027-03-07', '19:00', 60, 0, 0, 'P-GA'];
+  var guitarB = ['Guitar Melodies', 2, 0, '2027-03-07', '21:00', 60, 0, 0, 'P-GB'];
+  r = slice.reconcileStars(pidBundle([guitarA]), pidBundle([guitarAMoved, guitarB]), starred(guitarA), {}, now);
+  assert.strictEqual(r.changes[0].kind, 'moved');
+  assert.strictEqual(r.changes[0].to.time, '19:00');
+  assert.ok(r.stars[keyOf(guitarAMoved)] && !r.stars[keyOf(guitarB)]);
+  // By title alone the same pull is ambiguous.
+  var noPid = function(row) { return row.slice(0, 8); };
+  r = slice.reconcileStars(makeBundle([noPid(guitarA)]), makeBundle([noPid(guitarAMoved), noPid(guitarB)]),
+                           starred(guitarA), {}, now);
+  assert.strictEqual(r.changes[0].kind, 'check');
+
+  // Same title, different product id: not a move.
+  var otherProduct = ['80s Trivia', 1, 0, '2027-03-07', '16:00', 45, 0, 0, 'P-OTHER'];
+  r = slice.reconcileStars(pidBundle([trivia]), pidBundle([otherProduct]), starred(trivia), {}, now);
+  assert.strictEqual(r.changes[0].kind, 'cancelled');
+
+  // A show that runs twice under one product id is still ambiguous.
+  var show = ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 0, 0, 'P-ICE'];
+  var early = ['Ice Show', 0, 0, '2027-03-07', '19:00', 60, 0, 0, 'P-ICE'];
+  var late = ['Ice Show', 0, 0, '2027-03-07', '21:30', 60, 0, 0, 'P-ICE'];
+  r = slice.reconcileStars(pidBundle([show]), pidBundle([early, late]), starred(show), {}, now);
+  assert.strictEqual(r.changes[0].kind, 'check');
+  assert.strictEqual(r.changes[0].options, 2);
+
+  // Fallback to the title rule: either bundle without pid, or an old event with no id.
+  r = slice.reconcileStars(makeBundle([noPid(trivia)]), pidBundle([renamed]), starred(trivia), {}, now);
+  assert.strictEqual(r.changes[0].kind, 'cancelled');  // title changed, no id to follow
+  var triviaLate = ['80s Trivia', 1, 0, '2027-03-07', '17:00', 45, 0, 0, 'P-TRIV'];
+  r = slice.reconcileStars(pidBundle([trivia]), makeBundle([noPid(triviaLate)]), starred(trivia), {}, now);
+  assert.strictEqual(r.changes[0].kind, 'moved');
+  var untagged = ['80s Trivia', 1, 0, '2027-03-07', '15:00', 45, 0, 0, null];
+  r = slice.reconcileStars(pidBundle([untagged]), pidBundle([triviaLate]), starred(untagged), {}, now);
+  assert.strictEqual(r.changes[0].kind, 'moved');
+
+  // A reserved mark follows a star moved by product id.
+  var stars = starred(trivia);
+  stars['R|' + keyOf(trivia)] = true;
+  r = slice.reconcileStars(pidBundle([trivia]), pidBundle([renamed]), stars, {}, now);
+  assert.ok(r.stars['R|' + keyOf(renamed)] && !r.stars['R|' + keyOf(trivia)]);
+});
+
 test('re-sync: a moved star keeps its change time; stale times are pruned', function() {
   var ice = ['Ice Show', 0, 0, '2027-03-07', '20:00', 60, 0, 0];
   var comedy = ['Comedy', 0, 0, '2027-03-07', '21:00', 45, 0, 0];

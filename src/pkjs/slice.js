@@ -891,7 +891,8 @@ function scheduleEvents(bundle) {
     var e = {title: row[f.title], venue: vnames[row[f.venue]] || '', date: row[f.date],
              time: row[f.time] || null, minutes: row[f.minutes] || 0, featured: !!row[f.featured],
              paid: f.paid !== undefined && !!row[f.paid],
-             excursion: ((sched.cats || [])[row[f.cat]] || [])[0] === EXCURSIONS};
+             excursion: ((sched.cats || [])[row[f.cat]] || [])[0] === EXCURSIONS,
+             pid: f.pid !== undefined ? row[f.pid] || null : null};
     e.key = starKey(e.title, e.date, e.time, e.venue);
     return e;
   });
@@ -976,12 +977,19 @@ function sameTitle(a, b) {
   return (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
 }
 
+// Whether a bundle's schedule carries Royal's product id (`pid`, Phase 4).
+function hasPid(bundle) {
+  return ((bundle && bundle.schedule && bundle.schedule.fields) || []).indexOf('pid') >= 0;
+}
+
 // On re-import, checks each upcoming star against the new schedule. Stars are
 // keyed by title + date + time + venue (no event id in v1), so a rescheduled
 // event would silently lose its star and reminder:
 // - key still there: nothing to do;
 // - exactly one new event with the same title on the same watch day: moved, and
-//   the star follows it;
+//   the star follows it. When both schedules have `pid` and the old event has
+//   one, match on that product id instead of the title, so a reworded title
+//   still follows and two products sharing a title aren't confused;
 // - several: don't guess, drop the star and ask the user to check the times;
 // - none: cancelled, drop the star.
 // Only stars of events in the old schedule are checked (not personal entries or
@@ -1009,6 +1017,7 @@ function reconcileStars(oldBundle, newBundle, stars, settings, now, times) {
   scheduleEvents(oldBundle).forEach(function(e) { oldByKey[e.key] = e; });
   var newKeys = {};
   newEvents.forEach(function(e) { newKeys[e.key] = true; });
+  var byPid = hasPid(oldBundle) && hasPid(newBundle);
   var personalKeys = {};
   ((settings && settings.personal) || []).forEach(function(p) {
     personalKeys[starKey(p.title, p.date, p.time, p.venue)] = true;
@@ -1021,7 +1030,8 @@ function reconcileStars(oldBundle, newBundle, stars, settings, now, times) {
     }
     var day = eventWatchDay(sailDays, old);
     var candidates = newEvents.filter(function(e) {
-      return !oldByKey[e.key] && sameTitle(e.title, old.title) && eventWatchDay(sailDays, e) === day;
+      var same = byPid && old.pid ? e.pid === old.pid : sameTitle(e.title, old.title);
+      return !oldByKey[e.key] && same && eventWatchDay(sailDays, e) === day;
     });
     var change = {title: old.title, date: old.date, time: old.time, venue: old.venue, minutes: old.minutes};
     var reserved = !!out[reservedKey(key)];

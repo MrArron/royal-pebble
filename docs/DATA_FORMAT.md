@@ -197,9 +197,9 @@ text. One compact JSON object, ASCII only.
   - key still in the new schedule: nothing to do;
   - exactly one event that is new in this schedule, with the same title
     (ignoring case and outer spaces) on the same watch day: rescheduled, the star
-    moves to it, so its reminder follows. When both schedules have `pid` (Phase
-    4, only once product ids are shown to stay the same between pulls), match on
-    the old event's `pid` instead of the title, so a reworded title still
+    moves to it, so its reminder follows. When both schedules have `pid` and the
+    old event has one (Phase 4; ids held steady between pulls on 2026-09-28 and
+    2026-10-01), match on the old event's `pid` instead of the title, so a reworded title still
     follows its star and two products with the same title aren't confused;
   - several such events (a show that runs twice): don't guess; drop the star and
     tell the user to check the times;
