@@ -59,8 +59,8 @@ The last four came with the port day card (`docs/DESIGN_PHASE3.md` §23.6).
   (wraps to two lines) → `12:00p · On Air` (muted) → `Deck 4 Aft · ↓2` (muted)
   with `Route ›` (sea accent) at its right end → divider → next two items.
   Select opens the route to that event (`DESIGN_V1_1.md` §9.5); the hint shows
-  only when the venue is on board. Up = My info, Down = Today, Hold Up = next
-  demo variant (demo data only). The first 3 opens label the buttons for
+  only when the venue is on board. Up = My info, Down = Today, Hold Select =
+  Ask by voice, Hold Up = next demo variant (demo data only). The first 3 opens label the buttons for
   about 3 s (`DESIGN_V1_1.md` §9.5).
 - **Today list:** rows of time column + title/venue. Same-start-time events are
   grouped: time only on the first row, dividers only between groups. In-progress
@@ -92,7 +92,13 @@ The last four came with the port day card (`docs/DESIGN_PHASE3.md` §23.6).
   and `Same deck as Royal Theater`. Opened from Home, it ends with the event
   (`12:00p Name That Tune Trivia`, muted) instead of the summary. `Finding
   route…` while loading; `Connect your phone` / `Select tries again` with the
-  phone away. Long routes scroll.
+  phone away. Long routes scroll. Hold Select = Ask by voice.
+- **Ask** (voice, top bar `Ask` in the My info band; `DESIGN_V1_1.md` §9.6):
+  Hold Select on Home or Route starts dictation, then the phone's card: up to
+  four rows of a small label and a bold value (`HEARD`, `FROM`, `TO`,
+  `YOU'RE AT`, `TRY`), and a sea-accent hint (`Select: route · Hold: ask
+  again`). Select does what the hint says, Hold Select asks again, Back
+  closes.
 
 ## Phone settings page
 

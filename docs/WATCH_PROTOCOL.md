@@ -618,6 +618,26 @@ connection), closes an Ask screen that has nothing on it yet.
 | 1 + n | the hint line (`Select: route · Hold: ask again`), ≤ 47 bytes |
 | 1 + n, 1 + n | action 1 only: the Route screen's title and header until its page comes (≤ 31 bytes each) |
 
+Byte limits, as built (1.5.2 to 1.5.12). Each limit is the watch's buffer
+in `src/c/ask_window.c` less its NUL; the phone cuts to the same numbers
+(`LABEL_MAX`, `VALUE_MAX`, `HINT_MAX`, `TITLE_MAX` in `src/pkjs/voicecard.js`,
+at a whole UTF-8 character with `pack.utf8`):
+
+| Text | Max bytes | Watch buffer | Note |
+|---|---|---|---|
+| `voice_text`, the transcript (VOICE) | 255 | `heard`, 256 | Copied with `snprintf`, which can cut a multi-byte character at byte 255; the settings page's test box takes at most 255 characters |
+| row label | 15 | `LABEL_LEN` 16 | |
+| row value | 63 | `VALUE_LEN` 64 | |
+| hint line | 47 | `HINT_LEN` 48 | Also holds the watch's own hints (`Matching on the phone...`) |
+| route title, header | 31 each | `VALUE_LEN / 2`, 32 | |
+| rows | 4 | `ROWS_MAX` | Extra rows are dropped on both sides |
+
+A full card is at most 7 + 4 × (16 + 64) + 48 + 2 × 32 = 439 bytes, well
+inside the watch's 2048-byte inbox; VOICE fits the 768-byte outbox.
+`docs/PHASE5_PLAN.md` (V1) planned a transcript of up to 256 bytes and confirm
+strings of up to 48 bytes: those are the buffer sizes, so the usable text is
+one byte less (255 and 47).
+
 Select on a route card opens the Route screen in the Ask screen's place (and
 closes a Route screen already open), which asks for its page with
 ROUTE_REQUEST as usual. Hold Select asks again; Back closes. The phone answers

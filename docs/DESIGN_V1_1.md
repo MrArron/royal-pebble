@@ -788,7 +788,7 @@ Opened by:
   `CLOSEST TO ROYAL THEATER`, then the restroom's deck line and `Same deck as
   Royal Theater` under the steps);
 - **Select on Home** (route to the NEXT event, 9.5);
-- voice, later (9.6).
+- Select on an `Ask` voice card that names a place (9.6, from 1.5.2).
 
 ```
 Royal Theater                  Gothic 24 bold (destination)
@@ -849,7 +849,8 @@ FROM YOUR CABIN                small caps, muted (the start, 9.4)
 
 - **Restrooms are not listed in the directory** (26 of them would clutter every
   deck page). They're reached through a place page's `Closest restroom` line
-  (Hold Select) and, later, by voice. `WatchRestroomPlace` is parked.
+  (Hold Select) and by voice (`Closest restroom`, 9.6). `WatchRestroomPlace` is
+  parked.
 - **Elevator banks are directory places.** On a deck page they sit in their
   FORE / MID / AFT group as muted rows (`Fore elevators`). Browse by area gets
   an `Elevators` row (`Fore · Aft`) just before Ashore.
@@ -894,7 +895,7 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
 - **Select on Home** (unused today: Up = My info, Down = Today, hold Up = demo)
   opens the Route screen for the NEXT event.
 - **Button hints:** labels beside each button over a grayed-out Home: Up
-  `My info`; Select `Route to next` / `Hold: Ask by voice` (once voice exists);
+  `My info`; Select `Route to next` / `Hold: Ask by voice` (not drawn as built);
   Down `Today`; Back `Exit`. They show for about 3 s on the **first 3 opens**,
   and again after an update adds a button; any press dismisses them. The watch
   counts opens in its own storage. The phone's Help section has an **Always show
@@ -911,27 +912,55 @@ reminders (owner, 2026-09-26). Built in `src/pkjs/routestart.js`.
   under white-outlined labels with a pointer toward each button: `My info` and
   `Today` in black, `Route to next` in sea blue (only when Select has an event
   to route to, so not on the port-day countdown), `Exit` in dark gray on the
-  left. No voice line until voice exists. They show on a user open (not an
-  alert or an install), once Home is on top with its data, so after the
-  morning summary. Up, Select and Down only dismiss them; Back isn't taken and
+  left. Voice added no `Hold: Ask by voice` label; when Select has no event
+  but `I'm on board` is offered, its label is `Hold: on board`. They show on
+  a user open (not an alert or an install), once Home is on top with its
+  data, so after the morning summary. Up, Select and Down only dismiss them; Back isn't taken and
   exits as labelled. The count and a hints version live in the watch's
   storage (`WATCH_PROTOCOL.md`). The **Always show button hints** switch is in
   the settings page's Help section (9.7).
 
-### 9.6 Voice (concept, later)
+### 9.6 Voice (Ask)
 
-`WatchVoice*`. Now Phase 5 in the brief (Phase 4 from 2026-09-26 to 09-27):
-nothing here is built
-until that phase's scope session, which includes the airplane-mode dictation
-test in `docs/FUTURE_VOICE_QUERIES.md` on the owner's phone. Scope session
-2026-09-28 (brief, item 29): every command below is in scope; schedule
-questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
+`WatchVoice*` (the mockups came before the build; where they differ, this
+section is what shipped). Phase 5 in the brief (item 29). Scope session
+2026-09-28: every command below is in scope; schedule questions (`What's
+next`, `When is <event>`) are a future goal, not in Phase 5 (they answer `NOT
+YET`). **Built in 1.5.2 to 1.5.10**; 1.5.11 renamed Harmony's refitted venues
+in the lexicon. The owner tried 1.5.4 (dictation in airplane mode included)
+and 1.5.10 on the Pebble Time 2 with the Android phone (`docs/PHASE5_PLAN.md`
+§1.3 and §3).
 
-- **Hold Select** on Home or on a Route screen starts dictation. (On place pages
-  Hold Select is the restroom route.) Check it doesn't clash with any firmware
-  long-press action. Top bar `Ask`.
-- **Commands** (keyword matching on the phone against the venue table and its
-  aliases):
+How it works, as built:
+
+- **Watch** (`src/c/ask_window.c`): **Hold Select** on Home or on a Route
+  screen opens the `Ask` screen (top bar `Ask`) and starts the Pebble app's
+  dictation with its own confirm step off. What was heard goes to the phone;
+  the screen then draws the card the phone sends back. It has no place names
+  or wording of its own (bytes: `docs/WATCH_PROTOCOL.md`, Voice). On place
+  pages Hold Select stays the restroom route.
+- **Phone, fixed commands first** (`src/pkjs/voicecard.js`): on board /
+  ashore, `Forget where I am`, my cabin, the nearest restroom, muster station,
+  tomorrow and departure, matched by pattern and answered from the cruise data.
+- **Phone, the matcher** (`src/pkjs/voice.js`, 1.5.7, wired in 1.5.8):
+  everything else is parsed into one intent (`SET_LOCATION`, `ROUTE`,
+  `ROUTE_COMBINED`, `CLOSEST_RESTROOM`, `CLOSEST_BAR`, `CLOSEST_COFFEE`,
+  `LOCATION_REFUSED`, `OUT_OF_SCOPE_KNOWN`, `INCOMPLETE`, `NO_MATCH`).
+  Command and category words live only in its `GRAMMAR`; venue names, aliases
+  and mishearings live only in the generated lexicon
+  `src/pkjs/data/voice-HM.js`, built by `tools/voice/build_voice.js` from
+  `tools/voice/venue-mishearings-HM.json` and `venues.js` (see
+  `tools/voice/README.md`). `voicecard.js` turns the result into a card.
+- **Where routes start** (`src/pkjs/routestart.js`, 9.4): a spoken `I'm at`
+  is the start for 90 minutes (`SPOKEN_FOR`); the phone keeps it (`index.js`)
+  and logs when it ends.
+- **Usage log:** a `voice` line per turn on the phone (heard, matched, the
+  card, what Select did) and a watch entry per dictation with its status and
+  free heap (`docs/WATCH_PROTOCOL.md`, Usage log).
+
+Commands and answers (every card starts with `HEARD`):
+
+- **Commands:**
   - `I'm at <venue>` / `I'm in cabin <number>`: set where you are (9.4);
   - `Closest restroom (from <venue>)`;
   - `How do I get from <A> to <B>` / `<A> to <B>`;
@@ -1010,12 +1039,15 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
   embark and port days, where `I'm on board` is said. With the phone away,
   Hold Select opens the `On board?` screen while it's offered.
 - **Only one-spot places can be a location:** landmark venues and cabins.
-  Restrooms, elevators and stairs are refused (`There are 26 restrooms` / `Say a
-  venue or a cabin number near you instead`); they're fine as destinations.
+  Restrooms, bars, coffee places, elevators, stairs and decks are refused
+  (`There are many restrooms`, `Elevators stop on many decks`, with a `TRY`
+  row and the hint `Say a place or cabin number near you`); they're fine as
+  destinations.
 - **Always show what was heard and what it matched** (`HEARD`, `FROM` / `TO` or
   `YOU'RE AT`) before answering; Select confirms, Hold Select asks again.
 - Screens for no match (with a `TRY` example) and phone away (`Voice is heard
-  on the phone`).
+  on the phone` / `Bring the phone nearby, then hold Select to ask`). If the
+  watch can't start dictation: `Voice isn't available`.
 - A spoken cabin number is used for routing only: never stored beyond the
   current start. The usage log may record it (owner, 2026-09-26); the log
   never goes into the repo.
@@ -1025,9 +1057,11 @@ questions (`What's next`, `When is <event>`) are a future goal, not in Phase 5.
   confirm, or ask again). All wording and matching live on the phone
   (`src/pkjs/voicecard.js`), so they change without a watch update. The watch
   writes only what it must say itself: `Voice is heard on the phone` (phone
-  away), `Matching on the phone...` and `No answer from the phone` (10 s).
-  On embark day, while `I'm on board` is offered, Hold Select on Home keeps
-  that job; Ask is on Hold Select the rest of the time. A Route screen opened
+  away), `Matching on the phone...`, `No answer from the phone` (10 s),
+  `Phone busy. Select to try again` (a confirm that couldn't be sent) and
+  `Voice isn't available`.
+  (In 1.5.2 Hold Select on Home kept the `On board?` screen while `I'm on
+  board` was offered; now it always asks, as above.) A Route screen opened
   from Ask replaces an open one. Byte format: `docs/WATCH_PROTOCOL.md`, Voice.
 
 ### 9.7 Phone settings page (not mocked)
@@ -1060,8 +1094,8 @@ All built into the local settings page, so they work offline.
   (turns on `Cross to port` / `· stbd side`), `Flip the whole ship` and a chip
   per mapped deck for `Flip single decks` (a deck chip flips on top of the
   whole-ship switch). These are kept per ship (`settings.shipSides`) and
-  applied to the planner for every directory and route page. No voice
-  commands yet (9.6 is still Later).
+  applied to the planner for every directory and route page. `Try a voice
+  phrase` (1.5.9, 9.6) answers a typed phrase as the watch would.
 
 ### 9.8 Check before or while building
 
@@ -1107,7 +1141,8 @@ For the build PRs:
 9. **Help section** in the phone settings (voice commands, controls, notes).
 10. **Voice:** designed as a concept; Phase 5 in the brief (Phase 4 from 2026-09-26 to 09-27),
     starting with a scope session (companion app or current setup) that
-    includes the dictation test.
+    includes the dictation test. Built in the current setup (PebbleKit JS
+    and the Pebble app's dictation), 1.5.2 to 1.5.10 (9.6).
 11. **Route start (2026-09-26):** the 15-minute rule, not "the last starred
     venue until 04:00" (9.4).
 12. **No `~` on distances (2026-09-26):** every figure is approximate in an
