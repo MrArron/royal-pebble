@@ -1,6 +1,6 @@
 // The settings page, built on the phone and opened as a data: URL so it works
-// with no internet (docs/DESIGN.md, "Phone settings"). Screens: Cruise, Days, Filters,
-// Events and Me, with Help under Me (docs/DESIGN_V1_1.md §9.7).
+// with no internet (docs/DESIGN.md §12). Screens: Cruise, Days, Filters,
+// Events and Me, with Help under Me (docs/DESIGN.md §12.7).
 //
 // The page returns its result through `return_to` (the emulator tooling adds
 // it) or the phone app's pebblejs://close# URL:
@@ -12,7 +12,7 @@
 //    each was made), personal: [{title, venue, date, time, minutes}],
 //    download: {ship: {code, name}, sailDate}, bundle, ships,
 //    login: {email, password} (download-login only; the phone script passes it to
-//           the sign-in and nothing keeps it, docs/PHASE4_PLAN.md),
+//           the sign-in and nothing keeps it, docs/DESIGN.md §12.2),
 //    venues: {ship, overrides} (all venue edits for that ship, only when changed),
 //    usage: {on, label, clear} (Me > Usage log),
 //    voiceTest: text (Help > Try a voice phrase; the phone answers it for the next open),
@@ -374,7 +374,7 @@ var HELP_NOTES = [
 
 // Help > Voice commands: [group, [[what to say, what it does]]]. Only what the
 // phone answers today (src/pkjs/voicecard.js fixed commands, then the matcher in
-// voice.js); keep in step with them and docs/DESIGN_V1_1.md §9.6.
+// voice.js); keep in step with them and docs/DESIGN.md §11.
 var HELP_VOICE = [
   ['Going places', [
     ['How do I get to the Windjammer?', 'The route from where routes start now. Also <b>Take me to</b> or ' +
@@ -633,7 +633,7 @@ var BODY = [
   '-4 4 1.8 4 4 4zm0 2c-2.7 0-8 1.3-8 4v2h16v-2c0-2.7-5.3-4-8-4z"/></svg></span>Me</button></nav>'
 ].join('');
 
-// Clashes (docs/DESIGN_V1_1.md §8.3), worked out like the watch does: two
+// Clashes (docs/DESIGN.md §7.4), worked out like the watch does: two
 // starred events or personal entries whose times overlap. One with no length
 // lasts 30 minutes; back-to-back isn't a clash. `items` are {at, minutes}, with
 // `at` in minutes on one clock (null when untimed). Returns, for each item, the
@@ -837,7 +837,7 @@ function pageMain(S, V, CL, SH) {
     $('status').innerHTML = html;
   }
 
-  // ---- Ready to sail (docs/DESIGN_PHASE3.md §24.2): three checks under the
+  // ---- Ready to sail (docs/DESIGN.md §12.2): three checks under the
   // cruise card, from the first download until embark day ends (04:00 the next
   // day). It replaces the old "All set" line.
   var TICK = '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5 11-11"/></svg>';
@@ -1239,7 +1239,7 @@ function pageMain(S, V, CL, SH) {
     return /TENDER/.test(type || '') ? 60 : 30;
   }
 
-  // Same as slice.js warnPeriod (docs/DESIGN_PHASE3.md §23.2).
+  // Same as slice.js warnPeriod (docs/DESIGN.md §12.3).
   var WARN_PERIODS = [30, 60, 90, 120];
   function warnPeriodOf(d) {
     var v = days[d.date].warn;
@@ -1259,7 +1259,7 @@ function pageMain(S, V, CL, SH) {
 
   // {ship: all-aboard in ship time, depart: local, exact, royal}, minutes from
   // the day's midnight; null where there is none. `royal`: the day has Royal's
-  // gangway time (§23.1), which comes before the buffer.
+  // gangway time (§12.3), which comes before the buffer.
   function allAboardOf(d) {
     var set = days[d.date];
     var it = effective(d);
@@ -1393,7 +1393,7 @@ function pageMain(S, V, CL, SH) {
     }
 
     if (hasAboard && aa.royal) {
-      // Royal's gangway time, moved in 5-minute steps (§23.1).
+      // Royal's gangway time, moved in 5-minute steps (§12.3).
       html += '<label>All aboard <span class="chip ok">From Royal</span></label>';
       if (aa.exact) {
         html += '<label for="' + id + 'aa">All-aboard time (ship time)</label>' +
@@ -1608,7 +1608,7 @@ function pageMain(S, V, CL, SH) {
   var categories = S.categories || [];
   var hidden = (S.hiddenCats || ['Shop']).slice();
   var openCat = null;
-  // Ages (docs/DESIGN_PHASE4.md §2.4): switches, not categories. Each row's
+  // Ages (docs/DESIGN.md §12.4): switches, not categories. Each row's
   // bit is its place here, as slice.js ageMask gives them.
   var ageOn = (S.ageFilters || []).slice();
   var AGE_ROWS = [['adult', 'Hide Adult only events', '18+ and 21+'],
@@ -1658,8 +1658,8 @@ function pageMain(S, V, CL, SH) {
     return $('featured').getAttribute('aria-checked') === 'true';
   }
 
-  // ---- Me > Help (docs/DESIGN_V1_1.md §9.7), a screen under Me as the venues are
-  // under Cruise. The button hints switch (§9.5) lives here.
+  // ---- Me > Help (docs/DESIGN.md §12.7), a screen under Me as the venues are
+  // under Cruise. The button hints switch (§4.6) lives here.
   $('openHelp').addEventListener('click', function() { show('help', 'Help'); });
   function switchOn(id) {
     return $(id).getAttribute('aria-checked') === 'true';
@@ -1684,7 +1684,7 @@ function pageMain(S, V, CL, SH) {
       S.voiceTest.lines.map(function(l) { return '<div class="chg"><span>' + esc(l) + '</span></div>'; }).join('');
   }
 
-  // Port and starboard (§9.7): only for a ship with a map, to set the sides right
+  // Port and starboard (§12.7): only for a ship with a map, to set the sides right
   // on the first sailing with it.
   var SD = S.shipSides;
   var flipDecks = SD ? SD.flipDecks.slice() : [];
@@ -1726,7 +1726,7 @@ function pageMain(S, V, CL, SH) {
 
   function catSummary(c) {
     if (c.name === 'Casino') {
-      // Matched on the phone (slice.js isCasino), docs/DESIGN_PHASE3.md §27.
+      // Matched on the phone (slice.js isCasino), docs/DESIGN.md §12.4.
       return (hidden.indexOf(c.name) !== -1 ? 'Hidden &middot; ' : '') + 'Casino Royale and casino games &middot; ' +
         c.n + (c.n === 1 ? ' event' : ' events');
     }
@@ -1868,8 +1868,8 @@ function pageMain(S, V, CL, SH) {
         minutes: row[fi.minutes] || 0, featured: !!row[fi.featured], reservation: !!row[fi.reservation],
         paid: fi.paid !== undefined && !!row[fi.paid], price: fi.price !== undefined ? row[fi.price] : null
       };
-      // Phase 4 details (docs/DATA_FORMAT.md `infos`, docs/DESIGN_PHASE4.md
-      // §2.3, §3.3, §4.2): the age, arrive-early minutes and notes.
+      // Phase 4 details (docs/DATA_FORMAT.md `infos`, docs/DESIGN.md
+      // §12.5): the age, arrive-early minutes and notes.
       var inf = fi.info !== undefined ? infoRows[row[fi.info]] : null;
       if (Array.isArray(inf)) {
         var age = Array.isArray(inf[0]) ? inf[0] : [];
@@ -1930,7 +1930,7 @@ function pageMain(S, V, CL, SH) {
     return starChanges.hasOwnProperty(key) ? starChanges[key] : !!savedStars[key];
   }
 
-  // Reserved marks (docs/DESIGN_V1_1.md §5) travel with the stars under
+  // Reserved marks (docs/DESIGN.md §7.3) travel with the stars under
   // slice.js reservedKey ('R|' + star key), so they go back the same way and
   // the latest change wins against the watch. Unstarring keeps the mark.
   function resKey(key) {
@@ -1962,7 +1962,7 @@ function pageMain(S, V, CL, SH) {
     toReserve = allEvents.filter(needsReserving).length;
   }
 
-  // The reservation line under an event (§5): a chip and a button while
+  // The reservation line under an event (§12.5): a chip and a button while
   // starred, a plain note when not.
   function resBlock(e) {
     if (!e || !e.reservation) {
@@ -1985,7 +1985,7 @@ function pageMain(S, V, CL, SH) {
     return e ? resBlock(e) + eventTags(e) : '';
   }
 
-  // Clash chips (docs/DESIGN_V1_1.md §8.3) by event key and by personal entry
+  // Clash chips (docs/DESIGN.md §7.4) by event key and by personal entry
   // index, among upcoming starred events and timed entries. Worked out again
   // whenever stars or entries change.
   var clashes = {byKey: {}, byEntry: {}, count: 0};
@@ -2042,9 +2042,9 @@ function pageMain(S, V, CL, SH) {
     return text ? '<span class="tags">' + clashChip(text) + '</span>' : '';
   }
 
-  // Outlined "Last chance" / "Only show" chip (§8.4), then the clash chip.
-  // Search finds events in hidden categories too (docs/DESIGN_PHASE3.md
-  // §24.3); unless starred, they're marked.
+  // Outlined "Last chance" / "Only show" chip (§7.5), then the clash chip.
+  // Search finds events in hidden categories too (docs/DESIGN.md
+  // §12.4); unless starred, they're marked.
   function eventTags(e) {
     var fin = finals[e.key];
     var html = (fin ? '<span class="schip final">' + (fin === 2 ? 'Only show' : 'Last chance') + '</span>' : '') +
@@ -2069,7 +2069,7 @@ function pageMain(S, V, CL, SH) {
     return e.minutes + ' min';
   }
 
-  // An event's notes behind a "Notes · 2 ▾" toggle, collapsed (§4.2).
+  // An event's notes behind a "Notes · 2 ▾" toggle, collapsed (§12.5).
   function notesBlock(e) {
     if (!e.notes || !e.notes.length) {
       return '';
@@ -2197,7 +2197,7 @@ function pageMain(S, V, CL, SH) {
     $('evMine').innerHTML = html + '</div>';
   }
 
-  // ---- From your booking (docs/DESIGN_PHASE3.md §22.7): booked excursions and
+  // ---- From your booking (docs/DESIGN.md §12.5): booked excursions and
   // other timed orders from the sync tool's login data. Read-only: they are
   // starred on the watch and change only in the Royal app. Shown in the day
   // view, under Starred and in search results.
@@ -2216,7 +2216,7 @@ function pageMain(S, V, CL, SH) {
       '<span class="bchip">' + CHECK_SVG + 'Booked &middot; &starf; on the watch</span></span></div>';
   }
 
-  // While searching, orders are in the results under their day (§24.3).
+  // While searching, orders are in the results under their day (§12.5).
   function renderOrders() {
     var list = searchText() ? [] : orders.filter(function(o) {
       return !isFinished(o.date, o.time, o.minutes) && (evDay === 'starred' || o.date === evDay);
@@ -2273,7 +2273,7 @@ function pageMain(S, V, CL, SH) {
       }).join('') + '</select>';
   }
 
-  // ---- Shore excursions (docs/DESIGN_PHASE4.md §6.1): one card per port day
+  // ---- Shore excursions (docs/DESIGN.md §12.5): one card per port day
   // with a Pick button per session. Picking stars it and marks it reserved,
   // like an activity's session; the watch shows it at the port, Ashore.
   function dayPortName(date) {
@@ -2442,7 +2442,7 @@ function pageMain(S, V, CL, SH) {
     return bits.map(function(b) { return esc(b.toUpperCase()); }).join(' &middot; ');
   }
 
-  // Search (docs/DESIGN_PHASE3.md §24.3): every day's events, the booked
+  // Search (docs/DESIGN.md §12.5): every day's events, the booked
   // orders and My entries, grouped under day headers. Events in hidden
   // categories are found too (marked in eventTags).
   function searchResults(q) {
@@ -2587,7 +2587,7 @@ function pageMain(S, V, CL, SH) {
     renderEvList();
   }
 
-  // Searching hides the day chips (§24.3); clearing the field goes back to the
+  // Searching hides the day chips (§12.5); clearing the field goes back to the
   // day view. An open entry form is left alone so nothing typed is lost.
   $('evSearch').addEventListener('input', function() {
     renderEvDays();
@@ -2710,7 +2710,7 @@ function pageMain(S, V, CL, SH) {
   });
 
   // ---- Cruise > Ship venues: the built-in venue table with the owner's edits
-  // (docs/DESIGN_V1_1.md section 1). V holds the rules shared with the phone
+  // (docs/DESIGN.md §12.2). V holds the rules shared with the phone
   // (venues.js venueLib); edits for this ship go back whole in the result.
   var VS = S.venues || null;
   var vTable = VS ? VS.table : {venues: {}, aliases: {}};
@@ -3081,7 +3081,7 @@ function pageMain(S, V, CL, SH) {
   // ---- Me
   // Stateroom, Deck, Nearest stairs and Muster fill themselves from the booking,
   // the cabin table and the ship map; a hand edit is kept and never refilled
-  // (docs/DESIGN_PHASE3.md §24.1). me.src remembers each field's source.
+  // (docs/DESIGN.md §12.6). me.src remembers each field's source.
   var me = S.me || {};
   var MR = S.meRef || {decks: [], booking: {}, generic: [], dining: []};
   var ME_FIELDS = ['stateroom', 'deck', 'stairs', 'muster', 'dining'];
@@ -3205,7 +3205,7 @@ function pageMain(S, V, CL, SH) {
       v = 'Deck ' + deckNo(v);
     }
     meSet(f, v);
-    // Settings saved before §24.1 have no sources: a value that differs from
+    // Settings saved before 1.3.3 have no sources: a value that differs from
     // what would fill it counts as a hand edit.
     meEdited[f] = me.src ? me.src[f] === 'edited' : !!v && meIsEdit(f);
     meShow(f);
@@ -3549,7 +3549,7 @@ function pageMain(S, V, CL, SH) {
     return {ship: MC.ship, clear: mcClear, notes: notes, added: mcAdded.filter(Boolean).map(pick)};
   }
 
-  // ---- Cruise > Share my plan (docs/DESIGN_PHASE3.md §28). The Pebble app's
+  // ---- Cruise > Share my plan (docs/DESIGN.md §12.2). The Pebble app's
   // WebView can't open Android's share sheet (probe, 2026-09-26), so Share plan
   // copies the text and Import plan takes it pasted. Import changes this page's
   // state like any other edit and saves it with Apply or Accept all.
@@ -4005,7 +4005,7 @@ function buildPage(state, now) {
     '</body></html>';
 }
 
-// For the Me tab (docs/DESIGN_PHASE3.md §24.1): the ship's cabin table (null
+// For the Me tab (docs/DESIGN.md §12.6): the ship's cabin table (null
 // without one), its decks for the drop-down ([] = 1-18), the generic stairs
 // list, the booking's stateroom, deck and muster, and the ship's main dining
 // rooms for the Dining drop-down ([] = a plain "Main Dining Room"). mapDecks:

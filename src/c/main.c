@@ -17,7 +17,7 @@
 // Watch day we last asked the phone about, so a rollover asks only once.
 static int32_t s_requested_day = INT32_MIN;
 
-// Morning sync (docs/DESIGN_PHASE3.md §25): opened by its wakeup, the app shows
+// Morning sync (docs/DESIGN.md §8.5): opened by its wakeup, the app shows
 // Home without a buzz, takes the slice the phone sends when the app starts, and
 // closes. It stays open when a notice came or the user left Home.
 #define SYNC_WAIT_MS 60000
@@ -108,7 +108,7 @@ int toggle_star(int event_index) {
 
 bool toggle_reserved(int event_index) {
   Event *e = data_event(event_index);
-  // Reserved only applies to starred events that need a reservation (§5).
+  // Reserved only applies to starred events that need a reservation (§7.3).
   if (!(e->flags & EVENT_STARRED) || !(e->flags & EVENT_RESERVATION)) {
     return false;
   }

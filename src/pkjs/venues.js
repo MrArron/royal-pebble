@@ -1,5 +1,5 @@
 // Built-in venue table: where each venue in Royal's schedule is on the ship
-// (docs/DESIGN_V1_1.md §1 and §6). Phone-only app knowledge, keyed by the venue
+// (docs/DESIGN.md §12.2). Phone-only app knowledge, keyed by the venue
 // name exactly as royal.clean() produces it; the bundle format doesn't change.
 //
 // Harmony of the Seas values come from Royal's own deck plans for sailings from
@@ -570,7 +570,7 @@ function venueLib() {
     return n >= 1 && n <= 20 ? n : null;
   }
 
-  // The watch's lines for a venue (docs/DESIGN_V1_1.md §2): loc is
+  // The watch's lines for a venue (docs/DESIGN.md §7.2): loc is
   // "Deck 4 · Mid", "Decks 3-5 · Fore" (no cabin deck), "Ashore" or null (no
   // deck); rel is {dir: 1 up, -1 down, 0 same deck, text} or null (no cabin deck).
   function watchLines(v, cabin) {
@@ -740,7 +740,7 @@ function watchWhere(v, cabin) {
   return {deck: deck, deckTo: 0, pos: pos, ashore: false, rel: cabin === null ? null : deck - cabin};
 }
 
-// "From" directions on a reminder (docs/DESIGN_V1_1.md §2): how to get to a
+// "From" directions on a reminder (docs/DESIGN.md §8.1): how to get to a
 // venue from the one the user is at just before.
 var FROM_NONE = 0;   // directions from the cabin (watchWhere)
 var FROM_ROUTE = 1;  // "From Royal Theater:" / "↓1 deck · Fore → Mid"

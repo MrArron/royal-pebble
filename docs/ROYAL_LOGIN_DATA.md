@@ -11,8 +11,7 @@ Everything here reaches the app through `cruise_sync.py --login` and the
 paste-in backup, or through the settings page's Advanced download, where the
 phone companion signs in once and makes the same calls (`royal.fetchMine`, from
 1.4.7; `docs/DATA_FORMAT.md`, `mine`). What the sync tool already
-copies into the bundle is marked **In the bundle**; the rest is for a future
-session to weigh.
+copies into the bundle is marked **In the bundle**; the rest is not used.
 
 All endpoints are on `aws-prd.api.rccl.com` with headers `AppKey`,
 `Access-Token` and `account-id` / `vds-id` (the token's `sub`). Commerce paths
@@ -62,7 +61,8 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
   re-run the explorer and look for it in the booking (`profileBookings`) and
   the voyage data. If it's there, add it to `mine` in both producers
   (`docs/DATA_FORMAT.md`) and let the Advanced download fill Me's Main dining
-  room like muster (`From booking`). Until then it's typed in (1.4.8).
+  room like muster (`From booking`). Until then it's typed in (1.4.8). On the
+  freeze checklist in `docs/PLAN.md`.
 - An order's `guests` can include people from **other staterooms and
   bookings** (a group booking listed a third guest with a different cabin and
   reservation id). The bundle's `guests` counts them all.
@@ -76,8 +76,8 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
 
 - The booking has `deckNumber` and `musterStation` (seen on one of two
   bookings, presumably once a cabin is assigned). **In the bundle** as `deck` and
-  `muster`. My info fields are typed by hand today; a future session can prefill
-  them (typed values should still win).
+  `muster`. The Me tab fills them from the booking when empty (1.3.3); a hand
+  edit still wins.
 - `passengers[].arrivalTime` (terminal arrival appointment) is empty until
   online check-in. **In the bundle** as `arrival` when set. *Unverified format*;
   the sync tool converts common time spellings to `HH:MM` and otherwise keeps
@@ -92,18 +92,17 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
   days on a 7-night sailing; not on sea, embark or debark days). **In the
   bundle** under `ports` by cruise day. *Unverified:* the format (not a plain
   `HH:MM` or ISO time; the sync tool keeps Royal's text when it can't read it)
-  and the meaning. `gangwayUp` may be when the gangway is raised, i.e. close to
-  departure, which would give a real all-aboard time instead of departure minus
-  a buffer. Compare with the Daily Planner on board before using it for
-  countdowns.
+  and the meaning. A readable `gangwayUp` is the day's all-aboard by default
+  (Phase 3 item 23), shifted in 5-minute steps on the Days tab. Still to check
+  against the Daily Planner on board that it's when you must be back.
 - `portInfo[].pointsOfInterest[]` sometimes has `latitude`/`longitude` (3 of
   16 points). **In the bundle** as `lat`/`lon` of the first point with
   coordinates: approximate, but good enough for the sunrise/sunset formula
   (sun reminders, now a future concept in the brief) in place of the built-in
   port table.
-- `portInfo[].bazaarDayType` (`ANCHOR` / `DESTINATION`) might mark tender ports
-  (Phase 3 item 23, tender-day warning). Not copied; check against a known tender port
-  first.
+- `portInfo[].bazaarDayType` (`ANCHOR` / `DESTINATION`) might mark tender ports.
+  Not copied: the app treats a day as a tender day when the itinerary's day type
+  contains `TENDER`. Check against a known tender port first.
 - `departurePortInformation.timeZoneName` gives the embark port's time zone.
   **In the bundle** as `embarkTimeZone`. Might help the ship-time default; port
   time zones per day are not listed.
@@ -120,23 +119,11 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
 - `smartShipCapabilities`, check-in and health questionnaire windows: not
   needed at sea.
 
-## Ideas for the app
+## How the app uses it
 
-Scheduled on 2026-09-26: ideas 1 and 6 are Phase 3 item 22, ideas 2 and 4 are
-item 23 and idea 3 is item 24 (`docs/PROJECT_BRIEF.md`). Idea 5 went with sun
-reminders to Future concepts.
-
-1. **Booked excursions (and other timed orders) as events.** Show `mine.orders`
-   with a `time` on Today and in the day lists like a reserved, starred event,
-   with the usual reminder, at `meet` when present (else `time`). Place: the
-   port name from the itinerary for day `day`.
-2. **Excursion-aware all-aboard.** On a port day with a booked excursion, show
-   its end time next to the all-aboard countdown.
-3. **Prefill My info** (deck, muster station) from `mine` when the owner hasn't
-   typed them.
-4. **Gangway times** as a suggested all-aboard (after checking on board what
-   `gangwayUp` means) and for the time-ashore bar.
-5. **Port coordinates** from `mine.ports` for sun reminders, falling back to the
-   built-in table.
-6. **Embark day:** terminal arrival appointment (`mine.arrival`) on the embark
-   day's Home.
+Built in Phase 3 (`docs/PROJECT_BRIEF.md`, items 22-24; screens in
+`docs/DESIGN.md`): booked excursions and other timed orders on Today with
+reminders (§7.7), the excursion's end on the port-day bar (§4.2), the Me tab
+prefilled from the booking (§12.6), gangway times as the default all-aboard
+(§12.3), and the terminal arrival card on embark day (§4.3). Port coordinates
+are kept for sun reminders, a future concept in the brief.

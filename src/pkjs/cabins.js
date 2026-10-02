@@ -17,7 +17,7 @@ var DATA = {
 
 // The lookups work on one ship's table, so the settings page can run them too:
 // config.js puts cabinLib's source and the ship's table in the page
-// (docs/DESIGN_PHASE3.md §24.1). Keep it self-contained, ES5.
+// (docs/DESIGN.md §12.6). Keep it self-contained, ES5.
 function cabinLib() {
   var CENTRE = 3;   // metres either side of the centreline that count as "centre"
   var NEAR_BANK = 15;   // stairs this close to an elevator bank are named after it

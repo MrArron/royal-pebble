@@ -64,7 +64,7 @@ LOGIN_CLIENT = ("Basic ZzlTMDIzdDc0NDczWlVrOTA5Rk42OEYwYjRONjdQU09oOTJvMDR2TDBCU
 TIMEOUT = 30
 PAGE = 200
 # Largest bundle pasted into the settings page on a real phone (Android,
-# docs/PHASE4_PLAN.md "Paste-in size"); all arrived whole.
+# docs/PROJECT_BRIEF.md "Measurements and limits"); all arrived whole.
 PASTE_TESTED = 1024 * 1024
 # Product types kept for the schedule (docs/DATA_FORMAT.md): the free activities,
 # plus the shows you reserve (ENTERTAINMENT), the paid classes and experiences
@@ -77,7 +77,7 @@ EXCURSION_CAT = ["Shore excursions", ""]
 # Left out by title: NextCruise sales appointments (about 22 slots a day) would
 # push busy days past the watch's 160 events.
 SKIP_TITLES = re.compile(r"nextcruise", re.I)
-# Event details (docs/DATA_FORMAT.md, docs/PHASE4_PLAN.md items 2-7).
+# Event details (docs/DATA_FORMAT.md, Event details).
 # Notes left out: boilerplate, the fee (already `paid`) and long legal text.
 NOTE_SKIP = re.compile(r"(images are illustrative|this activity has a fee|fee applies)", re.I)
 NOTE_MAX = 120
@@ -431,7 +431,7 @@ def product_ids(products: list) -> dict:
 
 def compare_ids(old: list, new: list) -> list:
     """Report lines comparing productID by title between two pulls (the gate
-    for re-sync by product id, docs/PHASE4_PLAN.md item 5)."""
+    for re-sync by product id, docs/DATA_FORMAT.md)."""
     a, b = product_ids(old), product_ids(new)
     both = sorted(set(a) & set(b))
     changed = [t for t in both if a[t] != b[t]]

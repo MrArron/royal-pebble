@@ -5,8 +5,8 @@
 #include "ui.h"
 #include "usage.h"
 
-// Route screen (docs/DESIGN_V1_1.md §9.2): the walking route to a place, from
-// a place to its closest restroom, or to Home's NEXT event (§9.5), one line
+// Route screen (docs/DESIGN.md §10.3): the walking route to a place, from
+// a place to its closest restroom, or to Home's NEXT event (§4.1), one line
 // per step with a drawn glyph.
 // The phone works out every line (docs/WATCH_PROTOCOL.md, Route screen); the
 // watch only draws them and keeps nothing once the screen closes.
@@ -42,7 +42,7 @@ static Fetch s_fetch;
 static uint8_t s_flags;         // 1: shown less (not drawn differently yet)
 static int8_t s_small_decks;
 // The screen's texts and steps, on the heap while it's open (static data must
-// stay under 64 KB: docs/PHASE5_PLAN.md).
+// stay under 64 KB: docs/PLAN.md).
 typedef struct {
   char venue[VENUE_LEN];  // the event's venue, as the phone is asked
   char title[TEXT_LEN];   // the destination

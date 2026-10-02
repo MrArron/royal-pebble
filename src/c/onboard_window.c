@@ -7,11 +7,11 @@
 // Two confirmations share this window, both confirmed by Hold Down, with Back
 // leaving things unchanged and Up and Select doing nothing.
 //
-// "On board?" (docs/DESIGN_PHASE3.md §22.6), opened by Hold Select on Home:
+// "On board?" (docs/DESIGN.md §4.4), opened by Hold Select on Home:
 // after Hold Down, a short buzz and "On board" for about 2 s (any button
 // closes it early), then Home. The top bar stays Home's.
 //
-// "Remove star?" (§26), opened by Hold Select on a starred event in Today or
+// "Remove star?" (§6), opened by Hold Select on a starred event in Today or
 // its details: Hold Down removes the star (toggle_star buzzes) and returns.
 // The top bar stays the screen's it came from.
 

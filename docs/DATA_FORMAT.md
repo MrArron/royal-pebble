@@ -98,7 +98,7 @@ text. One compact JSON object, ASCII only.
   - **Event details** (Phase 4, added without a version bump; a bundle without
     them is valid and every event then has no venue code, age, arrive-early
     time or notes). Each comes from the products listing both producers already
-    download (`docs/PHASE4_PLAN.md` items 1-7):
+    download:
     - `venueCodes`: beside `venues`, Royal's `locationCode` for each venue, or
       `null`. Venues are indexed by name and code together, so a blank title
       with a code (the wine tasting: `""`, `VINT`) is its own entry. The phone
@@ -165,7 +165,7 @@ text. One compact JSON object, ASCII only.
   - `ports[]`: port days with extra details, by itinerary `day`. `gangwayDown`,
     `gangwayUp`: `HH:MM`, or Royal's text when it isn't a readable time
     (port-local like the itinerary). A readable `gangwayUp` is the day's
-    all-aboard by default (`docs/DESIGN_PHASE3.md` §23.1); its meaning is
+    all-aboard by default (`docs/DESIGN.md` §12.3); its meaning is
     still to be checked on board. `lat`,
     `lon`: approximate port coordinates (a point of interest near the port).
     Each field is present only when Royal lists it; days without any are left out.
@@ -205,7 +205,7 @@ text. One compact JSON object, ASCII only.
     tell the user to check the times;
   - none: cancelled; drop the star.
 
-  A **Reserved** mark (`docs/DESIGN_V1_1.md` §5) is user data kept with the
+  A **Reserved** mark (`docs/DESIGN.md` §7.3) is user data kept with the
   stars, under the same key with `R|` in front; it moves or is dropped with its
   star.
 
@@ -224,7 +224,7 @@ text. One compact JSON object, ASCII only.
 ## Shared plan (Share my plan) — v1
 
 Not part of the bundle: the text the settings page's **Share plan** copies
-(`docs/DESIGN_PHASE3.md` §28) and **Import plan** reads on another phone. Only
+(`docs/DESIGN.md` §12.2) and **Import plan** reads on another phone. Only
 the phone companion produces it (`src/pkjs/share.js`); the sync tool doesn't.
 It holds the user's own choices, so treat it like a bundle: no shared plans
 in the repo, and made-up cabin numbers in tests.

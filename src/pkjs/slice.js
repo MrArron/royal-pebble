@@ -26,8 +26,8 @@ var FLAG_RESERVATION = 4;
 var FLAG_PERSONAL = 8;
 var FLAG_LAST_CHANCE = 16;  // the last performance of a featured show (finalShows)
 var FLAG_ONLY_SHOW = 32;    // a featured show that is on only once
-var FLAG_RESERVED = 64;     // the owner marked it reserved (docs/DESIGN_V1_1.md §5)
-var FLAG_BOOKED = 128;      // a timed order from login data (docs/DESIGN_PHASE3.md §22); star locked
+var FLAG_RESERVED = 64;     // the owner marked it reserved (docs/DESIGN.md §7.3)
+var FLAG_BOOKED = 128;      // a timed order from login data (docs/DESIGN.md §7.7); star locked
 
 var ALARM_ALL_ABOARD = 0;
 var ALARM_REMINDER = 1;
@@ -126,7 +126,7 @@ function starKey(title, date, time, venue) {
   return [title, date, time || '', venue || ''].join('|');
 }
 
-// Reserved marks (docs/DESIGN_V1_1.md §5) are kept with the stars, under the
+// Reserved marks (docs/DESIGN.md §7.3) are kept with the stars, under the
 // event's star key with this prefix, so they share the stars' storage, change
 // times (the latest change wins) and the watch's change queue. The flag stays
 // when the event is unstarred, so starring it again brings it back.
@@ -231,7 +231,7 @@ function defaultBuffer(type) {
   return /TENDER/.test(type || '') ? 60 : 30;
 }
 
-// The warning period (docs/DESIGN_PHASE3.md §23.2): the first all-aboard alert
+// The warning period (docs/DESIGN.md §8.2): the first all-aboard alert
 // and the start of the watch bar's red section, in minutes before all-aboard.
 // Per day on the Days tab; 30 unless set, 60 at tender ports.
 var WARN_PERIODS = [30, 60, 90, 120];
@@ -246,7 +246,7 @@ var MAX_SHIFT = 120;
 
 // Royal's gangway time for an itinerary day (`mine.ports[].gangwayUp`, from
 // login data), in minutes after the day's midnight, port-local; null without
-// a readable one. It is the day's all-aboard by default (§23.1). Ports are
+// a readable one. It is the day's all-aboard by default (§12.3). Ports are
 // matched by the itinerary's `day`.
 function royalAllAboard(bundle, it) {
   var ports = bundle && bundle.mine && Array.isArray(bundle.mine.ports) ? bundle.mine.ports : [];
@@ -334,7 +334,7 @@ function buildDay(bundle, settings, dayIndex, sailDays) {
 }
 
 // Embark day's terminal arrival appointment from login data (`mine.arrival`,
-// docs/DESIGN_PHASE3.md §22.5): {at: cruise minutes in ship time, text: ''}
+// docs/DESIGN.md §4.3): {at: cruise minutes in ship time, text: ''}
 // for an `HH:MM`, {at: NO_TIME, text: Royal's text} otherwise, and neither
 // on other days or without one. Royal gives it in port time like the
 // itinerary.
@@ -363,7 +363,7 @@ function isHidden(hidden, cat) {
 }
 
 // Casino events get a category of their own, Casino, in place of Royal's
-// (docs/DESIGN_PHASE3.md §27), so Filters shows and hides them like the
+// (docs/DESIGN.md §12.4), so Filters shows and hides them like the
 // others. Royal lists them at Casino Royale (or its Non-Smoking and Expanded
 // rooms) under Entertainment / Casino, raffles and drawings there included.
 // Elsewhere a title about casino games matches; bingo and raffles don't.
@@ -383,8 +383,8 @@ function eventCat(title, venue, cat) {
   return isCasino(title, venue, cat) ? ['Casino', ''] : cat;
 }
 
-// Settings > Filters > Ages (docs/PHASE4_PLAN.md §2, docs/DESIGN_PHASE4.md
-// §2.4): hide adult only events, teen and kid only events, family events.
+// Settings > Filters > Ages (docs/DESIGN.md
+// §12.4): hide adult only events, teen and kid only events, family events.
 // Stored as a list of these names; all off until the user turns one on.
 var AGE_FILTERS = ['adult', 'young', 'family'];
 
@@ -433,7 +433,7 @@ function cleanAgeFilters(list) {
 // Phase 4 event details (docs/DATA_FORMAT.md `infos`, docs/WATCH_PROTOCOL.md
 // Packed events). The watch shows up to eight fixed tags, worked out here from
 // an event's notes: by Royal's note id first, keywords in the text second
-// (Royal's ids are inconsistent; docs/PHASE4_PLAN.md item 6). A short
+// (Royal's ids are inconsistent; docs/DESIGN.md §7.6). A short
 // description (id `short`) only gives the meeting spot tag.
 var TAG_RULES = [
   [1, /seapass/i, /seapass/i],
@@ -487,8 +487,8 @@ function eventDetails(sched) {
   });
 }
 
-// `Ages 18+`, `Ages 17 & under`, `Ages 13-17`, or '' (docs/DESIGN_PHASE4.md
-// §2.1). The settings page gets this function as text.
+// `Ages 18+`, `Ages 17 & under`, `Ages 13-17`, or '' (docs/DESIGN.md
+// §7.6). The settings page gets this function as text.
 function ageText(min, max) {
   if (min && max) {
     return 'Ages ' + min + '-' + max;
@@ -794,7 +794,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     flags |= fin === FINAL_LAST_CHANCE ? FLAG_LAST_CHANCE : fin === FINAL_ONLY_SHOW ? FLAG_ONLY_SHOW : 0;
     var port;
     if (cat[0] === EXCURSIONS) {
-      // Shore excursions (docs/DESIGN_PHASE4.md §6): picked ones are booked,
+      // Shore excursions (docs/DESIGN.md §7.7): picked ones are booked,
       // so they take a reserved mark. One also in login data goes only as
       // the booked order below.
       if (inOrders(orders, row[f.title], row[f.date], row[f.time])) {
@@ -811,7 +811,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     add(p.title, p.venue, p.date, p.time, p.minutes, FLAG_PERSONAL);
   });
 
-  // Booked excursions and other timed orders (§22.1): starred and booked, at
+  // Booked excursions and other timed orders (§7.7): starred and booked, at
   // the day's port, Ashore. Never filtered out.
   orders.forEach(function(o) {
     var start = eventStart(sailDays, o.date, o.time);
@@ -841,7 +841,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   return events;
 }
 
-// For the settings page's Ready to sail check (docs/DESIGN_PHASE3.md §24.2):
+// For the settings page's Ready to sail check (docs/DESIGN.md §12.2):
 // what each cruise day would send the watch before the MAX_EVENTS trim, as
 // [{date, fixed, cats: [[category, subcategory, n(, ages)]]}]. `fixed` counts
 // what no filter hides (starred, personal, booked, no category or age), so the
@@ -1092,7 +1092,7 @@ function buildNotices(sailDate, changes) {
 }
 
 // The last performance of each featured show in the cruise, matched by title
-// across all days (docs/DESIGN_V1_1.md §8.4): {starKey: FINAL_LAST_CHANCE, or
+// across all days (docs/DESIGN.md §7.5): {starKey: FINAL_LAST_CHANCE, or
 // FINAL_ONLY_SHOW when the show is on only once}. Personal entries and
 // unfeatured events never get one.
 var FINAL_LAST_CHANCE = 1;
@@ -1123,12 +1123,12 @@ function finalShows(bundle) {
   return out;
 }
 
-// Tomorrow's card for the evening summary (docs/DESIGN_V1_1.md §8.1): the
+// Tomorrow's card for the evening summary (docs/DESIGN.md §5): the
 // day, how many starred events and personal entries it holds and the first
 // timed one, how many featured events, a show to catch (`last`, with
 // `lastKind` a FINAL_ value, 0 none): a last chance before an only show, the
 // earliest of each; and how many starred events still need a reservation
-// (`toReserve`, §5).
+// (`toReserve`, §8.3).
 function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
   var day = buildDay(bundle, settings, dayIndex + 1, sailDays);
   var t = {kind: day.kind, status: '', location: '', arrive: NO_TIME, depart: NO_TIME,
@@ -1165,7 +1165,7 @@ function buildTomorrow(bundle, settings, stars, dayIndex, sailDays) {
   return t;
 }
 
-// The countdown before the cruise (docs/DESIGN_V1_1.md §8.2): starred events
+// The countdown before the cruise (docs/DESIGN.md §4.5): starred events
 // across the whole cruise (keys that still match the schedule, whatever the
 // Filters) plus personal entries and booked orders.
 function cruiseStarred(bundle, settings, stars) {
@@ -1193,12 +1193,12 @@ function formatSync(iso) {
     pad2(d.getMinutes()) + (h < 12 ? 'a' : 'p');
 }
 
-// "From" directions start where routestart.js says (docs/DESIGN_V1_1.md §9.4):
+// "From" directions start where routestart.js says (docs/DESIGN.md §10.4):
 // the previous starred event or personal entry when it ends less than 15 minutes
 // before the next one starts, or overlaps it.
 var previousStop = routestart.previousStop;
 
-// Starred, needs a reservation and isn't marked reserved (§5).
+// Starred, needs a reservation and isn't marked reserved (§7.3).
 function notReserved(e) {
   var f = e.flags;
   return !!((f & FLAG_STARRED) && (f & FLAG_RESERVATION) && !(f & FLAG_RESERVED));
@@ -1214,7 +1214,7 @@ function notReserved(e) {
 // (venues.FROM_*), `fromPos` and `fromVenue` (the previous venue's short name,
 // for a route). `notReserved` is set on a reminder for a starred event that
 // needs a reservation and isn't marked reserved.
-// Each evening also gets to-reserve alerts (§5): at the Me tab's time (see
+// Each evening also gets to-reserve alerts (§8.3): at the Me tab's time (see
 // reserveAlertAt) on a watch day, one per starred event of the next watch day
 // that needs a reservation and isn't marked reserved, at most MAX_TO_RESERVE,
 // in time order. `ref` is the event's start, `extra` how many there are in all.
@@ -1251,14 +1251,14 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
     }
     days[d].forEach(function(e) {
       if (e.booked) {
-        // Before the meeting time when there is one (§22.4); Ashore, no directions.
+        // Before the meeting time when there is one (§8.1); Ashore, no directions.
         alarms.push({at: e.start - e.booked.meetBefore - lead, ref: e.start, kind: ALARM_REMINDER,
                      extra: e.minutes, title: e.title, venue: e.venue, where: e.where,
                      from: venues.FROM_NONE, booked: e.booked});
         return;
       }
-      // Before the arrive-by time when the event asks to come early (Phase 4
-      // §3); `ref` stays the start, so directions and clashes use the start.
+      // Before the arrive-by time when the event asks to come early (docs/DESIGN.md
+      // §8.1); `ref` stays the start, so directions and clashes use the start.
       var prev = previousStop(stops, e);
       var route = prev ? finder.route(prev.venue, e.venue) : null;
       alarms.push({at: e.start - e.early - lead, ref: e.start, kind: ALARM_REMINDER, extra: e.minutes,
@@ -1369,9 +1369,9 @@ function buildSlice(bundle, settings, stars, now, testAt) {
   };
 }
 
-// My info's lines (docs/DESIGN_PHASE3.md §24.1). me.src says where each saved
+// My info's lines (docs/DESIGN.md §12.6). me.src says where each saved
 // Me field came from: a hand edit ('edited') always wins, a filled-in value
-// follows the latest sync, and an empty field (or settings saved before §24.1,
+// follows the latest sync, and an empty field (or settings saved before 1.3.3,
 // with no src) falls back to the booking and the cabin table.
 function myInfo(bundle, me) {
   var mine = bundle.mine || {};

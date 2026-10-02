@@ -247,7 +247,7 @@ day).
 | Phone `localStorage` | about 5 M characters across all keys | probe, 2026-09-26 |
 | Clipboard copy from the settings page | works to 512 KB, 1 MB fails | probe |
 | Settings page `data:` URL | 1,850 KB loads, about 2 MB never does; text grows about 1.6× in the URL | probe |
-| Page result through `pebblejs://close#` | 1,024 KB arrived whole on the phone; the emulator rejects over about 64 KB | RP Probe, 2026-09-27 |
+| Page result through `pebblejs://close#` | 1,024 KB arrived whole on the phone; the emulator rejects over about 64 KB. On Android the result arrives already URL-decoded, so the phone parses it as is first | RP Probe, 2026-09-27 |
 | Phone script | about 540 KB; no known limit | build |
 
 **Making room on the watch** (Phase 5, 2026-09-28): static buffers moved to

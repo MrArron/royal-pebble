@@ -10,11 +10,11 @@ void home_window_refresh(void);
 void home_window_destroy(void);
 // Home is the screen on top (nothing opened over it).
 bool home_window_is_top(void);
-// An open by the user: Home shows its button hints (§9.5) if they're due, as
+// An open by the user: Home shows its button hints (§4.6) if they're due, as
 // soon as it is on top with its data.
 void home_window_arm_hints(void);
 
-// Morning summary (docs/DESIGN_V1_1.md §8.1). The launch sets whether the user
+// Morning summary (docs/DESIGN.md §5). The launch sets whether the user
 // opened the app (alerts don't count); summary_check then shows today's card,
 // or tomorrow's from 20:00, over Home the first time each is due, once the
 // slice is today's.
@@ -33,10 +33,10 @@ void today_window_refresh(void);
 void info_window_push(void);
 void info_window_refresh(void);
 
-// "On board?" (docs/DESIGN_PHASE3.md §22.6), from Hold Select on Home.
+// "On board?" (docs/DESIGN.md §4.4), from Hold Select on Home.
 void onboard_window_push(void);
 void onboard_window_refresh(void);
-// "Remove star?" (§26) for starred event `event_index`, from Hold Select in
+// "Remove star?" (§6) for starred event `event_index`, from Hold Select in
 // Today or event details; shares the "On board?" window. `band` and `name`: the
 // top bar of the screen it opens from. Closes itself if the event goes away.
 void unstar_window_push(int event_index, GColor band, const char *name);
@@ -46,18 +46,18 @@ void unstar_window_push(int event_index, GColor band, const char *name);
 void dir_window_push(int32_t ref, const char *title);
 void dir_window_refresh(void);
 
-// Route screen (docs/DESIGN_V1_1.md §9.2) for place page `ref`: to the place,
+// Route screen (docs/DESIGN.md §10.3) for place page `ref`: to the place,
 // or with `rest` from it to its closest restroom. `title` and `header` show
 // until the phone's page arrives.
 void route_window_push(int32_t ref, bool rest, const char *title, const char *header);
-// The Route screen to event `e` (Home's NEXT, §9.5), with its time and title
+// The Route screen to event `e` (Home's NEXT, §4.1), with its time and title
 // under the steps.
 void route_window_push_event(const Event *e);
 void route_window_refresh(void);
 // Closes the Route screen if it's open (a voice route replaces it).
 void route_window_close(void);
 
-// Ask (docs/DESIGN_V1_1.md §9.6): starts dictation and shows the phone's
+// Ask (docs/DESIGN.md §11): starts dictation and shows the phone's
 // answer; from Hold Select on Home and Route screens. Pushed again while open,
 // it asks again.
 void ask_window_push(void);
@@ -92,11 +92,11 @@ void notice_window_refresh(void);
 int toggle_star(int event_index);
 
 // Select on event details: toggle Reserved on a starred event that needs a
-// reservation (docs/DESIGN_V1_1.md §5), with a short buzz. Returns false (and
+// reservation (docs/DESIGN.md §7.3), with a short buzz. Returns false (and
 // does nothing) for other events.
 bool toggle_reserved(int event_index);
 
-// The silent morning sync is running (docs/DESIGN_PHASE3.md §25): notices show
+// The silent morning sync is running (docs/DESIGN.md §8.5): notices show
 // without a buzz, and keep the app open.
 bool sync_in_progress(void);
 

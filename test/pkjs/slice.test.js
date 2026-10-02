@@ -260,7 +260,7 @@ test('Filters: subcategories, and starred events ignore filters', function() {
   assert.strictEqual(slice.cleanHiddenCats('Shop'), null);
 });
 
-test('Casino category: venue, Royal\'s Casino subcategory and casino game titles (§27)', function() {
+test('Casino category: venue, Royal\'s Casino subcategory and casino game titles (§12.4)', function() {
   var yes = [
     ['Welcome Raffle', 'Casino Royale', ['Entertainment', 'Casino']],   // a raffle at the casino counts
     ['Lucky Draw', 'Casino Royale Non-Smoking', ['Activities', '']],
@@ -321,7 +321,7 @@ test('Casino category: venue, Royal\'s Casino subcategory and casino game titles
   assert.deepStrictEqual(day.cats, [['Casino', '', 3], ['Entertainment', 'Shows', 2]]);
 });
 
-test('Ready to sail: each day load before the 160 trim, and the days saved (§24.2)', function() {
+test('Ready to sail: each day load before the 160 trim, and the days saved (§12.2)', function() {
   var b = makeBundle([
     ['Scavenger Hunt', 2, 0, '2027-03-07', null, 0, 0, 0],
     ['Watch Sale', 2, 1, '2027-03-07', '10:00', 60, 0, 0],
@@ -1720,7 +1720,7 @@ test('booked orders: the reminder is before the meeting time, with no directions
   assert.deepStrictEqual(r.booked, {meetBefore: 15, guests: 2, excursion: true});
 });
 
-// Shore excursions (docs/DESIGN_PHASE4.md §6): a snorkel (meet 30 min early,
+// Shore excursions (docs/DESIGN.md §7.7): a snorkel (meet 30 min early,
 // ages 6+), an all-day cabana and the booked order's own session.
 function excursionBundle() {
   var b = bookedBundle();
@@ -1962,7 +1962,7 @@ test('event details reach the packed events; untimed events never arrive early',
   });
 });
 
-test('arrive-early reminders fire before the arrive-by time, across midnight too (Phase 4 §3)', function() {
+test('arrive-early reminders fire before the arrive-by time, across midnight too (§8.1)', function() {
   var b = {
     ship: {code: 'HM'}, sailDate: '2027-03-06',
     itinerary: [{day: 1, date: '2027-03-06', type: 'EMBARK', port: 'Miami', depart: '16:00'},
@@ -2000,7 +2000,7 @@ test('arrive-early reminders fire before the arrive-by time, across midnight too
   }));
 });
 
-test('age filters: which events each one matches (Phase 4 §2)', function() {
+test('age filters: which events each one matches (§12.4)', function() {
   assert.strictEqual(slice.ageMask(18, 0, 'Adult Comedy', 'Comedy Live'), 1);
   assert.strictEqual(slice.ageMask(21, 0, 'Wine Tasting', ''), 1);
   assert.strictEqual(slice.ageMask(18, 25, 'Hyperlink Mixer', ''), 1);

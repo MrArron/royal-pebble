@@ -1,7 +1,6 @@
-# Phase 2 daily view: mockups (DESIGN_V1_1.md §8)
+# Phase 2 daily view: mockups (docs/DESIGN.md §4.5, §5-§7)
 
-**Status: approved 2026-09-24,** with the owner's §8.6 answers (recorded in
-§8.6). One change from these mockups: a featured show with a single performance
+**Status: approved 2026-09-24,** with the owner's answers (2026-09-24, below). One change from these mockups: a featured show with a single performance
 gets an `Only show` tag, shown like `Last chance` (decision 5). No mockup shows
 it; it fits a Today row (133 px).
 
@@ -31,7 +30,7 @@ All data is placeholder: sail date Sat Mar 6, Galveston, deck values as in v1.1
 
 ## Font stand-ins (2× mockup → watch)
 
-As in §2, plus two sizes that are new here:
+As in `docs/DESIGN.md` §1, plus two sizes that are new here:
 
 | Mockup | Watch |
 |---|---|
@@ -83,7 +82,7 @@ Widest lines that fit (check these in the emulator): `11:30a Adults Only Trivia`
 - **Countdown:** `days` sits beside the number, on its baseline.
 - **Tomorrow card:** the band follows tomorrow's kind (port teal). There's no
   right label, since today's status would be wrong on a card about tomorrow.
-- **Tomorrow card:** no `Port time` line and no clash count. §8.5 sends no
+- **Tomorrow card:** no `Port time` line and no clash count. The phone sends no
   tomorrow offset or events.
 - **Toast:** sits at the bottom so the row that was just starred stays visible.
   The double vibration isn't shown.
@@ -92,7 +91,7 @@ Widest lines that fit (check these in the emulator): `11:30a Adults Only Trivia`
   available), so they wrap to a second row. The alternative is a scrolling row
   like the day chips, but that would hide Clashes off-screen.
 
-## §8.6: recommendations (shown in the mockups; alternatives noted)
+## Owner decisions: recommendations (shown in the mockups; alternatives noted)
 
 The owner took every recommendation except 5 (`Only show` instead of no tag).
 

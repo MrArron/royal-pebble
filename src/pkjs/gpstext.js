@@ -1,4 +1,4 @@
-// Ship GPS text for the watch (docs/DESIGN_V1_1.md §9.1-9.2): distances in the
+// Ship GPS text for the watch (docs/DESIGN.md §10.2-10.3): distances in the
 // owner's units, route steps and the FROM / summary lines, from shipmap.js routes.
 // Phone only. The watch draws the arrows and step glyphs itself, so deck changes
 // come back as numbers and each step has a glyph code.
@@ -9,10 +9,10 @@ var FEET_PER_METRE = 3.2808;
 var DOT = ' ' + String.fromCharCode(183) + ' ';
 var UP = String.fromCharCode(0x2191);
 var DOWN = String.fromCharCode(0x2193);
-var STRIDE = 0.75;          // metres per step; to check on board (§9.8)
+var STRIDE = 0.75;          // metres per step; to check on board (§10.5)
 var LOBBY_NEAR = 12;        // stairs this close to a bank are that bank's stairs
 
-// Step glyphs (drawn on the watch, §9.2).
+// Step glyphs (drawn on the watch, §10.3).
 var GLYPH_WALK = 0;
 var GLYPH_CROSS = 1;
 var GLYPH_ELEVATOR = 2;
@@ -57,7 +57,7 @@ function zone(a, banks) {
   return a > banks.aft - LOBBY_NEAR ? 'Aft' : 'Mid';
 }
 
-// Is this route too unsure to give step by step? Then show less (§9.2).
+// Is this route too unsure to give step by step? Then show less (§10.3).
 function reduced(r) {
   return !!(r && (r.approx || r.unsure));
 }
@@ -115,7 +115,7 @@ function summary(r, from, opts) {
   return {decks: decks, text: distance(r.metres, unitOf(opts)) + (reduced(r) ? '' : ' in all')};
 }
 
-// A place page's FROM line (§9.1): {decks, text}. On the same deck the text
+// A place page's FROM line (§10.2): {decks, text}. On the same deck the text
 // starts "Your deck · " when the start is the cabin, "Same deck · " otherwise;
 // with a deck change the watch draws the arrow and deckText() before the text.
 function fromLine(r, from, opts) {

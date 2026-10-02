@@ -1,22 +1,22 @@
-// Voice cards (docs/WATCH_PROTOCOL.md, Voice; docs/DESIGN_V1_1.md §9.6).
+// Voice cards (docs/WATCH_PROTOCOL.md, Voice; docs/DESIGN.md §11).
 //
 // The watch sends what dictation heard; the phone answers with a card that the
 // watch only draws: up to four label/value rows, a hint line, and what Select
 // does. All wording lives here, so it changes without touching the watch.
 //
 // Commands that need no place names are answered here with real data too
-// (owner, 2026-09-28): "I'm on board" / "I'm ashore" (§22.6), "When do we
+// (owner, 2026-09-28): "I'm on board" / "I'm ashore" (§4.4), "When do we
 // leave?", "What's tomorrow?", "Where's my muster station?" and "Take me to my
 // cabin". The watch sends whether today's on-board flag is set and its clock
 // style (`state`), so cards say "Already on board" and show times as it does.
 //
 // Everything else goes to the voice matcher (voice.js, Phase 5 V3): places,
 // groups, cabins, elevators, the closest bar or coffee, a snack, and the
-// answers for what it can't do (docs/DESIGN_V1_1.md §9.6, VOICE_FINAL_PLAN
+// answers for what it can't do (docs/DESIGN.md §11, VOICE_FINAL_PLAN
 // decisions D1-D22). The commands above keep precedence. Routes use the Route
 // screen refs (directory.js).
 //
-// Where routes start (1.5.9, §9.4, routestart.js): `I'm at X` answers YOU'RE AT
+// Where routes start (1.5.9, §10.4, routestart.js): `I'm at X` answers YOU'RE AT
 // X and sets the spoken start as soon as the card is shown (the card's `start`
 // with `set`, saved by index.js; 90 minutes, D22; 1.5.10, owner: Hold to ask the
 // next question kept nothing before). Select or Hold keep it; the watch doesn't
@@ -107,7 +107,7 @@ function onboardIntent(t) {
   return ASHORE.test(t) || SURE.test(t) ? false : ONBOARD.test(t) ? true : null;
 }
 
-// The card for "I'm on board" (on true) or "I'm ashore" (§22.6). The flag
+// The card for "I'm on board" (on true) or "I'm ashore" (§4.4). The flag
 // only means something on a port or embark day with an all-aboard time.
 function onboardCard(on, heard, ctx, state) {
   var today = ctx.bundle && ctx.bundle.sailDate ? slice.today(ctx.bundle, ctx.settings, ctx.now || new Date()) : null;
@@ -378,7 +378,7 @@ var START_REFUSED = {'@restroom': 'restroom', '@elevator': 'elevator', '@forelev
 
 // Where a spoken start (slot A: `I'm at X`, `from X`) is: {place ({venue} |
 // {cabin} | {mine}), name (as the card says it)}, {card} when it can't be a
-// start (only one-spot places and cabins, §9.6: D7, D8, D12, D19), or null
+// start (only one-spot places and cabins, §11: D7, D8, D12, D19), or null
 // with no A. `label` names it on a card ('YOU\'RE AT' or 'FROM').
 function startFrom(heard, p, ctx, label) {
   var a = p.A || '';
@@ -523,7 +523,7 @@ var REFUSED = {
   coffee: ['There are a few coffee places', 'I\'m at Starbucks']
 };
 
-// "I'm at ..." that can't be a start (§9.6: only one-spot places).
+// "I'm at ..." that can't be a start (§11: only one-spot places).
 function refusedCard(heard, p, ctx) {
   var r = REFUSED[p.reason];
   if (r) {

@@ -2,7 +2,7 @@
  "name": "Royal Pebble voice command grammar",
  "version": "0.1 (draft, 2026-09-28)",
  "ship": "HM",
- "status": "Design reference for v1.1 Phase 5 (docs/DESIGN_V1_1.md 9.6). Runtime: src/pkjs/voice.js (grammar) + src/pkjs/data/voice-HM.js (generated venue lexicon).",
+ "status": "Design reference for v1.1 Phase 5 (docs/DESIGN.md §11). Runtime: src/pkjs/voice.js (grammar) + src/pkjs/data/voice-HM.js (generated venue lexicon).",
  "pipeline_summary": "raw transcript -> normalise (sentences -> clauses) -> parse each clause into an intent with slot SPANS -> resolve spans (venue matcher, cabin table) -> merge clauses -> one result -> confirm screen (HEARD + FROM/TO or YOU'RE AT).",
  "output_schema": {
   "intent": "SET_LOCATION | ROUTE | ROUTE_COMBINED | CLOSEST_RESTROOM | LOCATION_REFUSED | OUT_OF_SCOPE_KNOWN | INCOMPLETE | NO_MATCH",

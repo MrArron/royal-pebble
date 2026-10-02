@@ -222,7 +222,7 @@ test('message carries rel and where only when known', function() {
   assert.ok(!('dir_rel' in directory.message(page(directory.REF_DECKS))));
 });
 
-// ---- Ship GPS on place pages (docs/DESIGN_V1_1.md §9.1) ----------------------
+// ---- Ship GPS on place pages (docs/DESIGN.md §10.2) ----------------------
 
 var CABIN = {me: {deck: 'Deck 9', stateroom: '9254'}};  // deck 9, aft, port
 
@@ -294,7 +294,7 @@ test('GPS: no stateroom gives the hint flag; the booking stateroom counts', func
   assert.strictEqual(gpsPage('Studio B', {settings: {}, bundle: bundle}).gps.flags, directory.GPS_NO_CABIN);
 });
 
-test('GPS: a stop on now (or just ended) is the start (§9.4)', function() {
+test('GPS: a stop on now (or just ended) is the start (§10.4)', function() {
   function at(time, minutes) {
     return {me: CABIN.me, personal: [{title: 'Show', venue: 'Studio B', date: '2027-03-07', time: time,
                                       minutes: minutes}]};
@@ -350,7 +350,7 @@ test('GPS: closest restroom from the venue, in the owner units', function() {
   assert.strictEqual(gpsPage('Perfect Day at CocoCay').gps, null);
 });
 
-// ---- Route screen (docs/DESIGN_V1_1.md §9.2) --------------------------------
+// ---- Route screen (docs/DESIGN.md §10.3) --------------------------------
 
 function route(name, rest, opts) {
   opts = opts || {};
@@ -376,7 +376,7 @@ test('route: steps with glyphs, the arrival last, and the summary', function() {
   assert.ok(/^[0-9]+ ft/.test(route('Royal Theater', false, {settings: {me: CABIN.me, units: 'ft'}}).steps[0].text));
 });
 
-test('route: port/starboard settings from Help (§9.7) reach the steps and reset', function() {
+test('route: port/starboard settings from Help (§12.7) reach the steps and reset', function() {
   var cross = /^Cross (the ship|to port|to stbd)$/;
   function crossing(p) {
     return p.steps.filter(function(s) { return cross.test(s.text); }).map(function(s) { return s.text; });
@@ -468,7 +468,7 @@ test('route: ROUTE_PAGE packs flags, decks, texts and steps', function() {
   assert.ok(boleros.length <= directory.ROUTE_STEPS_MAX);
 });
 
-// Home's NEXT (§9.5): the route to an event, from where you'll be before it.
+// Home's NEXT (§4.1): the route to an event, from where you'll be before it.
 function eventRoute(venue, start, settings) {
   return directory.eventRoutePage({start: start, venue: venue},
                                   {bundle: makeBundle(), settings: settings || CABIN, stars: {}, now: NOW});

@@ -1,4 +1,4 @@
-# Phase 3 mockups (DESIGN_PHASE3.md)
+# Phase 3 mockups (docs/DESIGN.md)
 
 **Item 22: approved 2026-09-26. Item 23: designed with the owner (one open question). Items 24-28: first drafts.** The same format as `docs/mockups/phase2`:
 Claude Design component files, 400×456 (2×) for the watch and 390×844 for the
@@ -7,7 +7,7 @@ need the canvas runtime to render. Open the canvas
 (https://claude.ai/artifact/8duBBQWuFmwggUrAp8HMA4, pages "Item 22 (final)" and "Items 23–28 (draft)").
 There is no `preview.png` yet.
 
-Where a file and `docs/DESIGN_PHASE3.md` differ, the doc wins (it has the rules
+Where a file and `docs/DESIGN.md` differ, the doc wins (it has the rules
 for missing fields).
 
 ## Files

@@ -9,8 +9,8 @@
 // starred events topped up with the next items, until the arrival time);
 // otherwise the next starred
 // event (or a featured one), then the next two items. Hold Select on the
-// countdown or the arrival card says "I'm on board" (docs/DESIGN_PHASE3.md
-// §22.6), and Home shows the sea-day layout for the rest of the day.
+// countdown or the arrival card says "I'm on board" (docs/DESIGN.md
+// §4.4), and Home shows the sea-day layout for the rest of the day.
 
 static Window *s_window;
 static Layer *s_top_bar;
@@ -73,7 +73,7 @@ static int pick_next_items(int *out, int32_t now, int skip, bool starred_first) 
 
 // Each item: "1:00p Title" (starred ones with a star), then the venue with
 // its deck in short form ("Studio B · 4 Mid"), after "Last chance · " when
-// tagged, and " · ✓ Reserved" when marked (§5). Items that don't fit above
+// tagged, and " · ✓ Reserved" when marked (§7.3). Items that don't fit above
 // `bottom` are left out.
 static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t now, int skip,
                             bool starred_first) {
@@ -136,7 +136,7 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
 static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int x, int y,
                       int w, int h);
 
-// "Hold Select: I'm on board" under the countdown and the arrival time (§22.6).
+// "Hold Select: I'm on board" under the countdown and the arrival time (§4.4).
 static int draw_onboard_hint(GContext *ctx, int y, int width) {
   graphics_context_set_text_color(ctx, g_theme->sea_accent);
   graphics_draw_text(ctx, "Hold Select: I'm on board", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
@@ -145,7 +145,7 @@ static int draw_onboard_hint(GContext *ctx, int y, int width) {
   return y + 16;
 }
 
-// ---- Time-ashore bar (docs/DESIGN_PHASE3.md §23.3-23.4) ---------------------
+// ---- Time-ashore bar (docs/DESIGN.md §4.2) -------- ---------------------
 
 #define BAR_H 8
 
@@ -268,7 +268,7 @@ static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
 }
 
 // `route`: Select opens the route to this event, so its brief line ends with
-// `Route ›` (§9.5).
+// `Route ›` (§4.1).
 static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index, bool featured,
                          bool route) {
   GFont label_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
@@ -352,7 +352,7 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
   return y + 4;
 }
 
-// ---- Days to sail (docs/DESIGN_V1_1.md §8.2) --------------------------------
+// ---- Days to sail (docs/DESIGN.md §4.5) --------------------------------
 
 // Before the cruise, Home counts the days itself from the sail date, so it
 // stays right without the phone until the embark day starts at 04:00.
@@ -472,9 +472,9 @@ static bool shows_day(int32_t now) {
   return data_ready() && !sail_ahead() && cruise_day_index(now) <= day->index && day->kind != DAY_NONE;
 }
 
-// Embark day's terminal arrival card (docs/DESIGN_PHASE3.md §22.5): until the
+// Embark day's terminal arrival card (docs/DESIGN.md §4.3): until the
 // arrival time, or with Royal's text (no time to switch at) until all-aboard;
-// never once the user is on board (§22.6).
+// never once the user is on board (§4.4).
 static bool shows_arrival(int32_t now) {
   const Day *day = data_day();
   if (!shows_day(now) || day->kind != DAY_PORT || onboard_is_set()) {
@@ -487,7 +487,7 @@ static bool shows_arrival(int32_t now) {
 }
 
 // The all-aboard countdown: a port day until all-aboard, or the day's
-// departure if that comes first, unless the user is on board (§22.6).
+// departure if that comes first, unless the user is on board (§4.4).
 static bool shows_countdown(int32_t now) {
   const Day *day = data_day();
   return shows_day(now) && !shows_arrival(now) && day->kind == DAY_PORT &&
@@ -552,7 +552,7 @@ static int draw_arrival(GContext *ctx, int y, int width, int32_t now) {
 // A venue on board, so the phone can route to it.
 static bool routable(const Event *e) { return e->where.deck > 0 && !(e->where.bits & WHERE_ASHORE); }
 
-// The event Select routes to (§9.5): the NEXT card's, when its venue is on
+// The event Select routes to (§4.1): the NEXT card's, when its venue is on
 // board; else -1.
 static int route_target(int32_t now) {
   bool featured = false;
@@ -639,7 +639,7 @@ static void draw_body(Layer *layer, GContext *ctx) {
     y = draw_arrival(ctx, y, b.size.w, now);
   } else if (countdown) {
     // The bar takes the next items' place; they're one press away in Today
-    // (docs/DESIGN_PHASE3.md §23.7).
+    // (docs/DESIGN.md §4.2).
     y = draw_countdown(ctx, y, b.size.w, now);
     draw_clash_count(ctx, PAD, y - 4, b.size.w - 2 * PAD, now);
     return;
@@ -654,7 +654,7 @@ static void draw_body(Layer *layer, GContext *ctx) {
   draw_next_items(ctx, y + 4, b.size.w, b.size.h, now, skip, countdown);
 }
 
-// ---- Button hints (docs/DESIGN_V1_1.md §9.5) --------------------------------
+// ---- Button hints (docs/DESIGN.md §4.6) --------------------------------
 
 // Labels beside each button over a faded Home, for about 3 s on the first
 // HINT_OPENS opens by the user (every open with the phone's Always show
@@ -837,7 +837,7 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
   bool offered = offers_onboard(now_cruise());
   usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
-  // Ask by voice (§9.6), where "I'm on board" is one of the commands (owner,
+  // Ask by voice (§11), where "I'm on board" is one of the commands (owner,
   // 2026-09-28). With the phone away there's no voice, so the "On board?"
   // screen takes Hold Select while it's offered.
   if (offered && !connection_service_peek_pebble_app_connection()) {

@@ -95,7 +95,7 @@ var EXCURSION_CAT = ['Shore excursions', ''];
 // Left out by title: NextCruise sales appointments (about 22 slots a day)
 // would push busy days past the watch's 160 events.
 var SKIP_TITLES = /nextcruise/i;
-// Event details (docs/DATA_FORMAT.md, docs/PHASE4_PLAN.md items 2-7).
+// Event details (docs/DATA_FORMAT.md, Event details).
 // Notes left out: boilerplate, the fee (already `paid`) and long legal text.
 var NOTE_SKIP = /^(images are illustrative|this activity has a fee|fee applies)/i;
 var NOTE_MAX = 120;
@@ -471,7 +471,7 @@ function download(ship, sailDate, callback) {
 }
 
 // ------------------------------------------------------------ with login
-// Advanced download (docs/PHASE4_PLAN.md, "Advanced download with your Royal
+// Advanced download (docs/DESIGN.md §12.2, "Advanced download with your Royal
 // login"): sign in once, then fetch the same `mine` as cruise_sync.fetch_mine.
 // Everything from here to fetchMine: keep in step with cruise_sync.py. The
 // email and password are used for the sign-in request only; the token lives

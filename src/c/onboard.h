@@ -2,7 +2,7 @@
 #include <pebble.h>
 #include "data.h"
 
-// "I'm on board" (docs/DESIGN_PHASE3.md §22.6): on embark and port days the
+// "I'm on board" (docs/DESIGN.md §4.4): on embark and port days the
 // user says they're back on the ship. Home then shows the sea-day layout and
 // the day's all-aboard warnings are off. Watch-only, kept in its own
 // persistent key, and over at the 04:00 day boundary.

@@ -64,7 +64,7 @@ var SHIPS_MAX_AGE_MS = 30 * 24 * 3600 * 1000;
 var STORE_DEMO = 'demo';  // {variant, at}
 // Voice `I'm at X` (routestart.js, D22): {sail, at, name, venue | cabin | mine}
 // from directory.spokenStart, removed when it ends. A spoken cabin number is kept
-// only while it's the start (§9.6).
+// only while it's the start (§11).
 var STORE_SPOKEN = 'spokenStart';
 // Help > Try a voice phrase: the last phrase and the card it gave {text, lines, at}.
 var STORE_VOICE_TEST = 'voiceTest';
@@ -640,14 +640,14 @@ function pageState(ships) {
     } : null,
     status: load(STORE_STATUS, {}),
     me: settings.me || {},
-    // For Me: what fills Deck, Nearest stairs and Muster (§24.1).
+    // For Me: what fills Deck, Nearest stairs and Muster (§12.6).
     meRef: config.meRef(bundle, bundle && bundle.ship ? shipmap.decks(bundle.ship.code) : []),
     theme: settings.theme || 'light',
     reminderLead: settings.reminderLead || 15,
     reserveAlertAt: slice.reserveAlertAt(settings),
     units: settings.units || 'm',
     alwaysHints: settings.alwaysHints === true,
-    // For Help > Port and starboard: only on a ship with a map (§9.7).
+    // For Help > Port and starboard: only on a ship with a map (§12.7).
     shipSides: shipSidesState(bundle, settings),
     gpsShips: shipmap.shipNames(),
     // For Me > Map check: only on a ship with a map.
@@ -794,7 +794,7 @@ function useBundle(bundle, how) {
 function settingsClosed(text) {
   var r;
   // The Pebble app on Android hands the result over already URL-decoded
-  // (docs/PHASE4_PLAN.md), so read it as it is first: decoding again would
+  // (docs/PROJECT_BRIEF.md, Measurements), so read it as it is first: decoding again would
   // change text holding a valid escape (a note with "%41"). Decode only when
   // it doesn't parse.
   try {
@@ -809,11 +809,11 @@ function settingsClosed(text) {
     }
   }
   // Advanced download: the email and password leave the result before anything
-  // else reads it, and go only to the sign-in (docs/PHASE4_PLAN.md).
+  // else reads it, and go only to the sign-in (docs/DESIGN.md §12.2).
   var login = r.login;
   delete r.login;
   usage.add('settings', 'page closed: ' + (r.action || 'save') + ', result ' + Math.round(text.length / 1024) + ' KB');
-  // Share my plan: counts only (docs/DESIGN_PHASE3.md §28).
+  // Share my plan: counts only (docs/DESIGN.md §12.2).
   var imp = r.imported;
   if (imp && typeof imp === 'object') {
     usage.add('settings', 'plan imported: ' + (imp.of | 0) + ' differences; ' + (imp.stars | 0) + ' stars added, ' +
@@ -833,18 +833,18 @@ function settingsClosed(text) {
   settings.theme = r.theme === 'dark' ? 'dark' : 'light';
   settings.reminderLead = [5, 15, 30].indexOf(r.reminderLead) !== -1 ? r.reminderLead : 15;
   settings.reserveAlertAt = slice.reserveAlertAt(r);
-  // Walking distances on the watch's place pages (docs/DESIGN_V1_1.md §9.7).
+  // Walking distances on the watch's place pages (docs/DESIGN.md §12.6).
   if (gpstext.UNITS.indexOf(r.units) !== -1) {
     settings.units = r.units;
   }
   if (typeof r.showFeatured === 'boolean') {
     settings.showFeatured = r.showFeatured;
   }
-  // Home's button hints at every open, not just the first few (§9.5).
+  // Home's button hints at every open, not just the first few (§4.6).
   if (typeof r.alwaysHints === 'boolean') {
     settings.alwaysHints = r.alwaysHints;
   }
-  // Port/starboard flip and "sides confirmed", kept per ship (§9.7).
+  // Port/starboard flip and "sides confirmed", kept per ship (§12.7).
   var sides = cleanShipSides(r.shipSides);
   if (sides) {
     settings.shipSides = settings.shipSides || {};

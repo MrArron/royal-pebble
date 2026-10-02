@@ -17,7 +17,7 @@ typedef struct {
   GColor cursor_bg;
   GColor cursor_text;
   GColor now_label;
-  // The time-ashore bar (docs/DESIGN_PHASE3.md §23.3, §23.6).
+  // The time-ashore bar (docs/DESIGN.md §2, §4.2).
   GColor sea_pale;
   GColor warn;
   GColor warn_pale;
@@ -44,7 +44,7 @@ void fmt_clock(char *buf, size_t size, int minutes);
 // "45 min", "1 h", "1 h 30 min".
 void fmt_duration(char *buf, size_t size, int minutes);
 
-// Top bar, one line (docs/DESIGN_V1_1.md §4): the screen's name on the left,
+// Top bar, one line (docs/DESIGN.md §3): the screen's name on the left,
 // ship time in the center, the day's status in small caps on the right (left
 // out when it doesn't fit or repeats the name).
 Layer *top_bar_create(GRect frame, GColor band, GColor label, const char *name);
@@ -61,19 +61,19 @@ void draw_divider(GContext *ctx, int y, int width);
 void draw_bang(GContext *ctx, GPoint top_left, int h, GColor color);
 // Drawn check mark (text fonts have no ✓), `size` wide and tall.
 void draw_check(GContext *ctx, GPoint top_left, int size, GColor color);
-// "✓ Reserved" (docs/DESIGN_V1_1.md §5) in Gothic 18 bold (`large`) or 14 bold,
+// "✓ Reserved" (docs/DESIGN.md §7.3) in Gothic 18 bold (`large`) or 14 bold,
 // on a text line starting at y. Returns its width.
 int draw_reserved(GContext *ctx, bool large, int x, int y, GColor color);
 // The width draw_reserved would take.
 int reserved_width(bool large);
-// The same for any text: "✓ Booked" (docs/DESIGN_PHASE3.md §22).
+// The same for any text: "✓ Booked" (docs/DESIGN.md §7.7).
 int draw_checked(GContext *ctx, const char *text, bool large, int x, int y, GColor color);
 int checked_width(const char *text, bool large);
 // "1 clash" in Gothic 14 bold, port accent. Draws nothing and returns 0 when
 // there are none; otherwise returns the line height.
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);
 // "Last chance" or "Only show" for a featured show's final performance
-// (docs/DESIGN_V1_1.md §8.4), else NULL.
+// (docs/DESIGN.md §7.5), else NULL.
 const char *event_final_tag(const Event *e);
 // One line: `tag` in `tag_color`, then " · rest" in `rest_color` (just `rest`
 // when `tag` is NULL). The tag is never cut; the rest gets the ellipsis.
@@ -81,7 +81,7 @@ const char *event_final_tag(const Event *e);
 int draw_tagged_line(GContext *ctx, const char *tag, GColor tag_color, const char *rest,
                      GColor rest_color, GFont font, GRect box);
 
-// ---- Where a venue is (docs/DESIGN_V1_1.md §2) ------------------------------
+// ---- Where a venue is (docs/DESIGN.md §7.2) ------------------------------
 
 bool where_known(const Where *w);  // a deck or Ashore
 bool where_ashore(const Where *w);

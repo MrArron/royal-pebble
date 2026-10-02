@@ -32,7 +32,7 @@ static const Theme DARK = {
   .warn_pale = {GColorDarkCandyAppleRedARGB8},   // #AA0000
 };
 
-// Everything in one quiet gray, for a screen behind Home's button hints (§9.5).
+// Everything in one quiet gray, for a screen behind Home's button hints (§4.6).
 static const Theme FADED_LIGHT = {
   .bg = {GColorWhiteARGB8},
   .text = {GColorLightGrayARGB8},

@@ -6,7 +6,7 @@
 // The watch allows 8 per app; one is kept for the morning sync.
 #define MAX_WAKEUPS 7
 
-// Morning sync (docs/DESIGN_PHASE3.md §25): 04:30 ship time, or 5 minutes
+// Morning sync (docs/DESIGN.md §8.5): 04:30 ship time, or 5 minutes
 // later at a time while an alert is within a minute of it, up to 04:55.
 #define SYNC_AT (4 * 60 + 30)
 #define SYNC_STEP 5
@@ -99,7 +99,7 @@ void alarms_schedule(void) {
   for (int i = 0; i < data_alarm_count() && scheduled < MAX_WAKEUPS; i++) {
     Alarm *a = data_alarm(i);
     // Alerts are sorted; several in the same minute share one wakeup. On
-    // board, the day's all-aboard warnings are off (§22.6).
+    // board, the day's all-aboard warnings are off (§4.4).
     if (a->at <= now || a->at == last || onboard_silences(a)) {
       continue;
     }

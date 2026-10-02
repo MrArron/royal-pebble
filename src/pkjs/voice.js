@@ -1,4 +1,4 @@
-// Offline voice commands (docs/DESIGN_V1_1.md §9.6, brief item 29).
+// Offline voice commands (docs/DESIGN.md §11, brief item 31).
 //
 // The watch records, the Pebble app turns speech into text on the phone (no
 // internet at sea), and this module turns that text into one command:
@@ -1032,7 +1032,7 @@ function resolve(p, match) {
   }
   out.A_target = a ? a.t : null;
   if (a && (/[LA]/.test(a.flags) || a.t.indexOf('|') !== -1)) {
-    // A start that isn't one spot (voicecard.js refuses it as a start, §9.6).
+    // A start that isn't one spot (voicecard.js refuses it as a start, §11).
     out.A_spot = a.flags.indexOf('A') !== -1 ? 'ashore' : a.flags.indexOf('L') !== -1 ? 'multi_spot' : 'group';
   }
   out.B_target = b ? b.t : null;
