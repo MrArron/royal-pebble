@@ -351,10 +351,10 @@ static void window_load(Window *window) {
   GRect b = layer_get_bounds(root);
   window_set_background_color(window, g_theme->bg);
   bool port = data_ready() && data_day()->kind == DAY_PORT;
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), port ? BAND_PORT : BAND_SEA,
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), port ? BAND_PORT : BAND_SEA,
                              BAND_LABEL, top_label(s_alarm.kind));
   layer_add_child(root, s_top_bar);
-  scroll_page_create(&s_page, window, root, GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT),
+  scroll_page_create(&s_page, window, root, BODY_FRAME(b),
                      update_proc, click_config);
 }
 

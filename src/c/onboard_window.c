@@ -17,8 +17,8 @@
 
 #define DONE_MS 2000
 // Button heights in the body's coordinates (window minus the top bar).
-#define BACK_CY (46 - TOP_BAR_HEIGHT)
-#define DOWN_CY (187 - TOP_BAR_HEIGHT)
+#define BACK_CY EDGE_BACK_CY
+#define DOWN_CY EDGE_DOWN_CY
 
 static Window *s_window;
 static Layer *s_top_bar;
@@ -213,9 +213,9 @@ static void apply_style(void) {
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect b = layer_get_bounds(root);
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_PORT, BAND_LABEL, "");
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_PORT, BAND_LABEL, "");
   layer_add_child(root, s_top_bar);
-  s_body = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
+  s_body = layer_create(BODY_FRAME(b));
   layer_set_update_proc(s_body, body_update_proc);
   layer_add_child(root, s_body);
   apply_style();

@@ -262,10 +262,10 @@ static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect b = layer_get_bounds(root);
   window_set_background_color(window, g_theme->bg);
-  s_card->top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_INFO, BAND_LABEL_INFO, "Ask");
+  s_card->top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL_INFO, "Ask");
   top_bar_set_right(s_card->top_bar, "", false, 0);
   layer_add_child(root, s_card->top_bar);
-  scroll_page_create(&s_card->page, window, root, GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT),
+  scroll_page_create(&s_card->page, window, root, BODY_FRAME(b),
                      content_update, click_config);
 }
 

@@ -7,8 +7,8 @@
 // row only and dividers sit between groups. In-progress events show NOW, and
 // finished ones drop off the list (checked every minute).
 
-#define ROW_HEIGHT 44
-#define TIME_COL_W 50
+#define ROW_HEIGHT TODAY_ROW_HEIGHT
+#define TIME_COL_W TODAY_TIME_COL_W
 #define BANG_W 3
 // Clash toast (docs/DESIGN.md §7.4): at the bottom, so the row just
 // starred stays in view.
@@ -261,10 +261,10 @@ static void window_load(Window *window) {
   GRect b = layer_get_bounds(root);
   window_set_background_color(window, g_theme->bg);
 
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_SEA, BAND_LABEL, "Today");
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_SEA, BAND_LABEL, "Today");
   layer_add_child(root, s_top_bar);
 
-  s_menu = menu_layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
+  s_menu = menu_layer_create(BODY_FRAME(b));
   menu_layer_set_callbacks(s_menu, NULL, (MenuLayerCallbacks){
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -289,7 +289,8 @@ static void window_load(Window *window) {
   menu_layer_set_selected_index(s_menu, MenuIndex(0, first_current_row()), MenuRowAlignTop, false);
   layer_add_child(root, menu_layer_get_layer(s_menu));
 
-  s_toast = layer_create(GRect(0, b.size.h - TOAST_HEIGHT, b.size.w, TOAST_HEIGHT));
+  s_toast = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - TOAST_HEIGHT,
+                               b.size.w - 2 * BODY_INSET_X, TOAST_HEIGHT));
   layer_set_update_proc(s_toast, toast_update_proc);
   layer_set_hidden(s_toast, true);
   layer_add_child(root, s_toast);

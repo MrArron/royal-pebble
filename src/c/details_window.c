@@ -229,11 +229,11 @@ static void window_load(Window *window) {
   const Day *day = data_day();
   window_set_background_color(window, g_theme->bg);
 
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT),
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b),
                              day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL,
                              top_name(data_event(s_index)));
   layer_add_child(root, s_top_bar);
-  scroll_page_create(&s_page, window, root, GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT),
+  scroll_page_create(&s_page, window, root, BODY_FRAME(b),
                      body_update_proc, click_config);
 }
 

@@ -1,11 +1,9 @@
 #pragma once
 #include <pebble.h>
 #include "data.h"
+#include "layout.h"
 
 // Shared look: theme tokens, top bar, time formatting (docs/DESIGN.md).
-
-#define TOP_BAR_HEIGHT 22
-#define PAD 8
 
 typedef struct {
   GColor bg;

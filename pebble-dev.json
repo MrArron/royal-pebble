@@ -5,6 +5,12 @@
   "screen": "200x228, 64 colors",
   "appRamBytes": 131072,
   "sizeBudgetBytes": 63488,
+  "platforms": {
+    "emery": {"watchModel": "Pebble Time 2", "screen": "200x228, 64 colors", "appRamBytes": 131072, "sizeBudgetBytes": 63488},
+    "gabbro": {"watchModel": "Pebble Round 2", "screen": "260x260 round, 64 colors, about 184x184 usable square", "appRamBytes": 131072, "sizeBudgetBytes": 63488}
+  },
+  "sizeCheck": "python3 tools/watch_size.py checks every platform's build/<platform>/pebble-app.elf",
+  "screenshots": "bash tools/screens.sh <out-dir> [emery] [gabbro]",
   "wsl": {
     "distro": "Ubuntu",
     "user": "pebble",

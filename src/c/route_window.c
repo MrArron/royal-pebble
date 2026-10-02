@@ -320,11 +320,11 @@ static void window_load(Window *window) {
   GRect b = layer_get_bounds(root);
   window_set_background_color(window, g_theme->bg);
 
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_INFO, BAND_LABEL, "Route");
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL, "Route");
   top_bar_set_right(s_top_bar, "", false, 0);
   layer_add_child(root, s_top_bar);
 
-  s_scroll = scroll_layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
+  s_scroll = scroll_layer_create(BODY_FRAME(b));
   scroll_layer_set_shadow_hidden(s_scroll, true);
   scroll_layer_set_callbacks(s_scroll, (ScrollLayerCallbacks){.click_config_provider = click_config,
                                                               .content_offset_changed_handler = offset_changed});
@@ -334,8 +334,9 @@ static void window_load(Window *window) {
   scroll_layer_add_child(s_scroll, s_content);
   layer_add_child(root, scroll_layer_get_layer(s_scroll));
 
-  s_more_above = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, INDICATOR_H));
-  s_more_below = layer_create(GRect(0, b.size.h - INDICATOR_H, b.size.w, INDICATOR_H));
+  s_more_above = layer_create(GRect(BODY_INSET_X, TOP_BAR_HEIGHT, b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
+  s_more_below = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - INDICATOR_H,
+                                    b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
   layer_add_child(root, s_more_above);
   layer_add_child(root, s_more_below);
   set_indicators();
