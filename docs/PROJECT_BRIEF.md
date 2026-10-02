@@ -1,605 +1,380 @@
-# Cruise Watch — Project Brief
+# Royal Pebble — Project brief
 
-A Pebble Time 2 watch app for Royal Caribbean cruises. Its job is **quick glances at
-what's next** without pulling out a phone, and making sure the wearer never misses
-all-aboard. All data is loaded before sailing; **at sea the app works with no
-internet at all**.
+A Pebble Time 2 watch app for Royal Caribbean cruises. Its job is **quick
+glances at what's next** without pulling out a phone, and making sure the
+wearer never misses all-aboard. All data is loaded before sailing; **at sea the
+app works with no internet at all**.
 
-This brief records decisions made during planning. When something here conflicts
-with a request in a session, ask before changing direction.
+This brief is the "what and why": purpose, constraints, what is built (1.5.13),
+the decisions still in force and what's left for later. How things look is in
+`DESIGN.md`; the work still to do before the sailing is in `PLAN.md`. When
+something here conflicts with a request in a session, ask before changing
+direction.
 
 ## Status and audience
 
-- Private, single-user app, sideloaded to the owner's phone and Pebble Time 2. No
-  app store release planned. Skip public-release polish (store listing, first-run
-  tutorials, support for other watches), but keep the code generic: any ship and
-  sail date, not hardcoded.
-- Royal Caribbean only for v1. Celebrity uses similar endpoints but is untested.
-- First real use: the owner's own sailing on Harmony of the Seas (ship code HM).
-  Its date is deliberately kept out of this repository; the itinerary includes
-  Port Canaveral, St. Thomas, Nassau and Perfect Day at CocoCay.
+- Private, single-user app, sideloaded to the owner's Android phone and Pebble
+  Time 2 (the owner and a travel companion use it; each phone keeps its own data). No
+  app store release planned: skip store listings, first-run tutorials and other
+  watches, but keep the code generic (any ship and sail date, nothing
+  hardcoded).
+- Royal Caribbean only. Celebrity uses similar endpoints but is untested.
+- First real use: the owner's sailing on Harmony of the Seas (ship code HM),
+  Dec 12, 2026, from Port Canaveral (St. Thomas, Nassau, Perfect Day at
+  CocoCay). It is also the app's test cruise: the usage log and map notes
+  collected on board drive the next round of fixes.
+- Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
+  (`CLAUDE.md`). Current: **1.5.13**, Phase 5.
+
+## Constraints
+
+- **Offline at sea.** Nothing the app needs on board may use the internet: not
+  the watch, not the phone script, not the settings page (built locally as a
+  `data:` URL, never loaded from a website). Bluetooth between watch and phone
+  works at sea, so stars and refreshes still flow.
+- **The watch can be without the phone.** It stores the day's schedule,
+  alerts and stars and works alone; place pages, routes and voice need the
+  phone nearby.
+- **Watch size.** Code + data + static buffers must stay under 65,535 bytes:
+  the SDK stores the size in a 16-bit field (`PebbleProcessInfo.virtual_size`),
+  and the firmware's copy is 16-bit too, so it's a hard cap. The rest of the
+  128 KB is heap. Budget 62 KB (`python3 tools/watch_size.py`); status in
+  `PLAN.md`.
+- **Pebble Time 2 only** (SDK platform `emery`, 200×228, 64 colors). Watch C
+  must avoid `strtol()` and `strlen()` (both faulted on the real watch).
+- **Be gentle with Royal's servers.** Unofficial endpoints: a sync or two, no
+  polling.
 
 ## Architecture
 
-- **Watch app** (C, Pebble SDK). A watch *app*, not a watch face: the owner opens it
-  with a Quick Launch button hold. App glances were considered and dropped (they
-  only update when the app closes).
-- **Phone companion** (PebbleKit JS, runs inside the Pebble phone app).
-  - Fetches data (below), keeps the **full dataset** in phone storage, and is the
-    source of truth.
-  - Pushes the watch only what it needs (today's slice: countdown, next few items,
-    my-info card) over Bluetooth via AppMessage. The watch's persistent storage
-    may be small (4 kB on older firmware), so it saves only what's needed
-    without the phone, by priority: all-aboard, alerts and starred events in the
-    next 12 hours first (`docs/WATCH_PROTOCOL.md`, Stored on the watch).
-  - Bluetooth works at sea, so phone → watch refreshes and watch → phone changes
-    (e.g. starring an event) work offline.
-- **Settings page** (HTML shown by the Pebble phone app). It **must work offline**:
-  build it locally from the companion (data URI, the approach the Clay library uses),
-  never load it from a website.
-- **Backup data path:** `tools/cruise-sync/` (Windows Python tool) produces the same
-  data bundle; the owner pastes it into the settings page.
+- **Watch app** (C, Pebble SDK, `src/c/`). A watch *app*, opened with a Quick
+  Launch button hold; not a watch face. App glances were dropped (they only
+  update when the app closes).
+- **Phone companion** (PebbleKit JS inside the Pebble phone app, `src/pkjs/`).
+  Downloads the data, keeps the **full bundle** in phone storage as the source
+  of truth, and sends the watch only today's slice over AppMessage
+  (`WATCH_PROTOCOL.md`). It holds all ship knowledge: the venue table, the ship
+  map and route planner, the voice matcher and every string the watch shows.
+- **Settings page** (HTML built by the companion, shown by the Pebble app),
+  offline. It returns its result through `pebblejs://close#`.
+- **Windows sync tool** (`tools/cruise-sync/`, Python): the reference
+  implementation of every Royal request and the backup data path. Its output
+  is pasted into the settings page.
+- **Build tools** (PC only): `tools/shipmap/` (ship map data), `tools/voice/`
+  (voice lexicon), `tools/mockups/` (design mockups), `tools/watch_size.py`.
 
 ## Data sources
 
 Unofficial, undocumented Royal Caribbean web endpoints (learned from
-jdeath/CheckRoyalCaribbeanPrice, MIT). The phone app logs in only for the optional
-Advanced download (Phase 4 item 38, from 1.4.7). Keep request
-volume low (a sync or two, not polling). See `docs/DATA_FORMAT.md` for the bundle
-format and `tools/cruise-sync/cruise_sync.py` as the reference implementation of
-every request.
+jdeath/CheckRoyalCaribbeanPrice, MIT). Bundle format: `DATA_FORMAT.md`.
 
 | Data | Endpoint (host `aws-prd.api.rccl.com`, header `AppKey`) | Notes |
 |---|---|---|
 | Ships | `/en/royal/web/v2/ships` | name ↔ code |
 | Sailings | `/en/royal/web/v3/ships/{code}/voyages` | sail dates |
 | Itinerary | `/en/royal/web/v3/ships/{code}/sailDate/{YYYYMMDD}` | port, type, arrive/depart |
-| Schedule | `/en/royal/web/v3/products?sailingID={code}{YYYYMMDD}&limit=200&offset=N` | keep `NON_REVENUE_SCHEDULABLE`, `ENTERTAINMENT`, `ACTIVITIES` |
+| Schedule | `/en/royal/web/v3/products?sailingID={code}{YYYYMMDD}&limit=200&offset=N` | keep `NON_REVENUE_SCHEDULABLE`, `ENTERTAINMENT`, `ACTIVITIES`, `SHOREX`; drop `SPA`, `DINING` |
+| Booking (login) | `ROYAL_LOGIN_DATA.md` | stateroom, deck, muster, orders, gangway times |
 
-Known facts about the data:
+Known facts:
 
-- The activity schedule is published roughly **two weeks before sailing** (observed
-  once, Sept 2026). Sync is therefore two-stage: itinerary any time, schedule later.
-  The settings page must say "not published yet" instead of showing an empty list.
-- A week's schedule is ~400–520 events. Each has a two-level category, venue,
-  date/time, duration, a `featured` flag (a handful per sailing) and a
-  reservation-required flag. Age fields are empty. Meeting locations say "Check
-  back later" pre-cruise (ignore).
-- Placeholder times: 00:00 / 23:59 on embark, debark and sea days; some events at
-  00:00 are untimed. The bundle already nulls these out.
-- **No all-aboard time** in the data. All-aboard = departure − buffer (default 30
-  min), editable per day.
-- **No time zone.** Times appear to be port-local. Ships from Florida may keep
-  Eastern time while St. Thomas is on Atlantic time (+1h in December), hence the
-  per-day ship-time offset. Unconfirmed until onboard.
-- The public data has no pier coordinates, muster station, onboard spending or
-  excursion times. A login (sync tool, or the phone's Advanced download) adds deck, muster station, booked
-  excursion times, gangway times and approximate port coordinates, some still
-  unverified: `docs/ROYAL_LOGIN_DATA.md`.
-- Plain HTTP clients have worked for these public endpoints so far; if Royal
-  starts returning 403 to the phone, the backup tool uses browser impersonation.
+- The activity schedule is published about **two weeks before sailing**. Sync
+  is two-stage: itinerary any time, schedule later; the settings page says
+  "not published yet" instead of showing an empty list.
+- A week's schedule is about 400-520 events (a 7-night bundle about 135 KB
+  with Phase 4 data). Each has a two-level category, venue name and code,
+  date/time, duration, `featured` and reservation flags, Royal's product id
+  (`pid`, stable between pulls), and optional age limits, arrive-early minutes
+  and notes.
+- Placeholder times (00:00 / 23:59 on embark, debark and sea days) are nulled
+  by the producers.
+- **No all-aboard time** in the public data. All-aboard = Royal's gangway time
+  from a login download when present, else departure minus a buffer (default
+  30 min).
+- **No time zone.** Times appear to be port-local; the ship may keep Eastern
+  time at St. Thomas (Atlantic). Hence the per-day ship-time offset.
+  Unconfirmed until on board.
+- Dining products list only bookable reservation slots, not opening hours
+  (`PLAN.md`, Phase 6 item 18).
+- Plain HTTP clients work for the public endpoints and for the sign-in from
+  the phone; if Royal starts refusing, the sync tool impersonates a browser.
 
-## Version 1 scope
+## What's built (1.5.13)
 
-1. **Setup and sync** — settings page: ship + sail-date pickers, Download, sync
-   status, paste-in backup. Personal fields: stateroom, deck, nearest stairs,
-   muster station.
-2. **Itinerary and all-aboard countdown** — day view; on port days the home screen
-   is a countdown to all-aboard, with vibration alerts at thresholds. All-aboard
-   buffer (30/45/60) and times editable per day.
-3. **Ship time vs local time** — per-day offset; countdowns always run on ship time
-   and show both clocks.
-4. **Schedule, favorites, reminders** — browse by day, filter by category (Shop
-   hidden by default), star events (phone or watch), reminders before starred
-   events (5/15/30 min), personal entries (e.g. dinner reservations).
-5. **My info card** — stateroom, deck, nearest stairs, muster station, ship clock
-   note, last sync.
-6. **Light / dark theme** setting.
+Numbers are the brief's item numbers, used in code comments and PRs. Screens
+and wording: `DESIGN.md`.
 
-### Watch interaction model
+**v1 (core)**
 
-- App opens straight to **Home**. Back exits.
-- **Home:** top bar (date · day type, location, ship time). Body:
-  - Port day, before all-aboard → all-aboard countdown + next two items (starred
-    ones first).
-  - Otherwise → next starred event or personal entry ("NEXT · IN 20 MIN") + next
-    two items.
-  - Nothing starred coming up → Royal's featured events (setting) or "Nothing
-    starred today".
-- **Down → Today list.** Grouped by start time (time shown on the first row of a
-  group only); in-progress events shown as NOW with end time. Finished events drop
-  off (at their end, or 30 minutes after the start when there is no length). The
-  highlighted row is only the cursor. The settings page likewise hides past days
-  and finished events and entries (Days, Events).
-- **Up → My info.**
-- In lists: **Select** opens event details (title, venue, time, duration,
-  reservation needed); **hold Select** toggles the star with a short vibration.
-- Reminders: Pebble limits scheduled wakeups per app, so schedule them a day (or a
-  few items) at a time. Confirm the current limit in the SDK docs.
+- **Setup and sync:** ship and sail-date pickers, Download, sync status,
+  paste-in backup; re-sync keeps stars and settings.
+- **Home:** all-aboard countdown on port days, otherwise the next starred
+  event or personal entry (`NEXT · IN 20 MIN`), Royal's featured events as a
+  fallback, and the next items. Ship time and local time per day.
+- **Today list**, event details, star from watch or phone (watch stars queue
+  until the phone is back), personal entries, category filters (Shop hidden by
+  default).
+- **Alerts:** all-aboard alerts and reminders before starred events (5/15/30
+  min), opening the app by themselves and working without the phone.
+- **My info:** stateroom, deck, nearest stairs, muster station, dining room,
+  ship clock note, last sync. Light and dark theme.
+- **Schedule changes:** a re-sync that moves or cancels a starred event moves
+  or removes the star and tells the user on the watch and the settings page.
 
-## Version 1.1 (planned for the owner's first sailing)
+**v1.1, Phase 1: wayfinding** (1) built-in venue table for Harmony (deck,
+fore/mid/aft, neighborhood; editable on the settings page), (2) deck and
+position on every event, ship time centered in every top bar, (3) "From"
+directions from the previous starred event, (4) ship directory by deck or area.
 
-Chosen in a brainstorm on 2026-09-24. The owner's biggest pain on past cruises was
-pulling out the phone to find **where** events are and when their picks start; the
-watch already covers the time and "when", so wayfinding comes first. Each numbered
-item is its own branch and PR, tested on the watch before merging. Items in the last
-phase (Planning) are the first to slip; after them, the tender warning.
+**Phase 2: daily view** (5) morning summary and the evening's tomorrow card,
+(6) days-to-sail countdown, (7) clash warnings, (8) Last chance / Only show
+tags, (9) Mark reserved and the evening reminder to reserve. Paid classes
+(Booked activities) are picked on the settings page.
 
-### Phase 1: Wayfinding (done)
+**Ship GPS** (19) walking distance on place pages, (20) closest restroom and
+elevator banks, (21) step-by-step Route screen, Select on Home routes to the
+next event, button hints, Help screen. Harmony is the only mapped ship
+(`tools/shipmap/`): 2,855 cabins, venue spots, both elevator banks, 26
+stairwells, a walkway graph per deck with 23 restrooms (58 links marked
+uncertain). The map lives on the phone; the watch gets short strings.
 
-1. **Venue table.** Venue name → deck, fore/mid/aft, neighborhood (Boardwalk,
-   Central Park, Royal Promenade, ...). Built into the app for Harmony from its
-   current deck plans and checked by the owner; editable on the settings page for
-   fixes and other ships. Checked 2026-09-24: Royal's schedule gives a venue only a
-   code, a name and a type (no deck or position), so the table is hand-built and
-   keyed by venue name. Design: `docs/DESIGN_V1_1.md` (Ship venues card under
-   Cruise; per-field "check" flags, "Looks right", aliases for near-duplicate
-   names). The table lives in the phone companion, owner fixes in settings; the
-   bundle format doesn't change.
-2. **Deck and position everywhere** an event appears: details, Home's NEXT card
-   and reminder alerts, e.g. `Studio B · Deck 4 · Mid` and `2 decks down from you`
-   (relative to the stateroom deck in My info). Final wording and the shortened
-   forms are in `docs/DESIGN_V1_1.md` §2. The same PR moves ship time to the
-   center of every watch top bar (§4).
-3. **Directions from the previous event.** When the last starred event or personal
-   entry ends less than 15 minutes before the next one starts (or overlaps it),
-   directions start from that venue instead of the cabin: `From Royal Theater: 1
-   deck down, aft → mid`, or `Same venue` / `Same area`. An event with no length
-   ends 30 minutes after it starts (the Today drop-off rule).
-4. **Ship directory** at the bottom of My info: browse by deck or neighborhood;
-   each place shows deck, position, distance from the cabin and what's on there for
-   the rest of today. Includes non-venue places from the deck plans (Guest
-   Services, Medical, Windjammer, pools, kids' club, elevator lobbies). The phone
-   sends one deck or neighborhood at a time.
+**Usage log and Map check** (sections below).
 
-### Phase 2: Daily view
+**Phase 3: port days, booking details and settings** (22) booked excursions
+from login data on Today with reminders, embark day's terminal arrival card,
+**I'm on board**; (23) port day card: Royal's gangway time as the default
+all-aboard, per-day warning period, time-ashore bar, warning sign, tender
+notice on the phone; (24) Me tab filled from the cabin table and booking,
+**Ready to sail** check, search across days; (25) silent morning sync at about
+04:30; (26) `Remove star?` confirm; (27) Casino category; (28) **Share my
+plan** with a travel companion.
 
-5. **Morning summary** on the first open of the day (port, arrive/depart,
-   all-aboard, starred count), and the same summary for **tomorrow** after about
-   8 pm.
-6. **Days-to-sail countdown** on Home before the cruise.
-7. **Clash warning** when a star overlaps another starred event or a personal
-   entry (watch and settings page).
-8. **Last-chance tag** on a featured show's final performance of the cruise.
-9. **Reservation reminder** the evening before: starred events that need a
-   reservation. Built with **Mark reserved** (`docs/DESIGN_V1_1.md` §5): the owner
-   marks a starred event reserved on the phone or with a short Select on the
-   watch's event details, and the reminder skips reserved events.
+**Phase 4: event data** (32) Royal's venue codes, (33) age limits and the
+adult, teen/kid and family filters, (34) arrive-early times and reminders,
+(35) event notes and what-to-bring tags, (36) a star follows its Royal product
+id on re-sync, (37) shore excursions selectable on the settings page, (38)
+**Advanced download** with the Royal login on the phone, and Main dining room
+on the Me tab, (39) sync tool: every new field, `--dump-products`.
 
-### Ship GPS (after Phase 2, before the usage log)
+**Phase 5: voice** (29) scope session, (31) offline voice: Hold Select on Home
+or a Route screen asks by voice; routes to places, closest restroom / bar /
+coffee, `I'm at` as a route start, on board / ashore, departure, tomorrow,
+muster station, my cabin; a Voice commands card and a Try a voice phrase box in
+Help. Item 30 (a native Android companion) wasn't needed. Left: tuning on the
+watch (`PLAN.md`).
 
-Moved from "Later" into v1.1 by the owner on 2026-09-24, as a follow-up to the
-ship directory (item 4). It builds on a prepared Harmony ship map, measured from
-Royal's deck plans:
-- 2,855 cabins;
-- venue spots (89 of the table's 108, some with several spots);
-- both elevator banks with the decks they serve, and 26 stairwells (7 of them
-  single-deck);
-- a walkway graph per deck: cabin corridors, public spaces, where port and
-  starboard really connect, and 23 restrooms (58 edges marked uncertain);
-- a route planner.
+**Planned: Phase 6** (`PLAN.md`): (17) "Before you go", starred events with
+requirements gathered ahead of time; (18) a dining hint (`Last dinner
+seating`), under consideration. Item 16 (meet-up points) was removed on
+2026-10-01. Then the freeze: re-sync, full watch test, fixes only.
 
-The map data (`src/pkjs/data/`, built by `tools/shipmap/`) and the planner
-(`src/pkjs/shipmap.js`) live in the phone companion. The watch gets only short
-strings and stores no map data.
+### Usage log
 
-**Which ships have GPS** (owner, 2026-09-26): users must be told. Keep one list
-of the mapped ships in the README, the settings page's Help section and the
-store listing (when there is one), and update all of them whenever a ship's map
-is added (`tools/shipmap/README.md`, Mapped ships). The README invites people to
-map another Royal ship with `tools/shipmap/` and open a pull request.
+The sailing is the app's first real test, so the app records how it's used and
+the log is reviewed afterwards (owner, 2026-09-24 and 09-26; both users
+consent).
 
-19. **Walking distance** on directory place pages: from the cabin (by stateroom
-    number on the Me tab), e.g. `160 m aft`, next to the existing deck line.
-20. **Closest restroom** on place pages (Hold Select opens its route), and
-    elevator banks as directory places. Restrooms themselves are not listed in
-    the directory (owner, 2026-09-25).
-21. **Step-by-step route** on its own Route screen, opened with Select from a
-    place page or from Home's NEXT card: short lines such as `50 m aft` /
-    `Aft elev to Deck 16` / `20 m aft`, from the current start (cabin by
-    default; see `docs/DESIGN_V1_1.md` §9.4).
+- **Where:** in the phone companion's storage. The watch sends its entries to
+  the phone and queues up to 800 while the phone is away. Every entry has a
+  real timestamp and the ship time. Fully offline.
+- **What:** app opens and closes (who opened it, battery, phone connected,
+  first screen), screens and time on each, button presses (while the phone is
+  connected), stars, alerts scheduled / fired / opened / missed, syncs and
+  their size and timing, phone connects, storage and message errors, free
+  memory, venues not in the table, "From" lines shown, settings changes (old →
+  new), Ship GPS pages and routes, voice turns, battery hourly while a wakeup
+  runs anyway. Each new feature adds its own log events.
+- **Header:** app and bundle versions, watch firmware, phone platform, ship
+  code, a device label set on the Me tab. The first start of a new version
+  logs `first run of 1.X.Y, was …`.
+- **Personal data:** titles and cabin details are included, on condition that
+  none of it ever reaches the GitHub repo. Never commit a log, an export or a
+  quote from it; exports use the git-ignored name `royal-pebble-log-*.txt`.
+  Tests use made-up cabin numbers; issues describe patterns, not entries.
+- **Export:** the Me tab's Usage log card: **Copy part 1 of N** (plain text,
+  each part at most 384 KB and starting with the header), entry count and
+  size, Clear log, on/off (on by default). Capped at 768 KB; the oldest
+  entries drop first. Entries are stored as `[ms, cruise day, minute, kind,
+  detail]` and rendered when copied (`2026-09-26 14:03:12  D3 14:03  setting
+  theme: "light" -> "dark"`; D1 is sail day).
+- **Why copy in parts** (probe on the owner's Android phone, 2026-09-26): the
+  Pebble app's WebView (Chrome 153) can't save or share a file (`<a
+  download>`, `navigator.share`, `navigator.clipboard`, `intent:` and
+  `mailto:` all fail), but `document.execCommand('copy')` works up to 512 KB.
+  Paste with long-press > Paste: the keyboard's clipboard suggestion cuts at
+  20,000 characters.
+- **Page-size guard:** the phone measures the settings page URL before opening
+  it; past 1.8 MB the page gets the newest entries that fit and says so. A page
+  that comes back with no result while over 1 MB halves that limit for the
+  next open.
 
-Designed 2026-09-25: `docs/DESIGN_V1_1.md` §9, mockups in `docs/mockups/gps/`.
+### Map check
 
-Before showing any of it:
-- **Port/starboard:** confirm the side against one known cabin on board, and
-  don't show a side until then.
-- **Main Dining Room:** check that choosing the nearest venue spot never sends
-  you to a different floor of it.
-- **Approximate spots:** treat the venues with no spot on the plans (now just
-  the Medical Center, on deck 2) as approximate.
-- **Route costs:** the elevator wait and stairs-per-deck costs are guesses, to
-  tune after walking the ship.
-- **Source conflicts:** the SVG scrape and the Royal app's plans disagree in
-  places (a venue's deck or side, names, restrooms). Each is listed in
-  `tools/shipmap/conflicts-HM.json`, as are conflicts from any later scrape;
-  the data keeps its current value until the owner checks it on board.
-- **On-board logging (designed with the owner, 2026-09-26; built after the usage
-  log, see "Map check" under it):** a way for the owner to log the true situation
-  in person during the sailing, for each open conflict (and anything else found
-  wrong), so the data can be fixed afterwards. It has to be on the watch and
-  phone before the freeze.
+On-board corrections for the ship map (designed 2026-09-26, built the same
+day).
 
-### Usage log (after Phase 2 and the Ship GPS; must be on the watch well before the freeze)
+- Map notes live in the usage log's store but in their own list: they never
+  drop off and Clear log doesn't touch them (Clear notes, with a confirm).
+- The Me tab's **Map check** card, only on a mapped ship: one row per open
+  entry in `tools/shipmap/conflicts-HM.json` (bundled into
+  `src/pkjs/data/conflicts-HM.js` by `tools/shipmap/build_conflicts.js`), with
+  its question and what each source says. Answers: `website right` / `app
+  right` / `neither` / `not checked`, an optional where and a note. **Add a
+  problem** covers anything else.
+- **Flag a map problem** is the last row of every place page on a mapped
+  ship: Select saves the time, place, what the page showed and the route start
+  (`Flagged on watch – add details` on the card). The watch can't take notes:
+  dictation needs the phone, and notes are typed on the phone.
+- **Found by the app:** a venue not in the table, no spot, no route or no
+  restroom found is saved once per problem with a repeat count (not with demo
+  data).
+- **Copy notes** exports JSON (`"format": "royal-pebble-map-notes"`):
+  `conflicts` by id, then `flags`, `found` and `added`. It can hold cabin
+  details, so saved copies use the git-ignored name `royal-pebble-map-notes-*`.
+  After the sailing each entry gets `status: confirmed` and `truth`, and the
+  data is fixed and rebuilt (`tools/shipmap/README.md`, Conflicts).
 
-Scope agreed with the owner on 2026-09-24. The sailing is the app's first real
-test, so the app records how it's used, and the log is evaluated afterwards. Own
-branch and PR; once the sailing gets close, it goes ahead of remaining feature work.
+## Measurements and limits
 
-- **Where:** the log lives in the phone companion's storage. The watch reports its
-  events to the phone in a new watch → phone message and queues them in its own
-  storage while the phone is away (up to 800 entries). Every entry has a real
-  timestamp and the ship time. Fully offline.
-- **Detail:** while the phone is connected, every button press is logged. Screen
-  views with time on screen and a scroll count per screen are logged all the
-  time (PR 2: they cost little and give the presses their context), so with the
-  phone away the log still shows where time went. Formats in
-  `docs/WATCH_PROTOCOL.md`, "Usage log".
-- **Events:** (A) app opened (you or an alert, battery %, phone connected, first
-  screen) and closed (time open); (B) screens shown and time on each, and what
-  Home's main card showed at open; (C) star/unstar from watch or phone with the
-  event title and venue, and Selects that did nothing; (D) alerts scheduled,
-  fired (lateness), opened, dismissed, missed while off, wakeup slots full;
-  (E) data syncs asked for (time taken, size, timeouts), phone connected or
-  disconnected, star confirmation delay, the watch storage report, schedule-change
-  notices shown; (F) watch message and storage errors with codes, free memory at
-  start and its lowest point, phone script errors, bundle problems, venue names
-  with no match in the venue table, and which "From" lines were shown; (G) settings
-  page opened or saved, bundle imported (counts only), re-sync changes.
-- **Wider scope (owner, 2026-09-26):** log anything that could help improve the
-  app and its development. Only the owner and his fiancé use it and both consent.
-  On top of (A)–(G), that includes: (H) Ship GPS: place pages opened, distances
-  shown, routes asked (start and destination kind, length, steps, planner time,
-  no-route failures), route start changes, restroom routes; (I) performance:
-  message round trips, sizes and retries, phone-side slice and page build times;
-  (J) battery % and charging at every open and close, and hourly from the watch
-  while the app has a wakeup anyway (no extra wakeups just for logging); (K)
-  every settings change (old → new value) and hints shown. Each feature built
-  from now on adds its own log events.
-- **Log header** on export: app and bundle versions, watch firmware, phone
-  platform, ship code, a device label set on the Me tab (two people, two
-  watches: each phone keeps its own log).
-- **Version marker (owner, 2026-09-27):** the first start of a new app version
-  logs "first run of 1.X.Y, was ...", so a log that spans several test builds
-  shows where the build under test begins. The version scheme is in `CLAUDE.md`.
-- **Titles and cabin details are included** (stateroom, muster station, spoken
-  cabin numbers; owner, 2026-09-26), on condition that none of it ever reaches
-  the GitHub repo. The log is personal cruise data: never commit it, any export
-  or excerpt of it, or findings that quote it; never print it in full. Saved
-  exports use the git-ignored name `royal-pebble-log-*.txt` and belong outside
-  the repo. Tests use made-up cabin numbers, never the owner's. PR descriptions
-  and issues about log findings describe patterns, not the entries.
-- **Export:** a Usage log card on the settings page Me tab with Copy log (plain
-  text), entry count and size, Clear log and an on/off switch. When full, the
-  oldest entries drop first.
-- **Export design (settled 2026-09-26 from a probe app on the owner's Android
-  phone):** the settings page opens as a `data:` URL in the Pebble app's Android
-  WebView (Chrome 153), which blocks every way of saving or sharing a file
-  (`<a download>` with data: or blob: URLs does nothing; no `navigator.share` or
-  `navigator.clipboard`; `intent:` and `mailto:` links error). Copying a textarea
-  with `document.execCommand('copy')` works up to 512 KB (1 MB fails). So:
-  - **Copy in parts:** each part at most 384 KB, buttons "Copy part 1 of N", each
-    part starting with the log header and its part number. A tip on the card says
-    to paste with long-press > Paste: the keyboard's clipboard suggestion cut a
-    paste to 20,000 characters.
-  - **Cap 768 KB of log text** (two parts). The phone script's `localStorage` holds
-    about 5 M characters for all keys together (one key saved 4 M; keys adding up
-    stopped at 4.6 M), so the log fits beside the cruise bundle; saving a full log
-    takes about 12 ms and loading it 1 ms. If storage fills anyway, the log drops
-    its oldest entries until it saves.
-  - **Page-size guard:** a `data:` URL of about 2 MB or more never loads (1,850 KB
-    did), and text grows about 1.6x in the URL. The phone measures the page URL
-    before opening it; past 1.8 MB the page gets the newest entries that fit and
-    says so. Nothing is deleted. A page that comes back with no result while over
-    1 MB halves that limit for the next open, until a page returns a result (a
-    page that doesn't load stays broken across reinstalls, since reinstalling
-    keeps `localStorage`).
-  - **Entries** are stored as `[ms, cruise day, minute of that day, kind, detail]`
-    and rendered when copied, as `2026-09-26 14:03:12  D3 14:03  setting  theme:
-    "light" -> "dark"` (D1 is sail day; before sailing D-1, D-2...). On by default;
-    the device label is empty until set.
-  - **Later, optional:** automatic upload to the owner's Google Drive when online
-    is possible (the page and phone script can reach the internet), but it would
-    be the app's first internet use beyond Royal's servers, so it needs the owner's
-    OK first.
-- **Build order:** PR 1 phone log store, Usage log card and phone-side events;
-  PR 2 the watch → phone log message, the watch queue and watch-side events;
-  PR 3 Map check.
+| What | Value | Source |
+|---|---|---|
+| Watch static (1.5.5 C code, the last watch change) | 61,984 B of 65,535; 1,504 B under the 62 KB budget | `tools/watch_size.py`, Sep 29 build |
+| Heap at launch | 69,088 B | same |
+| Free heap on the watch, Home open | about 30.7 KB (1.5.4, 115-event day) | usage log, 2026-09-28 |
+| Free heap at dictation start | 24-25 KB from Home and from a Route screen; dictation takes no app heap | usage log |
+| Events per watch day | 160 | `MAX_EVENTS` |
+| Alarms planned / wakeup slots | 24 / 8 (7 alerts + morning sync) | `data.h`, `alarms.h` |
+| Phone `localStorage` | about 5 M characters across all keys | probe, 2026-09-26 |
+| Clipboard copy from the settings page | works to 512 KB, 1 MB fails | probe |
+| Settings page `data:` URL | 1,850 KB loads, about 2 MB never does; text grows about 1.6× in the URL | probe |
+| Page result through `pebblejs://close#` | 1,024 KB arrived whole on the phone; the emulator rejects over about 64 KB | RP Probe, 2026-09-27 |
+| Phone script | about 540 KB; no known limit | build |
 
-#### Map check (on-board map corrections; designed 2026-09-26)
+**Making room on the watch** (Phase 5, 2026-09-28): static buffers moved to
+the heap and dead code removed (1.5.0, −1,576 B, and the 10 KB stored-slice
+buffer is freed after use: +10.5 KB free heap), link-time optimisation (1.5.1,
+−2,224 B; `-Oz` gave the same as `-Os`; LTO needs `-Wl,-u,__pbl_app_info` or
+installs fail). The Ask screen draws phone-sent rows instead of its own
+screens (1.5.2, +2,528 B).
 
-- **Same store, separate list:** map notes live in the usage log's phone-side
-  store but in their own list. They never drop off when the store is full and
-  Clear log doesn't touch them (it has its own Clear, with a confirm).
-- **Map check card** on the Me tab, only for a mapped ship: one row per open
-  entry in `tools/shipmap/conflicts-HM.json` (bundled into the phone script at
-  build time), showing the `check` question and what each source says. Answer
-  with `website right` / `app right` / `neither` / `not checked`, an optional
-  where (deck, fore/mid/aft, port/stbd) and a short note. An **Add a problem**
-  row covers anything else found wrong (place, deck, note).
-- **Quick flag on the watch** (the watch can't take notes offline: dictation
-  needs the internet): place pages on a mapped ship end with a **Flag a map
-  problem** row (owner, 2026-09-26: on the directory's place pages only, not the
-  Route screen). Select on it saves the time, the place, what the page showed
-  (FROM and restroom lines) and where the route starts, and opens a page saying
-  `Flagged`. It's an ordinary directory row built by the phone, so the watch
-  code is unchanged (docs/WATCH_PROTOCOL.md, Ship directory). Flags appear in
-  the card as `Flagged on watch – add details`.
-- **Found by the app** (owner, 2026-09-26): when the phone runs into a map
-  problem by itself (a venue not in the venue table, a venue with no spot on its
-  deck, no route found, no restroom found), it saves a note once per problem and
-  counts repeats. Not with demo data. They appear in the card under `Found by
-  the app`, with the same where and note fields.
-- **Copy notes** exports the answers keyed by conflict id, so after the sailing
-  each entry gets `status: confirmed` and `truth`, and the data is fixed and
-  rebuilt (`tools/shipmap/README.md`, Conflicts). The export is JSON
-  (`"format": "royal-pebble-map-notes"`): `conflicts` by id (every open one,
-  `not checked` included), then `flags`, `found` and `added`. It can hold cabin
-  details (a route start), so a saved copy uses the git-ignored name
-  `royal-pebble-map-notes-*` and stays out of the repo.
-- **Built (2026-09-26):** the card, answers, flags, problems found, Copy notes
-  and Clear notes (applied on Save, like Clear log). The open conflicts are
-  bundled by `tools/shipmap/build_conflicts.js` into `src/pkjs/data/conflicts-HM.js`.
+**Not worth it** (judged 2026-09-28): moving watch strings to resources or the
+phone (they total 2.5-5 KB and loading them back costs code and heap), a
+background worker or second app (a worker can't draw; an app can't open
+another), shrinking bitmaps or fonts (there are none). Held in reserve if
+needed: a shared drawing pass over the biggest screens (2-4 KB, touches every
+screen, not before the freeze), and halving the usage log's RAM queue to 400
+entries (6.4 KB heap).
 
-### Phase 3: Port days, booking details and settings
+## Decisions in force
 
-Replanned with the owner on 2026-09-26. Items are in build order. Sun and
-hydration reminders moved to Future concepts and the "Leave now" alert to the
-back-to-the-ship idea under Later.
+- **Watch app, not a face; no app glances** (planning, Sept 2026).
+- **Offline settings page** as a `data:` URL, the approach Clay uses (planning).
+- **Venue logic and all wording on the phone;** the watch formats numbers and
+  draws phone strings (2026-09-24, reaffirmed for voice 2026-09-28).
+- **Thin one-line top bar with ship time centered** (2026-09-24).
+- **Wayfinding first** for v1.1: the owner's biggest pain on past cruises was
+  finding *where* things are (2026-09-24).
+- **Route start rule:** cabin, else a starred event ending less than 15
+  minutes before, else a spoken location for 90 minutes; back to the cabin at
+  04:00 (2026-09-26).
+- **No side words until port/starboard is checked on board;** test-cruise flip
+  settings in Help (2026-09-25).
+- **No `~` on distances;** Help says once they're approximate (2026-09-26).
+- **Restrooms aren't directory places;** elevator banks are (2026-09-25).
+- **Ship GPS ships are listed** in the README, the settings page's Help and
+  `tools/shipmap/README.md`, kept in step; the README invites people to map
+  another ship (2026-09-26).
+- **Royal's gangway time is the default all-aboard**, shifted in 5-minute
+  steps; tender ports get a longer warning period on the phone, no tender
+  notice on the watch (2026-09-26).
+- **Dining must not assume a fixed nightly seating:** the owner has My Time
+  Dining; specialty dinners are personal entries.
+- **Advanced download with the Royal login on the phone** (2026-09-27, after a
+  probe on the owner's phone passed: sign-in 200 with no block, the password
+  survives the close URL unchanged, no password manager prompt). Nothing is
+  saved; the usage log records counts only.
+- **Voice on the current setup** (PebbleKit JS and the Pebble app's on-phone
+  dictation) on Android; the airplane-mode test passed 12/12 on 2026-09-28,
+  and 1.5.4 passed a full watch test the same day, dictation in airplane mode
+  included. Item 30 (native Android companion) is not needed.
+- **Hold Select on Home always asks by voice** (2026-09-28); the `On board?`
+  screen remains for when the phone is away.
+- **Casino is a category,** shown by default (2026-09-27).
+- **Usage log scope:** log anything that could improve the app, cabin details
+  included, never in the repo (2026-09-26).
 
-22. **Booked excursions and embark day.** Booked shore excursions (and other
-    orders with a time) show on Today and in the day lists like a reserved,
-    starred event, with the usual reminder at the meeting time when there is
-    one; embark day's Home shows the terminal arrival appointment. The data is
-    already in the bundle (`mine.orders`, `mine.arrival`,
-    `docs/DATA_FORMAT.md`), but only in bundles from `cruise_sync.py --login`;
-    without it, nothing changes. Check that a later download on the phone
-    doesn't lose it.
-    Added in design (2026-09-26): **I'm on board**. On embark and port days,
-    hold Select on Home and confirm to end the day's countdown and all-aboard
-    alerts; Home goes back to the sea-day layout (`docs/DESIGN_PHASE3.md` §22.6).
-23. **Port day card.** Royal's gangway time (`mine.ports`) is the day's
-    all-aboard by default, shifted in 5-minute steps on the Days tab if needed
-    (days without it keep departure minus the buffer). A per-day warning
-    period (default 30 min, 60 at tender ports) sets the first all-aboard alert.
-    On the port countdown: a time-ashore bar from arrival to all-aboard whose
-    colors change at now (booked excursion in blue, the warning window in
-    red), the excursion's end time, and a red warning sign beside the countdown
-    in the warning window. Tender ports get a notice on the phone's Days tab,
-    not on the watch. Designed with the owner on 2026-09-26
-    (`docs/DESIGN_PHASE3.md` §23).
-24. **Settings page upgrades.**
-    - Stateroom: the number box takes digits only. A number in the ship's
-      cabin table (Harmony: 2,855 cabins) fills in Deck and Nearest stairs
-      (the closest stairwell on the ship map); a field the owner changes by
-      hand keeps the change. Deck and Nearest stairs become drop-downs
-      (design: `docs/DESIGN_PHASE3.md` §24).
-    - Stateroom, deck and muster station prefilled from the booking (`mine`)
-      when empty.
-    - A **Ready to sail** check: every cruise day downloaded, stateroom set,
-      everything fits on the watch, then "you're ready to go offline" (users
-      must sync before departure).
-    - **Search events:** grouped by day, and finds personal entries too.
-25. **Silent morning sync** (owner's idea, 2026-09-24): a wakeup every night
-    between 04:00 and 05:00 ship time (about 04:30, not exactly on the day
-    boundary) that opens the app with no vibration, gets the new day's slice
-    from the phone and closes again once it arrives, or after a short timeout
-    if the phone doesn't answer. The watch is most likely near the phone then
-    (in the stateroom overnight), so each morning starts with that day's
-    schedule already on the watch. It takes one of the app's wakeup slots
-    (shared with reminder alerts), must keep clear of an early reminder, and is
-    scheduled again every time it fires and after each sync so the chain never
-    breaks. The usage log records each outcome (synced, phone unreachable, timed
-    out). Check the Wakeup API limits against the current SDK docs first.
-26. **Confirm before removing a star.** Hold Select in lists still stars an
-    event at once, but on a starred event it opens a "Remove star?" screen:
-    holding a different button (for example Down) confirms and Back cancels,
-    so a stray press can't drop a star. Check every screen where hold Select
-    already does something else (place pages, Home, Route).
-27. **Casino filter.** Casino events get their own entry under Filters so they
-    can be hidden in one step (some users would rather not see gambling at
-    all). Royal's categories don't separate them, so the phone matches them:
-    events at Casino Royale and titles about casino games (slots, blackjack,
-    poker, roulette, craps, casino tournaments). Bingo and raffles are not
-    casino events and keep their own categories. Hiding them only affects the
-    event lists and Today: Casino Royale stays in the ship directory and routes
-    as a landmark.
-28. **Share my plan.** Share plan on the settings page produces text to send to a
-    travel companion; Import plan on their phone merges it. It carries stars,
-    personal entries (including meet-ups and checklists), per-day all-aboard and
-    ship-time settings, itinerary edits and venue-table fixes. Cabin details
-    (stateroom, deck, stairs, muster station) only when "Include cabin details (we
-    share a cabin)" is ticked. Import opens a review screen: **Accept all**, **Reject
-    import** or **Review each**, where every difference is a row with its own choice
-    (add or skip a star, keep mine or unstar, use theirs or keep mine for settings
-    and cabin details). Accept all takes everything the sender has and uses their
-    values where they differ, but never unstars or deletes anything of the
-    receiver's. Nothing is saved until Apply or Accept all. Also works as a backup
-    of the owner's own choices. Needs a new section in `docs/DATA_FORMAT.md`.
-    Meet-ups and checklists come along once Phase 6 builds them.
+## Later (v2+)
 
-### Phase 4: Event data
+- Back-to-the-ship distance and direction (phone GPS pin dropped going
+  ashore), with a "Leave now" alert at all-aboard minus the walk back.
+- Native Android companion app (only if PebbleKit JS runs out; nothing needs
+  it now).
+- A quick "remind me in N minutes" timer, lap counter, spending log (Royal's
+  onboard credit is a starting balance), currency conversion, Celebrity
+  support.
+- Meet-up points as their own kind of entry, and free-form checklists ticked
+  off on the watch (both dropped from Phase 6 on 2026-10-01; a meet-up is a
+  personal entry with a venue and a reminder today).
+- Filter Today by category on the watch (needs a category per event on the
+  watch, well over 1 KB).
+- Usage log upload to the owner's Google Drive when online (the app's first
+  internet use beyond Royal; needs the owner's OK).
 
-Added by the owner on 2026-09-27, after a probe of Royal's products listing showed
-data we don't keep yet. Plan, findings and PR order: `docs/PHASE4_PLAN.md`.
-Versions start at 1.4.0. Items are in build order after a docs PR and a data PR
-(both producers write the new fields first).
+**Future concepts** (no timeline):
 
-32. **Venue codes.** Match event venues by Royal's location code before the name;
-    fills venues Royal leaves blank. Code/name disagreements go to
-    `tools/shipmap/conflicts-HM.json`.
-33. **Age limits and age filters.** `Ages 18+` / `Ages 13-17` on event details and
-    the settings page, and three Filters: **Hide Adult only events** (18+ and 21+),
-    **Hide Teen and Kid only events** and **Hide Family events** (family titles,
-    "All Ages" and Adventure Ocean Theater). Starred and booked events always go.
-34. **Arrive-early times.** `Arrive by 7:45p` on details, and a starred event's
-    reminder counts down to that time.
-35. **Event notes.** What to bring and wear, waivers, sign-ups and meeting spots:
-    full text on the settings page, up to eight short tags on the watch's event
-    details.
-36. **Stable ids for re-sync.** Royal's product id helps a star follow a
-    rescheduled event. The ids held steady between pulls (checked
-    2026-10-01), so it's in 1.5.12.
-37. **Shore excursions.** Selectable on the settings page like Booked activities,
-    with the meeting time on the watch; the sync tool takes booked excursions'
-    meeting times from the public listing.
-38. **Advanced download with your Royal login** (optional track): the settings
-    page takes the email and password for one download, the phone script signs in
-    to Royal and fetches the booking details; nothing is saved. Only if a probe on
-    the owner's phone shows Royal accepts it.
-    **Me: main dining room** (owner, 2026-09-28; 1.4.8): typed in on the Me tab
-    and shown on the watch's My info. Whether Royal's data holds the
-    assignment is checked once the sailing has its schedule
-    (`docs/ROYAL_LOGIN_DATA.md`); if so the Advanced download fills it.
-39. **Sync tool updates.** `cruise_sync.py` writes every new field in the same PRs
-    as the phone (shared test fixture) and gets a `--dump-products` option for
-    re-checking Royal's data.
+- **Schedule questions by voice** (`What's next`, `When is <event>`, `Where is
+  <event>`), after the matcher has been tried at sea (`DESIGN.md` §13).
+- **Sun and hydration reminders,** only together: separate toggles and
+  intervals (sun 60/80/120 min, default 80, between sunrise and sunset;
+  hydration 45/60/90, default 60, 8:00-22:00), per day with defaults by day
+  type. The phone computes sunrise and sunset from port coordinates
+  (`mine.ports`, else a small built-in table; sea days interpolated between
+  ports) and sends absolute times. The watch keeps only the next one scheduled
+  so star reminders keep their wakeup slots.
 
-### Phase 5: Voice
+**Out of scope:** live data on board, messaging between phones, app glances, a
+watch face.
 
-29. **Scope session first.** Before any voice work, decide whether voice is
-    better built with a native Android companion app or within the current
-    setup (PebbleKit JS and the Pebble app's dictation). Two cheap probes feed
-    the decision: does dictation work in airplane mode, and does the new Pebble
-    app accept a third-party PebbleKit Android companion. Record the outcome
-    and the scope here.
-    **Scope session, 2026-09-28 (owner):**
-    - **Phone:** Android (the phone on the Dec 12 sailing). The airplane-mode
-      dictation test runs on it; iPhone is not tested.
-    - **Timing:** before the Dec 12 sailing, so voice is tried at sea on the
-      test cruise. The airplane-mode test comes first; nothing else is built
-      until it passes.
-    - **How it's built:** the current setup (PebbleKit JS and the Pebble app's
-      dictation) if the test passes. The PebbleKit Android companion probe runs
-      only if it fails; if dictation can't work offline, voice leaves the
-      sailing's scope and the companion app question goes back to the owner.
-    - **Commands in scope** (DESIGN_V1_1 section 9.6): routes (`How do I get to
-      <B>`, `<A> to <B>`, `my cabin` as A or B), `Closest restroom (from
-      <venue>)`, and setting where you are (`I'm at <venue>` / `I'm in cabin
-      <number>`), always with the Heard/Matched confirm step.
-    - **Future goal, not in Phase 5:** schedule questions by voice (see Future
-      concepts).
-    - **Test result:** not yet run. Test app: RP Probe round 3 (the throwaway
-      `rp-webview-probe` repo).
-30. **Native Android companion app**, only if the scope session chooses it: it
-    moves from Later to the front of this phase and is built before the voice
-    features (reversing the earlier "stay on PebbleKit JS until after the
-    sailing").
-31. **Offline voice questions** (moved from Later): ask the watch a simple
-    question such as "how do I get to my cabin from the Windjammer", using the
-    Dictation API with the Pebble app's on-phone speech recognition,
-    keyword-matched against the venue table and directory. See
-    `docs/FUTURE_VOICE_QUERIES.md` and `docs/DESIGN_V1_1.md` section 9.6; the
-    exact list of voice features comes out of the scope session.
+## Edge cases handled
 
-### Phase 6: Planning
+Itinerary changes (skipped or added ports) editable offline; overnight port
+stays; tender ports (longer warning period); placeholder times; events past
+midnight (the watch day runs 04:00 to 04:00); the schedule changing between
+pulls; an empty schedule before publication.
 
-16. **Meet-up points.** A personal entry that points at a directory place, with a
-    reminder.
-17. **Checklists** written on the settings page and ticked off on the watch;
-    starter lists for debark night (bags out, settle account, passports, safe) and
-    port days (SeaPass, ID, sunscreen, cash).
-18. **Dining window hint** in the evening, e.g. `Dining room open until 9:30`, from
-    Royal's schedule if it lists the hours, otherwise typed in once. Dining features
-    must not assume a fixed nightly seating: the owner has My Time Dining, and
-    specialty dinners are one-off personal entries.
+## Still to verify on board
 
-### If time allows
+- Ship time at St. Thomas, and whether port times are port-local.
+- That Royal's `gangwayUp` is when you must be back (the 5-minute steps are the
+  fix if not), and whether `bazaarDayType` marks tender ports (the app matches
+  `TENDER` in the day type today).
+- Ship map: port/starboard, the open conflicts, approximate spots, route costs,
+  the step length (`DESIGN.md` §10.5).
+- Voice in noisy places, with the hard venue names.
+- Whether Royal's booking data holds the main dining room assignment
+  (`ROYAL_LOGIN_DATA.md`).
 
-Free-time gaps between starred events; filter Today by category on the watch.
+## History
 
-### Freeze (the last stretch before the sailing)
+Git history has the detail; one line per stretch:
 
-Re-sync with the sailing's published schedule, full test on the watch, bug fixes only.
-
-### Later (v2+), not in v1.1
-
-Back-to-the-ship distance/direction (phone GPS pin dropped when going ashore),
-with a **"Leave now" alert** at all-aboard minus the walk back (moved from Phase 3
-on 2026-09-26: better with a real distance than a walking time the owner sets),
-a quick "remind me in N minutes" timer, lap counter, spending log, currency
-conversion (not needed for this itinerary), Celebrity support.
-
-**Ship GPS** (idea from the owner, 2026-09-24; the routes on directory place pages
-moved into v1.1, see "Ship GPS" above): pick a starting place and a
-destination on board and get step-by-step directions that account for stairs
-and elevators (which bank to use, walking down being easier than up). It would
-build on the venue table's decks, fore/mid/aft and entrance lists, plus a map of
-the stair and elevator banks per ship.
-
-**Native Android companion app** (asked 2026-09-26; decided to stay on PebbleKit
-JS until after the sailing, unless the Phase 5 scope session chooses it): voice
-dictation goes through the Pebble app either way, copy-in-parts covers the usage
-log export, and it would be a large rebuild with unconfirmed support for
-third-party PebbleKit Android apps in the new Pebble app. The two cheap probes
-(dictation in airplane mode, and whether the Pebble app accepts a PebbleKit
-Android companion) are now part of the Phase 5 scope session.
-
-### Future concepts (no timeline)
-
-Ideas kept for later with no version or date attached.
-
-**Schedule questions by voice** (owner, 2026-09-28, future goal after Phase 5):
-`What's next`, `When is <event>`, `Where is <event>`, answered from the day's
-slice. Harder than venues: event titles change from day to day and have to be
-matched from speech, so it builds on the Phase 5 matcher once that has been
-tried at sea.
-
-**Sun and hydration reminders** (in v1.1 Phase 3 until the owner moved them
-here on 2026-09-26; sun reminders are only worth building together with
-hydration reminders). Separate toggles and intervals (sun default 80 min:
-60/80/120; hydration default 60 min: 45/60/90), on or off per day with defaults
-by day type. Sun reminders only between sunrise and sunset; hydration within
-waking hours (default 8:00–22:00). The **phone** computes sunrise and sunset
-with a simple solar formula (approximate is fine) from port coordinates on port
-days (`mine.ports` coordinates when the bundle has them, else a small built-in
-table of Caribbean and Bahamas ports) and, on sea days, a point interpolated
-between the previous and next port at (day − departure day) ÷ (arrival day −
-departure day). Unknown ports get a lat/long field or a default 7:00–18:00
-window. It sends absolute times, so no time zone is needed. The watch keeps
-only the next reminder scheduled so star reminders keep their wakeup slots.
-
-### Out of scope
-
-Live data onboard, messaging between phones, app glances, a watch face.
-(Logging in from the phone app moved to Phase 4 item 38 on 2026-09-27, as an
-optional track gated on a phone probe; the probe passed the same day.)
-
-## Edge cases to handle from the start
-
-Itinerary changes (skipped/added ports) editable offline; overnight port stays;
-tender ports (larger buffer); placeholder times; events spanning midnight; the
-schedule changing onboard vs the pre-cruise version; an empty schedule before
-publication.
-
-## To verify early
-
-- Pebble Time 2 platform details in the current SDK (screen assumed 200×228,
-  64-color palette; platform name).
-- Wakeup/reminder limits.
-- Offline settings page approach works in the current Pebble phone app (iOS and
-  Android).
-- Ship-time behavior at St. Thomas (onboard).
-- What the logged-in order history actually contains. Answered (Sept 2026, with
-  `tools/cruise-sync/explore_account.py`): a guarantee booking lists stateroom
-  "GTY"; packages have no date or time; a **booked shore excursion carries its
-  date, time, cruise day and port**, and its product page adds meeting and end
-  times. The sync tool now copies these into `mine` (`docs/DATA_FORMAT.md`);
-  showing them in the app is not scheduled yet. Details and candidate uses:
-  `docs/ROYAL_LOGIN_DATA.md`. Still to check: dining and show bookings, and
-  what `gangwayUp` means (compare with the Daily Planner on board).
-- Logging in from the phone app stays out of scope for now (decided Sept 2026).
-  Revisit only if timed orders turn out to carry usable times: the password
-  would pass through the Pebble app's settings-page return, and the phone can't
-  mimic a browser if Royal blocks it. Until then the Windows tool is the login
-  path. (Excursion orders do carry times, as of Sept 2026. On 2026-09-27 the
-  owner chose to look into it: Phase 4 item 38, gated on a probe on the phone;
-  `docs/PHASE4_PLAN.md`. The probe passed on 2026-09-27 and the Advanced
-  download shipped in 1.4.7.)
+- **v1** (2026-09-24): sync, Home, Today, alerts, My info, settings page,
+  Windows sync tool.
+- **Phases 1-2** (2026-09-24 to 09-25): venue table and wayfinding, ship
+  directory, daily view, Mark reserved, paid classes.
+- **Ship GPS, usage log, Map check** (2026-09-25 to 09-26).
+- **Phase 3, 1.3.0-1.3.9** (2026-09-26 to 09-27): port days, booking details,
+  settings upgrades, morning sync, Share my plan.
+- **Phase 4, 1.4.0-1.4.8** (2026-09-27 to 09-28): event data, excursions,
+  Advanced download, Main dining room.
+- **Phase 5, 1.5.0-1.5.13** (2026-09-28 to 10-01): making room on the watch,
+  voice, Harmony refit names (1.5.11), re-sync by product id (1.5.12), Help >
+  Voice commands (1.5.13).
 
 ## Testing
 
 Schedules exist only for sailings about two weeks out, so develop against any
-Harmony (HM) sailing currently within that window, e.g. run
-`py tools/cruise-sync/cruise_sync.py --ship HM` and pick the nearest date. Re-test
-with the owner's sailing once its schedule appears.
+Harmony sailing in that window (`py tools/cruise-sync/cruise_sync.py --ship HM`,
+pick the nearest date) or the built-in demo data. Re-test with the owner's
+sailing once its schedule appears (the freeze, `PLAN.md`). Commands, emulator
+tips and test files: `CLAUDE.md`.
