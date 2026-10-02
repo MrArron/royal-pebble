@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Browser__find",
+      "Bash(git fetch)",
+      "Bash(git fetch *)",
+      "Bash(iconv -f utf-8 -t utf-8 *)",
+      "mcp__ccd_pr__get_status",
+      "mcp__ccd_session_mgmt__search_session_transcripts",
+      "mcp__Claude_Browser__read_page",
+      "mcp__Claude_Browser__read_console_messages",
+      "mcp__Claude_Browser__get_page_text"
+    ]
+  }
+}
