@@ -333,9 +333,9 @@ static void click_config(void *context) {
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect b = layer_get_bounds(root);
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_SEA, BAND_LABEL, "");
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_SEA, BAND_LABEL, "");
   layer_add_child(root, s_top_bar);
-  s_body = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
+  s_body = layer_create(BODY_FRAME(b));
   layer_set_update_proc(s_body, body_update_proc);
   layer_add_child(root, s_body);
   apply_style();

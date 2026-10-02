@@ -631,7 +631,7 @@ static void draw_body(Layer *layer, GContext *ctx) {
   }
 
   int32_t now = now_cruise();
-  int y = 4;
+  int y = HOME_TOP;
   int skip = -1;
   bool countdown = !shows_headline(now);
 
@@ -718,16 +718,16 @@ static void draw_hint_label(GContext *ctx, const char *text, GColor fill, bool l
 
 static void hints_update_proc(Layer *layer, GContext *ctx) {
   int w = layer_get_bounds(layer).size.w;
-  draw_hint_label(ctx, "My info", GColorBlack, false, 46, w);
+  draw_hint_label(ctx, "My info", GColorBlack, false, HINT_UP_CY, w);
   // Select does nothing without a NEXT card on board, so no label then.
   int32_t now = now_cruise();
   if (route_target(now) >= 0) {
-    draw_hint_label(ctx, "Route to next", GColorCobaltBlue, false, 114, w);
+    draw_hint_label(ctx, "Route to next", GColorCobaltBlue, false, HINT_SELECT_CY, w);
   } else if (offers_onboard(now)) {
-    draw_hint_label(ctx, "Hold: on board", GColorCobaltBlue, false, 114, w);
+    draw_hint_label(ctx, "Hold: on board", GColorCobaltBlue, false, HINT_SELECT_CY, w);
   }
-  draw_hint_label(ctx, "Today", GColorBlack, false, 187, w);
-  draw_hint_label(ctx, "Exit", GColorDarkGray, true, 46, w);
+  draw_hint_label(ctx, "Today", GColorBlack, false, HINT_DOWN_CY, w);
+  draw_hint_label(ctx, "Exit", GColorDarkGray, true, HINT_BACK_CY, w);
 }
 
 static void click_config(void *context);
@@ -858,12 +858,16 @@ static void click_config(void *context) {
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect b = layer_get_bounds(root);
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_SEA, BAND_LABEL, "");
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_SEA, BAND_LABEL, "");
   layer_add_child(root, s_top_bar);
-  s_body = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
+  s_body = layer_create(BODY_FRAME(b));
   layer_set_update_proc(s_body, body_update_proc);
   layer_add_child(root, s_body);
+#if defined(PBL_ROUND)
+  s_hints = layer_create(GRect(HINTS_INSET_X, 0, b.size.w - 2 * HINTS_INSET_X, b.size.h));
+#else
   s_hints = layer_create(b);
+#endif
   layer_set_update_proc(s_hints, hints_update_proc);
   layer_set_hidden(s_hints, true);
   layer_add_child(root, s_hints);

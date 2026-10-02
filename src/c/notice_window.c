@@ -171,10 +171,10 @@ static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect b = layer_get_bounds(root);
   window_set_background_color(window, g_theme->bg);
-  s_top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_INFO, BAND_LABEL_INFO,
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL_INFO,
                              "Schedule");
   layer_add_child(root, s_top_bar);
-  s_layer = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
+  s_layer = layer_create(BODY_FRAME(b));
   layer_set_update_proc(s_layer, update_proc);
   layer_add_child(root, s_layer);
 }

@@ -127,6 +127,10 @@ static void page_received(const DirPageMsg *page) {
   v->bank = page->bank;
   if (is_place(v)) {
     set_indicators(v);
+#if defined(PBL_ROUND)
+    // The page is one tall row: keep its top in view, not its middle.
+    menu_layer_set_center_focused(v->menu, false);
+#endif
   }
   top_bar_set(v->top_bar, BAND_INFO, BAND_LABEL, page->title);
   top_bar_set_right(v->top_bar, page->label, page->has_rel, page->rel);
@@ -535,11 +539,11 @@ static void window_load(Window *window) {
   GRect b = layer_get_bounds(root);
   window_set_background_color(window, g_theme->bg);
 
-  v->top_bar = top_bar_create(GRect(0, 0, b.size.w, TOP_BAR_HEIGHT), BAND_INFO, BAND_LABEL, v->title);
+  v->top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL, v->title);
   top_bar_set_right(v->top_bar, "", false, 0);
   layer_add_child(root, v->top_bar);
 
-  v->menu = menu_layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, b.size.h - TOP_BAR_HEIGHT));
+  v->menu = menu_layer_create(BODY_FRAME(b));
   menu_layer_set_callbacks(v->menu, v, (MenuLayerCallbacks){
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -554,8 +558,9 @@ static void window_load(Window *window) {
   menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(v->menu, window);
   layer_add_child(root, menu_layer_get_layer(v->menu));
-  v->more_above = layer_create(GRect(0, TOP_BAR_HEIGHT, b.size.w, INDICATOR_H));
-  v->more_below = layer_create(GRect(0, b.size.h - INDICATOR_H, b.size.w, INDICATOR_H));
+  v->more_above = layer_create(GRect(BODY_INSET_X, TOP_BAR_HEIGHT, b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
+  v->more_below = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - INDICATOR_H,
+                                     b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
   layer_add_child(root, v->more_above);
   layer_add_child(root, v->more_below);
   fetch_start(&v->fetch);

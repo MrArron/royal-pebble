@@ -134,6 +134,69 @@ static GSize text_size(const char *text, GFont font) {
                                                GTextAlignmentLeft);
 }
 
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/NOTES.md): the time alone, centered in the band;
+// the screen's name and the day's status (or the decks from the cabin) as one
+// centered small-caps line under it, "COCOCAY · DOCKED".
+#define LABEL_LINE_W 170  // the circle's width at the label line, less a margin
+
+// Copies `src` in capitals after `dst`'s end, keeping the NUL in `size`.
+static void append_caps(char *dst, size_t size, const char *src) {
+  size_t i = 0;
+  while (i + 1 < size && dst[i]) {
+    i++;
+  }
+  for (; i + 1 < size && *src; src++, i++) {
+    dst[i] = *src >= 'a' && *src <= 'z' ? *src - 'a' + 'A' : *src;
+  }
+  dst[i] = '\0';
+}
+
+static void top_bar_update_proc(Layer *layer, GContext *ctx) {
+  TopBarData *data = layer_get_data(layer);
+  GRect b = layer_get_bounds(layer);
+  graphics_context_set_fill_color(ctx, data->band);
+  graphics_fill_rect(ctx, GRect(0, 0, b.size.w, TOP_BAND_HEIGHT), 0, GCornerNone);
+  graphics_context_set_fill_color(ctx, g_theme->bg);
+  graphics_fill_rect(ctx, GRect(0, TOP_BAND_HEIGHT, b.size.w, b.size.h - TOP_BAND_HEIGHT), 0,
+                     GCornerNone);
+
+  GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  char ship_time[8];
+  fmt_clock(ship_time, sizeof(ship_time), now_minutes());
+  graphics_context_set_text_color(ctx, GColorWhite);
+  graphics_draw_text(ctx, ship_time, font, GRect(0, TOP_BAND_HEIGHT - 19, b.size.w, 18),
+                     GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+
+  char line[56] = "";
+  append_caps(line, sizeof(line), data->name);
+  const char *status = data->custom ? data->right : data_ready() ? data_day()->status : "";
+  const char *sep = line[0] ? " \xc2\xb7 " : "";
+  GColor color = g_theme->muted;
+  int y = TOP_BAND_HEIGHT + 1;
+  if (data->custom && data->has_rel) {
+    // "MY INFO · ↓1 DECK" with a drawn arrow, or "· YOUR DECK".
+    int n = data->rel < 0 ? -data->rel : data->rel;
+    char text[16];
+    snprintf(text, sizeof(text), n == 0 ? "YOUR DECK" : n == 1 ? "%d DECK" : "%d DECKS", n);
+    append_caps(line, sizeof(line), sep);
+    int arrow_w = n == 0 ? 0 : arrow_width(false) + 1;
+    int w = text_size(line, font).w + arrow_w + text_size(text, font).w;
+    if (w > LABEL_LINE_W) {
+      w = LABEL_LINE_W;
+    }
+    draw_arrow_line(ctx, false, color, (b.size.w - w) / 2, y, w + 2, line, data->rel, text);
+    return;
+  }
+  if (status[0] && !same_ignoring_case(status, data->name)) {
+    append_caps(line, sizeof(line), sep);
+    append_caps(line, sizeof(line), status);
+  }
+  graphics_context_set_text_color(ctx, color);
+  graphics_draw_text(ctx, line, font, GRect((b.size.w - LABEL_LINE_W) / 2, y, LABEL_LINE_W, 18),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+}
+#else
 static void top_bar_update_proc(Layer *layer, GContext *ctx) {
   TopBarData *data = layer_get_data(layer);
   GRect b = layer_get_bounds(layer);
@@ -177,6 +240,7 @@ static void top_bar_update_proc(Layer *layer, GContext *ctx) {
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   }
 }
+#endif  // PBL_ROUND
 
 void top_bar_set(Layer *bar, GColor band, GColor label, const char *name) {
   TopBarData *data = layer_get_data(bar);
@@ -570,7 +634,7 @@ void draw_label(GContext *ctx, const char *text, int y, int width) {
   graphics_context_set_text_color(ctx, g_theme->muted);
   graphics_draw_text(ctx, text, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                      GRect(PAD, y, width - 2 * PAD, 16), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
 }
 
 int draw_hint_right(GContext *ctx, const char *text, int right, int y) {

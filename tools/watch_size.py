@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""Watch app size report for Royal Pebble (Pebble Time 2 / emery).
+"""Watch app size report for Royal Pebble (Pebble Time 2 / emery and Pebble
+Round 2 / gabbro).
 
-Reads build/emery/pebble-app.elf (pure Python, no readelf needed) and prints:
+Reads build/<platform>/pebble-app.elf for each platform (pure Python, no
+readelf needed) and prints, per platform:
 - static size (.text + .data + .bss): the SDK refuses a build above 65,535
   bytes because PebbleProcessInfo.virtual_size is a uint16_t
   (sdk/tools/inject_metadata.py);
-- heap left at launch: emery gives an app 128 KB (0x20000) in all;
+- heap left at launch: emery and gabbro each give an app 128 KB (0x20000);
 - with --map build/pebble-app.map, the biggest object files.
 
-Exit code 1 when static size is over --budget (default 63,488 = 62 KB), so a
-PR that eats the last of the room fails loudly before the SDK's hard wall.
-Usage: python3 tools/watch_size.py [--elf PATH] [--map PATH] [--budget N]
+Exit code 1 when either platform's static size is over --budget (default
+63,488 = 62 KB), or a platform's ELF is missing, so a PR that eats the last of
+the room fails loudly before the SDK's hard wall.
+Usage: python3 tools/watch_size.py [--platform P ...] [--elf PATH] [--map PATH] [--budget N]
+(--elf checks that one file instead of the platforms.)
 """
 import argparse, collections, re, struct, sys
 
@@ -40,27 +44,48 @@ def by_object(map_path, top):
     return sizes.most_common(top)
 
 
+PLATFORMS = ('emery', 'gabbro')
+
+
+def report(label, elf, map_path, budget):
+    s = sections(elf)
+    end = max(addr + size for addr, size in s.values())
+    parts = {k: s[k][1] for k in ('.text', '.data', '.bss') if k in s}
+    print('== %s' % label)
+    print('static (virtual_size): %6d B  %s' % (end, '  '.join('%s %d' % kv for kv in parts.items())))
+    print('room to SDK limit    : %6d B  (limit %d)' % (HARD_LIMIT - end, HARD_LIMIT))
+    print('room to budget       : %6d B  (budget %d)' % (budget - end, budget))
+    print('heap at launch       : %6d B  (128 KB minus static)' % (APP_RAM - end))
+    if map_path:
+        print('biggest objects (map, approximate):')
+        for o, n in by_object(map_path, 12):
+            print('  %6d  %s' % (n, o))
+    if end > budget:
+        print('OVER BUDGET by %d B' % (end - budget))
+        return False
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--elf', default='build/emery/pebble-app.elf')
+    ap.add_argument('--platform', action='append', choices=PLATFORMS,
+                    help='check only this platform (repeatable; default: all)')
+    ap.add_argument('--elf', default=None, help='check this one ELF instead')
     ap.add_argument('--map', default=None)
     ap.add_argument('--budget', type=int, default=62 * 1024)
     a = ap.parse_args()
-    s = sections(a.elf)
-    end = max(addr + size for addr, size in s.values())
-    parts = {k: s[k][1] for k in ('.text', '.data', '.bss') if k in s}
-    print('static (virtual_size): %6d B  %s' % (end, '  '.join('%s %d' % kv for kv in parts.items())))
-    print('room to SDK limit    : %6d B  (limit %d)' % (HARD_LIMIT - end, HARD_LIMIT))
-    print('room to budget       : %6d B  (budget %d)' % (a.budget - end, a.budget))
-    print('heap at launch       : %6d B  (128 KB minus static)' % (APP_RAM - end))
-    if a.map:
-        print('biggest objects (map, approximate):')
-        for o, n in by_object(a.map, 12):
-            print('  %6d  %s' % (n, o))
-    if end > a.budget:
-        print('OVER BUDGET by %d B' % (end - a.budget))
-        return 1
-    return 0
+    if a.elf:
+        return 0 if report(a.elf, a.elf, a.map, a.budget) else 1
+    ok = True
+    for p in a.platform or PLATFORMS:
+        elf = 'build/%s/pebble-app.elf' % p
+        try:
+            ok = report(p, elf, a.map, a.budget) and ok
+        except FileNotFoundError:
+            print('== %s' % p)
+            print('missing %s (run pebble build)' % elf)
+            ok = False
+    return 0 if ok else 1
 
 
 if __name__ == '__main__':
