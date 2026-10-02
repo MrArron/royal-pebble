@@ -5,14 +5,14 @@
 #include "ui.h"
 #include "usage.h"
 
-// Ask (docs/DESIGN_V1_1.md §9.6): Hold Select on Home or a Route screen starts
+// Ask (docs/DESIGN.md §11): Hold Select on Home or a Route screen starts
 // the Pebble app's dictation; the transcript goes to the phone, which matches
 // it and answers with a card (docs/WATCH_PROTOCOL.md, Voice). The watch knows
 // no places or wording: it draws the phone's rows. Only what it must say with
 // the phone away or silent is written here.
 //
 // Select does the card's action (open a route; confirm, such as "I'm at"; set
-// or clear "I'm on board", docs/DESIGN_PHASE3.md §22.6), or asks again when
+// or clear "I'm on board", docs/DESIGN.md §4.4), or asks again when
 // there is none; Hold Select asks again; Back closes.
 
 #define ROWS_MAX 4

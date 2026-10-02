@@ -4,8 +4,8 @@
 #include "ui.h"
 #include "usage.h"
 
-// My info: while the user is on board (docs/DESIGN_PHASE3.md §22.6), an undo
-// row first; then the day's summary (docs/DESIGN_V1_1.md §8.1), the stateroom
+// My info: while the user is on board (docs/DESIGN.md §4.4), an undo
+// row first; then the day's summary (docs/DESIGN.md §5), the stateroom
 // (with deck and stairs), muster station, dining room, ship clock note, last sync, and the
 // way into the ship directory. Up and Down move the cursor between the undo
 // row, the summary and the directory, Select opens it (or undoes); the screen
@@ -129,7 +129,7 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
   usage_press(BUTTON_ID_SELECT, 0, s_cursor);
   if (s_cursor == ROW_ONBOARD && onboard_is_set()) {
     // Back ashore: the row goes away and Home shows the countdown again if
-    // its time hasn't passed (§22.6).
+    // its time hasn't passed (§4.4).
     onboard_set(false);
     vibes_short_pulse();
     s_cursor = ROW_SUMMARY;

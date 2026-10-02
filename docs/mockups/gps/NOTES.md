@@ -1,12 +1,11 @@
-# Ship GPS: mockups (DESIGN_V1_1.md §9)
+# Ship GPS: mockups (docs/DESIGN.md §10, §11)
 
-**Status: approved 2026-09-25,** with the owner's answers in §9.9. The mockups
-are the final word on text and layout where they differ from the sketches in
-§9.
+**Status: approved 2026-09-25,** with the owner's answers. Where they differ
+from `docs/DESIGN.md`, the doc wins: it records what was built.
 
 **Superseded (2026-09-26): the `~` before distances.** The mockups show
 `~160 m fore`; the app shows `160 m fore`, and the Help section says once that
-distances are approximate (DESIGN_V1_1.md §9.9, decision 12).
+distances are approximate (docs/DESIGN.md §1, owner decision 2026-09-26).
 
 Same format as `docs/mockups/v1.1` and `docs/mockups/phase2`: Claude Design
 component files, 400×456 (2×), inline styles, Roboto Condensed standing in for
@@ -17,7 +16,7 @@ https://claude.ai/artifact/Cq3jrWKZAZE6qHxbqNVy6n
 All data is placeholder: cabin on deck 6, made-up distances and step counts,
 and no stateroom (`Cabin 9150` on the voice screen is an invented number).
 Distances are shown in metres; the owner picks feet, metres or steps in the
-phone settings (§9.7).
+phone settings (`docs/DESIGN.md` §12.6).
 
 ## Files
 
@@ -48,7 +47,7 @@ phone settings (§9.7).
 
 ## Font stand-ins (2× mockup → watch)
 
-As in §2: 48 px = Gothic 24 bold, 34 px = Gothic 18 bold, 26–30 px = Gothic 14
+As in `docs/DESIGN.md` §1: 48 px = Gothic 24 bold, 34 px = Gothic 18 bold, 26–30 px = Gothic 14
 bold. Muted = `#555555` light / `#AAAAAA` dark.
 
 ## Drawn shapes

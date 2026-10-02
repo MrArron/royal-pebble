@@ -3,7 +3,7 @@
 #include "ui.h"
 #include "usage.h"
 
-// Morning summary (docs/DESIGN_V1_1.md §8.1, mockups in docs/mockups/phase2):
+// Morning summary (docs/DESIGN.md §5, mockups in docs/mockups/phase2):
 // one card with the day, its port times and what's starred. It replaces Home
 // on the first open by the user of each watch day; from 20:00 the first open
 // shows tomorrow's card instead. Alert launches don't count. My info reopens
@@ -85,7 +85,7 @@ typedef struct {
   int32_t depart;
   int32_t all_aboard;
   int16_t local_offset;  // today only; tomorrow's isn't sent
-  int32_t terminal;      // today only: embark day's terminal arrival (§22.5)
+  int32_t terminal;      // today only: embark day's terminal arrival (§4.3)
 } CardDay;
 
 static CardDay card_day(void) {
@@ -250,7 +250,7 @@ static void draw_today_plan(GContext *ctx, int y, int w, int bottom, bool sea) {
 }
 
 // Tomorrow: the count, the first starred item, how many are still to reserve
-// (§5) and a show to catch.
+// (§7.3) and a show to catch.
 static void draw_tomorrow_plan(GContext *ctx, int y, int w) {
   const Tomorrow *t = data_tomorrow();
   y = draw_count(ctx, t->starred, t->featured, "tomorrow", y, w);

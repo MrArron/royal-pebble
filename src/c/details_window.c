@@ -4,10 +4,10 @@
 #include "usage.h"
 
 // Event details: title, venue, deck and position, time and duration,
-// arrive-by, age and what-to-bring tags (docs/DESIGN_PHASE4.md),
-// reservation, last chance, star state (docs/DESIGN_V1_1.md §2, §5, §8.4).
+// arrive-by, age and what-to-bring tags (docs/DESIGN.md §7.6),
+// reservation, last chance, star state (docs/DESIGN.md §7.2, §7.3, §7.5).
 // Hold Select toggles the star; Select toggles Reserved on a starred event
-// that needs a reservation. A booked order (docs/DESIGN_PHASE3.md §22.3) shows
+// that needs a reservation. A booked order (docs/DESIGN.md §7.7) shows
 // its meeting time, guests and "✓ Booked", and its star is locked. The page
 // scrolls when it doesn't fit.
 
@@ -35,7 +35,7 @@ static const char *const TAG_TEXTS[8] = {
   "Swimwear or active wear", "Limited spots, come early", "Meeting spot on phone",
 };
 
-// Phase 4 lines under the time (docs/DESIGN_PHASE4.md §2.1, §3.1, §4.1):
+// Phase 4 lines under the time (docs/DESIGN.md §7.6):
 // "Arrive by 9:45p" (or "Meet 9:00a" ashore), "Ages 18+" and the tags. Each
 // is left out when the phone sent nothing for it.
 static int draw_event_info(GContext *ctx, const Event *e, int y, int w) {

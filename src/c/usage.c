@@ -308,7 +308,7 @@ void usage_check_missed(int32_t launch_at) {
   for (int i = 0; i < data_alarm_count(); i++) {
     int32_t at = data_alarm(i)->at;
     // Alerts are sorted; several in the same minute count once. An all-aboard
-    // warning silenced on board (§22.6) isn't missed.
+    // warning silenced on board (§4.4) isn't missed.
     if (at <= closed.closed || at > now || at == launch_at || at == last ||
         onboard_silences(data_alarm(i))) {
       continue;

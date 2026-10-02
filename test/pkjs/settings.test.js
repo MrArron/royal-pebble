@@ -135,7 +135,7 @@ test('settings page builds, embeds state safely and its script parses', function
   console.log('    page ' + Math.round(html.length / 1024) + ' KB, data URL ' + Math.round(url.length / 1024) + ' KB');
 });
 
-test('Me tab reference: cabin table, decks and the booking (§24.1)', function() {
+test('Me tab reference: cabin table, decks and the booking (§12.6)', function() {
   var b = {ship: {code: 'HM', name: 'Harmony of the Seas'}, mine: {stateroom: '8226', deck: '8', muster: ' B4 '}};
   var r = config.meRef(b, [3, 4, 5]);
   assert.strictEqual(r.ship, 'HM');
@@ -439,7 +439,7 @@ test('settings page with starred overlaps builds with the clash filter code', fu
   assert.ok(html.indexOf("'clashes'") !== -1, 'Clashes filter');
 });
 
-test('Ready to sail card replaces the All set line, with the load and the page time (§24.2)', function() {
+test('Ready to sail card replaces the All set line, with the load and the page time (§12.2)', function() {
   var state = {ships: [], status: {}, me: {}, theme: 'light', reminderLead: 15,
     cruise: {shipCode: 'HM', shipName: 'Harmony of the Seas', sailDate: '2027-03-06', days: 4, nights: 3,
              published: true, events: 2, savedDays: 4, lastSync: 'today'},
@@ -453,7 +453,7 @@ test('Ready to sail card replaces the All set line, with the load and the page t
   assert.ok(html.indexOf('"dayLoad":[{"date":"2027-03-07"') !== -1, 'load embedded');
 });
 
-test('Filters: the Casino category uses the shared matcher (§27)', function() {
+test('Filters: the Casino category uses the shared matcher (§12.4)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
     categories: [{name: 'Casino', n: 18, subs: [{name: '', n: 18}]}], hiddenCats: ['Casino']};
   var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
@@ -463,7 +463,7 @@ test('Filters: the Casino category uses the shared matcher (§27)', function() {
   assert.ok(html.indexOf('bingo and raffles') !== -1, 'Filters note');
 });
 
-test('Filters: the AGES switches above categories, sent back as ageFilters (Phase 4 §2.4)', function() {
+test('Filters: the AGES switches above categories, sent back as ageFilters (§12.4)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
     categories: [], hiddenCats: [], ageFilters: ['young']};
   var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
@@ -481,7 +481,7 @@ test('Filters: the AGES switches above categories, sent back as ageFilters (Phas
   assert.ok(script.indexOf('(e.ages & ageHideMask()) !== 0') !== -1, 'Hidden on watch');
 });
 
-test('Events rows: age, arrive-early and a Notes toggle (Phase 4 §2.3, §3.3, §4.2)', function() {
+test('Events rows: age, arrive-early and a Notes toggle (§12.5)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY};
   var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
   var script = pageScript(html);
@@ -492,7 +492,7 @@ test('Events rows: age, arrive-early and a Notes toggle (Phase 4 §2.3, §3.3, �
   assert.ok(script.indexOf('<ul class="notes" hidden>') !== -1, 'notes collapsed');
 });
 
-test('Events search: count line, day headers, My entries and Hidden on watch (§24.3)', function() {
+test('Events search: count line, day headers, My entries and Hidden on watch (§12.5)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
     personal: [{title: 'Trivia with friends', venue: 'Pub', date: '2027-03-07', time: '15:00', minutes: 0}]};
   var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
@@ -504,7 +504,7 @@ test('Events search: count line, day headers, My entries and Hidden on watch (§
   assert.ok(html.indexOf('>My entry<') !== -1, 'entry chip');
 });
 
-test('Booked activities and excursions: a card per port day with Pick buttons (Phase 4 §6.1)', function() {
+test('Booked activities and excursions: a card per port day with Pick buttons (§12.5)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY};
   var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
   var script = pageScript(html);

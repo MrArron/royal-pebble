@@ -12,7 +12,7 @@
 #define STAR_CHANGE_MAX_BYTES (19 + 1 + (SHORT_TITLE_LEN - 1) + 1 + (SHORT_VENUE_LEN - 1))
 
 // StarChange.on: bit 0 the new state; bit 1 set when the change is to the
-// event's Reserved mark (§5) rather than its star. Both share the queue.
+// event's Reserved mark (§7.3) rather than its star. Both share the queue.
 #define STAR_CHANGE_ON 1
 #define STAR_CHANGE_RESERVED 2
 

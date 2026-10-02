@@ -10,7 +10,7 @@
 #define ROW_HEIGHT 44
 #define TIME_COL_W 50
 #define BANG_W 3
-// Clash toast (docs/DESIGN_V1_1.md §8.3): at the bottom, so the row just
+// Clash toast (docs/DESIGN.md §7.4): at the bottom, so the row just
 // starred stays in view.
 #define TOAST_HEIGHT 46
 #define TOAST_MS 3000
@@ -136,7 +136,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   char sub[VENUE_LEN + 20];
   const char *tag = NULL;
   if ((e->flags & EVENT_BOOKED) && !in_progress) {
-    // "Meet 8:45a · ✓ Booked" (docs/DESIGN_PHASE3.md §22.2).
+    // "Meet 8:45a · ✓ Booked" (docs/DESIGN.md §6).
     int bx = x;
     if (e->booked.meet_before) {
       char meet_buf[8];
@@ -210,7 +210,7 @@ static void hide_toast(void *context) {
 }
 
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
-  // The star is locked on a booked order (docs/DESIGN_PHASE3.md §22.3).
+  // The star is locked on a booked order (docs/DESIGN.md §7.7).
   bool nothing = index->row >= s_row_count || (data_event(s_rows[index->row])->flags & EVENT_BOOKED);
   usage_press(BUTTON_ID_SELECT, USAGE_LONG | (nothing ? USAGE_NOTHING : 0), index->row);
   if (nothing) {

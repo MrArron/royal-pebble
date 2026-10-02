@@ -25,8 +25,8 @@ def configure(ctx):
 
 def build(ctx):
     ctx.load('pebble_sdk')
-    # Link-time optimisation: about 2.3 KB less code (docs/PHASE5_PLAN.md,
-    # proposal C). Code + data + static buffers must stay under 64 KB.
+    # Link-time optimisation: about 2.3 KB less code (docs/PROJECT_BRIEF.md,
+    # Measurements and limits). Code + data + static buffers must stay under 64 KB.
     for platform in ctx.env.TARGET_PLATFORMS:
         env = ctx.all_envs[platform]
         env.append_value('CFLAGS', ['-flto=auto'])

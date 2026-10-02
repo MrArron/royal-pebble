@@ -24,7 +24,7 @@ enum {
   USAGE_VOICE = 16,  // x: DictationSessionStatus (255 started), a: transcript bytes, b: free heap, c: the voice turn (as the phone logs it)
 };
 
-// USAGE_SYNC's `x`: the morning sync (docs/DESIGN_PHASE3.md §25).
+// USAGE_SYNC's `x`: the morning sync (docs/DESIGN.md §8.5).
 enum {
   SYNC_SCHEDULED = 0,    // b: when (NO_TIME none), a: the error when none
   SYNC_DONE = 1,         // a: seconds; c: 1 the app stayed open

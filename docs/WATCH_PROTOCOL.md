@@ -23,7 +23,7 @@ that the phone stores is described in `DATA_FORMAT.md`.
   after midnight too, and so is an all-aboard override before 04:00.
 - **All-aboard**, in this order: an exact time (ship time) set per day; else
   Royal's gangway time (`mine.ports[].gangwayUp`, port-local, from login data)
-  − ship offset ± the day's 5-minute steps (`docs/DESIGN_PHASE3.md` §23.1);
+  − ship offset ± the day's 5-minute steps (`docs/DESIGN.md` §12.3);
   else departure (port-local) − ship offset − buffer (default 30 min, 60 at
   tender ports: any day type containing `TENDER`). None on debark or sea days.
   Itinerary edits from Settings > Days (a skipped or added port, changed times)
@@ -56,7 +56,7 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
 e.g. `SAILS MAR 6` or `CRUISE ENDED`. Before the cruise, Home shows the
-days-to-sail countdown (`docs/DESIGN_V1_1.md` §8.2): the watch counts the days
+days-to-sail countdown (`docs/DESIGN.md` §4.5): the watch counts the days
 from `sail_date` itself, and shows `sail_port`, `ship_name` and
 `cruise_starred`. `cruise_starred` counts starred keys that still match the
 schedule, whatever the Filters, plus personal entries.
@@ -67,7 +67,7 @@ is a larger number, as for all-aboard. None on sea days, no arrival on the
 embark day and no departure on the debark day.
 
 `terminal` is the embark day's terminal arrival appointment from login data
-(`mine.arrival`, `docs/DESIGN_PHASE3.md` §22.5) in cruise minutes, ship time
+(`mine.arrival`, `docs/DESIGN.md` §4.3) in cruise minutes, ship time
 (Royal's port time minus the day's offset), or −1. When Royal's value isn't
 an `HH:MM` time, `terminal` is −1 and `terminal_text` has the text (≤ 23
 bytes); otherwise `terminal_text` is empty. Both are empty on every other
@@ -77,11 +77,11 @@ day and without login data. Home shows the arrival card from 04:00 until
 
 Home's all-aboard countdown runs until `all_aboard` or `depart`, whichever
 comes first. On the arrival card or the countdown, Hold Select says "I'm on
-board" (`docs/DESIGN_PHASE3.md` §22.6); from then until the 04:00 boundary Home
+board" (`docs/DESIGN.md` §4.4); from then until the 04:00 boundary Home
 shows the NEXT card and the top bar's right label reads `ON BOARD`. The phone
 isn't told; see "On board" under Stored on the watch.
 
-**Tomorrow's block** (the evening's tomorrow card, `docs/DESIGN_V1_1.md` §8.1;
+**Tomorrow's block** (the evening's tomorrow card, `docs/DESIGN.md` §5;
 the watch only has today's events, so the phone works it out):
 
 | Key | Value |
@@ -98,7 +98,7 @@ the watch only has today's events, so the phone works it out):
 Counts follow the Filters like the day's events (hidden categories left out
 unless starred). **Last chance** is the last performance of a featured show in
 the cruise, matched by title (trimmed, any case) across all days; a featured
-show on only once is an **only show** (`slice.finalShows`, §8.4). Of tomorrow's,
+show on only once is an **only show** (`slice.finalShows`, `docs/DESIGN.md` §7.5). Of tomorrow's,
 the earliest last chance is sent, else the earliest only show. Today's events
 carry the same as flags 16 and 32 (Packed events).
 
@@ -142,7 +142,7 @@ The phone also sends a slice by itself whenever the app starts (`ready`).
 | m | venue, UTF-8 |
 | 3 | booked only (flag 128): uint8 minutes from the meeting time to the start (0 none), uint8 guests (0 not known), uint8 kind (1 shore excursion, 0 other booking) |
 
-**Booked** (`docs/DESIGN_PHASE3.md` §22): a timed order from login data
+**Booked** (`docs/DESIGN.md` §7.7): a timed order from login data
 (`mine.orders`, `slice.bookedOrders`), sent as starred with flag 128 at the
 day's port (the itinerary location, as `day_location` would show it) and
 `where` Ashore. The watch shows `Meet 8:45a · ✓ Booked`, labels its details
@@ -154,7 +154,7 @@ categories don't apply.
 `where` is worked out on the phone (`venues.whereFinder`: the built-in venue
 table for the ship, the owner's edits from Settings > Cruise > Ship venues, and
 the cabin deck read from the Me tab's Deck field). The watch has no ship
-knowledge and only formats these numbers (`docs/DESIGN_V1_1.md` §2), so other
+knowledge and only formats these numbers (`docs/DESIGN.md` §7.2), so other
 ships need no watch change.
 
 | Byte | Field |
@@ -167,7 +167,7 @@ ships need no watch change.
 A venue that isn't in the table (and has no owner edit), or an event with no
 venue, sends all zeros: the watch leaves the deck lines out.
 
-**Age, arrive-early and tags** (Phase 4, `docs/DESIGN_PHASE4.md`) come from the
+**Age, arrive-early and tags** (Phase 4, `docs/DESIGN.md` §7.6) come from the
 bundle's `infos` row (`docs/DATA_FORMAT.md`); an event without one sends four
 zeros. The phone works all of it out, so the watch only formats numbers:
 
@@ -192,7 +192,7 @@ zeros. The phone works all of it out, so the watch only formats numbers:
 | 128 | Meeting spot on phone |
 
   The phone sets them from the event's notes (`src/pkjs/slice.js`), by Royal's
-  note id first and keywords second (`docs/PHASE4_PLAN.md` item 6). Bit 64 is
+  note id first and keywords second (`docs/DESIGN.md` §7.6). Bit 64 is
   left off when `early` is set, since `Arrive by` already says it.
 
 The four bytes make every event 4 bytes longer: about 640 bytes more for a
@@ -214,8 +214,8 @@ default 15) before each starred event and personal entry. It covers today's and
 tomorrow's watch days, so tomorrow's alerts still fire if the phone is away at the
 04:00 rollover.
 
-Each of those evenings also gets **to-reserve** alerts (`docs/DESIGN_V1_1.md`
-§5): at the Me tab's time (18:00 to 22:00 ship time, default 20:00), one per
+Each of those evenings also gets **to-reserve** alerts (`docs/DESIGN.md`
+§8.3): at the Me tab's time (18:00 to 22:00 ship time, default 20:00), one per
 starred event of the next watch day that needs a reservation and isn't marked
 reserved, at most 5, all in the same minute. The watch shows them on one screen.
 
@@ -248,7 +248,7 @@ A booked order's reminder fires `reminder_lead` minutes before its meeting
 time (the start without one), counts down to that time, and has no "From"
 directions; its venue is the port's name.
 
-**Arrive-early reminders** (Phase 4, `docs/DESIGN_PHASE4.md` §3) work the same
+**Arrive-early reminders** (Phase 4, `docs/DESIGN.md` §8.1) work the same
 way: with `early` set, a reminder fires `reminder_lead` minutes before `ref` −
 `early` and counts down to that time (`ARRIVE IN 15 MIN`, or `MEET IN 15 MIN`
 Ashore). `ref` stays the start, so clash warnings, "From" directions and
@@ -259,7 +259,7 @@ Texts are cut between UTF-8 characters. They are shorter than in events so alert
 take less of the watch's storage (they were first sized for a 4 kB cap). The venue table gives long venue names a short name for
 alerts (`Main Dining Room 5` → `Main Dining 5`); other long names are cut.
 
-**"From" directions** (`docs/DESIGN_V1_1.md` §2 and its decisions) are worked out
+**"From" directions** (`docs/DESIGN.md` §8.1) are worked out
 on the phone (`venues.venueFinder().route`, `slice.previousStop`). A reminder
 starts from the previous starred event or personal entry when that one starts
 earlier and ends less than 15 minutes before this one starts, or overlaps it (no
@@ -278,7 +278,7 @@ phone's next plan.
 
 The watch turns the plan into wakeups: at most 8 per app, at least a minute apart.
 One is kept for the silent morning sync (cookie −2, about 04:30 ship time;
-`docs/DESIGN_PHASE3.md` §25), so it schedules the next 7 alert minutes (alerts in the same minute share one) and
+`docs/DESIGN.md` §8.5), so it schedules the next 7 alert minutes (alerts in the same minute share one) and
 every launch, including one caused by a wakeup, schedules the next batch. The
 wakeup cookie is the alert's `at`. Starring on the watch adds or removes that
 event's reminder immediately. A launch by a wakeup shows only the alert screen
@@ -328,7 +328,7 @@ in a slice:
 - The queue keeps one entry per event (start, title and venue, cut to 39 and 23
   bytes like notices, plus the watch day for untimed entries and the sail date);
   a later change to the same event replaces it.
-- **Reserved** (`docs/DESIGN_V1_1.md` §5) goes the same way: a short Select on
+- **Reserved** (`docs/DESIGN.md` §7.3) goes the same way: a short Select on
   the details of a starred event that needs a reservation toggles flag 64 and
   queues a change with bit 1 of `on` set. Star and Reserved changes of one event
   are separate entries. The phone keeps the mark with the stars under
@@ -423,7 +423,7 @@ After the 04:00 rollover without a new slice, Home says to connect the phone
 instead of showing yesterday. Stars made on a stored slice are queued like any
 other (see Star changes) and reach the phone once it is back.
 
-Home's button hints (`docs/DESIGN_V1_1.md` §9.5) keep their own count in
+Home's button hints (`docs/DESIGN.md` §4.6) keep their own count in
 persistent key 7, outside the blob: a hints version and the user opens that
 showed them. They show on the first 3 opens by the user (not an alert wakeup or
 an install) once Home is on top with its data, and on every such open while
@@ -432,7 +432,7 @@ the count, so raising it after an update adds a button shows them again.
 Version 2 added `Hold: on board` beside Select on the arrival card and the
 countdown.
 
-**On board** (`src/c/onboard.c`, `docs/DESIGN_PHASE3.md` §22.6) is watch-only,
+**On board** (`src/c/onboard.c`, `docs/DESIGN.md` §4.4) is watch-only,
 in persistent key 9 outside the blob: int32 sail date (days since 1970), int32
 watch day and int32 cruise minute it was set. It counts only while the sail
 date matches and the watch day is the current one, so it ends by itself at
@@ -440,7 +440,7 @@ date matches and the watch day is the current one, so it ends by itself at
 
 ## Morning summary
 
-The summary card (`src/c/summary_window.c`, `docs/DESIGN_V1_1.md` §8.1) is
+The summary card (`src/c/summary_window.c`, `docs/DESIGN.md` §5) is
 drawn from the stored slice, so it works without the phone. It replaces Home on
 the first user open (`APP_LAUNCH_USER` or quick launch, not an alert wakeup or
 an install) of each watch day once the slice is today's; from 20:00 that first
@@ -456,7 +456,7 @@ the count covers the rest of the day.
 
 ## Ship directory
 
-The directory at the bottom of My info (`docs/DESIGN_V1_1.md` §3) is built on
+The directory at the bottom of My info (`docs/DESIGN.md` §10.1) is built on
 the phone (`src/pkjs/directory.js`) from the venue table, the owner's venue
 edits and the cabin deck, one page at a time: the watch sends DIR_REQUEST when
 a directory screen opens and the phone answers with DIR_PAGE. Pages are
@@ -493,7 +493,7 @@ minute (a retry) saves nothing more.
 - `dir_where`: a place page's where, 4 bytes as in Packed events. When the page
   has `dir_gps`, its rel is left out: the FROM line replaces `↓1 deck from
   cabin`.
-- `dir_gps` (place pages, `docs/DESIGN_V1_1.md` §9.1): the Ship GPS block,
+- `dir_gps` (place pages, `docs/DESIGN.md` §10.2): the Ship GPS block,
   worked out on the phone (`directory.js` with `shipmap.js`, `gpstext.js` and
   `routestart.js`): int8 decks to go (+ = up; the watch draws the arrow and
   `1 deck` / `N decks`), uint8 flags, then the FROM header (`FROM YOUR CABIN`,
@@ -509,7 +509,7 @@ minute (a retry) saves nothing more.
   with flags 2 and 4 too. Left out for Ashore, venues with no deck, ships with
   no map, and flag 4 with no restroom. Units (feet, metres or steps) are the
   phone's setting; the watch never converts.
-- `dir_bank` (elevator bank pages, `docs/DESIGN_V1_1.md` §9.3): uint8 the
+- `dir_bank` (elevator bank pages, `docs/DESIGN.md` §10.2): uint8 the
   cabin's deck (0 unknown), uint8 count and the decks the bank stops at (at
   most 24), then the line under the name (`Aft · Decks 3-17`) as uint8 length
   and UTF-8 bytes. The watch draws `STOPS AT` and the deck chips. The page has
@@ -540,13 +540,13 @@ categories left out unless starred.
 
 ## Route screen
 
-On a place page (`docs/DESIGN_V1_1.md` §9.2), Select asks for the walking route
+On a place page (`docs/DESIGN.md` §10.3), Select asks for the walking route
 to the place and Hold Select for the route from it to its closest restroom: the
 watch sends ROUTE_REQUEST with the page's `dir_ref` and `route_rest`, and the
 phone answers with ROUTE_PAGE (`directory.routePage`). The watch offers Select
 only when the page has a FROM block (`dir_gps` without flags 2 and 4) and Hold
 Select only on a venue with a restroom line. `dir_ref` 400 (`REF_CABIN`, only from a voice
-card) is the route to your stateroom from where routes start now (§9.4),
+card) is the route to your stateroom from where routes start now (§10.4),
 401 (`REF_REST_HERE`) the route from there to the closest restroom, 500 + D
 (`REF_REST_DECK`, 1.5.9) the closest restroom on deck D (`closest restroom on
 deck 5`), and 100000 + N (`REF_TO_CABIN`, 1.5.8) the route to cabin N said by
@@ -560,18 +560,18 @@ phone away (not connected, the request fails, or no answer within 8 seconds) it
 says `Connect your phone`, and Select asks again. A request sent before the
 phone script is up waits for it, as on directory pages.
 
-- The route to a place starts where the place page's FROM block does (§9.4) and
+- The route to a place starts where the place page's FROM block does (§10.4) and
   goes to the entrance that route reaches (an elevator bank: its lobby on the
   best deck).
 - The restroom route starts at that entrance (the one the place page's
   `Closest restroom` line is measured from), so it works with no stateroom too.
 
-From Home (§9.5), Select asks for the route to the NEXT card's event: the
+From Home (§4.1), Select asks for the route to the NEXT card's event: the
 request carries `route_start` and `route_venue` instead of `dir_ref` and
 `route_rest`, and the phone answers with `dir_ref` 0, `route_rest` 0 and the
 same `route_start` (`directory.eventRoutePage`). The venue may be cut short on
 the watch, so the phone matches it against the day's events starting then. The
-route starts where you'll be before the event (§9.4, with the event as the
+route starts where you'll be before the event (§10.4, with the event as the
 target), and both lines under the steps are empty: the watch draws the event's
 time and title there itself (it formats the time for its 12/24h setting).
 
@@ -595,7 +595,7 @@ pages.
 
 ## Voice
 
-Ask (`docs/DESIGN_V1_1.md` §9.6, `src/c/ask_window.c`, `src/pkjs/voicecard.js`).
+Ask (`docs/DESIGN.md` §11, `src/c/ask_window.c`, `src/pkjs/voicecard.js`).
 Hold Select on Home (when `I'm on board` isn't offered) or on a Route screen
 opens the Ask screen and starts the Pebble app's dictation (its own confirm
 step off). With the phone away the screen says `Voice is heard on the phone`
@@ -610,7 +610,7 @@ connection), closes an Ask screen that has nothing on it yet.
 
 | Bytes | Field |
 |---|---|
-| 1 | `action`: what Select does. 0 ask again, 1 open the Route screen for `ref`, 2 confirm (VOICE without text, then the screen closes), 3 set or clear `I'm on board` on the watch (`docs/DESIGN_PHASE3.md` §22.6; logged as entry 14), then close |
+| 1 | `action`: what Select does. 0 ask again, 1 open the Route screen for `ref`, 2 confirm (VOICE without text, then the screen closes), 3 set or clear `I'm on board` on the watch (`docs/DESIGN.md` §4.4; logged as entry 14), then close |
 | 1 | `flags`: 1 the route is to the closest restroom from `ref`; 2 (action 3) on board, else back ashore |
 | 4 | `ref`: int32, a place page's `dir_ref` (action 1), else 0 |
 | 1 | how many rows (at most 4) |
@@ -634,9 +634,8 @@ at a whole UTF-8 character with `pack.utf8`):
 
 A full card is at most 7 + 4 × (16 + 64) + 48 + 2 × 32 = 439 bytes, well
 inside the watch's 2048-byte inbox; VOICE fits the 768-byte outbox.
-`docs/PHASE5_PLAN.md` (V1) planned a transcript of up to 256 bytes and confirm
-strings of up to 48 bytes: those are the buffer sizes, so the usable text is
-one byte less (255 and 47).
+The usable text is one byte less than each buffer (255 for the transcript, 47
+for the hint).
 
 Select on a route card opens the Route screen in the Ask screen's place (and
 closes a Route screen already open), which asks for its page with
@@ -648,7 +647,7 @@ bank, chosen by the planner from where routes start now), 401 or a place's
 restroom route (`flags` 1), 400, 500 + a deck, or 100000 + a spoken cabin
 number. Demo data is answered like real data.
 
-Where routes start (1.5.9, `docs/DESIGN_V1_1.md` §9.4 and §9.6): `I'm at X` is
+Where routes start (1.5.9, `docs/DESIGN.md` §10.4 and §11): `I'm at X` is
 an action 2 card (`YOU'RE AT X`); the phone saves X as the spoken start as
 soon as the card is sent (1.5.10), and its confirm (VOICE without text for that
 `voice_seq`) or a new turn keeps it. Back isn't sent to the phone, so the card
@@ -723,8 +722,8 @@ nothing starred today, 9 terminal arrival (embark day).
 | 11 | phone connection | 1 connected, 0 lost | — | — | — |
 | 12 | message error | 0 not delivered, 1 phone's message dropped, 2 outbox busy | `AppMessageResult` | `msg_type` (0 unknown) | — |
 | 13 | storage error | 0 schedule, 1 star queue, 2 usage log, 3 other | the status (negative), or the bytes written when short; −5 (`E_OUT_OF_MEMORY`) when the schedule's save or load buffer couldn't be allocated | persistent key (0 for −5) | bytes asked for (−5), else — |
-| 14 | on board (§22.6); the phone writes `onboard set` or `onboard undo` | 1 set, 0 undo | — | ship time (cruise minutes) | — |
-| 15 | morning sync (§25) | 0 set (when it changes), 1 synced, 2 phone unreachable, 3 timed out (phone connected, no slice), 4 fired with the app open | 0 set: the error when none is set; 1-3: seconds until the slice came, or waited | 0 set: when (−1 none) | 1-3: 0 it closed itself, 1 the app stayed open (a notice, or the user left Home), 2 closed with Back before it finished |
+| 14 | on board (§4.4); the phone writes `onboard set` or `onboard undo` | 1 set, 0 undo | — | ship time (cruise minutes) | — |
+| 15 | morning sync (§8.5) | 0 set (when it changes), 1 synced, 2 phone unreachable, 3 timed out (phone connected, no slice), 4 fired with the app open | 0 set: the error when none is set; 1-3: seconds until the slice came, or waited | 0 set: when (−1 none) | 1-3: 0 it closed itself, 1 the app stayed open (a notice, or the user left Home), 2 closed with Back before it finished |
 | 16 | voice (Ask, 1.5.2) | `DictationSessionStatus` (0 heard, 1 cancelled, 2 cancelled after an error, 3 stopped by the system, 4 no speech, 5 no connection, 6 turned off, 7 internal error, 8 recognizer error); 255 dictation started | transcript bytes (heard) | free memory (bytes) | the voice turn it is for (`voice_seq`, as in the phone's `voice` line) |
 
 Button presses are logged while the phone is connected; a Select that did

@@ -8,7 +8,7 @@
 // schedules the next batch. The wakeup cookie is the alert time in cruise
 // minutes.
 //
-// The eighth is the silent morning sync (docs/DESIGN_PHASE3.md §25): about
+// The eighth is the silent morning sync (docs/DESIGN.md §8.5): about
 // 04:30 ship time on the cruise's days, cookie SYNC_COOKIE.
 
 #define SYNC_COOKIE (-2)

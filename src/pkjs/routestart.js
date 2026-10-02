@@ -1,4 +1,4 @@
-// Where directions and routes start (docs/DESIGN_V1_1.md §9.4, one rule for the
+// Where directions and routes start (docs/DESIGN.md §10.4, one rule for the
 // "From" lines on event details and reminders and for the Ship GPS).
 //
 // - The cabin, by default.

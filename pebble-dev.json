@@ -1,0 +1,38 @@
+{
+  "appName": "Royal Pebble",
+  "watchModel": "Pebble Time 2",
+  "platform": "emery",
+  "screen": "200x228, 64 colors",
+  "appRamBytes": 131072,
+  "sizeBudgetBytes": 63488,
+  "wsl": {
+    "distro": "Ubuntu",
+    "user": "pebble",
+    "pebbleTool": "/home/pebble/.local/bin/pebble",
+    "sdkVersion": "4.33.1"
+  },
+  "emulatorTZ": "Etc/GMT+4",
+  "jsTests": "test/pkjs/*.test.js",
+  "otherTests": ["python3 tools/cruise-sync/test_cruise_sync.py"],
+  "version": {
+    "scheme": "1.X.Y: X = v1.1 phase in progress, Y counts app-changing PRs within it; a new phase sets X and resets Y to 0; docs-only PRs leave it alone.",
+    "files": [
+      { "path": "package.json", "kind": "package-json" },
+      { "path": "src/pkjs/log.js", "regex": "APP_VERSION = '([0-9.]+)'" }
+    ]
+  },
+  "github": {
+    "bugLabel": "bug",
+    "areaLabels": ["watch", "phone"],
+    "publicRepo": true
+  },
+  "privateData": [
+    "stateroom / cabin numbers",
+    "names",
+    "Royal login passwords and tokens",
+    "cruise data bundles (cruise-watch-*.json)",
+    "usage log and map-note exports (royal-pebble-log-*, royal-pebble-map-notes-*)",
+    "account explorer output (royal-pebble-explore-*)"
+  ],
+  "projectNotes": "docs/"
+}

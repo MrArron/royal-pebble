@@ -209,12 +209,12 @@ function make(now, variant) {
   };
   if (embark) {
     // Login data on the embark day: the terminal arrival appointment, on the
-    // quarter hour (docs/DESIGN_PHASE3.md §22.5).
+    // quarter hour (docs/DESIGN.md §4.3).
     var arrival = nowMin + 50 - (nowMin + 50) % 15;
     bundle.mine = {stateroom: '9254', arrival: hhmm(arrival % (24 * 60)), orders: []};
   } else if (port) {
     // Login data on port days: a booked excursion an hour out (meet 15 minutes
-    // before) and a package, which never shows (docs/DESIGN_PHASE3.md §22).
+    // before) and a package, which never shows (docs/DESIGN.md §7.7).
     var exc = base + 60;
     bundle.mine = {
       stateroom: '9254',

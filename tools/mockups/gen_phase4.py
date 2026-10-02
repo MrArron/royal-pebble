@@ -1,4 +1,4 @@
-"""Writes the Phase 4 mockups (docs/DESIGN_PHASE4.md) to docs/mockups/phase4/.
+"""Writes the Phase 4 mockups (docs/DESIGN.md §7.6, §12) to docs/mockups/phase4/.
 
 Same format as the Phase 2 and 3 mockups: Claude Design component files, 400x456
 (2x) for the watch and 390x844 for the phone, inline styles, Roboto Condensed

@@ -41,10 +41,10 @@ enum {
   EVENT_FEATURED = 1 << 1,
   EVENT_RESERVATION = 1 << 2,
   EVENT_PERSONAL = 1 << 3,
-  EVENT_LAST_CHANCE = 1 << 4,  // the last performance of a featured show (§8.4)
+  EVENT_LAST_CHANCE = 1 << 4,  // the last performance of a featured show (§7.5)
   EVENT_ONLY_SHOW = 1 << 5,    // a featured show that is on only once
-  EVENT_RESERVED = 1 << 6,     // marked reserved (§5); only shown while starred
-  EVENT_BOOKED = 1 << 7,       // a booked order (docs/DESIGN_PHASE3.md §22): starred, star locked
+  EVENT_RESERVED = 1 << 6,     // marked reserved (§7.3); only shown while starred
+  EVENT_BOOKED = 1 << 7,       // a booked order (docs/DESIGN.md §7.7): starred, star locked
 };
 
 // Booked.kind
@@ -57,7 +57,7 @@ typedef struct {
   uint8_t kind;         // BOOKED_
 } Booked;
 
-// Starred, needs a reservation and isn't marked reserved yet (§5).
+// Starred, needs a reservation and isn't marked reserved yet (§7.3).
 static inline bool event_not_reserved(uint8_t flags) {
   return (flags & EVENT_STARRED) && (flags & EVENT_RESERVATION) && !(flags & EVENT_RESERVED);
 }
@@ -101,12 +101,12 @@ typedef struct {
   int32_t arrive;        // cruise minutes, ship time; NO_TIME when there is none
   int32_t depart;        // cruise minutes, ship time; NO_TIME when there is none
   int16_t local_offset;  // local time = ship time + offset (minutes)
-  // Embark day's terminal arrival appointment (docs/DESIGN_PHASE3.md §22.5):
+  // Embark day's terminal arrival appointment (docs/DESIGN.md §4.3):
   // cruise minutes, ship time; or NO_TIME with Royal's text; or neither.
   int32_t terminal;
   char terminal_text[24];
   // Minutes before all-aboard of the first alert and the bar's red section
-  // (docs/DESIGN_PHASE3.md §23.2): 30, 60, 90 or 120.
+  // (docs/DESIGN.md §12.3): 30, 60, 90 or 120.
   uint8_t warn_period;
 } Day;
 
@@ -117,8 +117,8 @@ typedef enum {
   FINAL_ONLY_SHOW = 2,    // a featured show that is on only once
 } FinalKind;
 
-// The next watch day, for the evening's tomorrow card (docs/DESIGN_V1_1.md
-// §8.1), worked out by the phone since the watch only has today's events.
+// The next watch day, for the evening's tomorrow card (docs/DESIGN.md
+// §5), worked out by the phone since the watch only has today's events.
 typedef struct {
   DayKind kind;              // DAY_NONE: tomorrow is outside the cruise
   char status[16];           // "DOCKED", "DEBARK"
@@ -259,7 +259,7 @@ typedef struct {
   bool dark_theme;
   bool show_featured;
   bool is_demo;
-  bool always_hints;       // Home's button hints at every open (§9.5)
+  bool always_hints;       // Home's button hints at every open (§4.6)
   bool from_storage;       // loaded from the watch, not fresh from the phone
   uint8_t reminder_lead;   // minutes before starred events
   uint8_t cruise_starred;  // starred events and personal entries in the whole cruise
@@ -310,7 +310,7 @@ bool event_is_past(const Event *e, int32_t now);
 bool event_is_finished(const Event *e, int32_t now);
 int32_t event_end(const Event *e);
 
-// Clashes (docs/DESIGN_V1_1.md §8.3): two timed starred events or personal
+// Clashes (docs/DESIGN.md §7.4): two timed starred events or personal
 // entries whose times overlap. One with no length lasts FINISHED_GRACE minutes;
 // back-to-back isn't a clash. Finished items are left out, and only today's
 // events are checked.

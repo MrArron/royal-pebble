@@ -1,4 +1,4 @@
-// Ship directory on the watch (docs/DESIGN_V1_1.md §3, docs/WATCH_PROTOCOL.md
+// Ship directory on the watch (docs/DESIGN.md §10.1, docs/WATCH_PROTOCOL.md
 // Ship directory). The watch asks for one page at a time when a directory
 // screen opens; the phone builds every line from the venue table, the owner's
 // edits and the cabin deck. Nothing here is saved on the watch.
@@ -36,7 +36,7 @@ var ROW_PLACE = 3;   // a heading: the name, and for a place its area (where is 
 // Row flags on items: a place the cursor can open, drawn muted (elevator banks).
 var ROW_MUTED = 1;
 
-// The elevator banks, directory places on a ship with a map (§9.3).
+// The elevator banks, directory places on a ship with a map (§10.2).
 var BANKS = [{key: 'fwd', name: 'Fore elevators', pos: 'Fore'},
              {key: 'aft', name: 'Aft elevators', pos: 'Aft'}];
 
@@ -317,7 +317,7 @@ function eventsAt(v, ctx) {
   });
 }
 
-// ---- Ship GPS on place pages (docs/DESIGN_V1_1.md §9.1) ---------------------
+// ---- Ship GPS on place pages (docs/DESIGN.md §10.2) ---------------------
 
 // Where a venue is on the map: the plans' spots on its decks, else a rough spot
 // from its deck and position (venues the plans don't label, or the owner moved
@@ -354,7 +354,7 @@ function stops(ctx, sailDays, today) {
 
 // A spoken start (voice, `I'm at X`) as the phone saves it: {sail (the bundle's
 // sail date), at (cruise minutes), name, and venue (a directory place's name),
-// cabin (a spoken cabin number, kept only while it lasts, §9.6) or mine (your
+// cabin (a spoken cabin number, kept only while it lasts, §11) or mine (your
 // stateroom, whatever it is then)}. `place`: {venue} | {cabin} | {mine: true}.
 function spokenStart(place, ctx) {
   var sailDays = slice.daysFromIso(ctx.bundle.sailDate);
@@ -408,7 +408,7 @@ function startOf(ctx, target, room) {
   return st;
 }
 
-// The route from where routestart.js says you are now (§9.4), or with `target`
+// The route from where routestart.js says you are now (§10.4), or with `target`
 // (an event {start}) where you'll be before it, to the nearest of the spots
 // `to`: {start, header, from (the spot it leaves), route}, or {flags} with
 // GPS_NO_CABIN or GPS_NO_FROM when there's none.
@@ -484,7 +484,7 @@ function fromBlock(to, ctx, cabin) {
   return {header: best.header, decks: line.decks, text: line.text, flags: 0, to: best.route.to};
 }
 
-// A place page's Ship GPS lines (§9.1): {header, decks, text, flags, rest}, or
+// A place page's Ship GPS lines (§10.2): {header, decks, text, flags, rest}, or
 // null for none at all (ship not mapped, ashore, no deck, nothing to show).
 // `rest` is the closest restroom from the venue ({decks, text}) or null.
 function placeGps(v, ctx, cabin) {
@@ -508,7 +508,7 @@ function placeGps(v, ctx, cabin) {
   return (gps.flags & GPS_NO_FROM) && !gps.rest ? null : gps;
 }
 
-// An elevator bank (§9.3): its name, `Aft · Decks 3-17`, the STOPS AT chips
+// An elevator bank (§10.2): its name, `Aft · Decks 3-17`, the STOPS AT chips
 // (dir_bank) and the FROM block to its lobby on the best deck.
 function bankPage(b, ctx, cabin, all) {
   var gps = ctx.bundle ? fromBlock(b.spots, ctx, cabin) : null;
@@ -609,9 +609,9 @@ function flagPage(info) {
   ] : [item(0, 'Not found', 'Go back and try again')]};
 }
 
-// ---- Route screen (docs/DESIGN_V1_1.md §9.2) --------------------------------
+// ---- Route screen (docs/DESIGN.md §10.3) --------------------------------
 
-var ROUTE_REDUCED = 1;  // shown less: the planner isn't sure (§9.2)
+var ROUTE_REDUCED = 1;  // shown less: the planner isn't sure (§10.3)
 var ROUTE_STEPS_MAX = 8;  // the watch keeps 8, the arrival last
 var ROUTE_TEXT_MAX = 39;  // title, steps and the small foot line: 40 bytes with the NUL
 var ROUTE_LEAD_MAX = 63;
@@ -635,7 +635,7 @@ function capSteps(list) {
 }
 
 // The Route screen for place page `ref` (a venue or an elevator bank): the route
-// from where you are (§9.4), or with `rest` the one from the venue to its closest
+// from where you are (§10.4), or with `rest` the one from the venue to its closest
 // restroom. Returns {ref, rest, title, header, lead, steps: [{glyph, text}], big,
 // small: {decks, text}, flags}: `lead` is a line above the steps (`Same area ·
 // your deck`, or a message when there's no route), `big` and `small` the lines
@@ -750,7 +750,7 @@ function startNow(ctx) {
 
 // Voice (voicecard.js): the nearest of the Route screen refs `refs` (places,
 // elevator banks, spoken cabins) by the planner's route from where routes start
-// now (§9.4), as the closest restroom is chosen. Returns {ref, from (where it
+// now (§10.4), as the closest restroom is chosen. Returns {ref, from (where it
 // starts: `Your cabin` or a venue's short name), name (the target's), at (the full name of the venue
 // it starts at, else ''), header, flags}; flags GPS_NO_CABIN (nowhere to start)
 // or GPS_NO_FROM (no route, or nothing on the map) with no route.
@@ -858,9 +858,9 @@ function routePage(ref, rest, ctx) {
   return page;
 }
 
-// The Route screen to an event (Home's NEXT, §9.5): `ev` is {start (cruise
+// The Route screen to an event (Home's NEXT, §4.1): `ev` is {start (cruise
 // minutes), venue (as the watch has it, maybe cut short)}. The route starts
-// where you'll be before the event (§9.4). As routePage, with `start` in place
+// where you'll be before the event (§10.4). As routePage, with `start` in place
 // of ref and rest, and no summary: the watch shows the event's time and title
 // under the steps.
 function eventRoutePage(ev, ctx) {
@@ -981,7 +981,7 @@ function routeMsg(page) {
 
 // What every page needs: the context with defaults, the directory's places,
 // the elevator banks and the cabin deck. Also applies the ship's port/starboard
-// settings from the Help page (§9.7): the flip to the map, `sides` (confirmed
+// settings from the Help page (§12.7): the flip to the map, `sides` (confirmed
 // on board) to the route wording.
 function setup(ctx) {
   var bundle = ctx.bundle || {};

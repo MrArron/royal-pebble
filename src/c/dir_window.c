@@ -6,7 +6,7 @@
 #include "ui.h"
 #include "usage.h"
 
-// Ship directory (docs/DESIGN_V1_1.md §3): decks (or areas), then one deck's
+// Ship directory (docs/DESIGN.md §10.1): decks (or areas), then one deck's
 // or area's places, then one place with what's on there for the rest of today.
 // The phone builds every page and sends one when a screen opens
 // (docs/WATCH_PROTOCOL.md, Ship directory). Each screen keeps only its own
@@ -158,7 +158,7 @@ static void draw_line(GContext *ctx, const char *text, GFont font, GColor color,
                      GTextAlignmentLeft, NULL);
 }
 
-// The Ship GPS block under a place's heading (docs/DESIGN_V1_1.md §9.1): a
+// The Ship GPS block under a place's heading (docs/DESIGN.md §10.2): a
 // divider, `FROM YOUR CABIN`, `↓1 deck · 160 m fore` and `Spot approximate`;
 // with no stateroom, the hint instead. Draws when ctx isn't NULL; returns the
 // new y.
@@ -187,7 +187,7 @@ static void draw_hint(GContext *ctx, const char *text, bool chevron, int y, int 
   }
 }
 
-// `Closest restroom · 30 m aft`, measured from the venue (§9.1). With a deck
+// `Closest restroom · 30 m aft`, measured from the venue (§10.2). With a deck
 // change, or when it doesn't fit on one line, the distance goes on a second
 // line (with the arrow). Then the `Hold Select for its route` hint. Draws when
 // ctx isn't NULL; returns the new y.
@@ -216,7 +216,7 @@ static int layout_rest(GContext *ctx, const View *v, int y, int w) {
 }
 
 // The decks an elevator bank stops at, 7 chips a row; the cabin's deck is
-// filled with the sea accent (§9.3). Draws when ctx isn't NULL; returns the new y.
+// filled with the sea accent (§10.2). Draws when ctx isn't NULL; returns the new y.
 #define CHIPS_PER_ROW 7
 #define CHIP_GAP 3
 #define CHIP_H 20

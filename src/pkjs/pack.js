@@ -66,7 +66,7 @@ function encodeWhere(w) {
   return [(w.deck | 0) & 255, (w.deckTo | 0) & 255, bits, (rel || 0) & 255];
 }
 
-// A booked order (flag 128, docs/DESIGN_PHASE3.md §22) is followed by three
+// A booked order (flag 128, docs/DESIGN.md §7.7) is followed by three
 // bytes: uint8 minutes from `meet` to the start (0 none), uint8 guests (0 not
 // known), uint8 kind (1 excursion, 0 other booking).
 var FLAG_BOOKED = 128;

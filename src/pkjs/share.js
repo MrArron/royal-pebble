@@ -1,4 +1,4 @@
-// Share my plan (docs/DESIGN_PHASE3.md §28): the text one phone's settings
+// Share my plan (docs/DESIGN.md §12.2): the text one phone's settings
 // page copies for a travel companion, and the comparison and merge the other
 // phone's page runs on import. The format is in docs/DATA_FORMAT.md ("Shared
 // plan"). shareLib is a self-contained factory so the settings page gets it as

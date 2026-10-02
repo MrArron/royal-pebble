@@ -1,4 +1,4 @@
-// Ship map for the GPS (docs/DESIGN_V1_1.md §9): where things are on the ship and
+// Ship map for the GPS (docs/DESIGN.md §10): where things are on the ship and
 // walking routes between them, on the walkway graph. Phone only: the watch gets
 // short strings (gpstext.js) and no map data.
 //
@@ -19,7 +19,7 @@
 //   such a route has unsure: true.
 // - restroom() searches every deck, with the real cost of stairs and elevators.
 // - setFlip() mirrors port and starboard for the whole ship or single decks (the
-//   test-cruise setting, §9.7); it applies to every spot and to the graph.
+//   test-cruise setting, §12.7); it applies to every spot and to the graph.
 'use strict';
 var cabins = require('./cabins');
 
@@ -56,7 +56,7 @@ function sideOf(x) {
 }
 
 // Port and starboard as the plans draw them, unless the owner flipped the ship
-// or this deck (test cruise, §9.7).
+// or this deck (test cruise, §12.7).
 function flipped(ship, deck) {
   var f = FLIP[ship];
   return !!f && !!f.all !== !!(f.decks && f.decks[deck]);

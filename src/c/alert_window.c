@@ -6,12 +6,12 @@
 
 // Shown when an alert fires: the top bar says "Reminder" or "All aboard",
 // then "IN 15 MIN", what it's about and, for reminders, where it is
-// (docs/DESIGN_V1_1.md §2). A reminder whose event is in the day's data shows
+// (docs/DESIGN.md §7.2). A reminder whose event is in the day's data shows
 // the event's details body with the "From" directions under the where lines
-// (docs/DESIGN_PHASE3.md §22.9). The evening's "To reserve" alert lists
-// tomorrow's starred events that still need a reservation (§5). A booked
-// order's reminder counts down to its meeting time (§22.4), an arrive-early
-// event's to its arrive-by time (docs/DESIGN_PHASE4.md §3.2).
+// (docs/DESIGN.md §8.1). The evening's "To reserve" alert lists
+// tomorrow's starred events that still need a reservation (§8.3). A booked
+// order's reminder counts down to its meeting time (§8.1), an arrive-early
+// event's to its arrive-by time (docs/DESIGN.md §8.1).
 // Opened by a wakeup (app closed) it is the only
 // screen the user asked for, so Back leaves the app; Select opens Home.
 
@@ -205,7 +205,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   bool all_aboard = a->kind == ALARM_ALL_ABOARD;
   bool booked = !all_aboard && (a->from & ALARM_BOOKED);
   // A booked order counts down to its meeting time when it has one, an event
-  // that asks to come early to its arrive-by time (Phase 4 §3.2).
+  // that asks to come early to its arrive-by time (docs/DESIGN.md §8.1).
   int before = booked ? a->booked.meet_before : all_aboard ? 0 : a->early;
   int left = (int)(a->ref - before - now_cruise());
   int w = b.size.w - 2 * PAD;
