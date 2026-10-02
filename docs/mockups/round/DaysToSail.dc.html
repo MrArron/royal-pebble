@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Round Home days to sail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 520px; height: 520px; position: relative; background: #1E1E1E; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif">
+<div style="position: absolute; left: 0; top: 0; width: 520px; height: 520px; border-radius: 50%; overflow: hidden; background: #FFFFFF; color: #000000">
+<div style="height: 60px; background: #000055; color: #FFFFFF; font-size: 28px; line-height: 28px; font-weight: 700; text-align: center; padding-top: 24px; box-sizing: border-box">9:15a</div>
+<div style="position: absolute; left: 50px; top: 84px; width: 420px; display: flex; flex-direction: column; align-items: center; text-align: center">
+<div style="font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: 1px; color: #555555">SAILS IN</div>
+<div style="font-size: 84px; line-height: 92px; font-weight: 700">78</div>
+<div style="font-size: 34px; line-height: 38px; font-weight: 700">days</div>
+<div style="font-size: 34px; line-height: 38px; font-weight: 700; color: #555555; margin-top: 6px">Sat Mar 6 · Port Canaveral</div>
+<div style="font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">Harmony of the Seas</div>
+<div style="width: 300px; height: 2px; background: #AAAAAA; margin: 12px 0"></div>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 26px; line-height: 30px; font-weight: 700"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7L2 9.2l7.1-.6z" fill="#0055AA"></path></svg><span>3 starred so far</span></div>
+</div>
+</div>
+<sc-if value="{{safe}}" hint-placeholder-val="{{ false }}"><div style="position: absolute; left: 76px; top: 76px; width: 368px; height: 368px; border: 2px dashed #FF5555; box-sizing: border-box"></div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"safe":{"editor":"boolean","default":false},"$preview":{"width":520,"height":520}}'>
+class Component extends DCLogic {
+renderVals() {
+return { safe: this.props.safe ?? false };
+}
+}
+</script>
+</body>
+</html>

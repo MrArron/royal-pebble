@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Round route</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 520px; height: 520px; position: relative; background: #1E1E1E; font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif">
+<div style="position: absolute; left: 0; top: 0; width: 520px; height: 520px; border-radius: 50%; overflow: hidden; background: #FFFFFF; color: #000000">
+<div style="height: 60px; background: #000055; color: #FFFFFF; font-size: 28px; line-height: 28px; font-weight: 700; text-align: center; padding-top: 24px; box-sizing: border-box">11:40a</div>
+<div style="position: absolute; left: 0; width: 520px; top: 66px; text-align: center; font-size: 24px; line-height: 28px; font-weight: 700; letter-spacing: 1px; color: #555555">ROUTE · FROM YOUR CABIN</div>
+<div style="position: absolute; left: 0; width: 520px; top: 98px; text-align: center; font-size: 48px; line-height: 52px; font-weight: 700">On Air</div>
+<div style="position: absolute; left: 150px; top: 152px; width: 220px; height: 2px; background: #AAAAAA"></div>
+<div style="position: absolute; left: 90px; top: 164px; width: 340px; display: flex; flex-direction: column; gap: 6px; font-size: 34px; line-height: 38px; font-weight: 700">
+<div style="display: flex; gap: 12px; align-items: flex-start"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 6px"><circle cx="12" cy="12" r="5" fill="#0055AA"></circle></svg><span>30 m aft</span></div>
+<div style="display: flex; gap: 12px; align-items: flex-start"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 6px"><path d="M2 21h5v-5h5v-5h5V6h5" stroke="#0055AA" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></svg><span>Aft stairs to Deck 4</span></div>
+<div style="display: flex; gap: 12px; align-items: flex-start"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink: 0; margin-top: 6px"><circle cx="12" cy="12" r="5" fill="#0055AA"></circle></svg><span>20 m aft</span></div>
+<div style="display: flex; gap: 12px; align-items: flex-start"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 6px"><circle cx="12" cy="12" r="8.5" stroke="#0055AA" stroke-width="2.8"></circle><circle cx="12" cy="12" r="3.5" fill="#0055AA"></circle></svg><span>On Air</span></div>
+</div>
+<div style="position: absolute; left: 150px; top: 350px; width: 220px; height: 2px; background: #AAAAAA"></div>
+<div style="position: absolute; left: 0; width: 520px; top: 364px; display: flex; flex-direction: column; align-items: center; text-align: center; font-size: 26px; line-height: 30px; font-weight: 700; color: #555555">
+<div>12:00p</div>
+<div>Name That Tune Trivia</div>
+</div>
+</div>
+<sc-if value="{{safe}}" hint-placeholder-val="{{ false }}"><div style="position: absolute; left: 76px; top: 76px; width: 368px; height: 368px; border: 2px dashed #FF5555; box-sizing: border-box"></div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"safe":{"editor":"boolean","default":false},"$preview":{"width":520,"height":520}}'>
+class Component extends DCLogic {
+renderVals() {
+return { safe: this.props.safe ?? false };
+}
+}
+</script>
+</body>
+</html>

@@ -60,6 +60,53 @@ V1-V5 are done (1.5.2-1.5.13). Left:
 - **Versions:** Phase 5 tuning PRs that land after Phase 6 starts take the next
   1.6.Y (open question 4).
 
+## 3a. Round 2 (gabbro) phase
+
+**Comes before the rest of Phase 6:** the .pbw targets only the Time 2 today,
+so the app does not install on a Pebble Round 2 at all.
+
+**Goal:** the same app and the same .pbw run well on the Pebble Round 2
+(260x260 round, about 184x184 usable square), worn by a second person for the
+whole sailing. In scope: every watch screen on the round display, phone text
+that fits it, build / size / screenshot tooling for both platforms, a
+real-hardware soak before the freeze, and matching Time 2 style updates
+(G6a). Out of scope: touch, new features, store publishing.
+
+**Approach:** one codebase, two binaries. `gabbro` joins `targetPlatforms`;
+per-platform layout numbers live in `layout.h` behind `PBL_ROUND`; round-only
+code sits under `#ifdef PBL_ROUND` (costs the Time 2 nothing); `ui.c` row,
+header and footer helpers learn the round rules once; the phone reads
+`Pebble.getActiveWatchInfo().platform` and sends shorter text for gabbro.
+Round rules and mockups: `docs/mockups/round/` (`NOTES.md`). Home's timeline
+becomes an arc along the bottom edge.
+
+| # | What | Exit check |
+|---|---|---|
+| G0a | SDK in WSL has gabbro and its emulator boots | Tooling ready |
+| G0b | Throwaway build with `gabbro` added; screenshot every screen; gabbro size and RAM | Baseline |
+| G0c | When the Round 2 arrives: install through the second wearer's Android phone (share her data first) | Install route works |
+| G1 | Round mockups in `docs/mockups/round/` (done) | Owner approved; arc chosen |
+| G2 | `gabbro` target, `pebble-dev.json`, `watch_size.py` for both, `layout.h`, round-aware `ui.c` helpers, screenshot script | Nothing clipped on gabbro; Time 2 walk unchanged. **Usable build; this is what sails if later stages slip** |
+| G3 | Home: centered time and next event, timeline arc | Mockup match; Time 2 unchanged |
+| G4 | Alerts and notices | Alerts fire on time on the gabbro emulator |
+| G5 | Directory and Route | Longest real step fits; 5-level directory walk |
+| G6 | My info, voice card, On board?, phone-away, dictation failed | 4-row card fits; long TRY text wraps |
+| G6a | Time 2 matching style: rounded selection pill, right-edge scroll bar on long pages, time-ashore bar on the all-aboard alert (shared `ui.c` helpers) | Mockup match on the Time 2; under the 62 KB budget; cost stated in the PR |
+| G7 | Phone: per-platform text budgets for route lines, card rows, hints; tests for both | No fixture string over budget |
+| G8 | Soak on the Round 2 from arrival to the freeze: alerts, routes, a dictation session, both themes, usage log shared back | No crashes; hardware-only faults fixed |
+
+Stages before G0c and G8 run on the gabbro emulator until the Round 2 arrives.
+G7 can run alongside G3-G6. Phase 6 items pick up only after G6.
+
+**Size rules:** every watch PR puts `watch_size.py` first lines for both
+platforms (before / after) in its description, and both pass the 62 KB budget.
+The Time 2 (emery) binary may grow at most 50 B per PR; G6a is the one
+exception and states its cost up front. Gabbro's limits are assumed to match
+the Time 2's until G0b measures them.
+
+**Versions:** the first app-changing Round 2 PR starts the next minor version;
+docs-only PRs don't bump.
+
 ## 4. Phase 6: Planning
 
 App versions start at 1.6.0. Owner decisions so far (2026-10-01):
