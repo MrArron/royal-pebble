@@ -35,6 +35,9 @@
 // Home's first line (body coordinates): right under the label line, so the
 // port-day countdown's last line ("3 clashes") still fits.
 #define HOME_TOP 0
+// Home's body is wider than the 184 px column (docs/mockups/round/Main):
+// its centered lines are short at the top and the circle widens below.
+#define HOME_INSET_X 25
 
 #else
 
@@ -67,3 +70,12 @@
 #define BODY_FRAME(b)                                                     \
   GRect(BODY_INSET_X, TOP_BAR_HEIGHT, (b).size.w - 2 * BODY_INSET_X, \
         (b).size.h - TOP_BAR_HEIGHT - BODY_INSET_BOTTOM)
+
+// Home's body: the body on the Time 2, a wider column on the Round 2.
+#if defined(PBL_ROUND)
+#define HOME_FRAME(b)                                                     \
+  GRect(HOME_INSET_X, TOP_BAR_HEIGHT, (b).size.w - 2 * HOME_INSET_X, \
+        (b).size.h - TOP_BAR_HEIGHT - BODY_INSET_BOTTOM)
+#else
+#define HOME_FRAME(b) BODY_FRAME(b)
+#endif

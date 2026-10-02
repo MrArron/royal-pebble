@@ -354,7 +354,7 @@ int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now) {
   snprintf(buf, sizeof(buf), "%d clash%s", n, n == 1 ? "" : "es");
   graphics_context_set_text_color(ctx, g_theme->port_accent);
   graphics_draw_text(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GRect(x, y, w, 18),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
   return 16;
 }
 
@@ -517,6 +517,13 @@ int draw_arrow_line(GContext *ctx, bool large, GColor color, int x, int y, int w
   ArrowMetrics m = arrow_metrics(large);
   int height = large ? 20 : 16;
   int right = x + w;
+#if defined(PBL_ROUND)
+  // Centered like the round screen's other lines.
+  int line_w = text_size(before, font).w + (dir != 0 ? m.width + 1 : 0) + text_size(after, font).w;
+  if (line_w < w) {
+    x += (w - line_w) / 2;
+  }
+#endif
   graphics_context_set_text_color(ctx, color);
   if (before[0]) {
     graphics_draw_text(ctx, before, font, GRect(x, y, right - x, height),

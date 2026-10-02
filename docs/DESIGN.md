@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
 How the watch app and the phone settings page look and behave, as built in
-1.6.0. One section per screen or feature. Designs that are approved but not
+1.6.1. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -957,10 +957,42 @@ holds on the Round 2 unless this section says otherwise.
 - **Lists** (Today, directory): the firmware keeps the selected row in the
   middle of the column. A place page (§10.2), a single tall row, keeps its top
   in view instead.
-- **Home (§4):** the first line sits 0 px below the label line (4 px on the
-  Time 2) so the port-day countdown's last line fits. Button hints (§4.6) sit
-  at Up 70, Select 130, Down 190 on the right and Exit at 130 on the left
-  (window y), inside a 200 px column.
+- **Home (§4), round layout since 1.6.1 (G3; mockups `Main`,
+  `HomeNextDark`, `HomePortArc`, `HomePortArcDark`, `DaysToSail`):** the
+  body is a wider 210 px column (inset 25 px) from y 48 to 220, its first
+  line right under the label line, and every line is centered.
+  - NEXT card: the star and `NEXT · IN 20 MIN` centered together, the
+    title, `12:00p · On Air`, `Deck 4 Aft · ↓2`, tags and the clash count,
+    then a divider and **one** next item (`1:00p ★ Title` and its venue
+    line, each centered as one line; left out when it doesn't fit above the
+    body's bottom). `Route ›` is a centered bottom hint at y 221, outside
+    the body, while Select routes.
+  - All-aboard countdown: `ALL ABOARD IN`, the count (centered together
+    with the warning sign in the warning window), `4:30p ship · 4:30p
+    local`, `Excursion back 11:30a` and the clash count. The time-ashore bar
+    becomes an **arc along the bottom edge**: radius 121, 8 px wide, from
+    140° on the left to 40° on the right (screen angles), rounded ends,
+    the §4.2 colors one degree at a time, and the now tick as a 2 px radial
+    line (radius 114-128) in `text`. The start and all-aboard times sit
+    just above the arc's ends (Gothic 14 bold, `muted`, y 177), and `Hold
+    Select: on board` is centered at y 202 between them.
+  - Days to sail: the label line reads `SAILS IN` (`SAILS` on the last
+    day), then the count (LECO 42) with `days` under it, the sail line and
+    ship, a divider and `★ 3 starred so far`. In the last 3 days the ship
+    line is left out to make room for the sync reminder.
+  - Arrival card, messages: the same lines, centered; `Hold Select: on
+    board` (shorter than the Time 2's `I'm on board`).
+  - The arc, its times and the bottom hints are drawn on a full-screen layer
+    over the body, so they fade with the rest behind the button hints.
+  Button hints (§4.6) sit at Up 70, Select 130, Down 190 on the right and
+  Exit at 130 on the left (window y), inside a 200 px column.
+- **Morning summary (§5), since 1.6.1 (mockup `MorningSummary`):** today's
+  card puts `DAY 4 · PORT DAY` on the label line (no status after it) and
+  starts with the place; every line is centered, the star with its count.
+  Tomorrow's card keeps `TOMORROW` on the label line and the day label in
+  the body.
+- **Arrow lines** (`↓2 decks from cabin`, `Deck 4 Aft · ↓2`, route and
+  place lines) are centered in their box on the Round 2 since 1.6.1.
 - **On board? and Remove star? (§4.4, §6):** the edge labels (`Not yet` /
   `Keep`, `Hold: yes` / `Hold: remove`) sit along the bottom of the body,
   left and right, until G6 puts them on the bezel by their buttons.
