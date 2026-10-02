@@ -300,6 +300,7 @@ var CSS = [
   '.card h3{margin:16px 0 0;font-size:15px;font-weight:600}',
   '.keys .row{justify-content:flex-start}.keys .row b{flex:none;width:104px;font-weight:600}',
   '.keys .row span:last-child{flex:1;font-weight:400;text-align:left}',
+  '.vcmds .chg span{display:block;color:var(--on-surface-variant)}',
   '.notes{margin:8px 0 0;padding-left:20px}.notes li{margin:6px 0}',
   '.deckchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.deckchips .fchip{min-width:48px}',
   '.mch{margin:18px 0 2px;font-size:14px;font-weight:600;color:var(--on-surface-variant)}',
@@ -331,6 +332,7 @@ var HELP_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="
 // watch's click handlers (src/c/*_window.c) whenever a control changes.
 var HELP_KEYS = [
   ['Home', [['Up', 'My info'], ['Down', 'Today'], ['Select', 'Route to the next event, when its venue is on board'],
+            ['Hold Select', 'Ask by voice (with the phone away on a port day: On board?)'],
             ['Hold Up', 'Next demo screen (only while the watch shows the demo)'], ['Back', 'Exit']]],
   ['Morning summary', [['Any button', 'On to Home'],
                        ['Up, Down', 'On to My info or Today, when it opened with the app']]],
@@ -342,7 +344,10 @@ var HELP_KEYS = [
   ['Ship directory', [['Up, Down', 'Move, or scroll a place page'], ['Select', 'Open; on a place page, its route'],
                       ['Hold Select', 'On a place page: the route to its closest restroom'],
                       ['Select on Flag a map problem', 'Save a map note for Me > Map check (last row of a place page)']]],
-  ['Route', [['Up, Down', 'Scroll a long route'], ['Select', 'Try again when the phone was away']]],
+  ['Route', [['Up, Down', 'Scroll a long route'], ['Select', 'Try again when the phone was away'],
+             ['Hold Select', 'Ask by voice']]],
+  ['Ask (voice)', [['Select', 'What the hint says: open the route, keep where you are, or set on board'],
+                   ['Hold Select', 'Ask again'], ['Up, Down', 'Scroll a long answer'], ['Back', 'Close']]],
   ['Alerts', [['Select', 'Home'], ['Back', 'Close (back to what you were doing)']]],
   ['Schedule change', [['Up, Down', 'Previous or next change'], ['Select, Back', 'Close']]]
 ];
@@ -367,6 +372,34 @@ var HELP_NOTES = [
     'The schedule, stars and alerts work without it.'
 ];
 
+// Help > Voice commands: [group, [[what to say, what it does]]]. Only what the
+// phone answers today (src/pkjs/voicecard.js fixed commands, then the matcher in
+// voice.js); keep in step with them and docs/DESIGN_V1_1.md §9.6.
+var HELP_VOICE = [
+  ['Going places', [
+    ['How do I get to the Windjammer?', 'The route from where routes start now. Also <b>Take me to</b> or ' +
+      '<b>Where is</b> a place.'],
+    ['From the Solarium to Studio B', 'The route from the first place, for this route only.'],
+    ['Take me to my cabin', 'The route to your stateroom, from a starred event on now or where you said you are.'],
+    ['Take me to the dining room', 'Your main dining room (Me tab). Groups, such as the elevators, go to the ' +
+      'nearest one.']]],
+  ['Closest', [
+    ['Closest restroom', 'From where routes start now. Also <b>Restroom near the theater</b> or <b>Closest ' +
+      'restroom on deck 5</b>.'],
+    ['Closest bar', 'The nearest bar. <b>Closest coffee</b> works the same way.'],
+    ['I\'m hungry', 'Cafe Promenade, open 24 hours.']]],
+  ['Where you are', [
+    ['I\'m at the Solarium', 'Routes start there for 90 minutes. Also <b>I\'m in cabin</b> and its number, ' +
+      'or <b>I\'m at my cabin</b>. Add a question: <b>I\'m at the Solarium, how do I get to Studio B?</b>'],
+    ['Forget where I am', 'Routes start at your stateroom or a starred event again.']]],
+  ['Your cruise', [
+    ['I\'m on board', 'On a port or embark day: all-aboard alerts off for today. <b>I\'m ashore</b> turns ' +
+      'them back on.'],
+    ['When do we leave?', 'Today\'s port, departure and all-aboard times.'],
+    ['What\'s tomorrow?', 'Tomorrow\'s port, arrival and all-aboard times.'],
+    ['Where\'s my muster station?', 'Your muster station (Me tab), with its route when it\'s on the map.']]]
+];
+
 var HELP_HTML = [
   '<section class="screen" id="help">',
   '<div class="card switch-row"><span class="t"><b>Always show button hints</b>',
@@ -383,6 +416,17 @@ var HELP_HTML = [
   '<div class="card"><h2>Good to know</h2><ul class="notes">',
   HELP_NOTES.map(function(n) { return '<li>' + n + '</li>'; }).join(''),
   '</ul></div>',
+  '<div class="card vcmds" id="voiceCmds"><h2>Voice commands</h2>',
+  '<p class="muted">Hold Select on Home or a Route screen and say one of these. The watch shows what it heard ',
+  'and what it matched first; Select does what the hint says, Hold Select asks again. Voice is heard on the ',
+  'phone, so keep it nearby (no internet needed).</p>',
+  HELP_VOICE.map(function(g) {
+    return '<h3>' + g[0] + '</h3><div class="rows">' + g[1].map(function(c) {
+      return '<div class="chg"><b>&ldquo;' + c[0] + '&rdquo;</b><span>' + c[1] + '</span></div>';
+    }).join('') + '</div>';
+  }).join(''),
+  '<p class="help">Not yet: schedule questions (<b>What\'s next?</b>) and opening times. Use Today on the ',
+  'watch.</p></div>',
   '<div class="card" id="voiceCard"><h2>Try a voice phrase</h2>',
   '<p class="muted">What the watch would show for something you say, answered by the phone with your ',
   'cruise, no watch needed. Nothing is set or opened.</p>',

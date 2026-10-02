@@ -133,5 +133,7 @@ chips, Shop off by default), **Events** (search, day chips, My entries card with
 Add, star buttons), **Me** (stateroom, deck, stairs, walking distance units,
 muster station, main dining room, theme, reminder lead time, and a Help card). **Help**, under Me
 (`DESIGN_V1_1.md` §9.7): the Always show button hints switch, every watch
-button per screen, notes, the ships with Ship GPS, and port/starboard settings
-for a mapped ship.
+button per screen, notes, the voice commands, a box to try a voice phrase, the
+ships with Ship GPS, and port/starboard settings for a mapped ship. Voice
+commands are `.chg` rows: the phrase in bold quotes, what it does below in
+on-surface variant.

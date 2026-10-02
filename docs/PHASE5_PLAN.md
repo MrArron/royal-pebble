@@ -233,7 +233,7 @@ owner then tried on the watch and found working.
 | PR | What | Version | Budget |
 |---|---|---|---|
 | V4 | Hold Select on Home and Route starts dictation (`dictation_session_create(0, ...)`, confirm off, the phone does its own); the card screen; Select confirms (existing Route messages), Hold Select asks again, Back cancels; phone-away and dictation-failed screens; `Hold: Ask by voice` hint; `voice` usage-log entries with free heap at start | 1.5.4 | <= 2.5 KB static; heap check from M1 |
-| V5 | Settings Help: voice commands card, `HELP_KEYS` | 1.5.5 | phone only |
+| V5 | Settings Help: voice commands card, `HELP_KEYS` | **Done, 1.5.13** (`Voice commands` card from `HELP_VOICE`, next to Try a voice phrase; `HELP_KEYS` gains Hold Select = Ask on Home and Route, and the Ask screen) | phone only |
 
 ### Stage 5: tune before the freeze
 
