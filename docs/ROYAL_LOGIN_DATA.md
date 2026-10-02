@@ -57,7 +57,7 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
   Book one and re-run the explorer to check.
 - **To check (owner, 2026-09-28): the main dining room assignment.** Royal
   assigns every stateroom a dining room (on the SeaPass and in the Royal app).
-  Once the owner's Dec 12 sailing has its schedule (about two weeks before),
+  Once the owner's sailing has its schedule (about two weeks before),
   re-run the explorer and look for it in the booking (`profileBookings`) and
   the voyage data. If it's there, add it to `mine` in both producers
   (`docs/DATA_FORMAT.md`) and let the Advanced download fill Me's Main dining

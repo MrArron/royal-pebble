@@ -19,9 +19,8 @@ direction.
   watches, but keep the code generic (any ship and sail date, nothing
   hardcoded).
 - Royal Caribbean only. Celebrity uses similar endpoints but is untested.
-- First real use: the owner's sailing on Harmony of the Seas (ship code HM),
-  Dec 12, 2026, from Port Canaveral (St. Thomas, Nassau, Perfect Day at
-  CocoCay). It is also the app's test cruise: the usage log and map notes
+- First real use: the owner's upcoming sailing on Harmony of the Seas (ship
+  code HM). It is also the app's test cruise: the usage log and map notes
   collected on board drive the next round of fixes.
 - Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
   (`CLAUDE.md`). Current: **1.5.13**, Phase 5.

@@ -21,7 +21,7 @@ the backup for that.)
 
 1. Double-click **`sync.bat`**.
 2. Type your ship's name (for example `Harmony`), then pick your sailing from the list.
-3. The tool saves a file named like `cruise-watch-HM-20261212.json` in the same
+3. The tool saves a file named like `cruise-watch-HM-20270306.json` in the same
    folder and copies its contents to your clipboard.
 4. Get that text to your phone however you normally move text: email it to
    yourself, or paste it into a notes app that syncs to your phone.

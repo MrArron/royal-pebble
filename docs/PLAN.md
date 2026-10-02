@@ -4,22 +4,23 @@ The one active plan, as of 2026-10-01 (app 1.5.13). What is built is in
 `PROJECT_BRIEF.md`; screens are in `DESIGN.md`. Update this file as work lands
 and delete what's done once it's in the brief.
 
-## 1. Timeline to Dec 12
+## 1. Timeline to the sailing
 
-Schedules publish about two weeks before sailing, so the owner's schedule
-appears about Nov 28, which starts the freeze.
+Counted in weeks before the owner's sailing (about 10 weeks out as of
+2026-10-01). Schedules publish about two weeks before sailing, which starts
+the freeze.
 
-| Weeks of | Work |
+| Weeks before sailing | Work |
 |---|---|
-| Oct 5 - Oct 11 | Phase 6 P1 (Bring view); Phase 5 V6 tuning sessions start |
-| Oct 12 - Oct 25 | Phase 6 G1 (two dining pulls on one sailing), P2 |
-| Oct 26 - Nov 8 | Phase 6 P3 (or the typed fallback only, if G1 fails) |
-| Nov 9 - Nov 15 | Phase 6 P4, after the last Phase 5 watch change; one evening on the watch |
-| Nov 16 - Nov 22 | Phase 5 V6 tuning ends; spare for fixes |
-| Nov 28 - Dec 11 | **Freeze** (§5) |
-| Dec 12 | Sailing (the test cruise) |
+| 10 - 9 | Phase 6 P1 (Bring view); Phase 5 V6 tuning sessions start |
+| 9 - 7 | Phase 6 G1 (two dining pulls on one sailing), P2 |
+| 7 - 5 | Phase 6 P3 (or the typed fallback only, if G1 fails) |
+| 5 - 4 | Phase 6 P4, after the last Phase 5 watch change; one evening on the watch |
+| 4 - 3 | Phase 5 V6 tuning ends; spare for fixes |
+| last 2 | **Freeze** (§5) |
+| 0 | Sailing (the test cruise) |
 
-If P4 slips past Nov 22, drop it: P1 still covers item 17 without the watch.
+If P4 slips past 3 weeks out, drop it: P1 still covers item 17 without the watch.
 
 ## 2. Watch size budget
 
@@ -202,7 +203,7 @@ the to-reserve screen, not builds. Dining findings are one pull of one 2-night
 sailing. Alarm crowding with 17-B was reasoned from `buildAlarms`, not tested
 on a busy 7-night day.
 
-## 5. Freeze (about Nov 28 - Dec 11)
+## 5. Freeze (the last two weeks before sailing)
 
 Bug fixes only; no new features.
 
