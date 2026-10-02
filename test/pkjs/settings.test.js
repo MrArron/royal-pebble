@@ -306,6 +306,44 @@ test('Help: opened from Me, lists controls, notes and the ships with Ship GPS', 
   assert.ok(html.indexOf('id="sidesCard" hidden') !== -1, 'port/starboard hidden without a mapped ship');
 });
 
+// Phase 5 V5 (1.5.13): every example on the Voice commands card is answered by the
+// phone as the card says (not NO_MATCH or NOT YET), and Hold Select is in Watch buttons.
+test('Help: Voice commands card lists what the phone answers, beside Try a voice phrase', function() {
+  var voicecard = require('../../src/pkjs/voicecard');
+  var demo = require('../../src/pkjs/demo');
+  var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
+    api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2026, 8, 24));
+  new Function(pageScript(html));
+  var help = html.slice(html.indexOf('<section class="screen" id="help">'));
+  help = help.slice(0, help.indexOf('</section>'));
+  var cmds = help.indexOf('id="voiceCmds"');
+  assert.ok(cmds !== -1, 'the card is in Help');
+  assert.strictEqual(html.split('id="voiceCmds"').length, 2, 'and only there');
+  assert.ok(cmds < help.indexOf('id="voiceCard"'), 'just before Try a voice phrase');
+  ['Voice commands', 'Going places', 'Closest', 'Where you are', 'Your cruise', 'Forget where I am',
+   'Not yet', 'Ask (voice)', 'Ask by voice'].forEach(function(t) { assert.ok(help.indexOf(t) !== -1, t); });
+  // Each quoted phrase, answered with demo data: a sea day at 14:00 (a starred show on, so `my cabin`
+  // has a start), a port day for on board and leave.
+  var phrases = [];
+  help.replace(/<div class="chg"><b>&ldquo;(.*?)&rdquo;<\/b>/g, function(m, p) { phrases.push(p); });
+  assert.ok(phrases.length >= 13, phrases.length + ' phrases');
+  function ctx(made, variant, now) {
+    var d = demo.make(made, variant);
+    return {bundle: d.bundle, settings: d.settings, stars: d.stars, now: now};
+  }
+  var sea = ctx(new Date(2027, 2, 8, 13, 0), 1, new Date(2027, 2, 8, 14, 0));
+  var port = ctx(new Date(2027, 2, 9, 10, 0), 2, new Date(2027, 2, 9, 10, 0));
+  phrases.forEach(function(p) {
+    var card = voicecard.answer(p, /on board|leave/.test(p) ? port : sea, true, 0);
+    var lines = voicecard.cardLines(card).join(' | ');
+    assert.ok(!/^(NO_MATCH|OUT_OF_SCOPE|INCOMPLETE)/.test(card.log) && lines.indexOf('NOT YET') === -1, p + ': ' + lines);
+    assert.ok(card.action !== voicecard.ACT_NONE || /tomorrow|leave|forget/i.test(p), p + ' does something: ' + lines);
+  });
+  // The "Not yet" examples really aren't answered yet.
+  assert.ok(/^OUT_OF_SCOPE_KNOWN schedule/.test(voicecard.answer('What\'s next?', sea, true, 0).log));
+});
+
 test('Help: port and starboard settings for a mapped ship go back per ship', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, theme: 'light', reminderLead: 15,
     shipSides: {ship: 'HM', name: 'Harmony of the Seas', decks: [2, 3, 4], all: false, flipDecks: [3],

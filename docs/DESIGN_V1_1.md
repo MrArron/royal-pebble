@@ -1052,9 +1052,15 @@ All built into the local settings page, so they work offline.
   bottom of Me opens it, with a Back arrow, like Ship venues under Cruise).
   Cards: the Always show button hints switch; `Watch buttons`, every press
   and hold per screen (`HELP_KEYS` in `config.js`, to update with the watch's
-  click handlers); `Good to know` (sync before sailing, the 04:00 day change,
+  click handlers; Hold Select = Ask on Home and Route and the Ask screen's
+  buttons since 1.5.13); `Good to know` (sync before sailing, the 04:00 day change,
   where routes start, distances approximate, `Spot approximate`, no side until
-  checked, the phone nearby for place pages and routes); `Ships with Ship GPS`
+  checked, the phone nearby for place pages and routes); `Voice commands`
+  (1.5.13, Phase 5 V5; `HELP_VOICE` in `config.js`, to update with
+  `voicecard.js` and `voice.js`): what to say under Going places, Closest,
+  Where you are and Your cruise, each with what it does, and what isn't
+  answered yet (schedule questions, opening times); `Try a voice phrase`
+  (1.5.9); `Ships with Ship GPS`
   (from `shipmap.js`, kept in step with the README); and, only when the synced
   ship has a map, `Port and starboard`: a `Sides checked on board` switch
   (turns on `Cross to port` / `· stbd side`), `Flip the whole ship` and a chip
