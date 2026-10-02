@@ -5,16 +5,13 @@ Caribbean cruises that works fully offline at sea, plus a Windows Python tool fo
 backup data sync.
 
 Read before making changes:
-- `docs/PROJECT_BRIEF.md` — scope, architecture, decisions, open questions
-- `docs/DESIGN.md` — watch and settings-page designs, color tokens
-- `docs/DESIGN_V1_1.md` — v1.1 designs (venues, wayfinding, Mark reserved)
-- `docs/DESIGN_PHASE3.md` — Phase 3 designs (booked excursions, embark day, I'm on
-  board; later items as drafts)
-- `docs/PHASE4_PLAN.md` — Phase 4 plan (event data: venue codes, ages and age
-  filters, arrive-early times, notes, shore excursions, optional phone login)
-- `docs/DESIGN_PHASE4.md` — Phase 4 designs (ages, arrive-early, notes and tags,
-  shore excursions)
-- `docs/DATA_FORMAT.md` — the cruise data bundle (v1)
+- `docs/PROJECT_BRIEF.md` — purpose, constraints, what's built, decisions in
+  force, measurements and limits, Later
+- `docs/DESIGN.md` — every watch screen and settings-page tab as built, color
+  tokens, mockups, and what's approved but not built
+- `docs/PLAN.md` — the active plan: watch size budget, Phase 5 tuning, Phase 6,
+  the freeze, open questions
+- `docs/DATA_FORMAT.md` — the cruise data bundle (v1) and the shared plan
 - `docs/ROYAL_LOGIN_DATA.md` — what a Royal login can see (sync tool only) and
   ideas for using it
 - `docs/WATCH_PROTOCOL.md` — phone ↔ watch messages and the time model (cruise
@@ -29,9 +26,10 @@ Read before making changes:
   data files are generated, never edited by hand.
 - `tools/voice/` — builds the voice lexicon (`src/pkjs/data/voice-HM.js`,
   generated) from `venue-mishearings-HM.json` and `venues.js`. See its README.
-- `docs/` — brief, design, data format.
+- `docs/` — brief, design, plan, data format, protocol; mockups in
+  `docs/mockups/`.
 - Watch app: `package.json` + `wscript` at the root, `src/c/` watch code,
-  `src/pkjs/` phone companion (and later the settings page). Targets the Pebble
+  `src/pkjs/` phone companion and the settings page. Targets the Pebble
   Time 2 only (SDK platform `emery`, 200x228, 64 colors).
 
 ## Working rules
@@ -43,9 +41,10 @@ Read before making changes:
   user-facing text.
 - **Offline first.** Nothing the app needs at sea may depend on the internet,
   including the settings page (build it locally, never load it from a URL).
-- **Scope.** v1 and the planned v1.1 features (in phase order) are listed in the
-  brief. Don't add features from its "Later" list or change decisions without
-  asking.
+- **Scope.** What's built is in the brief, what's next in `docs/PLAN.md`. Don't
+  add features from the brief's "Later" list or change decisions without
+  asking. When a feature lands, update `docs/DESIGN.md` (as built) and the
+  brief, and remove it from the plan.
 - **Secrets.** Never commit or print passwords, tokens or personal cruise data.
   Output bundles (`cruise-watch-*.json`) can contain a stateroom number and are
   git-ignored. The usage log and map notes hold cabin details: never commit
@@ -126,7 +125,8 @@ Read before making changes:
   stores it in a 16-bit field; the watch has 128 KB, the rest is heap). After
   `pebble build`, run `python3 tools/watch_size.py` (fails over a 62 KB budget)
   and put its first lines in the PR description. Big buffers go on the heap,
-  allocated while their screen is open. See `docs/PHASE5_PLAN.md`. The build
+  allocated while their screen is open. Budget status: `docs/PLAN.md`; what
+  was done and what isn't worth it: the brief, Measurements and limits. The build
   uses link-time optimisation (`wscript`); keep its `-Wl,-u,__pbl_app_info`,
   or LTO drops the app header and installs fail.
 - Watch C code: don't use `strtol()` or `strlen()`; both faulted on real Pebble

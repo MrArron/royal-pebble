@@ -1,220 +1,134 @@
 # Royal Pebble
 
 Royal Pebble is a Pebble Time 2 watch app for Royal Caribbean cruises. Glance at
-your wrist for the all-aboard countdown and what's next on the ship's schedule,
-without pulling out your phone. Everything is loaded before you sail, so it works
-at sea with no internet.
+your wrist for the all-aboard countdown, what's next on the ship's schedule and
+how to get there, without pulling out your phone. Everything is loaded before
+you sail, so it works at sea with no internet.
 
 > **Not affiliated with Pebble or Royal Caribbean.** This is an independent,
 > personal project. It is not made, endorsed or supported by Royal Caribbean
 > Group / Royal Caribbean International, or by Pebble or Core Devices. "Royal
 > Caribbean" and "Pebble" are trademarks of their owners and are used here only to
-> say what the app works with. The app reads Royal Caribbean's public website data
+> say what the app works with. The app reads Royal Caribbean's website data
 > through unofficial endpoints that can change or stop working at any time.
 
-## What it does
+## Features at a glance
 
 On the watch (open it with a Quick Launch button hold):
 
-- **Home:** on port days, a big countdown to all-aboard, shown in both ship time and
-  local time, with your next two starred events under it (topped up with what's
-  next). Otherwise, your next starred event or dinner reservation ("NEXT · IN 20
-  MIN"), falling back to Royal's featured events, then the next two items. Before
-  the cruise, Home counts down the days to sailing. The first few times the app
-  opens, Home labels its buttons.
-- **Morning summary:** the first time you open the app each day, a card with the
-  day's port, arrival and departure, all-aboard and how many events you starred.
-  From 8 PM it shows tomorrow instead. My info opens it again any time.
-- **Today** (Down): the day's schedule grouped by start time, with what's on now.
-  Select opens an event; hold Select to star it. Stars you set on the watch reach
-  the phone the next time they're in touch, even if the phone was away. A featured
-  show's final performance is tagged **Last chance** (or **Only show**), and
-  starring an event that overlaps another of your picks warns you of the clash.
-- **Reservations:** the evening before, the watch reminds you of starred events
-  that need a reservation. Once booked, press Select on the event to **Mark
-  reserved** and the reminder skips it.
-- **Where things are:** every event shows its deck and position, on the event
-  details, Home's NEXT card and reminder alerts (`Studio B · Deck 4 · Mid`,
-  `2 decks down from you`). When your previous starred event ends just before the
-  next one, directions start from there instead of your cabin
-  (`From Royal Theater: 1 deck down`, `Same venue`). Ship time sits in the middle
-  of every top bar.
-- **My info** (Up): stateroom, deck, nearest stairs, muster station, ship clock note
-  and last sync.
-- **Ship directory** (bottom of My info): browse the ship by deck or by area
-  (Royal Promenade, Central Park, Boardwalk...). Each place shows its deck, position
-  and what's on there for the rest of today. The directory is loaded from the phone
-  one deck or area at a time, so it needs the phone nearby.
-- **Ship GPS** (ships with a map only, see below): each place page shows the
-  walking distance from your cabin (`↓1 deck · 160 m fore`) and the closest
-  restroom. Select opens a short step-by-step route (`25 m aft` / `Aft elev to
-  Deck 4` / `130 m fore`), and Hold Select the route to that restroom. On Home,
-  Select opens the route to your next event. Routes start from your cabin, or
-  from a starred event that ends just before. Distances are in metres, feet or
-  steps, your choice. Every distance is approximate, and routes say "Cross the
-  ship" rather than port or starboard until the map's sides have been checked on
-  board. Place pages end with **Flag a map problem**: Select saves what the page
-  showed, for the Map check on the phone (below).
-- **Alerts:** the watch buzzes 60, 30 and 15 minutes before all-aboard, and before
-  each starred event or personal entry (5, 15 or 30 minutes, your choice). Alerts
-  open the app by themselves and keep working with your phone out of range.
-- **Schedule changes:** when a new download moves one of your starred events, the
-  star (and its reminder) moves with it; if Royal cancels it, the star is removed.
-  Either way the watch buzzes and tells you, and the settings page lists what changed.
-- **Works without the phone:** the watch saves the whole day's schedule, so the
-  countdown, next events and alerts keep working when the phone is away. If a day
-  ever doesn't fit, it keeps the most important things first and tells you when
-  it needs the phone again.
-- Late nights work as you'd expect: a day on the watch runs from 4 AM to 4 AM, so
-  the midnight show and countdowns past midnight stay with the evening they belong to.
+- **Home:** on port days, a big countdown to all-aboard in ship and local time,
+  with a time-ashore bar that turns red in the last stretch. Otherwise your next
+  starred event or personal entry (`NEXT · IN 20 MIN`) with its deck and
+  position. Before the cruise, the days to sailing.
+- **Morning summary** on the first open of the day, and tomorrow's from 8 PM.
+- **Today:** the day's schedule with what's on now. Select opens an event (deck,
+  time, ages, arrive-by time, what to bring); hold Select stars it. Clashes,
+  **Last chance** shows and reservations to make are flagged.
+- **Alerts** before all-aboard and before each starred event, even with the
+  phone out of range, plus an evening reminder of what still needs reserving.
+- **My info:** stateroom, deck, nearest stairs, muster station, dining room.
+- **Ship directory** by deck or area, and on mapped ships the **Ship GPS**:
+  walking distance from your cabin, the closest restroom and a step-by-step
+  route (`50 m aft` / `Aft elev to Deck 16`).
+- **Voice:** hold Select and ask "how do I get to Studio B", "closest restroom",
+  "I'm at the Solarium" or "when do we leave". Speech is recognised on the
+  phone, so it works in airplane mode with the phone nearby.
+- **I'm on board** ends the day's countdown once you're back.
+- **Booked excursions** and the terminal arrival time, from your Royal login.
 
-On the phone, in the Pebble app's settings page for the watch app (works offline):
+On the phone, in the Pebble app's settings page for Royal Pebble (works offline):
 
-- **Cruise:** pick your ship and sailing and tap Download. The activity schedule is
-  usually published about two weeks before sailing; download again then, and your
-  stars and settings are kept. **Ship venues** lists where each venue is (deck,
-  fore/mid/aft, area). It's built in for Harmony of the Seas from its deck plans;
-  fix any entry, or fill it in for another ship, here.
-- **Days:** per-day ship time and all-aboard times.
-- **Filters:** choose which event categories the watch shows.
-- **Events:** browse the schedule, star events (clashes are marked), mark
-  reservations and add your own entries. **Booked activities** lists paid classes
-  and experiences: pick the session you booked and it shows on the watch with a
-  reminder.
-- **Me:** your stateroom details, muster station, walking-distance units, light or
-  dark theme, reminder lead time, the time of the evening reservation reminder and
-  a ship clock note. The **Test alerts** switch sends your watch a test reminder,
-  a test all-aboard alert and a test reminder to reserve a couple of minutes
-  later, so you can check alerts before you sail. Turn it off to stop them; it
-  turns itself off after an hour.
-  - **Map check** (ships with Ship GPS): questions to settle on board where
-    Royal's sources disagree about the map, the problems you flagged on the watch
-    and the ones the app ran into by itself. Add a note to each, then **Copy
-    notes** after the sailing so the map can be fixed.
-  - **Usage log:** a record of how the app was used on the cruise, kept on your
-    phone, to review afterwards. Copy it out in parts, clear it, or turn it off.
-  - **Help:** what every watch button does, tips, the ships with Ship GPS and, on
-    a mapped ship, the port and starboard check (flip the whole ship or single
-    decks if the sides are wrong, then mark them checked).
+- **Cruise:** download your sailing, optionally with your Royal login for your
+  booking; a **Ready to sail** check; ship venues; **Share my plan** with a
+  travel companion.
+- **Days:** ship time, all-aboard time and warning period per day.
+- **Filters:** categories, Casino, and adult / teen / family events.
+- **Events:** search, star, mark reserved, your own entries, and pick the paid
+  classes and shore excursions you booked.
+- **Me:** cabin details, units, theme, reminders, test alerts, the usage log,
+  the map check and **Help** (every button, voice commands, tips).
 
 ## Ships with Ship GPS
 
-The Ship GPS needs a map of the ship, measured from Royal's deck plans. Ships
-mapped so far:
+The Ship GPS needs a map of the ship, measured from Royal's deck plans:
 
 | Ship | Mapped from | Notes |
 |---|---|---|
 | Harmony of the Seas | deck plans for sailings from May 21, 2026 | Port and starboard not yet checked on board; a few spots still to confirm (Me > Map check) |
 
-On any other ship, everything else works (the schedule, alerts, the directory
-with deck and position), but there are no walking distances or routes.
+On any other ship everything else works (schedule, alerts, the directory with
+deck and position), without walking distances, routes or voice place names.
 
-**Map a ship.** Want the Ship GPS on your Royal Caribbean ship? The tools that
-built Harmony's map are in [`tools/shipmap/`](tools/shipmap/README.md): they
-download the ship's deck plans and turn them into cabins, venue spots and
-walkways. Pick a ship, map it, and open a pull request; the README there
-explains each step and what to check.
+**Map a ship.** The tools that built Harmony's map are in
+[`tools/shipmap/`](tools/shipmap/README.md). Pick a Royal Caribbean ship, map
+it, and open a pull request; the README there explains each step.
 
-## Status
+## Install on a Pebble Time 2
 
-Version 1 is done and in use on a real Pebble Time 2. Version 1.1 is being built
-for the owner's first sailing, one feature at a time, each
-tested on the watch before it's merged. The full plan is in the
-[project brief](docs/PROJECT_BRIEF.md).
+Royal Pebble isn't in the Pebble app store; you sideload it with the Pebble app
+on an Android phone (the only phone it has been tested with).
 
-- **Done:** v1; v1.1 Phase 1 (wayfinding: the venue table, deck and position on
-  the watch, "From" directions and the ship directory); Phase 2 (daily view: the
-  morning summary, days-to-sail countdown, clash warnings, last-chance tags and
-  the reservation reminder with **Mark reserved**); the Ship GPS
-  (walking distances, closest restrooms, elevator banks, routes, button hints
-  and a Help section on the settings page); the usage log; and the Map check
-  (on-board map notes, watch flags and problems the app finds). The sync tool's
-  login also saves booked excursion times, the terminal arrival time and port
-  gangway times, ready for Phase 3.
-- **Next, Phase 3 (port days, booking details and settings):** booked excursions
-  on Today with reminders, and the terminal arrival time on embark day; a port-day
-  card (time ashore, excursion end time, Royal's gangway time as a suggested
-  all-aboard, a tender-day warning); settings upgrades (the stateroom number fills
-  in deck and nearest stairs, prefill from the booking, a **Ready to sail** check,
-  event search); a silent morning sync that loads each new day before you wake;
-  a confirm step before removing a star; a Casino filter; and **Share my plan**
-  with a travel companion.
-- **Then:** Phase 4, event data (venue codes, age limits and age filters,
-  arrive-early times, what-to-bring notes, selectable shore excursions, and an
-  optional login download on the phone); Phase 5, voice (a scope session
-  first: offline voice questions such
-  as "how do I get to my cabin from the Windjammer", possibly with a native
-  Android companion app); Phase 6, planning (meet-up points, checklists, a dining
-  window hint). The last stretch before the sailing is a freeze: re-sync, a full
-  test on the watch and bug fixes only.
+1. Get `royal-pebble.pbw`: build it from source (below), which writes
+   `build/royal-pebble.pbw`.
+2. Copy the `.pbw` to the phone and open it with the Pebble app, which
+   installs it on the watch. Or, with the Pebble app's developer connection
+   on, run `pebble install --phone <phone's IP>` from the SDK.
+3. Open Royal Pebble's settings in the Pebble app and download your sailing.
 
-## Getting it on your watch
+## Getting your cruise in
 
-It isn't in the Pebble app store; you sideload it.
+Do this **before you leave home, while you still have internet**. Royal
+publishes the activity schedule about two weeks before sailing; download again
+once it appears (stars and settings are kept). After that nothing needs a
+connection.
 
-- **CloudPebble:** import this GitHub repository (or a branch of it), build, and
-  install to your watch.
-- **Pebble SDK:** `pebble build`, then `pebble install --phone <your phone's IP>`.
-  The only target is the Pebble Time 2.
-
-Then open the app's settings in the Pebble phone app and download your sailing
-**before you leave home, while you still have internet.** Royal usually publishes
-the activity schedule about two weeks before sailing, so download again once it
-appears (your stars and settings are kept). Once your sailing and its schedule are
-downloaded, Royal Pebble works at sea with no internet: nothing on the watch or the
-settings page needs a connection.
-
-### Backup: the Windows sync tool
-
-If the in-app Download doesn't work (for example, Royal's servers refuse your
-phone), `tools/cruise-sync` downloads the same data on a Windows PC. You paste the
-result into **Settings > Cruise > Backup: paste cruise data**. It can optionally log
-in to your Royal Caribbean account to add your stateroom, deck and muster station,
-your purchases (with the times of booked shore excursions), the terminal arrival
-time and port gangway times. The app uses the stateroom today; the rest is saved
-for the Phase 3 port-day features. See
-[tools/cruise-sync/README.md](tools/cruise-sync/README.md).
+- **Download** (settings page, Cruise): pick your ship and sailing. Public data
+  only: itinerary, schedule, shore excursions.
+- **Advanced download with your Royal login** (same card): also fetches your
+  stateroom, deck, muster station, terminal arrival time, booked excursions and
+  gangway times. Your email and password go only to Royal Caribbean for that
+  one download and are never saved.
+- **Backup: the Windows sync tool** ([`tools/cruise-sync/`](tools/cruise-sync/README.md)),
+  if the phone can't download: it saves the same data as text, optionally with
+  your login, and you paste it into **Cruise > Backup: paste cruise data**.
 
 ## Privacy
 
-- The watch app and phone settings read only public sailing and schedule data,
-  unless you use the optional **Advanced download** on the settings page. Then your
-  Royal Caribbean email and password go from the page to Royal Pebble's phone
-  script and from there only to Royal Caribbean, for that one download. They are
-  never saved or written to the usage log; your booking details are saved like the
-  rest of your cruise data.
-- Your personal details (stateroom and so on) stay in the Pebble phone app's storage
-  on your phone.
-- The sync tool's optional login uses your password once and never saves it. Its
-  output file can contain your stateroom number and booking details, so don't
-  share it.
-- The usage log and map notes stay on your phone and leave it only when you copy
-  them. They can include event titles and cabin details, so treat a copy as
+- The app reads public sailing and schedule data, plus your booking when you
+  use the Advanced download or the sync tool's login. Your password is used
+  once and never saved or logged.
+- Your cruise and cabin details stay in the Pebble app's storage on your phone
+  and on your watch. The sync tool's output file can hold your stateroom and
+  booking, so don't share it.
+- The usage log and map notes stay on your phone and leave it only when you
+  copy them. They can include event titles and cabin details; treat a copy as
   private. The usage log can be turned off on the Me tab.
 
-## For developers
+## Build from source
 
-- `src/c/`: watch app (C, Pebble SDK 4.x, platform `emery`).
-- `src/pkjs/`: phone companion (PebbleKit JS): data download, settings page, and
-  what gets sent to the watch.
-- `tools/cruise-sync/`: Windows backup tool (Python), the reference implementation
-  of every Royal Caribbean request.
-- `tools/shipmap/`: builds the Ship GPS map data (`src/pkjs/data/`) from Royal's
-  deck plans, and keeps the list of source conflicts to settle on board. New
-  ships welcome (see Ships with Ship GPS above).
-- `tools/mockups/`: scripts that generated the Phase 2 mockups (design only).
-- `docs/`: [project brief](docs/PROJECT_BRIEF.md) (scope and the full plan),
-  [design](docs/DESIGN.md), [v1.1 design](docs/DESIGN_V1_1.md) (mockups in
-  `docs/mockups/`: `v1.1`, `phase2`, `gps`), [data format](docs/DATA_FORMAT.md),
-  [phone ↔ watch protocol](docs/WATCH_PROTOCOL.md),
-  [what a Royal login can see](docs/ROYAL_LOGIN_DATA.md) and
-  [voice query ideas](docs/FUTURE_VOICE_QUERIES.md).
-- Tests (Node): `node test/pkjs/<name>.test.js` for each file in `test/pkjs/`
-  (`slice`, `settings`, `companion`, `venues`, `directory`, `shipmap`,
-  `shipmap-data`, `cabins`, `log`). Sync tool (Python, offline):
+Pebble SDK 4.x (`pebble build`, platform `emery`), Node for the phone tests and
+Python for the tools. Commands, emulator tips and working rules are in
+[`CLAUDE.md`](CLAUDE.md).
+
+- `src/c/`: the watch app (C). `src/pkjs/`: the phone companion (PebbleKit JS),
+  including the settings page and generated map and voice data.
+- `tools/cruise-sync/`: Windows sync tool, the reference for every Royal
+  request. `tools/shipmap/`: ship map data. `tools/voice/`: voice lexicon.
+  `tools/mockups/`: design mockup scripts. `tools/watch_size.py`: watch size
+  check.
+- Tests: `node test/pkjs/<name>.test.js` for each file in `test/pkjs/`;
   `python tools/cruise-sync/test_cruise_sync.py`.
-- Emulator: `pebble build`, `pebble install --emulator emery`.
-  [`CLAUDE.md`](CLAUDE.md) has the working rules and emulator tips.
+
+## Docs
+
+| File | What it holds |
+|---|---|
+| [`docs/PROJECT_BRIEF.md`](docs/PROJECT_BRIEF.md) | Purpose, constraints, what's built, decisions, limits, later ideas |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | Every watch screen and settings-page tab as built, colors, mockups |
+| [`docs/PLAN.md`](docs/PLAN.md) | The work left before the sailing: Phase 5 tuning, Phase 6, the freeze |
+| [`docs/DATA_FORMAT.md`](docs/DATA_FORMAT.md) | The cruise data bundle and the shared plan format |
+| [`docs/WATCH_PROTOCOL.md`](docs/WATCH_PROTOCOL.md) | Phone ↔ watch messages, storage and the time model |
+| [`docs/ROYAL_LOGIN_DATA.md`](docs/ROYAL_LOGIN_DATA.md) | What a Royal login can see |
 
 ## Credits and attributions
 
@@ -227,15 +141,14 @@ for the Phase 3 port-day features. See
   public domain): used on both the phone and the watch to count days without time
   zones.
 - **Royal Caribbean's published deck plans** for Harmony of the Seas: the source of
-  the built-in venue table (deck, position and area of each venue) and the Ship GPS
-  map (cabins, venue spots, stairs, elevators, walkways and restrooms).
+  the built-in venue table and the Ship GPS map.
 - **Pebble SDK** project template (`wscript`), from `pebble new-project`.
 - **Clay** (Pebble's configuration library): the idea of opening the settings page
   as a local `data:` URL so it works offline. No Clay code is included.
 - **Built with help from Claude**, Anthropic's AI model, through Claude Code. Claude
   aided in designing and writing the watch app, phone companion, settings page, sync
-  tool, venue table, tests and documentation, working with the project's owner who tested every
-  step on a real Pebble Time 2.
+  tool, venue table, tests and documentation, working with the project's owner who
+  tested every step on a real Pebble Time 2.
 
 ## License
 

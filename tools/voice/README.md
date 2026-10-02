@@ -1,7 +1,7 @@
 # Voice tools
 
-These build the phone's voice lexicon for Phase 5 voice commands
-(`docs/DESIGN_V1_1.md` §9.6, brief item 29). Nothing here runs at sea. The watch
+These build the phone's voice lexicon for the voice commands
+(`docs/DESIGN.md` §11, brief item 31). Nothing here runs at sea. The watch
 gets no ship knowledge: the phone turns what was heard into the usual strings.
 
 | File | What it is | Edited by hand? |
@@ -9,7 +9,7 @@ gets no ship knowledge: the phone turns what was heard into the usual strings.
 | `venue-mishearings-HM.json` | Every place a guest can say: spoken forms, likely mishearings (type, likelihood, observed), collisions, groups, flags | **Yes**: the one source for venue words |
 | `build_voice.js` | Builds `src/pkjs/data/voice-HM.js` from it and `src/pkjs/venues.js` | yes (code) |
 | `measure_voice.js` | Sizes, leave-one-out and false-match numbers | yes (code) |
-| `voice-commands.json` | The command grammar as designed: intents, phrasings, watch wording. Reference only; the build doesn't read it | until the wording is approved |
+| `voice-commands.json` | The command grammar as first designed: intents, phrasings, watch wording. Reference only; the build doesn't read it, and `docs/DESIGN.md` §11 has the wording as built | no |
 | `src/pkjs/data/voice-HM.js` | Generated lexicon | **never** |
 | `src/pkjs/voice.js` | Parser and matcher; `GRAMMAR` holds the command words, restroom / elevator / stairs / cabin words and numbers | yes |
 

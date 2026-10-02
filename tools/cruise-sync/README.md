@@ -2,9 +2,10 @@
 
 A small backup tool for the Royal Pebble watch app. It downloads your sailing's
 itinerary and activity schedule from Royal Caribbean and saves them as one block of
-text you paste into the app's phone settings. Use it when the in-app **Download
-cruise data** button doesn't work, or when you also want your stateroom and
-purchased add-ons from your Royal Caribbean account.
+text you paste into the app's phone settings. Use it when the settings page's
+**Download** doesn't work on your phone. (The settings page's **Advanced
+download with your Royal login** fetches your booking too; this tool's login is
+the backup for that.)
 
 ## Install (one time)
 
@@ -55,16 +56,16 @@ includes:
   meeting time and end time of timed bookings such as shore excursions;
 - gangway times and approximate locations for port days.
 
-The watch app uses your stateroom from this now. The rest is saved in the bundle
-for the planned port-day features (booked excursions on Today with reminders, the
-terminal arrival time on embark day, a port-day card with gangway times; project
-brief, Phase 3).
+The watch app uses all of it: your cabin details fill the Me tab, booked
+excursions show on Today with reminders, the terminal arrival time shows on
+embark day, and a port's gangway time becomes that day's all-aboard.
 
 Treat that file as private. Run it again after booking or changing anything. What
 each part is based on is in [docs/ROYAL_LOGIN_DATA.md](../../docs/ROYAL_LOGIN_DATA.md).
 
-To skip the password prompt, you can set the `RCCL_EMAIL` and `RCCL_PASSWORD`
-environment variables, but don't store your password in any file you share.
+On the command line, `--login` asks for the email unless you pass `--email` or
+set `RCCL_EMAIL`. To skip the password prompt you can set `RCCL_PASSWORD`, but
+don't store your password in any file you share.
 
 ### Explore what a login can see (test tool)
 
@@ -90,7 +91,7 @@ It only reads (no bookings or changes), one request at a time with a short pause
 
 ```
 py cruise_sync.py --ship harmony --date YYYY-MM-DD
-py cruise_sync.py --ship HM --date YYYY-MM-DD --login
+py cruise_sync.py --ship HM --date YYYY-MM-DD --login [--email you@example.com]
 py cruise_sync.py --ship HM --date YYYY-MM-DD --out-dir <folder> --no-clipboard
 py cruise_sync.py --ship HM --date YYYY-MM-DD --dump-products
 py cruise_sync.py --help

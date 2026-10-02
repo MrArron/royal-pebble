@@ -90,7 +90,8 @@ Then run `node test/pkjs/shipmap-data.test.js` and `node test/pkjs/cabins.test.j
   cabin block. Deck 8 (the park floor) and deck 6 (the Boardwalk) can be
   crossed.
 - **Venue spots** are label centres, the middle of each room, not its door. For
-  big rooms the door can be 10-15 m away. That's fine for `~` distances.
+  big rooms the door can be 10-15 m away. That's fine for distances that are
+  approximate anyway.
 - **Restrooms.** Use the ones in `walkways-HM.js`. The `restrooms` list in
   `places-HM.js` is the raw symbol read: it misses two (deck 5 aft port, deck 16
   aft) and counts pairs twice.
