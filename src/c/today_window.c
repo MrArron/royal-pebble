@@ -60,12 +60,69 @@ static bool starts_group(int row, int32_t now) {
   return row == 0 || group_key(row, now) != group_key(row - 1, now);
 }
 
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/Today): the time on its own line above the
+// title ("12:00p", "NOW · ends 12:45") on a group's first row and the
+// selected one, with the star and clash "!" after it; the venue under the
+// title. A booked order adds "Meet 8:45a" to the time and shows "✓ Booked";
+// a final show adds its tag ("Last chance") in the port accent.
+static void fill_round_row(RoundRow *r, char *top, size_t size, int row, bool selected, int32_t now) {
+  Event *e = data_event(s_rows[row]);
+  bool in_progress = event_in_progress(e, now);
+  *r = (RoundRow){.top = top, .top_color = g_theme->muted, .title = e->title, .sub = e->venue};
+  char buf[8];
+  top[0] = '\0';
+  if (starts_group(row, now) || selected) {
+    if (!event_is_timed(e)) {
+      snprintf(top, size, "ALL DAY");
+    } else if (in_progress) {
+      fmt_clock(buf, sizeof(buf), event_end(e));
+      snprintf(top, size, "NOW \xc2\xb7 ends %s", buf);
+      r->top_color = g_theme->now_label;
+    } else {
+      fmt_clock(top, size, e->start);
+    }
+  }
+  const char *sep = top[0] ? " \xc2\xb7 " : "";
+  int n = 0;  // no strlen() on the watch (CLAUDE.md)
+  while (top[n]) {
+    n++;
+  }
+  if ((e->flags & EVENT_BOOKED) && !in_progress) {
+    if (e->booked.meet_before) {
+      fmt_clock(buf, sizeof(buf), e->start - e->booked.meet_before);
+      snprintf(top + n, size - n, "%sMeet %s", sep, buf);
+    }
+    r->sub = "Booked";
+    r->sub_checked = true;
+  } else if (!in_progress && event_final_tag(e)) {
+    snprintf(top + n, size - n, "%s%s", sep, event_final_tag(e));
+    r->top_color = g_theme->port_accent;
+  }
+  if (e->flags & EVENT_STARRED) {
+    r->icons |= ROUND_ROW_STAR;
+  }
+  if (data_clashes_with(s_rows[row], now, NULL) > 0) {
+    r->icons |= ROUND_ROW_BANG;
+  }
+}
+#endif
+
 // With nothing left, one row shows a message instead.
 static uint16_t get_num_rows(MenuLayer *menu, uint16_t section, void *context) {
   return s_row_count > 0 ? s_row_count : 1;
 }
 
 static int16_t get_cell_height(MenuLayer *menu, MenuIndex *index, void *context) {
+#if defined(PBL_ROUND)
+  if (index->row < s_row_count) {
+    RoundRow r;
+    char top[40];
+    bool selected = menu_layer_is_index_selected(menu, index);
+    fill_round_row(&r, top, sizeof(top), index->row, selected, now_cruise());
+    return round_row_height(&r, selected);
+  }
+#endif
   return ROW_HEIGHT;
 }
 
@@ -76,8 +133,12 @@ static int16_t get_separator_height(MenuLayer *menu, MenuIndex *index, void *con
 // The separator's index is the row below it.
 static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, void *context) {
   if (index->row > 0 && index->row < s_row_count && starts_group(index->row, now_cruise())) {
+#if defined(PBL_ROUND)
+    round_divider(ctx, cell, s_menu, index);
+#else
     GRect b = layer_get_bounds(cell);
     draw_divider(ctx, 0, b.size.w);
+#endif
   }
 }
 
@@ -94,6 +155,13 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   }
 
   int32_t now = now_cruise();
+#if defined(PBL_ROUND)
+  RoundRow r;
+  char top[40];
+  fill_round_row(&r, top, sizeof(top), index->row, highlighted, now);
+  round_row_draw(ctx, cell, &r, highlighted);
+  return;
+#endif
   Event *e = data_event(s_rows[index->row]);
   bool in_progress = event_in_progress(e, now);
   bool past = event_is_past(e, now);  // a no-length event just after its start
@@ -279,7 +347,7 @@ static void window_load(Window *window) {
   s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_SEA, BAND_LABEL, "Today");
   layer_add_child(root, s_top_bar);
 
-  s_menu = menu_layer_create(BODY_FRAME(b));
+  s_menu = menu_layer_create(LIST_FRAME(b));
   menu_layer_set_callbacks(s_menu, NULL, (MenuLayerCallbacks){
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -291,7 +359,7 @@ static void window_load(Window *window) {
     .selection_will_change = selection_will_change,
   });
   menu_layer_set_normal_colors(s_menu, g_theme->bg, g_theme->text);
-  menu_layer_set_highlight_colors(s_menu, g_theme->cursor_bg, g_theme->cursor_text);
+  menu_layer_set_highlight_colors(s_menu, LIST_CURSOR_BG, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(s_menu, window);
   s_rows = malloc(MAX_EVENTS * sizeof(int16_t));
   if (!s_rows) {
@@ -345,7 +413,7 @@ void today_window_refresh(void) {
     // The theme may have changed (settings page).
     window_set_background_color(s_window, g_theme->bg);
     menu_layer_set_normal_colors(s_menu, g_theme->bg, g_theme->text);
-    menu_layer_set_highlight_colors(s_menu, g_theme->cursor_bg, g_theme->cursor_text);
+    menu_layer_set_highlight_colors(s_menu, LIST_CURSOR_BG, g_theme->cursor_text);
     layer_mark_dirty(s_top_bar);
   }
 }

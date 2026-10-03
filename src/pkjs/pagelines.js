@@ -251,8 +251,10 @@ function routeLines(page, opts) {
     P.text(y - 4, FONT_18, TEXT, page.lead, {maxH: 66});
     y += H[FONT_18] + 2;
   }
+  // A step wraps to two lines (three in the Round 2's narrow column, where the
+  // longest arrival, "Playmakers Sports Bar & Arcade · stbd side", needs them).
   page.steps.forEach(function(st) {
-    P.text(y - 4, FONT_18, TEXT, st.text, {glyph: STEP + (st.glyph & 7), maxH: 44, center: false, max: 39});
+    P.text(y - 4, FONT_18, TEXT, st.text, {glyph: STEP + (st.glyph & 7), maxH: round ? 66 : 44, center: false});
     y += H[FONT_18] + 2;
   });
   var small = page.small || {decks: 0, text: ''};

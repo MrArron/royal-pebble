@@ -77,7 +77,15 @@ static bool send_request(void *owner) { return comm_request_dir(((View *)owner)-
 // more above or below (docs/mockups/gps/NOTES.md). The menu's scroll layer
 // keeps them up to date.
 static void set_indicators(View *v) {
+#if defined(PBL_ROUND)
+  // The scroll arc (more_above) instead, and the card in the body's column,
+  // which the phone laid it out for (the list is wider).
+  scroll_layer_set_frame(menu_layer_get_scroll_layer(v->menu),
+                         BODY_FRAME(layer_get_bounds(window_get_root_layer(v->window))));
+  layer_set_hidden(v->more_above, false);
+#else
   set_scroll_indicators(menu_layer_get_scroll_layer(v->menu), v->more_above, v->more_below);
+#endif
   v->indicators_on = true;
 }
 
@@ -156,6 +164,21 @@ static void fmt_event_time(char *buf, size_t size, const DirRow *r) {
   }
 }
 
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/Directory): a place's name with its second line
+// under it, larger on the pill; an event's time above its title.
+static void fill_round_row(RoundRow *r, char *top, size_t size, const DirRow *d) {
+  *r = (RoundRow){.top = "", .top_color = g_theme->muted, .title = d->line1, .sub = d->line2, .big = true};
+  if (d->kind == DIR_ROW_EVENT) {
+    fmt_event_time(top, size, d);
+    r->top = top;
+    r->sub = "";
+    r->big = false;
+    r->icons = (d->flags & EVENT_STARRED) ? ROUND_ROW_STAR : 0;
+  }
+}
+#endif
+
 static void draw_two_lines(GContext *ctx, const char *line1, const char *line2, int w,
                            GColor text, GColor muted) {
   graphics_context_set_text_color(ctx, text);
@@ -183,11 +206,11 @@ static void draw_message(GContext *ctx, const View *v, GRect b) {
   graphics_context_set_text_color(ctx, text);
   graphics_draw_text(ctx, "Connect your phone", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      GRect(PAD, 4, w - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   graphics_context_set_text_color(ctx, muted);
   graphics_draw_text(ctx, "The ship directory comes from your phone. Select to try again.",
                      fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GRect(PAD, 26, w - 2 * PAD, 54),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
 }
 
 static uint16_t get_num_rows(MenuLayer *menu, uint16_t section, void *context) {
@@ -201,6 +224,15 @@ static int16_t get_cell_height(MenuLayer *menu, MenuIndex *index, void *context)
     return MESSAGE_H;
   }
   const DirRow *r = &v->rows[index->row];
+#if defined(PBL_ROUND)
+  if (r->kind == DIR_ROW_ITEM || r->kind == DIR_ROW_EVENT) {
+    RoundRow round;
+    char top[32];
+    fill_round_row(&round, top, sizeof(top), r);
+    // Under a card the selection isn't centered and rows keep their height.
+    return round_row_height(&round, !v->lines && menu_layer_is_index_selected(menu, index));
+  }
+#endif
   switch (r->kind) {
     case DIR_ROW_HEADER: return HEADER_H;
     case DIR_ROW_EVENT: return EVENT_H;
@@ -220,7 +252,11 @@ static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, v
   View *v = context;
   if (v->fetch.state == FETCH_READY && index->row > 0 && index->row < v->row_count &&
       selectable(&v->rows[index->row]) && selectable(&v->rows[index->row - 1])) {
+#if defined(PBL_ROUND)
+    round_divider(ctx, cell, v->menu, index);
+#else
     draw_divider(ctx, 0, layer_get_bounds(cell).size.w);
+#endif
   }
 }
 
@@ -235,12 +271,21 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
     return;
   }
   const DirRow *r = &v->rows[index->row];
+#if defined(PBL_ROUND)
+  if (r->kind == DIR_ROW_ITEM || r->kind == DIR_ROW_EVENT) {
+    RoundRow round;
+    char top[32];
+    fill_round_row(&round, top, sizeof(top), r);
+    round_row_draw(ctx, cell, &round, highlighted);
+    return;
+  }
+#endif
   switch (r->kind) {
     case DIR_ROW_HEADER:
       graphics_context_set_text_color(ctx, muted);
       graphics_draw_text(ctx, r->line1, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                          GRect(PAD, 4, w - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+                         TEXT_ALIGN, NULL);
       break;
     case DIR_ROW_PLACE:
       // Drawn over the cursor's highlight: the heading only keeps the page's top in view.
@@ -344,7 +389,7 @@ static void window_load(Window *window) {
   top_bar_set_right(v->top_bar, "", false, 0);
   layer_add_child(root, v->top_bar);
 
-  v->menu = menu_layer_create(BODY_FRAME(b));
+  v->menu = menu_layer_create(LIST_FRAME(b));
   menu_layer_set_callbacks(v->menu, v, (MenuLayerCallbacks){
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -356,14 +401,21 @@ static void window_load(Window *window) {
     .selection_will_change = selection_will_change,
   });
   menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);
-  menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
+  menu_layer_set_highlight_colors(v->menu, LIST_CURSOR_BG, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(v->menu, window);
   layer_add_child(root, menu_layer_get_layer(v->menu));
+#if defined(PBL_ROUND)
+  // Place pages: the scroll arc, shown when the card arrives (more_below stays NULL).
+  v->more_above = scroll_arc_create(b, menu_layer_get_scroll_layer(v->menu));
+  layer_set_hidden(v->more_above, true);
+  layer_add_child(root, v->more_above);
+#else
   v->more_above = layer_create(GRect(BODY_INSET_X, TOP_BAR_HEIGHT, b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
   v->more_below = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - INDICATOR_H,
                                      b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
   layer_add_child(root, v->more_above);
   layer_add_child(root, v->more_below);
+#endif
   fetch_start(&v->fetch);
 }
 
@@ -372,7 +424,9 @@ static void window_unload(Window *window) {
   fetch_cancel(&v->fetch);
   menu_layer_destroy(v->menu);
   layer_destroy(v->more_above);
+#if !defined(PBL_ROUND)
   layer_destroy(v->more_below);
+#endif
   top_bar_destroy(v->top_bar);
   free(v->rows);
   free(v->lines);
@@ -428,7 +482,7 @@ void dir_window_refresh(void) {
       // The theme may have changed (settings page).
       window_set_background_color(v->window, g_theme->bg);
       menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);
-      menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
+      menu_layer_set_highlight_colors(v->menu, LIST_CURSOR_BG, g_theme->cursor_text);
       if (v->indicators_on) {
         set_indicators(v);
       }
