@@ -28,10 +28,11 @@
 #define HINT_SELECT_CY 130
 #define HINT_DOWN_CY 190
 #define HINT_BACK_CY 130
-// "On board?" and "Remove star?" button labels (body coordinates): along the
-// bottom of the body until the round screen gets its own layout.
-#define EDGE_BACK_CY 160
-#define EDGE_DOWN_CY 160
+// "On board?" and "Remove star?" button labels (body coordinates, the body
+// being the whole screen under the top bar on the Round 2): each sits at its
+// button's height, Back at the left middle and Down at the lower right.
+#define EDGE_BACK_CY (HINT_BACK_CY - TOP_BAR_HEIGHT)
+#define EDGE_DOWN_CY (HINT_DOWN_CY - TOP_BAR_HEIGHT)
 // Home's first line (body coordinates): right under the label line, so the
 // port-day countdown's last line ("3 clashes") still fits.
 #define HOME_TOP 0
