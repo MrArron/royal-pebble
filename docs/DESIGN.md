@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
 How the watch app and the phone settings page look and behave, as built in
-1.6.3. One section per screen or feature. Designs that are approved but not
+1.6.4. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -1017,9 +1017,8 @@ holds on the Round 2 unless this section says otherwise.
   other all-aboard alerts (the test alert) keep the `IN 15 MIN` layout. On
   `PHONE NEEDED` the text is smaller so it clears the footer. The clash toast
   is a bordered rounded card over the middle of Today (200 x 70, two lines)
-  instead of the bar at the bottom. Not built: the short scroll arc on the
-  right edge for long pages (the triangles stay, inside the body); it needs
-  a shared `ui.c` helper and the budget is used (G5/G6).
+  instead of the bar at the bottom. Long alerts show the scroll arc (below)
+  since 1.6.4.
 - **Place card and Route screen, since 1.6.3 (GP; mockups `Place`,
   `Route`):** both are phone-built pages (§10.2, §10.3), laid out for the
   Round 2 on the phone. The place card is centered with short dividers
@@ -1029,9 +1028,33 @@ holds on the Round 2 unless this section says otherwise.
   bar's label line (`ROUTE · FROM YOUR CABIN`, `CLOSEST TO` shortened to
   `NEAR`), centers the title and the lines under the steps between short
   dividers (110 px), keeps the steps left-aligned with their glyphs, and
-  puts Home's event time and title on two lines.
-- **Scroll triangles:** inside the body column (top and bottom); the right
-  edge scroll arc isn't built yet.
+  puts Home's event time and title on two lines. A step wraps to three lines
+  there (two on the Time 2), so the longest Harmony arrival, `Playmakers
+  Sports Bar & Arcade · stbd side`, shows whole (1.6.4).
+- **Lists, since 1.6.4 (G5; mockups `Today`, `Directory`):** Today and the
+  directory's lists keep the selected row in the middle on a rounded pill
+  (14 px radius, 12 px in from the screen's edge, so the list is 236 px wide)
+  with every line centered. The selected row is larger (a directory name in
+  Gothic 24, an event title in Gothic 18, its second line in 14 bold); the
+  rows above and below are smaller (14 bold, second line in 14) and muted,
+  and short dividers (110 px) separate them, none beside the pill. Today's
+  time sits on its own line above the title (`12:00p`, `NOW · ends 12:45` in
+  the now color) on a group's first row and on the selected row, with the
+  star and the clash `!` after it (in the cursor text color on the pill); a
+  booked order adds `Meet 8:45a` to it and shows `✓ Booked` under the title,
+  and a final show adds `Last chance` / `Only show` to it in the port accent.
+  The venue is the line under the title. A directory event row has its time
+  above its title the same way. Headers (`FORE`, `DECK 8 · MID`) and the
+  `Connect your phone` message are centered. Under a place or area card the
+  selection isn't centered: rows keep their height and the selected one gets
+  a smaller pill, and the list narrows to the body column the card was laid
+  out for.
+- **Scroll arc, since 1.6.4 (mockup `Event`):** long pages (event details,
+  route, place and area pages, alerts, the Ask card) show their scroll
+  position as a short arc on the right edge beside Up and Down instead of the
+  triangles: from -35° to 35°, radius 123, track `divider` 2 px, thumb
+  `muted` 4 px sized to the share of the page on screen. Nothing shows when
+  the page fits.
 
 **Tools:** `tools/watch_size.py` checks both binaries against the 62 KB
 budget; `tools/screens.sh <dir>` installs on each emulator in turn and saves a

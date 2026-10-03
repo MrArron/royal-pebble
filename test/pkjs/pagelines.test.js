@@ -181,6 +181,18 @@ test('event route: the time follows the watch clock, two lines on the Round 2', 
   assert.deepStrictEqual(t.slice(-2), ['8:00p', 'Ice Show: 1887']);
 });
 
+test('route steps keep their whole text; three lines on the Round 2', function() {
+  // The longest real arrival with the sides confirmed (Harmony, measured in
+  // 1.6.4): 43 bytes, cut at 39 before.
+  var text = 'Playmakers Sports Bar & Arcade' + DOT + 'stbd side';
+  var p = {title: 'Playmakers Sports Bar & Arcade', header: 'FROM YOUR CABIN', steps: [{glyph: 4, text: text}]};
+  [false, true].forEach(function(round) {
+    var step = routeLines(p, {round: round}).filter(function(l) { return l.glyph >= pagelines.STEP; })[0];
+    assert.strictEqual(step.text, text);
+    assert.strictEqual(step.maxH, round ? 3 * 22 : 44);
+  });
+});
+
 test('messages: a "No route found" route keeps its lead', function() {
   var p = directory.routePage(placeRef('Perfect Day at CocoCay'), false, CTX);
   assert.ok(texts(routeLines(p)).indexOf(p.lead) > 0);

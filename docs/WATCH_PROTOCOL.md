@@ -584,7 +584,8 @@ the destination (`Royal Theater`, `Restroom`), the header (`FROM YOUR CABIN`,
 `dir_label`, `CLOSEST TO` shortened to `NEAR`), a divider, the lead line
 (`Same area · your deck`, or a message such as `No route found` with no
 steps), each step with its glyph (walk, cross the ship, elevator, stairs,
-arrive; at most 8, a longer route keeps the arrival last), then, when any is
+arrive; at most 8, a longer route keeps the arrival last; its whole text,
+wrapping to two lines, three on the Round 2, since 1.6.4), then, when any is
 there, a divider and the lines under the steps: a restroom's `Deck 5 · Fore`,
 the summary (`↓2 decks · 100 m in all`, `Same deck as Royal Theater`; `in all`
 is dropped when the planner isn't sure) and an event route's time and title.

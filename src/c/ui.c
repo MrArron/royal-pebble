@@ -672,6 +672,130 @@ int draw_hint_right(GContext *ctx, const char *text, int right, int y) {
   return w;
 }
 
+#if defined(PBL_ROUND)
+// ---- Round 2 lists (docs/mockups/round/Today, Directory) --------------------
+
+#define PILL_RADIUS 14
+#define PILL_PAD 12   // above and below the selected row's lines
+#define ROW_PAD 6     // the same for the other rows
+#define STAR_W 17     // gap and star after the top line
+#define BANG_W 7      // gap and "!"
+
+static bool round_has_top(const RoundRow *r) { return r->top[0] || r->icons; }
+
+int round_row_height(const RoundRow *r, bool selected) {
+  int h = round_has_top(r) ? 16 : 0;
+  if (r->sub[0]) {
+    h += 16;
+  }
+  return h + (selected ? (r->big ? 26 : 20) + PILL_PAD : 16 + ROW_PAD);
+}
+
+void round_row_draw(GContext *ctx, const Layer *cell, const RoundRow *r, bool selected) {
+  GRect b = layer_get_bounds(cell);
+  int w = b.size.w;
+  GColor on_pill = g_theme->cursor_text;
+  bool pill = selected;
+  // A list that doesn't keep its selection centered (under a place card) keeps
+  // every row's height: the selected one gets the pill but the small lines.
+  selected = selected && b.size.h >= round_row_height(r, true);
+  if (pill) {
+    graphics_context_set_fill_color(ctx, g_theme->cursor_bg);
+    graphics_fill_rect(ctx, b, b.size.h < 2 * PILL_RADIUS ? b.size.h / 2 : PILL_RADIUS, GCornersAll);
+  }
+  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  // The lines as a block in the middle (Gothic leaves room above its capitals).
+  int y = (b.size.h - round_row_height(r, selected) + (selected ? PILL_PAD : ROW_PAD)) / 2 - 3;
+  if (round_has_top(r)) {
+    int icons_w = ((r->icons & ROUND_ROW_STAR) ? STAR_W : 0) + ((r->icons & ROUND_ROW_BANG) ? BANG_W : 0);
+    int text_w = r->top[0] ? text_size(r->top, small).w : -4;
+    if (text_w > w - 16 - icons_w) {
+      text_w = w - 16 - icons_w;
+    }
+    int x = (w - text_w - icons_w) / 2;
+    graphics_context_set_text_color(ctx, pill ? on_pill : r->top_color);
+    graphics_draw_text(ctx, r->top, small, GRect(x, y, text_w + 2, 18), GTextOverflowModeTrailingEllipsis,
+                       GTextAlignmentLeft, NULL);
+    x += text_w + 4;
+    if (r->icons & ROUND_ROW_STAR) {
+      draw_star(ctx, GPoint(x + 6, y + 9), pill ? on_pill : g_theme->sea_accent);
+      x += STAR_W;
+    }
+    if (r->icons & ROUND_ROW_BANG) {
+      draw_bang(ctx, GPoint(x, y + 4), 11, pill ? on_pill : g_theme->port_accent);
+    }
+    y += 16;
+  }
+  GColor color = pill ? on_pill : g_theme->muted;
+  int title_h = selected ? (r->big ? 26 : 20) : 16;
+  graphics_context_set_text_color(ctx, color);
+  graphics_draw_text(ctx, r->title,
+                     fonts_get_system_font(!selected ? FONT_KEY_GOTHIC_14_BOLD
+                                           : r->big ? FONT_KEY_GOTHIC_24_BOLD : FONT_KEY_GOTHIC_18_BOLD),
+                     GRect(6, y - (selected && r->big ? 3 : 0), w - 12, title_h + 6),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  y += title_h;
+  if (!r->sub[0]) {
+    return;
+  }
+  if (r->sub_checked) {
+    draw_checked(ctx, r->sub, false, -w, y, color);
+    return;
+  }
+  graphics_draw_text(ctx, r->sub, selected ? small : fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                     GRect(6, y, w - 12, 18), GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+}
+
+void round_divider(GContext *ctx, const Layer *cell, MenuLayer *menu, const MenuIndex *index) {
+  MenuIndex below = *index;
+  MenuIndex above = MenuIndex(index->section, index->row - 1);
+  if (menu_layer_is_index_selected(menu, &below) || menu_layer_is_index_selected(menu, &above)) {
+    return;
+  }
+  int mid = layer_get_bounds(cell).size.w / 2;
+  graphics_context_set_stroke_color(ctx, g_theme->divider);
+  graphics_draw_line(ctx, GPoint(mid - 55, 0), GPoint(mid + 55, 0));
+}
+
+// ---- Round 2 scroll arc (docs/mockups/round/Event) ---------------------------
+
+// Pebble angles (0 at the top, clockwise): 55-125 is SVG -35 to 35 degrees.
+#define ARC_START 55
+#define ARC_SPAN 70
+
+static void scroll_arc_update(Layer *layer, GContext *ctx) {
+  ScrollLayer *scroll = *(ScrollLayer **)layer_get_data(layer);
+  int view = layer_get_bounds(scroll_layer_get_layer(scroll)).size.h;
+  int total = scroll_layer_get_content_size(scroll).h;
+  if (total <= view) {
+    return;
+  }
+  int max = total - view;
+  int off = -scroll_layer_get_content_offset(scroll).y;
+  off = off < 0 ? 0 : off > max ? max : off;
+  int thumb = ARC_SPAN * view / total;
+  if (thumb < 10) {
+    thumb = 10;
+  }
+  int a = ARC_START + (ARC_SPAN - thumb) * off / max;
+  GRect b = layer_get_bounds(layer);
+  // Track: 2 px on radius 123; thumb: 4 px on the same middle.
+  graphics_context_set_fill_color(ctx, g_theme->divider);
+  graphics_fill_radial(ctx, grect_inset(b, GEdgeInsets(6)), GOvalScaleModeFitCircle, 2,
+                       DEG_TO_TRIGANGLE(ARC_START), DEG_TO_TRIGANGLE(ARC_START + ARC_SPAN));
+  graphics_context_set_fill_color(ctx, g_theme->muted);
+  graphics_fill_radial(ctx, grect_inset(b, GEdgeInsets(5)), GOvalScaleModeFitCircle, 4,
+                       DEG_TO_TRIGANGLE(a), DEG_TO_TRIGANGLE(a + thumb));
+}
+
+Layer *scroll_arc_create(GRect window_bounds, ScrollLayer *scroll) {
+  Layer *layer = layer_create_with_data(window_bounds, sizeof(ScrollLayer *));
+  *(ScrollLayer **)layer_get_data(layer) = scroll;
+  layer_set_update_proc(layer, scroll_arc_update);
+  return layer;
+}
+#endif  // PBL_ROUND
+
 // ---- Scrolling pages ----------------------------------------------------------
 
 #define SCROLL_INDICATOR_H 12
@@ -740,7 +864,9 @@ void set_scroll_indicators(ScrollLayer *scroll, Layer *above, Layer *below) {
 }
 
 static void scroll_indicators(ScrollPage *p) {
+#if !defined(PBL_ROUND)
   set_scroll_indicators(p->scroll, p->more_above, p->more_below);
+#endif
 }
 
 void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,
@@ -758,12 +884,18 @@ void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,
   scroll_layer_add_child(p->scroll, p->content);
   scroll_layer_set_content_size(p->scroll, frame.size);
   layer_add_child(root, scroll_layer_get_layer(p->scroll));
+#if defined(PBL_ROUND)
+  // The scroll arc instead of the triangles (more_below stays NULL).
+  p->more_above = scroll_arc_create(layer_get_bounds(root), p->scroll);
+  layer_add_child(root, p->more_above);
+#else
   p->more_above = layer_create(GRect(frame.origin.x, frame.origin.y, frame.size.w, SCROLL_INDICATOR_H));
   p->more_below = layer_create(GRect(frame.origin.x, frame.origin.y + frame.size.h - SCROLL_INDICATOR_H,
                                      frame.size.w, SCROLL_INDICATOR_H));
   layer_add_child(root, p->more_above);
   layer_add_child(root, p->more_below);
   scroll_indicators(p);
+#endif
 }
 
 void scroll_page_top(ScrollPage *p) {
@@ -790,7 +922,9 @@ void scroll_page_destroy(ScrollPage *p) {
     app_timer_cancel(p->fit_timer);
   }
   layer_destroy(p->more_above);
+#if !defined(PBL_ROUND)
   layer_destroy(p->more_below);
+#endif
   layer_destroy(p->content);
   scroll_layer_destroy(p->scroll);
   memset(p, 0, sizeof(*p));

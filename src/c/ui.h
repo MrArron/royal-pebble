@@ -164,3 +164,45 @@ void draw_label(GContext *ctx, const char *text, int y, int width);
 // A sea-accent button hint with its `›` (Home's `Route ›`), right-aligned so
 // it ends at `right`, on a Gothic 14 bold line at y. Returns its width.
 int draw_hint_right(GContext *ctx, const char *text, int right, int y);
+
+// ---- Round 2 lists and scroll arc (docs/mockups/round/NOTES.md) -------------
+
+#if defined(PBL_ROUND)
+// Lists are wider than the body: the selected row's pill sits 12 px in from
+// the screen's edge (docs/mockups/round/Today, Directory).
+#define LIST_INSET_X 12
+#define LIST_FRAME(b)                                                     \
+  GRect(LIST_INSET_X, TOP_BAR_HEIGHT, (b).size.w - 2 * LIST_INSET_X, \
+        (b).size.h - TOP_BAR_HEIGHT - BODY_INSET_BOTTOM)
+// The menu's own highlight is off: rows draw their pill themselves.
+#define LIST_CURSOR_BG g_theme->bg
+
+// One row of a round list: centered lines; the selected row on a rounded pill
+// with a larger title, the others smaller and muted. `top` goes above the
+// title ("12:00p", "NOW · ends 12:45") in top_color, with a star (icons bit
+// 0) and a clash "!" (bit 1) after it; `sub` goes under it ("Booked" with a
+// check mark when sub_checked).
+typedef struct {
+  const char *top;
+  GColor top_color;
+  const char *title;
+  const char *sub;
+  uint8_t icons;
+  bool big;  // the selected title in Gothic 24 (directory), else 18
+  bool sub_checked;
+} RoundRow;
+#define ROUND_ROW_STAR 1
+#define ROUND_ROW_BANG 2
+
+int round_row_height(const RoundRow *r, bool selected);
+void round_row_draw(GContext *ctx, const Layer *cell, const RoundRow *r, bool selected);
+// A short centered divider between two rows, none beside the selected row.
+// The separator's index is the row below it.
+void round_divider(GContext *ctx, const Layer *cell, MenuLayer *menu, const MenuIndex *index);
+// The scroll position as a short arc on the right edge, beside Up and Down:
+// a full-window layer that follows `scroll` (drawn only while it scrolls).
+Layer *scroll_arc_create(GRect window_bounds, ScrollLayer *scroll);
+#else
+#define LIST_FRAME(b) BODY_FRAME(b)
+#define LIST_CURSOR_BG g_theme->cursor_bg
+#endif
