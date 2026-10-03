@@ -5,7 +5,7 @@ glances at what's next** without pulling out a phone, and making sure the
 wearer never misses all-aboard. All data is loaded before sailing; **at sea the
 app works with no internet at all**.
 
-This brief is the "what and why": purpose, constraints, what is built (1.6.4),
+This brief is the "what and why": purpose, constraints, what is built (1.6.5),
 the decisions still in force and what's left for later. How things look is in
 `DESIGN.md`; the work still to do before the sailing is in `PLAN.md`. When
 something here conflicts with a request in a session, ask before changing
@@ -23,7 +23,7 @@ direction.
   code HM). It is also the app's test cruise: the usage log and map notes
   collected on board drive the next round of fixes.
 - Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
-  (`CLAUDE.md`). Current: **1.6.4**, Round 2 phase (`PLAN.md` §3a).
+  (`CLAUDE.md`). Current: **1.6.5**, Round 2 phase (`PLAN.md` §3a).
 
 ## Constraints
 
@@ -98,7 +98,7 @@ Known facts:
 - Plain HTTP clients work for the public endpoints and for the sign-in from
   the phone; if Royal starts refusing, the sync tool impersonates a browser.
 
-## What's built (1.6.4)
+## What's built (1.6.5)
 
 Numbers are the brief's item numbers, used in code comments and PRs. Screens
 and wording: `DESIGN.md`.
@@ -111,7 +111,9 @@ directory's place card and the Route screen are built on the phone as
 pages of styled lines and drawn by one small watch renderer, laid out for
 each watch (`WATCH_PROTOCOL.md`, Page lines). From 1.6.4 the Round 2's
 lists (Today, the directory) keep the selected row centered on a rounded
-pill, and long pages show a scroll arc on the right edge.
+pill, and long pages show a scroll arc on the right edge. From 1.6.5 My info,
+the Ask card (and its phone-away and no-answer messages) and the On board?
+screen are centered too, with the On board? labels beside the buttons.
 
 **v1 (core)**
 
@@ -254,6 +256,7 @@ day).
 | Pebble Round 2 (gabbro) static, 1.6.2 (alerts, G4) | 63,472 B; 16 B under the budget. The Time 2 is 61,904 B (80 B smaller than 1.6.1) | `tools/watch_size.py`, 2026-10-02 |
 | Both watches, 1.6.3 (generic phone page, GP) | Time 2 58,776 B (3,128 B smaller; 4,712 B under the budget); Round 2 60,216 B (3,256 B smaller; 3,272 B under). The place card and Route layouts moved to the phone (`pagelines.js`) | `tools/watch_size.py`, 2026-10-02 |
 | Pebble Round 2 (gabbro) static, 1.6.4 (lists and scroll arc, G5) | 61,120 B (+904 B); 2,368 B under the budget. The Time 2's code is byte-identical (58,776 B) | `tools/watch_size.py`, 2026-10-03 |
+| Pebble Round 2 (gabbro) static, 1.6.5 (My info, Ask, On board?, G6) | 61,856 B (+736 B); 1,632 B under the budget. The Time 2's code is byte-identical (58,776 B) | `tools/watch_size.py`, 2026-10-03 |
 | Free heap on the watch, Home open | about 30.7 KB (1.5.4, 115-event day) | usage log, 2026-09-28 |
 | Free heap at dictation start | 24-25 KB from Home and from a Route screen; dictation takes no app heap | usage log |
 | Events per watch day | 160 | `MAX_EVENTS` |

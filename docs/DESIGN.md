@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
 How the watch app and the phone settings page look and behave, as built in
-1.6.4. One section per screen or feature. Designs that are approved but not
+1.6.5. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -1003,9 +1003,16 @@ holds on the Round 2 unless this section says otherwise.
   the body.
 - **Arrow lines** (`↓2 decks from cabin`, `Deck 4 Aft · ↓2`, route and
   place lines) are centered in their box on the Round 2 since 1.6.1.
-- **On board? and Remove star? (§4.4, §6):** the edge labels (`Not yet` /
-  `Keep`, `Hold: yes` / `Hold: remove`) sit along the bottom of the body,
-  left and right, until G6 puts them on the bezel by their buttons.
+- **On board? and Remove star? (§4.4, §6), since 1.6.5 (G6; mockup
+  `OnBoard`):** the title and the lines under it are centered in a 170 px
+  column (`Ends today's countdown` / `All-aboard alerts off.` / `Undo in My
+  info.` as one muted block; for Remove star? the event title and `9:00p ·
+  On Air`), with no divider. The edge labels sit by the buttons the G0 check
+  recorded (Back at the left middle, Down at the lower right, window y 130
+  and 190): `Not yet` / `Keep` is plain muted text with a `‹`, `Hold: yes` /
+  `Hold: remove` a pill 22 px in from the bezel with a `›`. The "On board"
+  confirmation was already centered. The real button positions still need
+  checking on the watch.
 - **Alerts and notices, since 1.6.2 (G4; mockups `AlertReminder`,
   `AlertAllAboard`, `AlertToReserve`, `NoticeSchedule`, `ClashToast`):** every
   line is centered, including the event details body a reminder shows (the
@@ -1055,6 +1062,27 @@ holds on the Round 2 unless this section says otherwise.
   triangles: from -35° to 35°, radius 123, track `divider` 2 px, thumb
   `muted` 4 px sized to the share of the page on screen. Nothing shows when
   the page fits.
+- **My info, since 1.6.5 (G6; mockup `MyInfo`):** the rows are centered on a
+  236 px column (the lists' width) that runs down to y 232. The stateroom is a
+  blue card (`cursor_bg`, 14 px radius): `STATEROOM`, the number in Gothic 28
+  bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
+  muted text and become a pill around their text, in Gothic 18 bold, when
+  under the cursor; the `ON BOARD` undo row is a centered pill. Muster
+  station, dining room, ship clock and last sync are labeled values with
+  110 px dividers. On `Ship directory` the page scrolls by whole rows, so no
+  label is cut under the top bar.
+- **Ask, since 1.6.5 (G6; mockups `VoiceCard`, `PhoneAway`,
+  `DictationFailed`):** the card is a 200 px column down to y 232 with
+  centered rows: the label in 14 bold caps, the value in Gothic 18 bold
+  (wraps, up to 66 px), no dividers. The hint is blue and centered; the
+  watch breaks `Select: route · Hold: ask again` at its `·` onto two lines.
+  A card with four rows drops the first row's label (`HEARD`) and narrows the
+  gaps so it fits with a two-line hint; a longer one scrolls with the arc.
+  The watch's own messages show as one Gothic 24 bold line in the middle
+  with a muted detail under it (`Voice is heard on the phone`, `Bring the
+  phone nearby, then hold Select to ask`) or, for `No answer from the
+  phone`, `Hold: ask again` in blue near the bottom edge. The phone's card
+  wording is not changed yet (G7).
 
 **Tools:** `tools/watch_size.py` checks both binaries against the 62 KB
 budget; `tools/screens.sh <dir>` installs on each emulator in turn and saves a
