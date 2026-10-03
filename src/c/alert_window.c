@@ -194,14 +194,15 @@ static void draw_more(GContext *ctx, int count, int y, int w) {
   scroll_page_fit(&s_page, y);
 }
 
-#if defined(PBL_ROUND)
-// Round 2 (docs/mockups/round/AlertAllAboard): an all-aboard alert for today's
-// all-aboard time shows Home's countdown and its time-ashore arc.
+// An all-aboard alert for today's all-aboard time shows Home's countdown and
+// its time-ashore bar (an arc on the Round 2; docs/mockups/round/
+// AlertAllAboard, PT2AlertAllAboard).
 static bool shows_arc(void) {
   return s_alarm.kind == ALARM_ALL_ABOARD && data_ready() && data_day()->all_aboard == s_alarm.ref &&
          s_alarm.ref > now_cruise();
 }
 
+#if defined(PBL_ROUND)
 static void edge_update_proc(Layer *layer, GContext *ctx) {
   if (shows_arc()) {
     draw_ashore_arc(ctx, now_cruise());
@@ -215,12 +216,10 @@ static void edge_update_proc(Layer *layer, GContext *ctx) {
 
 static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
-#if defined(PBL_ROUND)
   if (shows_arc()) {
-    scroll_page_fit(&s_page, draw_countdown(ctx, 2, b.size.w, now_cruise()));
+    scroll_page_fit(&s_page, draw_countdown(ctx, 2, b.size.w, now_cruise(), false));
     return;
   }
-#endif
   if (s_alarm.kind == ALARM_TO_RESERVE) {
     scroll_page_fit(&s_page, draw_to_reserve(ctx, b));
     return;
