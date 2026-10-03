@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
 How the watch app and the phone settings page look and behave, as built in
-1.6.5. One section per screen or feature. Designs that are approved but not
+1.6.6. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -51,8 +51,17 @@ code differ, the code is right and this file needs a fix.
   missing. Distances carry no `~`; the Help screen says once that every
   distance is approximate (owner, 2026-09-26). Times follow the watch's
   12/24-hour setting (`1:00p` in 12-hour style).
-- **Lists scroll** with Up/Down and the muted content triangles when a page
-  doesn't fit (details, reminders, place pages, routes, Ask).
+- **Lists scroll** with Up/Down. A page that doesn't fit (details, reminders,
+  place pages, routes, Ask) shows a thin scroll bar on the right edge, beside
+  Up and Down: track `divider` 1 px at x 195 from 6 px under the top bar to
+  6 px above the bottom, thumb `muted` 3 px with rounded ends, its length the
+  share of the page in view (at least 12 px). It replaced the content
+  triangles in 1.6.6 (G6a; mockup `round/PT2Event`); the Round 2 shows an arc
+  instead (§15).
+- **The cursor** on lists (Today, the directory, My info's rows) is a rounded
+  pill in `cursor_bg`, 8 px radius, inset 4 px from each side, with the row's
+  text where it was (since 1.6.6, G6a; mockups `round/PT2Today`,
+  `PT2Directory`, `PT2MyInfo`). It replaced the full-width bar.
 
 ## 2. Colors
 
@@ -477,8 +486,15 @@ Not reserved yet / ✓ Reserved
 
 Alerts at the day's **warning period** (30/60/90/120 min, Days tab; 30 by
 default, 60 at tender ports), then 30 and 15 minutes before all-aboard,
-without duplicates. Top bar `All aboard`, `ALL ABOARD IN` large (Gothic 28,
-port accent). Cancelled by I'm on board (§4.4).
+without duplicates. Top bar `All aboard`. Cancelled by I'm on board (§4.4).
+
+Since 1.6.6 (G6a; mockup `round/PT2AlertAllAboard`) an alert for today's
+all-aboard time, while it's still ahead, shows Home's countdown (§4.2):
+`ALL ABOARD IN`, the count with the warning sign in the warning window, the
+ship and local times, then the time-ashore bar with its end times and
+`Excursion back 4:30p` while one is out. No on-board hint or clash line
+(Select opens Home). Any other all-aboard alert keeps the text layout:
+`ALL ABOARD IN 15 MIN` large (Gothic 28, port accent), the port, the time.
 
 ### 8.3 To reserve (evening)
 
@@ -520,12 +536,16 @@ Top bar `My Info` in the gray band. Rows, top to bottom:
 
 1. `ON BOARD` undo row, while on board (§4.4).
 2. `Today's summary` / `Tomorrow's summary` (§5).
-3. `STATEROOM` (large) with deck and nearest stairs.
+3. The stateroom card: a `cursor_bg` rounded card (inset 4 px, 8 px radius)
+   with `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`
+   in the cursor text color (since 1.6.6, G6a; mockup `round/PT2MyInfo`).
 4. `MUSTER STATION`, `DINING ROOM` (`Not set` when empty), `SHIP CLOCK`
    note, `LAST SYNC` (`4:31a today`).
 5. `Ship directory` (§10.1).
 
-Up/Down pick a row; Select opens it.
+Up/Down pick a row (the undo row, the summary, Ship directory); Select opens
+it. The summary and Ship directory rows are plain Gothic 18 bold text, on the
+cursor's pill when selected.
 
 ## 10. Ship directory and Ship GPS
 

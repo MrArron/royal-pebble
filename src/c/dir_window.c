@@ -21,7 +21,6 @@
 #define ITEM2_H 44
 #define EVENT_H 44
 #define MESSAGE_H 84
-#define INDICATOR_H 12
 
 typedef struct {
   Window *window;
@@ -32,9 +31,7 @@ typedef struct {
   Fetch fetch;
   uint8_t *lines;  // the heading's card (lines.h), drawn as sent
   int lines_length;
-  Layer *more_above;  // scroll indicators (place pages)
-  Layer *more_below;
-  bool indicators_on;
+  Layer *bar;  // the scroll bar (place pages)
   DirRow *rows;
   int row_count;
 } View;
@@ -73,20 +70,15 @@ static void state_changed(void *owner) {
 
 static bool send_request(void *owner) { return comm_request_dir(((View *)owner)->ref); }
 
-// Muted triangles under the top bar and at the bottom while a place page has
-// more above or below (docs/mockups/gps/NOTES.md). The menu's scroll layer
-// keeps them up to date.
+// A place page shows the scroll bar (docs/mockups/round/NOTES.md).
 static void set_indicators(View *v) {
 #if defined(PBL_ROUND)
-  // The scroll arc (more_above) instead, and the card in the body's column,
-  // which the phone laid it out for (the list is wider).
+  // The card in the body's column, which the phone laid it out for (the list
+  // is wider).
   scroll_layer_set_frame(menu_layer_get_scroll_layer(v->menu),
                          BODY_FRAME(layer_get_bounds(window_get_root_layer(v->window))));
-  layer_set_hidden(v->more_above, false);
-#else
-  set_scroll_indicators(menu_layer_get_scroll_layer(v->menu), v->more_above, v->more_below);
 #endif
-  v->indicators_on = true;
+  layer_set_hidden(v->bar, false);
 }
 
 static void page_received(const DirPageMsg *page) {
@@ -189,13 +181,11 @@ static void draw_two_lines(GContext *ctx, const char *line1, const char *line2, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
-// Loading or no phone, drawn over the cursor's highlight: it isn't a choice.
+// Loading or no phone, without the cursor's pill: it isn't a choice.
 static void draw_message(GContext *ctx, const View *v, GRect b) {
   int w = b.size.w;
   GColor text = g_theme->text;
   GColor muted = g_theme->muted;
-  graphics_context_set_fill_color(ctx, g_theme->bg);
-  graphics_fill_rect(ctx, b, 0, GCornerNone);
   if (v->fetch.state == FETCH_LOADING) {
     graphics_context_set_text_color(ctx, muted);
     graphics_draw_text(ctx, "Loading...", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
@@ -279,6 +269,11 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
     round_row_draw(ctx, cell, &round, highlighted);
     return;
   }
+#else
+  // The cursor's pill (a place's heading takes the cursor without it).
+  if (highlighted && r->kind != DIR_ROW_PLACE) {
+    fill_pill(ctx, PILL_ROW(layer_get_bounds(cell)));
+  }
 #endif
   switch (r->kind) {
     case DIR_ROW_HEADER:
@@ -288,9 +283,7 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
                          TEXT_ALIGN, NULL);
       break;
     case DIR_ROW_PLACE:
-      // Drawn over the cursor's highlight: the heading only keeps the page's top in view.
-      graphics_context_set_fill_color(ctx, g_theme->bg);
-      graphics_fill_rect(ctx, layer_get_bounds(cell), 0, GCornerNone);
+      // No pill: the heading only keeps the page's top in view.
       lines_draw(ctx, v->lines, v->lines_length, w);
       break;
     case DIR_ROW_EVENT: {
@@ -404,18 +397,10 @@ static void window_load(Window *window) {
   menu_layer_set_highlight_colors(v->menu, LIST_CURSOR_BG, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(v->menu, window);
   layer_add_child(root, menu_layer_get_layer(v->menu));
-#if defined(PBL_ROUND)
-  // Place pages: the scroll arc, shown when the card arrives (more_below stays NULL).
-  v->more_above = scroll_arc_create(b, menu_layer_get_scroll_layer(v->menu));
-  layer_set_hidden(v->more_above, true);
-  layer_add_child(root, v->more_above);
-#else
-  v->more_above = layer_create(GRect(BODY_INSET_X, TOP_BAR_HEIGHT, b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
-  v->more_below = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - INDICATOR_H,
-                                     b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
-  layer_add_child(root, v->more_above);
-  layer_add_child(root, v->more_below);
-#endif
+  // Place pages: the scroll bar, shown when the card arrives.
+  v->bar = scroll_bar_create(b, menu_layer_get_scroll_layer(v->menu));
+  layer_set_hidden(v->bar, true);
+  layer_add_child(root, v->bar);
   fetch_start(&v->fetch);
 }
 
@@ -423,10 +408,7 @@ static void window_unload(Window *window) {
   View *v = window_get_user_data(window);
   fetch_cancel(&v->fetch);
   menu_layer_destroy(v->menu);
-  layer_destroy(v->more_above);
-#if !defined(PBL_ROUND)
-  layer_destroy(v->more_below);
-#endif
+  layer_destroy(v->bar);
   top_bar_destroy(v->top_bar);
   free(v->rows);
   free(v->lines);
@@ -483,9 +465,6 @@ void dir_window_refresh(void) {
       window_set_background_color(v->window, g_theme->bg);
       menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);
       menu_layer_set_highlight_colors(v->menu, LIST_CURSOR_BG, g_theme->cursor_text);
-      if (v->indicators_on) {
-        set_indicators(v);
-      }
       layer_mark_dirty(v->top_bar);
       layer_mark_dirty(menu_layer_get_layer(v->menu));
     }

@@ -345,12 +345,7 @@ static void draw_warning_sign(GContext *ctx, int x, int y) {
   draw_bang(ctx, GPoint(x + 14, y + 10), 14, faded ? g_theme->bg : GColorBlack);
 }
 
-#if defined(PBL_ROUND)
-int  // shared with the all-aboard alert (screens.h)
-#else
-static int
-#endif
-draw_countdown(GContext *ctx, int y, int width, int32_t now) {
+int draw_countdown(GContext *ctx, int y, int width, int32_t now, bool home) {
   const Day *day = data_day();
   int left = (int)(day->all_aboard - now);
 
@@ -401,6 +396,9 @@ draw_countdown(GContext *ctx, int y, int width, int32_t now) {
   return draw_excursion_back(ctx, y + 22, width - 2 * PAD, now) + 4;
 #else
   y = draw_ashore_bar(ctx, y + 26, width, now);
+  if (!home) {
+    return y;
+  }
   draw_divider(ctx, y, width);
   return draw_onboard_hint(ctx, y + 4, width) + 4;
 #endif
@@ -825,7 +823,7 @@ static void draw_body(Layer *layer, GContext *ctx) {
   } else if (countdown) {
     // The bar takes the next items' place; they're one press away in Today
     // (docs/DESIGN.md §4.2).
-    y = draw_countdown(ctx, y, b.size.w, now);
+    y = draw_countdown(ctx, y, b.size.w, now, true);
 #if defined(PBL_ROUND)
     s_edge_shows = EDGE_ARC;
 #endif

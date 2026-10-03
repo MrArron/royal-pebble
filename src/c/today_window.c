@@ -146,6 +146,11 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   GRect b = layer_get_bounds(cell);
   bool highlighted = menu_cell_layer_is_highlighted(cell);
   GColor muted = highlighted ? g_theme->cursor_text : g_theme->muted;
+#if !defined(PBL_ROUND)
+  if (highlighted) {
+    fill_pill(ctx, PILL_ROW(b));
+  }
+#endif
   if (s_row_count == 0) {
     graphics_context_set_text_color(ctx, muted);
     graphics_draw_text(ctx, data_event_count() > 0 ? "Nothing left today" : "No events today",

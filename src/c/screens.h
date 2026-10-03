@@ -5,11 +5,13 @@
 // Each screen redraws itself on refresh (called every minute and after data or
 // theme changes). Refreshing a screen that isn't open does nothing.
 
-#if defined(PBL_ROUND)
 // Home's all-aboard countdown (ALL ABOARD IN, the count, the ship and local
-// times; returns the y below it) and its time-ashore arc with the end times,
-// both reused by the all-aboard alert (docs/mockups/round/AlertAllAboard).
-int draw_countdown(GContext *ctx, int y, int width, int32_t now);
+// times; returns the y below it), reused by the all-aboard alert
+// (docs/mockups/round/AlertAllAboard, PT2AlertAllAboard). On the Time 2 it
+// ends with the time-ashore bar and its end times, then (on Home) the
+// on-board hint; on the Round 2 the arc is drawn on its own.
+int draw_countdown(GContext *ctx, int y, int width, int32_t now, bool home);
+#if defined(PBL_ROUND)
 void draw_ashore_arc(GContext *ctx, int32_t now);
 #endif
 

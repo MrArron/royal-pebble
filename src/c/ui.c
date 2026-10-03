@@ -675,7 +675,6 @@ int draw_hint_right(GContext *ctx, const char *text, int right, int y) {
 #if defined(PBL_ROUND)
 // ---- Round 2 lists (docs/mockups/round/Today, Directory) --------------------
 
-#define PILL_RADIUS 14
 #define PILL_PAD 12   // above and below the selected row's lines
 #define ROW_PAD 6     // the same for the other rows
 #define STAR_W 17     // gap and star after the top line
@@ -757,13 +756,22 @@ void round_divider(GContext *ctx, const Layer *cell, MenuLayer *menu, const Menu
   graphics_draw_line(ctx, GPoint(mid - 55, 0), GPoint(mid + 55, 0));
 }
 
-// ---- Round 2 scroll arc (docs/mockups/round/Event) ---------------------------
+#endif  // PBL_ROUND
 
+// ---- Scroll bar (docs/mockups/round/PT2Event, Event) -------------------------
+
+#if defined(PBL_ROUND)
 // Pebble angles (0 at the top, clockwise): 55-125 is SVG -35 to 35 degrees.
 #define ARC_START 55
 #define ARC_SPAN 70
+#else
+// The Time 2's bar: a 1 px track 6 px in from the body's top and the
+// screen's bottom, and a 3 px thumb, just inside the right edge.
+#define BAR_TOP (TOP_BAR_HEIGHT + 6)
+#define BAR_X 195
+#endif
 
-static void scroll_arc_update(Layer *layer, GContext *ctx) {
+static void scroll_bar_update(Layer *layer, GContext *ctx) {
   ScrollLayer *scroll = *(ScrollLayer **)layer_get_data(layer);
   int view = layer_get_bounds(scroll_layer_get_layer(scroll)).size.h;
   int total = scroll_layer_get_content_size(scroll).h;
@@ -773,12 +781,13 @@ static void scroll_arc_update(Layer *layer, GContext *ctx) {
   int max = total - view;
   int off = -scroll_layer_get_content_offset(scroll).y;
   off = off < 0 ? 0 : off > max ? max : off;
+  GRect b = layer_get_bounds(layer);
+#if defined(PBL_ROUND)
   int thumb = ARC_SPAN * view / total;
   if (thumb < 10) {
     thumb = 10;
   }
   int a = ARC_START + (ARC_SPAN - thumb) * off / max;
-  GRect b = layer_get_bounds(layer);
   // Track: 2 px on radius 123; thumb: 4 px on the same middle.
   graphics_context_set_fill_color(ctx, g_theme->divider);
   graphics_fill_radial(ctx, grect_inset(b, GEdgeInsets(6)), GOvalScaleModeFitCircle, 2,
@@ -786,19 +795,33 @@ static void scroll_arc_update(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, g_theme->muted);
   graphics_fill_radial(ctx, grect_inset(b, GEdgeInsets(5)), GOvalScaleModeFitCircle, 4,
                        DEG_TO_TRIGANGLE(a), DEG_TO_TRIGANGLE(a + thumb));
+#else
+  int track = b.size.h - 6 - BAR_TOP;
+  int thumb = track * view / total;
+  if (thumb < 12) {
+    thumb = 12;
+  }
+  graphics_context_set_fill_color(ctx, g_theme->divider);
+  graphics_fill_rect(ctx, GRect(BAR_X, BAR_TOP, 1, track), 0, GCornerNone);
+  graphics_context_set_fill_color(ctx, g_theme->muted);
+  graphics_fill_rect(ctx, GRect(BAR_X - 1, BAR_TOP + (track - thumb) * off / max, 3, thumb), 1, GCornersAll);
+#endif
 }
 
-Layer *scroll_arc_create(GRect window_bounds, ScrollLayer *scroll) {
+Layer *scroll_bar_create(GRect window_bounds, ScrollLayer *scroll) {
   Layer *layer = layer_create_with_data(window_bounds, sizeof(ScrollLayer *));
   *(ScrollLayer **)layer_get_data(layer) = scroll;
-  layer_set_update_proc(layer, scroll_arc_update);
+  layer_set_update_proc(layer, scroll_bar_update);
   return layer;
 }
-#endif  // PBL_ROUND
+
+void fill_pill(GContext *ctx, GRect r) {
+  graphics_context_set_fill_color(ctx, g_theme->cursor_bg);
+  graphics_fill_rect(ctx, r, PILL_RADIUS, GCornersAll);
+}
 
 // ---- Scrolling pages ----------------------------------------------------------
 
-#define SCROLL_INDICATOR_H 12
 #define SCROLL_BOTTOM_PAD 6
 
 static void scroll_offset_changed(ScrollLayer *scroll, void *context) {
@@ -848,27 +871,6 @@ int text_height(const char *text, GFont font, int w, int max_h) {
                                                GTextAlignmentLeft).h;
 }
 
-void set_scroll_indicators(ScrollLayer *scroll, Layer *above, Layer *below) {
-  ContentIndicator *ci = scroll_layer_get_content_indicator(scroll);
-  const ContentIndicatorDirection dirs[2] = {ContentIndicatorDirectionUp, ContentIndicatorDirectionDown};
-  Layer *layers[2] = {above, below};
-  for (int i = 0; i < 2; i++) {
-    const ContentIndicatorConfig config = {
-      .layer = layers[i],
-      .times_out = false,
-      .alignment = GAlignCenter,
-      .colors = {.foreground = g_theme->muted, .background = g_theme->bg},
-    };
-    content_indicator_configure_direction(ci, dirs[i], &config);
-  }
-}
-
-static void scroll_indicators(ScrollPage *p) {
-#if !defined(PBL_ROUND)
-  set_scroll_indicators(p->scroll, p->more_above, p->more_below);
-#endif
-}
-
 void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,
                         LayerUpdateProc update, ClickConfigProvider clicks) {
   memset(p, 0, sizeof(*p));
@@ -884,18 +886,8 @@ void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,
   scroll_layer_add_child(p->scroll, p->content);
   scroll_layer_set_content_size(p->scroll, frame.size);
   layer_add_child(root, scroll_layer_get_layer(p->scroll));
-#if defined(PBL_ROUND)
-  // The scroll arc instead of the triangles (more_below stays NULL).
-  p->more_above = scroll_arc_create(layer_get_bounds(root), p->scroll);
-  layer_add_child(root, p->more_above);
-#else
-  p->more_above = layer_create(GRect(frame.origin.x, frame.origin.y, frame.size.w, SCROLL_INDICATOR_H));
-  p->more_below = layer_create(GRect(frame.origin.x, frame.origin.y + frame.size.h - SCROLL_INDICATOR_H,
-                                     frame.size.w, SCROLL_INDICATOR_H));
-  layer_add_child(root, p->more_above);
-  layer_add_child(root, p->more_below);
-  scroll_indicators(p);
-#endif
+  p->bar = scroll_bar_create(layer_get_bounds(root), p->scroll);
+  layer_add_child(root, p->bar);
 }
 
 void scroll_page_top(ScrollPage *p) {
@@ -913,7 +905,6 @@ void scroll_page_refresh(ScrollPage *p) {
   if (!p->scroll) {
     return;
   }
-  scroll_indicators(p);
   layer_mark_dirty(p->content);
 }
 
@@ -921,10 +912,7 @@ void scroll_page_destroy(ScrollPage *p) {
   if (p->fit_timer) {
     app_timer_cancel(p->fit_timer);
   }
-  layer_destroy(p->more_above);
-#if !defined(PBL_ROUND)
-  layer_destroy(p->more_below);
-#endif
+  layer_destroy(p->bar);
   layer_destroy(p->content);
   scroll_layer_destroy(p->scroll);
   memset(p, 0, sizeof(*p));
