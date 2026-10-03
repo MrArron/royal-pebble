@@ -620,6 +620,32 @@ Pebble Time 2 the pages are pixel for pixel the 1.6.2 screens; on the Pebble
 Round 2 (`Pebble.getActiveWatchInfo().platform` is `gabbro`) they are
 centered, with short dividers (`docs/mockups/round/Place`, `Route`).
 
+## Text budgets
+
+The phone words what the watch draws, so the wording stays out of the C code
+(1.6.7, `src/pkjs/textfit.js`). It picks a watch from
+`Pebble.getActiveWatchInfo().platform`; a missing or unknown watch is the
+Pebble Time 2 (`emery`), whose text is exactly what it was before. For the
+Pebble Round 2 (`gabbro`, 168 px text column inside the circle) it works in
+characters per line, estimated from Gothic Bold's average glyph and checked on
+the emulator: 28 at Gothic 14, 23 at Gothic 18 and 20 at Gothic 24. The Time 2
+columns, used by the tests only, are 32, 26 and 22.
+
+- **Page lines** (`pagelines.js`): on the Round 2 each text is fitted to the
+  lines its box holds (`max_h` over the font's line height; a route step has
+  two characters less for its glyph). A text that doesn't fit is first
+  shortened (`Same deck as X` becomes `Same deck: X`), then cut at a word with
+  an ellipsis.
+- **Voice card** (`voicecard.js`, `answer(..., platform)`): the hint has a short
+  Round 2 form (`Select: route to X` becomes `Select: route`; `Select: all-aboard
+  alerts off for today` becomes `Select: alerts off today`), never more than two
+  lines, and a two-part hint (`a · b`) has each part on its own line (the watch
+  splits at the `·`). Row values are cut at three lines of Gothic 18.
+- The packed card and its byte limits (47 for the hint, 63 for a value) are the
+  same for both watches. `test/pkjs/textfit.test.js` checks that no hint, row,
+  place-page line or route line goes over its budget on either platform, and
+  that the Time 2's text is unchanged.
+
 ## Voice
 
 Ask (`docs/DESIGN.md` §11, `src/c/ask_window.c`, `src/pkjs/voicecard.js`).

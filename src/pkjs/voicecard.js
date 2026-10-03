@@ -29,6 +29,7 @@
 'use strict';
 
 var pack = require('./pack');
+var textfit = require('./textfit');
 var slice = require('./slice');
 var directory = require('./directory');
 var voice = require('./voice');
@@ -641,7 +642,13 @@ function matchText(p) {
 // The answer to `text` (see the top of this file). `state`: the watch's
 // voice_state bits. The card's `log` says which command answered, for the usage log.
 // Demo data is answered like real data (`isDemo` is kept for the callers).
-function answer(text, ctx, isDemo, state) {
+// `platform` ('emery' or 'gabbro', textfit.platformOf): the card is worded for
+// that watch (textfit.js); the Time 2's card is the one built here.
+function answer(text, ctx, isDemo, state, platform) {
+  return textfit.cardFor(platform, answerCard(text, ctx, isDemo, state));
+}
+
+function answerCard(text, ctx, isDemo, state) {
   var heard = {label: 'HEARD', value: quoted(text)};
   var t = (text || '').toLowerCase();
   state = state | 0;
