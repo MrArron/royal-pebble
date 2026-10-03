@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
 How the watch app and the phone settings page look and behave, as built in
-1.6.2. One section per screen or feature. Designs that are approved but not
+1.6.3. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -581,6 +581,11 @@ Flag a map problem             mapped ships only
 - **Flag a map problem:** Select saves the time, the place, what the page
   showed and the route start for Me > Map check, and shows `Flagged`.
 - Distances use the Me tab's unit (metres, feet or steps), rounded.
+- **Built on the phone (1.6.3):** the card above `LATER TODAY` is a page of
+  styled lines the phone lays out and the watch draws as sent
+  (`WATCH_PROTOCOL.md`, Page lines; `src/pkjs/pagelines.js`,
+  `src/c/lines.c`). The Time 2's card is pixel for pixel the 1.6.2 one; the
+  Round 2's is centered (§15). The list rows below it stay the watch's own.
 
 ### 10.3 Route screen
 
@@ -621,6 +626,11 @@ FROM YOUR CABIN                small caps, muted
   summary.
 - `Finding route…` while loading; `No route found`, `No restroom found`.
   Up/Down scroll; Hold Select asks by voice.
+- **Built on the phone (1.6.3):** the whole screen is a page of styled lines
+  from the phone, as the place card (§10.2); the time on Home's route follows
+  the watch's 12/24h setting, which the request carries. Until the page comes
+  (and with the phone away) the watch draws the title, header and
+  `Finding route…` / `Connect your phone` itself in the same layout.
 - **Route safety** (planner rules): every step walkable as written (no
   fore/aft run through cabin corridors that don't connect); change sides only
   where the plans show a link (lobby, promenade, open deck); no crew doors or
@@ -1010,7 +1020,18 @@ holds on the Round 2 unless this section says otherwise.
   instead of the bar at the bottom. Not built: the short scroll arc on the
   right edge for long pages (the triangles stay, inside the body); it needs
   a shared `ui.c` helper and the budget is used (G5/G6).
-- **Scroll triangles:** inside the body column (top and bottom).
+- **Place card and Route screen, since 1.6.3 (GP; mockups `Place`,
+  `Route`):** both are phone-built pages (§10.2, §10.3), laid out for the
+  Round 2 on the phone. The place card is centered with short dividers
+  (150 px), `Restroom · 30 m aft` in place of `Closest restroom · …`, and
+  only `Select for route ›` as its hint (`Hold Select: restroom route`
+  when there's no route). The Route screen puts its header in the top
+  bar's label line (`ROUTE · FROM YOUR CABIN`, `CLOSEST TO` shortened to
+  `NEAR`), centers the title and the lines under the steps between short
+  dividers (110 px), keeps the steps left-aligned with their glyphs, and
+  puts Home's event time and title on two lines.
+- **Scroll triangles:** inside the body column (top and bottom); the right
+  edge scroll arc isn't built yet.
 
 **Tools:** `tools/watch_size.py` checks both binaries against the 62 KB
 budget; `tools/screens.sh <dir>` installs on each emulator in turn and saves a

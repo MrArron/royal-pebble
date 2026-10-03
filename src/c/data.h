@@ -213,35 +213,15 @@ typedef enum {
   DIR_ROW_HEADER = 0,  // small-caps header; the cursor skips it
   DIR_ROW_ITEM = 1,    // name and optional sub-line; opens `ref` when not 0
   DIR_ROW_EVENT = 2,   // an event at the place: title, start and minutes
-  DIR_ROW_PLACE = 3,   // a heading: the name; for a place, its area in line2
+  DIR_ROW_PLACE = 3,   // a heading drawn from the page's lines; line2: its route's header
 } DirRowKind;
 
 // Row flags on items.
 #define DIR_ITEM_MUTED 1  // a place drawn muted (elevator banks)
-
-// Ship GPS FROM block on a place page (docs/WATCH_PROTOCOL.md, Ship directory).
-#define DIR_GPS_APPROX 1    // "Spot approximate"
-#define DIR_GPS_NO_CABIN 2  // no FROM block: "Add your stateroom..."
-#define DIR_GPS_NO_FROM 4   // no FROM block (no route), only the restroom line
-
-typedef struct {
-  int8_t decks;         // decks to go, + = up
-  uint8_t flags;        // DIR_GPS_
-  bool has_rest;        // a closest restroom line
-  int8_t rest_decks;    // from the venue to the restroom
-  char header[32];      // "FROM YOUR CABIN"
-  char text[32];        // "160 m fore", "Your deck · 50 m aft"
-  char rest_text[32];   // "30 m aft"
-} DirGps;
-
-// An elevator bank's page: the decks it stops at, as chips.
-#define DIR_BANK_DECKS 24
-typedef struct {
-  uint8_t cabin;        // the cabin's deck, 0 if unknown
-  uint8_t count;
-  uint8_t decks[DIR_BANK_DECKS];
-  char text[32];        // "Aft · Decks 3-17"
-} DirBank;
+// Row flags on a heading (drawn from the page's lines).
+#define DIR_PLACE_PAGE 1   // a place page: the heading takes the cursor
+#define DIR_PLACE_ROUTE 2  // Select opens the route to the place
+#define DIR_PLACE_REST 4   // Hold Select opens the route to its closest restroom
 
 typedef struct {
   int32_t start;     // events: cruise minutes, NO_TIME for untimed
