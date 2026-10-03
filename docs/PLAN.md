@@ -93,7 +93,7 @@ becomes an arc along the bottom edge.
 | G5 | Directory and Route (the place card and Route screen are done in GP; left: the directory lists, the scroll arc) | **Done in 1.6.4** (DESIGN.md §15): Today and directory lists with the centered pill and muted smaller neighbors, the scroll arc on long pages, route steps up to three lines on the Round 2 (the longest Harmony arrival fits); 5-level directory walk on the gabbro emulator. Time 2 unchanged (58,776 B, same code), Round 2 61,120 B (+904 B; 2,368 B under budget) |
 | G6 | My info, voice card, On board?, phone-away, dictation failed | **Done in 1.6.5** (DESIGN.md §15): My info with the blue stateroom card and pills, the Ask card centered with a two-line hint, phone-away and no-answer messages, On board? and Remove star? with the edge labels by the button positions; a 4-row card fits, a long TRY text wraps (gabbro emulator, `pebble transcribe`). Time 2 unchanged (58,776 B, same code), Round 2 61,856 B (+736 B; 1,632 B under budget) |
 | G6a | Time 2 matching style: rounded selection pill, right-edge scroll bar on long pages, time-ashore bar on the all-aboard alert (shared `ui.c` helpers) | **Done in 1.6.6** (DESIGN.md §1, §8.2, §9): pill on Today, the directory and My info (blue stateroom card), the scroll bar on every long page, the all-aboard alert with Home's countdown and bar; emery emulator matches the PT2 mockups, gabbro screens unchanged. Time 2 59,056 B (+280 B), Round 2 61,592 B (-264 B) |
-| G7 | Phone: per-platform text budgets for route lines, card rows, hints; tests for both | No fixture string over budget |
+| G7 | Phone: per-platform text budgets for route lines, card rows, hints; tests for both | **Done in 1.6.7** (WATCH_PROTOCOL.md Text budgets): `textfit.js` words the voice card and the Round 2's page lines for the watch's column; `test/pkjs/textfit.test.js` checks every Harmony place page and route and a set of sayings on both platforms. The watch code is unchanged (Time 2 59,056 B, Round 2 61,592 B) |
 | G8 | Soak on the Round 2 from arrival to the freeze: alerts, routes, a dictation session, both themes, usage log shared back | No crashes; hardware-only faults fixed |
 
 Stages before G0c and G8 run on the gabbro emulator until the Round 2 arrives.
@@ -119,7 +119,9 @@ budget). G5 done in 1.6.4: Today and the directory's lists with the
 centered pill, and the scroll arc on long pages. G6 done in 1.6.5: My info,
 the Ask card and its messages, and the On board? labels by the buttons.
 G6a done in 1.6.6: the Time 2's pill, scroll bar and all-aboard bar (+280 B
-on the Time 2, 4,432 B under budget). Next: G7.
+on the Time 2, 4,432 B under budget). G7 done in 1.6.7: the phone words
+the voice card and pages for each watch (no watch code). Next: G8, the soak
+on the Round 2 once it arrives.
 
 ## 4. Phase 6: Planning
 

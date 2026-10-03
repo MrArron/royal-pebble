@@ -1101,8 +1101,11 @@ holds on the Round 2 unless this section says otherwise.
   The watch's own messages show as one Gothic 24 bold line in the middle
   with a muted detail under it (`Voice is heard on the phone`, `Bring the
   phone nearby, then hold Select to ask`) or, for `No answer from the
-  phone`, `Hold: ask again` in blue near the bottom edge. The phone's card
-  wording is not changed yet (G7).
+  phone`, `Hold: ask again` in blue near the bottom edge. From 1.6.7 the phone
+  words the card for the Round 2 (`src/pkjs/textfit.js`): short hints
+  (`Select: route`, `Select: alerts off today`, `Nothing to change · Hold: ask
+  again`, `Undo: “Forget where I am”`), at most two lines, and row values cut
+  at three lines. The Time 2's card is unchanged.
 
 **Tools:** `tools/watch_size.py` checks both binaries against the 62 KB
 budget; `tools/screens.sh <dir>` installs on each emulator in turn and saves a

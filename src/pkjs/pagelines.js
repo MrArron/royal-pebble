@@ -6,6 +6,7 @@
 
 var pack = require('./pack');
 var gpstext = require('./gpstext');
+var textfit = require('./textfit');
 
 var DOT = ' · ';
 
@@ -32,6 +33,7 @@ var STEP = 8;  // + the step's glyph (gpstext GLYPH_*)
 // LINE_H18, LINE_H24). Pages are laid out with them: a line that wraps on
 // the watch pushes the rest down by itself.
 var H = [14, 18, 24];
+var FONT_PX = [14, 18, 24];  // each font's size (textfit.js budgets are by size)
 var TEXT_MAX = 63;  // the watch's line buffer is 64 bytes with the NUL
 var CHIP_ROWS_H = 23;
 var CHIPS_PER_ROW = 7;
@@ -68,6 +70,12 @@ Page.prototype.text = function(top, font, color, text, o) {
   o = o || {};
   var center = o.center === undefined ? this.round : o.center;
   text = text || '';
+  if (this.round) {
+    // The Round 2's narrow column: cut to the lines the box holds (textfit.js);
+    // a step's glyph takes the first characters of its lines.
+    var b = textfit.lineBudget('gabbro', FONT_PX[font], o.maxH || H[font], H[font], o.glyph >= STEP ? 2 : 0);
+    text = textfit.fit(text, b.per, b.lines);
+  }
   this.push({style: font | (center ? CENTER : 0) | (color << 3), glyph: o.glyph || PLAIN, maxH: o.maxH || H[font],
              bytes: pack.utf8(text, o.max || TEXT_MAX)}, top, top + (text ? H[font] : 0));
 };

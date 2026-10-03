@@ -13,6 +13,7 @@ var venues = require('./venues');
 var directory = require('./directory');
 var routestart = require('./routestart');
 var voicecard = require('./voicecard');
+var textfit = require('./textfit');
 var gpstext = require('./gpstext');
 var shipmap = require('./shipmap');
 var logLib = require('./log');
@@ -175,7 +176,7 @@ function watchInfo() {
 // centered and shorter.
 function pageOpts() {
   var w = watchInfo();
-  return {round: !!(w && (w.platform === 'gabbro' || w.platform === 'chalk'))};
+  return {round: textfit.platformOf(w) === 'gabbro'};
 }
 
 function phoneText() {
@@ -431,7 +432,7 @@ function sendVoiceCard() {
   s_voice = null;
   var data = currentData();
   var ctx = ctxOf(data);
-  var card = voicecard.answer(turn.text, ctx, data.isDemo, turn.state);
+  var card = voicecard.answer(turn.text, ctx, data.isDemo, turn.state, textfit.platformOf(watchInfo()));
   s_sending = true;
   sendQueue([{msg_type: MSG_VOICE_CARD, voice_seq: turn.seq, voice_card: voicecard.packCard(card)}],
             function(ok, info) {
