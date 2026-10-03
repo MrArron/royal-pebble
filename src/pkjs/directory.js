@@ -9,6 +9,7 @@ var slice = require('./slice');
 var shipmap = require('./shipmap');
 var gpstext = require('./gpstext');
 var routestart = require('./routestart');
+var pagelines = require('./pagelines');
 
 var L = venues.lib;
 var DOT = ' ' + String.fromCharCode(183) + ' ';
@@ -31,7 +32,7 @@ var REF_FLAG = 30000;  // + a place page's ref: Flag a map problem (Map check)
 var ROW_HEADER = 0;  // small-caps header, the cursor skips it
 var ROW_ITEM = 1;    // name and optional sub-line; opens `ref` when not 0
 var ROW_EVENT = 2;   // an event at the place: title, the watch formats the time
-var ROW_PLACE = 3;   // a heading: the name, and for a place its area (where is dir_where)
+var ROW_PLACE = 3;   // a heading: the name and its area; the watch draws its card from dir_lines (pagelines.js)
 
 // Row flags on items: a place the cursor can open, drawn muted (elevator banks).
 var ROW_MUTED = 1;
@@ -54,9 +55,8 @@ var SHORT_AREAS = {
 
 var LINE1_MAX = 39;  // the watch keeps 40 and 32 bytes with the NUL
 var LINE2_MAX = 31;
-var GPS_TEXT_MAX = 31;  // the FROM header and line: 32 bytes with the NUL
 
-// dir_gps flags.
+// Ship GPS block flags (page.gps.flags).
 var GPS_APPROX = 1;    // the place's spot is approximate
 var GPS_NO_CABIN = 2;  // no stateroom on the Me tab: no FROM block, a hint instead
 var GPS_NO_FROM = 4;   // no route from the start: no FROM block, only the restroom line
@@ -65,6 +65,14 @@ var TEXT_MAX = 23;   // title and label
 var MAX_ROWS = 40;
 // One message; the watch inbox is 2048 bytes and also holds the keys.
 var ROWS_MAX_BYTES = 1500;
+// dir_rows and dir_lines together.
+var PAGE_MAX_BYTES = 1900;
+
+// Heading row flags (the watch's DIR_PLACE_*): a place page, whose heading
+// takes the cursor; Select opens its route; Hold Select its restroom route.
+var HEAD_PLACE = 1;
+var HEAD_ROUTE = 2;
+var HEAD_REST = 4;
 
 function shortArea(area) {
   return SHORT_AREAS[area] || area;
@@ -509,7 +517,7 @@ function placeGps(v, ctx, cabin) {
 }
 
 // An elevator bank (§10.2): its name, `Aft · Decks 3-17`, the STOPS AT chips
-// (dir_bank) and the FROM block to its lobby on the best deck.
+// (page.bank) and the FROM block to its lobby on the best deck.
 function bankPage(b, ctx, cabin, all) {
   var gps = ctx.bundle ? fromBlock(b.spots, ctx, cabin) : null;
   if (gps) {
@@ -541,7 +549,7 @@ function spotProblem(v, to) {
   return null;
 }
 
-// A place: its heading (name, area; where it is goes in dir_where), the Ship GPS
+// A place: its heading (name, area; where it is goes in page.where), the Ship GPS
 // FROM block when there is one, and what's on there for the rest of today.
 function placePage(v, ctx, cabin) {
   var key = areaKey(v);
@@ -613,8 +621,6 @@ function flagPage(info) {
 
 var ROUTE_REDUCED = 1;  // shown less: the planner isn't sure (§10.3)
 var ROUTE_STEPS_MAX = 8;  // the watch keeps 8, the arrival last
-var ROUTE_TEXT_MAX = 39;  // title, steps and the small foot line: 40 bytes with the NUL
-var ROUTE_LEAD_MAX = 63;
 
 // "Same deck as Royal Theater", "1 deck above Royal Theater".
 function deckFrom(decks, name) {
@@ -859,14 +865,15 @@ function routePage(ref, rest, ctx) {
 }
 
 // The Route screen to an event (Home's NEXT, §4.1): `ev` is {start (cruise
-// minutes), venue (as the watch has it, maybe cut short)}. The route starts
+// minutes), venue and title (as the watch has them, maybe cut short)}. The route starts
 // where you'll be before the event (§10.4). As routePage, with `start` in place
-// of ref and rest, and no summary: the watch shows the event's time and title
+// of ref and rest, and no summary: `event` puts the event's time and title
 // under the steps.
 function eventRoutePage(ev, ctx) {
   var s = setup(ctx);
   var ship = s.c.shipCode;
-  var name = eventVenue(ev, s.c);
+  var found = eventAt(ev, s.c);
+  var name = found ? found.venue : String(ev.venue || '');
   var target = null;
   var problem = null;
   if (ctx.bundle && name && shipmap.data(ship)) {
@@ -895,20 +902,22 @@ function eventRoutePage(ev, ctx) {
   page.ref = 0;
   page.rest = false;
   page.start = ev.start;
+  // Under the steps: the event's time and title (the watch sends its clock style
+  // and its own copy of the title, used when the phone's events differ).
+  page.event = {start: ev.start, title: found ? found.title : String(ev.title || '')};
   return page;
 }
 
-// The event's full venue name: the watch's copy may be cut short, so match it
-// against the day's events that start then.
-function eventVenue(ev, c) {
+// The day's event the watch means: the one starting then at its venue (the
+// watch's copy may be cut short), or null.
+function eventAt(ev, c) {
   var sent = String(ev.venue || '');
   if (!c.bundle || !sent) {
-    return sent;
+    return null;
   }
   var sailDays = slice.daysFromIso(c.bundle.sailDate);
-  var found = slice.buildEvents(c.bundle, c.settings, c.stars, slice.cruiseDayIndex(ev.start), sailDays)
-    .filter(function(e) { return e.start === ev.start && e.venue && e.venue.indexOf(sent) === 0; })[0];
-  return found ? found.venue : sent;
+  return slice.buildEvents(c.bundle, c.settings, c.stars, slice.cruiseDayIndex(ev.start), sailDays)
+    .filter(function(e) { return e.start === ev.start && e.venue && e.venue.indexOf(sent) === 0; })[0] || null;
 }
 
 // Only walking, on one deck, within one of Fore / Mid / Aft.
@@ -952,27 +961,16 @@ function restroomRoute(target, at, ship, opts) {
           flags: gpstext.reduced(r) ? ROUTE_REDUCED : 0};
 }
 
-// uint8 flags, int8 decks (the small line's arrow), then title, header, lead,
-// big and small texts as uint8 length and UTF-8 bytes, then uint8 step count
-// and each step's uint8 glyph and text.
-function encodeRoute(p) {
-  var out = [p.flags & 255, int8(p.small.decks)];
-  [[p.title, ROUTE_TEXT_MAX], [p.header, GPS_TEXT_MAX], [p.lead, ROUTE_LEAD_MAX], [p.big, GPS_TEXT_MAX],
-   [p.small.text, ROUTE_TEXT_MAX]].forEach(function(f) {
-    var b = pack.utf8(f[0] || '', f[1]);
-    out = out.concat([b.length], b);
-  });
-  out.push(p.steps.length);
-  p.steps.forEach(function(st) {
-    var b = pack.utf8(st.text || '', ROUTE_TEXT_MAX);
-    out = out.concat([st.glyph & 255, b.length], b);
-  });
-  return out;
-}
-
-// The ROUTE_PAGE message (without msg_type). An event's route echoes its start.
-function routeMsg(page) {
-  var m = {dir_ref: page.ref, route_rest: page.rest ? 1 : 0, route: encodeRoute(page)};
+// The ROUTE_PAGE message (without msg_type): the page as lines for the watch
+// (pagelines.js); on the Round 2 the header goes in the top bar's label. An
+// event's route echoes its start. opts: {round, h24}.
+function routeMsg(page, opts) {
+  opts = opts || {};
+  var m = {dir_ref: page.ref, route_rest: page.rest ? 1 : 0, route: pagelines.encode(pagelines.routeLines(page, opts))};
+  if (opts.round && page.header) {
+    // The label line is short: "NEAR ROYAL THEATER" for "CLOSEST TO ROYAL THEATER".
+    m.dir_label = pack.cutText(page.header.replace(/^CLOSEST TO /, 'NEAR '), TEXT_MAX);
+  }
   if (page.start !== undefined) {
     m.route_start = page.start;
   }
@@ -1055,15 +1053,17 @@ function encodeRow(r) {
           line1.length].concat(line1, [line2.length], line2);
 }
 
-// Rows as bytes: as many as fit, and a last row saying how many were left out.
-function packRows(rows) {
+// Rows as bytes: as many as fit in `maxBytes` (ROWS_MAX_BYTES by default), and
+// a last row saying how many were left out.
+function packRows(rows, maxBytes) {
+  maxBytes = maxBytes || ROWS_MAX_BYTES;
   var bytes = [];
   var more = {kind: ROW_ITEM, ref: 0, line1: '', line2: 'The rest are on your phone'};
   var reserve = ROW_FIXED + 2 + LINE1_MAX + LINE2_MAX;
   for (var i = 0; i < rows.length; i++) {
     var b = encodeRow(rows[i]);
     var last = i === rows.length - 1;
-    if (i >= MAX_ROWS - (last ? 0 : 1) || bytes.length + b.length + (last ? 0 : reserve) > ROWS_MAX_BYTES) {
+    if (i >= MAX_ROWS - (last ? 0 : 1) || bytes.length + b.length + (last ? 0 : reserve) > maxBytes) {
       more.line1 = (rows.length - i) + ' more';
       return bytes.concat(encodeRow(more));
     }
@@ -1072,54 +1072,37 @@ function packRows(rows) {
   return bytes;
 }
 
-// The DIR_PAGE message (without msg_type) for a page.
-function message(page) {
+// The heading row as the watch gets it: its flags say what Select and Hold
+// Select do, and line 2 is the Route screen's header until its page comes
+// (the area is on the card).
+function headingRow(page, r) {
+  var acts = pagelines.placeActions(page);
+  return {kind: ROW_PLACE, ref: 0, line1: r.line1,
+          line2: acts.route ? page.gps.header : '',
+          flags: (acts.place ? HEAD_PLACE : 0) | (acts.route ? HEAD_ROUTE : 0) | (acts.rest ? HEAD_REST : 0)};
+}
+
+// The DIR_PAGE message (without msg_type) for a page. A page that starts with
+// a heading gets its card as lines (pagelines.js) for the watch it is sent
+// to: opts.round for the Round 2.
+function message(page, opts) {
   var m = {
     dir_ref: page.ref,
     dir_title: (page.title || '').slice(0, TEXT_MAX),
-    dir_label: (page.label || '').slice(0, TEXT_MAX),
-    dir_rows: packRows(page.rows)
+    dir_label: (page.label || '').slice(0, TEXT_MAX)
   };
+  var rows = page.rows;
+  var maxBytes = ROWS_MAX_BYTES;
+  if (rows.length && rows[0].kind === ROW_PLACE) {
+    m.dir_lines = pagelines.encode(pagelines.placeLines(page, opts));
+    rows = [headingRow(page, rows[0])].concat(rows.slice(1));
+    maxBytes = Math.min(ROWS_MAX_BYTES, PAGE_MAX_BYTES - m.dir_lines.length);
+  }
+  m.dir_rows = packRows(rows, maxBytes);
   if (page.rel !== null && page.rel !== undefined) {
     m.dir_rel = page.rel;
   }
-  if (page.where) {
-    m.dir_where = pack.encodeWhere(page.where);
-  }
-  if (page.gps) {
-    m.dir_gps = encodeGps(page.gps);
-  }
-  if (page.bank) {
-    m.dir_bank = encodeBank(page.bank);
-  }
   return m;
-}
-
-function int8(n) {
-  return Math.max(-127, Math.min(127, n | 0)) & 255;
-}
-
-// int8 decks (signed, + = up), uint8 flags, then the FROM header and the FROM
-// line text, each as uint8 length and UTF-8 bytes; then, with a closest
-// restroom, its int8 decks and text the same way.
-function encodeGps(g) {
-  var header = pack.utf8(g.header || '', GPS_TEXT_MAX);
-  var text = pack.utf8(g.text || '', GPS_TEXT_MAX);
-  var out = [int8(g.decks), g.flags & 255, header.length].concat(header, [text.length], text);
-  if (g.rest) {
-    var rest = pack.utf8(g.rest.text || '', GPS_TEXT_MAX);
-    out = out.concat([int8(g.rest.decks), rest.length], rest);
-  }
-  return out;
-}
-
-// uint8 cabin deck (0 none), uint8 count and the decks the bank stops at, then
-// the line under the name as uint8 length and UTF-8 bytes.
-var BANK_DECKS_MAX = 24;  // the watch keeps 24
-function encodeBank(b) {
-  var text = pack.utf8(b.text || '', GPS_TEXT_MAX);
-  var decks = b.decks.slice(0, BANK_DECKS_MAX);
-  return [(b.cabin | 0) & 255, decks.length].concat(decks, [text.length], text);
 }
 
 module.exports = {
@@ -1131,8 +1114,9 @@ module.exports = {
   AREA_KEYS: AREA_KEYS, MAX_ROWS: MAX_ROWS, ROWS_MAX_BYTES: ROWS_MAX_BYTES,
   GPS_APPROX: GPS_APPROX, GPS_NO_CABIN: GPS_NO_CABIN, GPS_NO_FROM: GPS_NO_FROM,
   places: places, deckRanges: deckRanges, bankDecksText: bankDecksText, buildPage: buildPage,
-  encodeRow: encodeRow, packRows: packRows, encodeGps: encodeGps, encodeBank: encodeBank, message: message,
+  encodeRow: encodeRow, packRows: packRows, message: message, HEAD_PLACE: HEAD_PLACE, HEAD_ROUTE: HEAD_ROUTE,
+  HEAD_REST: HEAD_REST, PAGE_MAX_BYTES: PAGE_MAX_BYTES,
   ROUTE_REDUCED: ROUTE_REDUCED, ROUTE_STEPS_MAX: ROUTE_STEPS_MAX,
-  routePage: routePage, eventRoutePage: eventRoutePage, encodeRoute: encodeRoute, routeMsg: routeMsg,
+  routePage: routePage, eventRoutePage: eventRoutePage, routeMsg: routeMsg,
   startReason: startReason, flagInfo: flagInfo
 };

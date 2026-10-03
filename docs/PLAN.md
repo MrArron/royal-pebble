@@ -1,6 +1,6 @@
 # Royal Pebble — Plan to the sailing
 
-The one active plan, as of 2026-10-02 (app 1.6.0). What is built is in
+The one active plan, as of 2026-10-02 (app 1.6.3). What is built is in
 `PROJECT_BRIEF.md`; screens are in `DESIGN.md`. Update this file as work lands
 and delete what's done once it's in the brief.
 
@@ -87,12 +87,13 @@ becomes an arc along the bottom edge.
 | G0c | When the Round 2 arrives: install through the second wearer's Android phone (share her data first) | Install route works |
 | G1 | Round mockups in `docs/mockups/round/` (done) | Owner approved; arc chosen |
 | G2 | `gabbro` target, `pebble-dev.json`, `watch_size.py` for both, `layout.h`, round-aware `ui.c` helpers, screenshot script | **Done in 1.6.0** (DESIGN.md §15): Time 2 code byte-identical (61,984 B), Round 2 62,176 B; nothing clipped on the gabbro emulator walk |
-| G3 | Home: centered time and next event, timeline arc | Mockup match; Time 2 unchanged |
-| G4 | Alerts and notices | Alerts fire on time on the gabbro emulator |
-| G5 | Directory and Route | Longest real step fits; 5-level directory walk |
-| G6 | My info, voice card, On board?, phone-away, dictation failed | 4-row card fits; long TRY text wraps |
-| G6a | Time 2 matching style: rounded selection pill, right-edge scroll bar on long pages, time-ashore bar on the all-aboard alert (shared `ui.c` helpers) | Mockup match on the Time 2; under the 62 KB budget; cost stated in the PR |
-| G7 | Phone: per-platform text budgets for route lines, card rows, hints; tests for both | No fixture string over budget |
+| G3 | Home: centered time and next event, timeline arc | **Done in 1.6.1** (DESIGN.md §15): Time 2 code byte-identical (61,984 B), Round 2 62,920 B (568 B under budget); gabbro emulator matches the Home and summary mockups |
+| G4 | Alerts and notices | **Done in 1.6.2** (DESIGN.md §15): centered alerts and notices, all-aboard alert with the arc, round clash toast; alerts fire on time in real time on the gabbro emulator. Time 2 61,904 B (-80 B), Round 2 63,472 B (16 B under budget). Scroll arc not built |
+| GP | Generic phone page (owner, 2026-10-02): the place card and the Route screen become phone-built pages of styled lines, one small watch renderer for both watches | **Done in 1.6.3** (DESIGN.md §10.2, §10.3, §15; WATCH_PROTOCOL.md Page lines): Time 2 pages pixel-identical, Round 2 pages centered per the mockups. Time 2 58,776 B (-3,128 B), Round 2 60,216 B (-3,256 B; 3,272 B under budget) |
+| G5 | Directory and Route (the place card and Route screen are done in GP; left: the directory lists, the scroll arc) | **Done in 1.6.4** (DESIGN.md §15): Today and directory lists with the centered pill and muted smaller neighbors, the scroll arc on long pages, route steps up to three lines on the Round 2 (the longest Harmony arrival fits); 5-level directory walk on the gabbro emulator. Time 2 unchanged (58,776 B, same code), Round 2 61,120 B (+904 B; 2,368 B under budget) |
+| G6 | My info, voice card, On board?, phone-away, dictation failed | **Done in 1.6.5** (DESIGN.md §15): My info with the blue stateroom card and pills, the Ask card centered with a two-line hint, phone-away and no-answer messages, On board? and Remove star? with the edge labels by the button positions; a 4-row card fits, a long TRY text wraps (gabbro emulator, `pebble transcribe`). Time 2 unchanged (58,776 B, same code), Round 2 61,856 B (+736 B; 1,632 B under budget) |
+| G6a | Time 2 matching style: rounded selection pill, right-edge scroll bar on long pages, time-ashore bar on the all-aboard alert (shared `ui.c` helpers) | **Done in 1.6.6** (DESIGN.md §1, §8.2, §9): pill on Today, the directory and My info (blue stateroom card), the scroll bar on every long page, the all-aboard alert with Home's countdown and bar; emery emulator matches the PT2 mockups, gabbro screens unchanged. Time 2 59,056 B (+280 B), Round 2 61,592 B (-264 B) |
+| G7 | Phone: per-platform text budgets for route lines, card rows, hints; tests for both | **Done in 1.6.7** (WATCH_PROTOCOL.md Text budgets): `textfit.js` words the voice card and the Round 2's page lines for the watch's column; `test/pkjs/textfit.test.js` checks every Harmony place page and route and a set of sayings on both platforms. The watch code is unchanged (Time 2 59,056 B, Round 2 61,592 B) |
 | G8 | Soak on the Round 2 from arrival to the freeze: alerts, routes, a dictation session, both themes, usage log shared back | No crashes; hardware-only faults fixed |
 
 Stages before G0c and G8 run on the gabbro emulator until the Round 2 arrives.
@@ -109,7 +110,18 @@ docs-only PRs don't bump. G2 is 1.6.0; G3-G7 take 1.6.Y.
 
 **Progress:** G0a-G0b measured (gabbro builds to the same size as emery, 128 KB
 app RAM, mic yes, no speaker). G1 approved. G2 done in 1.6.0: the Round 2
-build is plain but usable. Next: G3 (check the Round 2's button positions first).
+build is plain but usable. G3 done in 1.6.1: round Home (arc, one next item,
+bottom hints) and morning summary. G4 done in 1.6.2: alerts, notices and the clash toast on the Round 2.
+GP done in 1.6.3: the place card and the Route screen are built on the
+phone and drawn by one small watch renderer, which freed about 3.1 KB on
+the Time 2 (4,712 B under budget) and 3.3 KB on the Round 2 (3,272 B under
+budget). G5 done in 1.6.4: Today and the directory's lists with the
+centered pill, and the scroll arc on long pages. G6 done in 1.6.5: My info,
+the Ask card and its messages, and the On board? labels by the buttons.
+G6a done in 1.6.6: the Time 2's pill, scroll bar and all-aboard bar (+280 B
+on the Time 2, 4,432 B under budget). G7 done in 1.6.7: the phone words
+the voice card and pages for each watch (no watch code). Next: G8, the soak
+on the Round 2 once it arrives.
 
 ## 4. Phase 6: Planning
 

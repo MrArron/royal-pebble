@@ -104,7 +104,7 @@ static int line(GContext *ctx, const char *text, const char *font_key, GColor co
                 int w, int height) {
   graphics_context_set_text_color(ctx, color);
   graphics_draw_text(ctx, text, fonts_get_system_font(font_key), GRect(x, y, w, height),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
   return y + height;
 }
 
@@ -146,8 +146,15 @@ static void fmt_port_times(char *buf, size_t size, const CardDay *day) {
 // arrival (embark day) and all-aboard.
 static int draw_day(GContext *ctx, const CardDay *day, int y, int w) {
   char buf[48];
+#if defined(PBL_ROUND)
+  // Today's label is the top bar's label line (apply_style).
+  if (s_tomorrow) {
+#endif
   fmt_day_label(buf, sizeof(buf), day);
   y = line(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y, w, 16);
+#if defined(PBL_ROUND)
+  }
+#endif
   y = line(ctx, day->kind == DAY_SEA ? "At sea" : day->location, FONT_KEY_GOTHIC_24_BOLD,
            g_theme->text, PAD, y - 4, w, 30);
   if (day->kind == DAY_SEA) {
@@ -183,9 +190,20 @@ static int draw_day(GContext *ctx, const CardDay *day, int y, int w) {
 static int draw_count(GContext *ctx, int starred, int featured, const char *when, int y, int w) {
   char buf[40];
   if (starred > 0) {
+#if defined(PBL_ROUND)
+    // The star and the count centered together.
+    snprintf(buf, sizeof(buf), "%d starred %s", starred, when);
+    int line_w = graphics_text_layout_get_content_size(buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                                                       GRect(0, 0, w, 22), GTextOverflowModeFill,
+                                                       GTextAlignmentLeft).w + 2;
+    int x = PAD + (w - 16 - line_w) / 2;
+    draw_star(ctx, GPoint(x + 6, y + 12), g_theme->sea_accent);
+    return line(ctx, buf, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, x + 16, y, line_w, 22);
+#else
     draw_star(ctx, GPoint(PAD + 6, y + 12), g_theme->sea_accent);
     snprintf(buf, sizeof(buf), "%d starred %s", starred, when);
     return line(ctx, buf, FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD + 16, y, w - 16, 22);
+#endif
   }
   y = line(ctx, "Nothing starred yet", FONT_KEY_GOTHIC_18_BOLD, g_theme->text, PAD, y, w, 22);
   if (featured > 0 && data_meta()->show_featured) {
@@ -294,12 +312,23 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
 static void apply_style(void) {
   CardDay day = card_day();
   window_set_background_color(s_window, g_theme->bg);
+#if defined(PBL_ROUND)
+  // Round 2: today's card puts "DAY 4 · PORT DAY" on the label line
+  // (docs/mockups/round/MorningSummary).
+  char label[24];
+  fmt_day_label(label, sizeof(label), &day);
+  top_bar_set(s_top_bar, day.kind == DAY_SEA ? BAND_SEA : BAND_PORT, BAND_LABEL,
+              s_tomorrow ? "Tomorrow" : label);
+  // The label says which day: no status after it.
+  top_bar_set_right(s_top_bar, "", false, 0);
+#else
   top_bar_set(s_top_bar, day.kind == DAY_SEA ? BAND_SEA : BAND_PORT, BAND_LABEL,
               s_tomorrow ? "Tomorrow" : data_day()->location);
   if (s_tomorrow) {
     // Today's status would be wrong on a card about tomorrow.
     top_bar_set_right(s_top_bar, "", false, 0);
   }
+#endif
 }
 
 static void close_then(void (*next)(void)) {

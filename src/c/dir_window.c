@@ -3,6 +3,7 @@
 #include "comm.h"
 #include "data.h"
 #include "fetch.h"
+#include "lines.h"
 #include "ui.h"
 #include "usage.h"
 
@@ -20,7 +21,6 @@
 #define ITEM2_H 44
 #define EVENT_H 44
 #define MESSAGE_H 84
-#define INDICATOR_H 12
 
 typedef struct {
   Window *window;
@@ -29,15 +29,9 @@ typedef struct {
   int32_t ref;
   char title[24];  // shown until the page arrives
   Fetch fetch;
-  bool has_where;
-  Where where;
-  bool has_gps;
-  DirGps gps;
-  bool has_bank;
-  DirBank bank;
-  Layer *more_above;  // scroll indicators (place pages)
-  Layer *more_below;
-  bool indicators_on;
+  uint8_t *lines;  // the heading's card (lines.h), drawn as sent
+  int lines_length;
+  Layer *bar;  // the scroll bar (place pages)
   DirRow *rows;
   int row_count;
 } View;
@@ -48,29 +42,17 @@ static int s_depth;
 
 static View *top_view(void) { return s_depth > 0 ? s_views[s_depth - 1] : NULL; }
 
-// A place page (a venue or an elevator bank), not an area's.
-static bool is_place(const View *v) { return v->has_where || v->has_bank; }
-
-// A place page's heading takes the cursor (drawn without the highlight), so the
-// page opens at its top however tall the heading is; an area's heading doesn't.
-static bool selectable(const View *v, const DirRow *r) {
+// A place page's heading (a venue or an elevator bank) takes the cursor
+// (drawn without the highlight), so the page opens at its top however tall the
+// heading is; an area's heading doesn't.
+static bool selectable(const DirRow *r) {
   return r->kind == DIR_ROW_ITEM || r->kind == DIR_ROW_EVENT ||
-         (r->kind == DIR_ROW_PLACE && is_place(v));
-}
-
-// Select opens the route: a place page with a FROM block (�9.2).
-static bool has_route(const View *v) {
-  return is_place(v) && v->has_gps && !(v->gps.flags & (DIR_GPS_NO_CABIN | DIR_GPS_NO_FROM));
-}
-
-// Hold Select opens the route to its closest restroom.
-static bool has_rest_route(const View *v) {
-  return v->has_where && v->has_gps && v->gps.has_rest;
+         (r->kind == DIR_ROW_PLACE && (r->flags & DIR_PLACE_PAGE));
 }
 
 static int first_selectable(const View *v) {
   for (int row = 0; row < v->row_count; row++) {
-    if (selectable(v, &v->rows[row])) {
+    if (selectable(&v->rows[row])) {
       return row;
     }
   }
@@ -88,12 +70,15 @@ static void state_changed(void *owner) {
 
 static bool send_request(void *owner) { return comm_request_dir(((View *)owner)->ref); }
 
-// Muted triangles under the top bar and at the bottom while a place page has
-// more above or below (docs/mockups/gps/NOTES.md). The menu's scroll layer
-// keeps them up to date.
+// A place page shows the scroll bar (docs/mockups/round/NOTES.md).
 static void set_indicators(View *v) {
-  set_scroll_indicators(menu_layer_get_scroll_layer(v->menu), v->more_above, v->more_below);
-  v->indicators_on = true;
+#if defined(PBL_ROUND)
+  // The card in the body's column, which the phone laid it out for (the list
+  // is wider).
+  scroll_layer_set_frame(menu_layer_get_scroll_layer(v->menu),
+                         BODY_FRAME(layer_get_bounds(window_get_root_layer(v->window))));
+#endif
+  layer_set_hidden(v->bar, false);
 }
 
 static void page_received(const DirPageMsg *page) {
@@ -119,13 +104,19 @@ static void page_received(const DirPageMsg *page) {
     codec_read_dir_row(&p, end, &v->rows[i]);
   }
   v->row_count = count;
-  v->has_where = page->has_where;
-  v->where = page->where;
-  v->has_gps = page->has_gps;
-  v->gps = page->gps;
-  v->has_bank = page->has_bank;
-  v->bank = page->bank;
-  if (is_place(v)) {
+  free(v->lines);
+  v->lines = page->lines_length > 0 ? malloc(page->lines_length) : NULL;
+  v->lines_length = v->lines ? page->lines_length : 0;
+  if (!v->lines) {
+    // No card (out of memory, or none sent): a place's heading shows its name
+    // as an area heading, which the cursor skips, instead of an empty row.
+    for (int i = 0; i < count; i++) {
+      if (v->rows[i].kind == DIR_ROW_PLACE) {
+        v->rows[i].kind = DIR_ROW_HEADER;
+      }
+    }
+  } else {
+    memcpy(v->lines, page->lines, v->lines_length);
     set_indicators(v);
 #if defined(PBL_ROUND)
     // The page is one tall row: keep its top in view, not its middle.
@@ -154,188 +145,6 @@ static void phone_up(void) {
 
 // ---- Drawing -----------------------------------------------------------------
 
-#define NO_CABIN_HINT "Add your stateroom on the phone for walking directions"
-
-static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int y, int w, int h) {
-  graphics_context_set_text_color(ctx, color);
-  graphics_draw_text(ctx, text, font, GRect(PAD, y, w, h), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
-}
-
-// The Ship GPS block under a place's heading (docs/DESIGN.md §10.2): a
-// divider, `FROM YOUR CABIN`, `↓1 deck · 160 m fore` and `Spot approximate`;
-// with no stateroom, the hint instead. Draws when ctx isn't NULL; returns the
-// new y.
-// "2 decks · 160 m fore" (the arrow is drawn before it), or just the text.
-static void fmt_decks(char *buf, size_t size, int decks, const char *text) {
-  int n = decks < 0 ? -decks : decks;
-  if (n) {
-    snprintf(buf, size, "%d %s \xc2\xb7 %s", n, n == 1 ? "deck" : "decks", text);
-  } else {
-    snprintf(buf, size, "%s", text);
-  }
-}
-
-#define REST_LABEL "Closest restroom"
-
-// A button hint in the sea accent (docs/mockups/gps/NOTES.md), in Gothic 14
-// bold at y, with a drawn `›` after it when `chevron`.
-static void draw_hint(GContext *ctx, const char *text, bool chevron, int y, int w) {
-  GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  draw_line(ctx, text, font, g_theme->sea_accent, y - 2, w, 18);
-  if (chevron) {
-    int x = PAD + graphics_text_layout_get_content_size(text, font, GRect(0, 0, w, 18),
-                                                        GTextOverflowModeTrailingEllipsis,
-                                                        GTextAlignmentLeft).w + 4;
-    draw_chevron(ctx, g_theme->sea_accent, x, y - 2);
-  }
-}
-
-// `Closest restroom · 30 m aft`, measured from the venue (§10.2). With a deck
-// change, or when it doesn't fit on one line, the distance goes on a second
-// line (with the arrow). Then the `Hold Select for its route` hint. Draws when
-// ctx isn't NULL; returns the new y.
-static int layout_rest(GContext *ctx, const View *v, int y, int w) {
-  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  int tw = w - 2 * PAD;
-  char text[64];
-  snprintf(text, sizeof(text), REST_LABEL " \xc2\xb7 %s", v->gps.rest_text);
-  if (v->gps.rest_decks == 0 && text_height(text, small, tw, 40) < 24) {
-    if (ctx) {
-      draw_line(ctx, text, small, g_theme->muted, y - 2, tw, 18);
-    }
-    y += 18;
-  } else {
-    if (ctx) {
-      draw_line(ctx, REST_LABEL, small, g_theme->muted, y - 2, tw, 18);
-      fmt_decks(text, sizeof(text), v->gps.rest_decks, v->gps.rest_text);
-      draw_arrow_line(ctx, false, g_theme->muted, PAD, y + 16, tw, "", v->gps.rest_decks, text);
-    }
-    y += 36;
-  }
-  if (ctx) {
-    draw_hint(ctx, "Hold Select for its route", false, y, tw);
-  }
-  return y + 18;
-}
-
-// The decks an elevator bank stops at, 7 chips a row; the cabin's deck is
-// filled with the sea accent (§10.2). Draws when ctx isn't NULL; returns the new y.
-#define CHIPS_PER_ROW 7
-#define CHIP_GAP 3
-#define CHIP_H 20
-static int layout_chips(GContext *ctx, const View *v, int y, int w) {
-  int chip_w = (w - 2 * PAD - (CHIPS_PER_ROW - 1) * CHIP_GAP) / CHIPS_PER_ROW;
-  int rows = (v->bank.count + CHIPS_PER_ROW - 1) / CHIPS_PER_ROW;
-  if (ctx) {
-    GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-    for (int i = 0; i < v->bank.count; i++) {
-      GRect r = GRect(PAD + (i % CHIPS_PER_ROW) * (chip_w + CHIP_GAP), y + (i / CHIPS_PER_ROW) * (CHIP_H + CHIP_GAP),
-                      chip_w, CHIP_H);
-      bool cabin = v->bank.decks[i] == v->bank.cabin;
-      graphics_context_set_fill_color(ctx, cabin ? g_theme->sea_accent : g_theme->divider);
-      graphics_fill_rect(ctx, r, 0, GCornerNone);
-      if (!cabin) {
-        graphics_context_set_fill_color(ctx, g_theme->bg);
-        graphics_fill_rect(ctx, grect_inset(r, GEdgeInsets(2)), 0, GCornerNone);
-      }
-      char num[4];
-      snprintf(num, sizeof(num), "%d", v->bank.decks[i]);
-      graphics_context_set_text_color(ctx, cabin ? g_theme->bg : g_theme->text);
-      graphics_draw_text(ctx, num, font, GRect(r.origin.x, r.origin.y + 1, r.size.w, CHIP_H - 2),
-                         GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
-    }
-  }
-  return y + rows * (CHIP_H + CHIP_GAP);
-}
-
-static int layout_gps(GContext *ctx, const View *v, int y, int w) {
-  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  int tw = w - 2 * PAD;
-  if (v->gps.flags & DIR_GPS_NO_CABIN) {
-    int h = text_height(NO_CABIN_HINT, small, tw, 36);
-    if (ctx) {
-      draw_line(ctx, NO_CABIN_HINT, small, g_theme->muted, y - 2, tw, h + 4);
-    }
-    return y + h + 2;
-  }
-  y += 4;
-  if (ctx) {
-    draw_divider(ctx, y, w);
-    draw_line(ctx, v->gps.header, small, g_theme->muted, y + 3, tw, 18);
-  }
-  y += 5 + 16;
-  if (ctx) {
-    char text[48];
-    fmt_decks(text, sizeof(text), v->gps.decks, v->gps.text);
-    draw_arrow_line(ctx, true, g_theme->text, PAD, y - 2, tw, "", v->gps.decks, text);
-  }
-  y += 22;
-  if (v->gps.flags & DIR_GPS_APPROX) {
-    if (ctx) {
-      draw_line(ctx, "Spot approximate", small, g_theme->muted, y - 2, tw, 18);
-    }
-    y += 18;
-  }
-  if (ctx) {
-    draw_hint(ctx, "Select for route", true, y, tw);
-  }
-  return y + 18;
-}
-
-// A heading: the name (up to two lines); on a place page, where it is, how far
-// from the cabin (or the GPS block below) and its area. Draws when ctx isn't
-// NULL; returns the height.
-static int layout_place(GContext *ctx, const View *v, const DirRow *r, int w) {
-  GFont name_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-  int tw = w - 2 * PAD;
-  int name_h = text_height(r->line1, name_font, tw, 58);
-  int y = 2;
-  if (ctx) {
-    draw_line(ctx, r->line1, name_font, g_theme->text, y - 4, tw, name_h + 4);
-  }
-  y += name_h + 4;
-  if (v->has_bank) {
-    if (ctx) {
-      draw_line(ctx, v->bank.text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), g_theme->text, y - 2, tw, 22);
-      draw_line(ctx, "STOPS AT", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), g_theme->muted, y + 21, tw, 18);
-    }
-    y = layout_chips(ctx, v, y + 22 + 18, w);
-  }
-  if (v->has_where && where_known(&v->where)) {
-    if (ctx) {
-      char loc[24];
-      fmt_where(loc, sizeof(loc), &v->where);
-      draw_line(ctx, loc, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                where_ashore(&v->where) ? g_theme->port_accent : g_theme->text, y - 2, tw, 22);
-    }
-    y += 22;
-    if (where_has_rel(&v->where)) {
-      if (ctx) {
-        draw_rel_line(ctx, false, g_theme->muted, PAD, y - 2, tw, &v->where);
-      }
-      y += 18;
-    }
-  }
-  if (r->line2[0]) {
-    if (ctx) {
-      draw_line(ctx, r->line2, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), g_theme->muted, y - 2, tw, 18);
-    }
-    y += 18;
-  }
-  if (v->has_gps && v->gps.has_rest) {
-    y = layout_rest(ctx, v, y, w);
-  }
-  if (v->has_gps && !(v->gps.flags & DIR_GPS_NO_FROM)) {
-    y = layout_gps(ctx, v, y, w) + 4;
-    if (ctx) {
-      draw_divider(ctx, y, w);
-    }
-    y += 1;
-  }
-  return y + 2;
-}
-
 // "2:00p - 3:00p", "2:00p", "Now · until 3:00p" or "All day".
 static void fmt_event_time(char *buf, size_t size, const DirRow *r) {
   if (r->start == NO_TIME) {
@@ -355,6 +164,21 @@ static void fmt_event_time(char *buf, size_t size, const DirRow *r) {
   }
 }
 
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/Directory): a place's name with its second line
+// under it, larger on the pill; an event's time above its title.
+static void fill_round_row(RoundRow *r, char *top, size_t size, const DirRow *d) {
+  *r = (RoundRow){.top = "", .top_color = g_theme->muted, .title = d->line1, .sub = d->line2, .big = true};
+  if (d->kind == DIR_ROW_EVENT) {
+    fmt_event_time(top, size, d);
+    r->top = top;
+    r->sub = "";
+    r->big = false;
+    r->icons = (d->flags & EVENT_STARRED) ? ROUND_ROW_STAR : 0;
+  }
+}
+#endif
+
 static void draw_two_lines(GContext *ctx, const char *line1, const char *line2, int w,
                            GColor text, GColor muted) {
   graphics_context_set_text_color(ctx, text);
@@ -365,13 +189,11 @@ static void draw_two_lines(GContext *ctx, const char *line1, const char *line2, 
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
 }
 
-// Loading or no phone, drawn over the cursor's highlight: it isn't a choice.
+// Loading or no phone, without the cursor's pill: it isn't a choice.
 static void draw_message(GContext *ctx, const View *v, GRect b) {
   int w = b.size.w;
   GColor text = g_theme->text;
   GColor muted = g_theme->muted;
-  graphics_context_set_fill_color(ctx, g_theme->bg);
-  graphics_fill_rect(ctx, b, 0, GCornerNone);
   if (v->fetch.state == FETCH_LOADING) {
     graphics_context_set_text_color(ctx, muted);
     graphics_draw_text(ctx, "Loading...", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
@@ -382,11 +204,11 @@ static void draw_message(GContext *ctx, const View *v, GRect b) {
   graphics_context_set_text_color(ctx, text);
   graphics_draw_text(ctx, "Connect your phone", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      GRect(PAD, 4, w - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   graphics_context_set_text_color(ctx, muted);
   graphics_draw_text(ctx, "The ship directory comes from your phone. Select to try again.",
                      fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GRect(PAD, 26, w - 2 * PAD, 54),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
 }
 
 static uint16_t get_num_rows(MenuLayer *menu, uint16_t section, void *context) {
@@ -400,11 +222,20 @@ static int16_t get_cell_height(MenuLayer *menu, MenuIndex *index, void *context)
     return MESSAGE_H;
   }
   const DirRow *r = &v->rows[index->row];
+#if defined(PBL_ROUND)
+  if (r->kind == DIR_ROW_ITEM || r->kind == DIR_ROW_EVENT) {
+    RoundRow round;
+    char top[32];
+    fill_round_row(&round, top, sizeof(top), r);
+    // Under a card the selection isn't centered and rows keep their height.
+    return round_row_height(&round, !v->lines && menu_layer_is_index_selected(menu, index));
+  }
+#endif
   switch (r->kind) {
     case DIR_ROW_HEADER: return HEADER_H;
     case DIR_ROW_EVENT: return EVENT_H;
     case DIR_ROW_PLACE:
-      return layout_place(NULL, v, r, layer_get_bounds(menu_layer_get_layer(menu)).size.w);
+      return lines_draw(NULL, v->lines, v->lines_length, layer_get_bounds(menu_layer_get_layer(menu)).size.w);
     default: return r->line2[0] ? ITEM2_H : ITEM_H;
   }
 }
@@ -418,8 +249,12 @@ static int16_t get_separator_height(MenuLayer *menu, MenuIndex *index, void *con
 static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, void *context) {
   View *v = context;
   if (v->fetch.state == FETCH_READY && index->row > 0 && index->row < v->row_count &&
-      selectable(v, &v->rows[index->row]) && selectable(v, &v->rows[index->row - 1])) {
+      selectable(&v->rows[index->row]) && selectable(&v->rows[index->row - 1])) {
+#if defined(PBL_ROUND)
+    round_divider(ctx, cell, v->menu, index);
+#else
     draw_divider(ctx, 0, layer_get_bounds(cell).size.w);
+#endif
   }
 }
 
@@ -434,18 +269,30 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
     return;
   }
   const DirRow *r = &v->rows[index->row];
+#if defined(PBL_ROUND)
+  if (r->kind == DIR_ROW_ITEM || r->kind == DIR_ROW_EVENT) {
+    RoundRow round;
+    char top[32];
+    fill_round_row(&round, top, sizeof(top), r);
+    round_row_draw(ctx, cell, &round, highlighted);
+    return;
+  }
+#else
+  // The cursor's pill (a place's heading takes the cursor without it).
+  if (highlighted && r->kind != DIR_ROW_PLACE) {
+    fill_pill(ctx, PILL_ROW(layer_get_bounds(cell)));
+  }
+#endif
   switch (r->kind) {
     case DIR_ROW_HEADER:
       graphics_context_set_text_color(ctx, muted);
       graphics_draw_text(ctx, r->line1, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                          GRect(PAD, 4, w - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+                         TEXT_ALIGN, NULL);
       break;
     case DIR_ROW_PLACE:
-      // Drawn over the cursor's highlight: the heading only keeps the page's top in view.
-      graphics_context_set_fill_color(ctx, g_theme->bg);
-      graphics_fill_rect(ctx, layer_get_bounds(cell), 0, GCornerNone);
-      layout_place(ctx, v, r, w);
+      // No pill: the heading only keeps the page's top in view.
+      lines_draw(ctx, v->lines, v->lines_length, w);
       break;
     case DIR_ROW_EVENT: {
       int text_w = w - 2 * PAD;
@@ -483,7 +330,7 @@ static void skip_unselectable(View *v, MenuIndex *new_index, MenuIndex old_index
   }
   int step = new_index->row >= old_index.row ? 1 : -1;
   for (int row = new_index->row; row >= 0 && row < v->row_count; row += step) {
-    if (selectable(v, &v->rows[row])) {
+    if (selectable(&v->rows[row])) {
       new_index->row = row;
       return;
     }
@@ -510,10 +357,10 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
       usage_press(BUTTON_ID_SELECT, 0, index->row);
       dir_window_push(r->ref, r->line1);
       return;
-    } else if (r->kind == DIR_ROW_PLACE && has_route(v)) {
+    } else if (r->kind == DIR_ROW_PLACE && (r->flags & DIR_PLACE_ROUTE)) {
       nothing = 0;
       usage_press(BUTTON_ID_SELECT, 0, index->row);
-      route_window_push(v->ref, false, r->line1, v->gps.header);
+      route_window_push(v->ref, false, r->line1, r->line2);
       return;
     }
   }
@@ -524,7 +371,7 @@ static void select_click(MenuLayer *menu, MenuIndex *index, void *context) {
 static void select_long_click(MenuLayer *menu, MenuIndex *index, void *context) {
   View *v = context;
   bool rest = v->fetch.state == FETCH_READY && index->row < v->row_count &&
-              v->rows[index->row].kind == DIR_ROW_PLACE && has_rest_route(v);
+              v->rows[index->row].kind == DIR_ROW_PLACE && (v->rows[index->row].flags & DIR_PLACE_REST);
   usage_press(BUTTON_ID_SELECT, USAGE_LONG | (rest ? 0 : USAGE_NOTHING), index->row);
   if (rest) {
     route_window_push(v->ref, true, "Restroom", "");
@@ -543,7 +390,7 @@ static void window_load(Window *window) {
   top_bar_set_right(v->top_bar, "", false, 0);
   layer_add_child(root, v->top_bar);
 
-  v->menu = menu_layer_create(BODY_FRAME(b));
+  v->menu = menu_layer_create(LIST_FRAME(b));
   menu_layer_set_callbacks(v->menu, v, (MenuLayerCallbacks){
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -555,14 +402,13 @@ static void window_load(Window *window) {
     .selection_will_change = selection_will_change,
   });
   menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);
-  menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
+  menu_layer_set_highlight_colors(v->menu, LIST_CURSOR_BG, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(v->menu, window);
   layer_add_child(root, menu_layer_get_layer(v->menu));
-  v->more_above = layer_create(GRect(BODY_INSET_X, TOP_BAR_HEIGHT, b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
-  v->more_below = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - INDICATOR_H,
-                                     b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
-  layer_add_child(root, v->more_above);
-  layer_add_child(root, v->more_below);
+  // Place pages: the scroll bar, shown when the card arrives.
+  v->bar = scroll_bar_create(b, menu_layer_get_scroll_layer(v->menu));
+  layer_set_hidden(v->bar, true);
+  layer_add_child(root, v->bar);
   fetch_start(&v->fetch);
 }
 
@@ -570,10 +416,10 @@ static void window_unload(Window *window) {
   View *v = window_get_user_data(window);
   fetch_cancel(&v->fetch);
   menu_layer_destroy(v->menu);
-  layer_destroy(v->more_above);
-  layer_destroy(v->more_below);
+  layer_destroy(v->bar);
   top_bar_destroy(v->top_bar);
   free(v->rows);
+  free(v->lines);
   for (int i = 0; i < s_depth; i++) {
     if (s_views[i] == v) {
       for (int j = i; j + 1 < s_depth; j++) {
@@ -626,10 +472,7 @@ void dir_window_refresh(void) {
       // The theme may have changed (settings page).
       window_set_background_color(v->window, g_theme->bg);
       menu_layer_set_normal_colors(v->menu, g_theme->bg, g_theme->text);
-      menu_layer_set_highlight_colors(v->menu, g_theme->cursor_bg, g_theme->cursor_text);
-      if (v->indicators_on) {
-        set_indicators(v);
-      }
+      menu_layer_set_highlight_colors(v->menu, LIST_CURSOR_BG, g_theme->cursor_text);
       layer_mark_dirty(v->top_bar);
       layer_mark_dirty(menu_layer_get_layer(v->menu));
     }

@@ -33,12 +33,8 @@ typedef struct {
   char label[24];     // top bar, right (when there is no rel)
   bool has_rel;
   int8_t rel;         // decks from the cabin, for the top bar
-  bool has_where;
-  Where where;        // place pages: where the place is
-  bool has_gps;       // place pages: the Ship GPS lines
-  DirGps gps;
-  bool has_bank;      // elevator bank pages
-  DirBank bank;
+  const uint8_t *lines;  // the heading's card (lines.h), NULL for none
+  int lines_length;
   const uint8_t *rows;
   int rows_length;
 } DirPageMsg;
@@ -59,13 +55,15 @@ bool comm_request_dir(int32_t ref);
 
 // A Route screen from the phone (docs/WATCH_PROTOCOL.md, Route screen) for
 // place page `ref`, to its closest restroom when `rest`, or to the event that
-// starts at `start` (NO_TIME for a place page). `data` points into the message
-// and is only valid in the handler.
+// starts at `start` (NO_TIME for a place page): its lines (lines.h) and the top
+// bar's right label. `lines` points into the message and is only valid in the
+// handler.
 typedef struct {
   int32_t ref;
   bool rest;
   int32_t start;
-  const uint8_t *data;
+  char label[24];
+  const uint8_t *lines;
   int length;
 } RoutePageMsg;
 
@@ -75,12 +73,10 @@ typedef void (*CommRoutePageHandler)(const RoutePageMsg *page);
 // from the phone.
 void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler on_failed,
                              CommPhoneUpHandler on_phone_up);
-// Asks the phone for the route to place page `ref` (or to its closest restroom);
-// false if the outbox was busy.
-bool comm_request_route(int32_t ref, bool rest);
-// Asks the phone for the route to the event at `start` (cruise minutes) at
-// `venue` (Home's NEXT); false if the outbox was busy.
-bool comm_request_event_route(int32_t start, const char *venue);
+// Asks the phone for the route to place page `ref` (or to its closest
+// restroom), or with `start` not NO_TIME to the event at `start` (cruise
+// minutes) at `venue` (Home's NEXT); false if the outbox was busy.
+bool comm_request_route(int32_t ref, bool rest, int32_t start, const char *venue, const char *title);
 
 // Voice (docs/WATCH_PROTOCOL.md, Voice): sends the transcript for voice turn
 // `seq` with the watch's `state` bits (1: on board today, 2: 24-hour clock), or with `text` NULL

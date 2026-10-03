@@ -35,7 +35,11 @@ static int find_headline(int32_t now, bool *featured) {
   return -1;
 }
 
+#if defined(PBL_ROUND)
+#define NEXT_ITEMS 1  // the round Home shows one (docs/mockups/round/NOTES.md)
+#else
 #define NEXT_ITEMS 2
+#endif
 
 static bool is_upcoming(const Event *e, int32_t now) { return event_is_timed(e) && e->start >= now; }
 
@@ -98,9 +102,18 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
     int time_w = graphics_text_layout_get_content_size(time_buf, bold, GRect(0, 0, width, 22),
                                                        GTextOverflowModeTrailingEllipsis,
                                                        GTextAlignmentLeft).w;
-    graphics_draw_text(ctx, time_buf, bold, GRect(PAD, y, time_w + 2, 22),
+    // Round 2: "1:00p ★ Title" centered as one line.
+    int x0 = PAD;
+#if defined(PBL_ROUND)
+    int lead = time_w + 4 + ((e->flags & EVENT_STARRED) ? 15 : 0);
+    x0 = (width - lead -
+          graphics_text_layout_get_content_size(e->title, bold, GRect(0, 0, width - 2 * PAD - lead, 22),
+                                                GTextOverflowModeTrailingEllipsis,
+                                                GTextAlignmentLeft).w) / 2;
+#endif
+    graphics_draw_text(ctx, time_buf, bold, GRect(x0, y, time_w + 2, 22),
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-    int text_x = PAD + time_w + 4;
+    int text_x = x0 + time_w + 4;
     if (e->flags & EVENT_STARRED) {
       draw_star(ctx, GPoint(text_x + 6, y + 12), g_theme->sea_accent);
       text_x += 15;
@@ -109,13 +122,23 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
                        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
     // Room is kept for "✓ Reserved"; the venue gets the ellipsis.
     int mark_w = reserved ? reserved_width(false) + 12 : 0;
-    int x = PAD;
+    int vx = PAD;
+#if defined(PBL_ROUND)
+    char whole[VENUE_LEN + 40];
+    snprintf(whole, sizeof(whole), "%s%s%s", tag ? tag : "", tag && venue_line[0] ? " \xc2\xb7 " : "",
+             venue_line);
+    vx = (width - mark_w -
+          graphics_text_layout_get_content_size(whole, small, GRect(0, 0, width - 2 * PAD - mark_w, 18),
+                                                GTextOverflowModeTrailingEllipsis,
+                                                GTextAlignmentLeft).w) / 2;
+#endif
+    int x = vx;
     if (venue_line[0] || tag) {
       x = draw_tagged_line(ctx, tag, g_theme->port_accent, venue_line, g_theme->muted, small,
-                           GRect(PAD, y + 20, width - 2 * PAD - mark_w, 18));
+                           GRect(vx, y + 20, width - 2 * PAD - mark_w, 18));
     }
     if (reserved) {
-      if (x > PAD) {
+      if (x > vx) {
         graphics_context_set_text_color(ctx, g_theme->muted);
         graphics_draw_text(ctx, " \xc2\xb7 ", small, GRect(x, y + 20, 12, 18),
                            GTextOverflowModeFill, GTextAlignmentLeft, NULL);
@@ -129,7 +152,7 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
     graphics_context_set_text_color(ctx, g_theme->muted);
     graphics_draw_text(ctx, "Nothing else today", fonts_get_system_font(FONT_KEY_GOTHIC_18),
                        GRect(PAD, y, width - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
   }
 }
 
@@ -137,11 +160,16 @@ static void draw_line(GContext *ctx, const char *text, GFont font, GColor color,
                       int w, int h);
 
 // "Hold Select: I'm on board" under the countdown and the arrival time (§4.4).
+#if defined(PBL_ROUND)
+#define ONBOARD_HINT "Hold Select: on board"
+#else
+#define ONBOARD_HINT "Hold Select: I'm on board"
+#endif
 static int draw_onboard_hint(GContext *ctx, int y, int width) {
   graphics_context_set_text_color(ctx, g_theme->sea_accent);
-  graphics_draw_text(ctx, "Hold Select: I'm on board", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+  graphics_draw_text(ctx, ONBOARD_HINT, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                      GRect(PAD, y, width - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   return y + 16;
 }
 
@@ -175,12 +203,98 @@ static GColor bar_color(const Day *day, int32_t t, int32_t now) {
   return past ? g_theme->port_accent : g_theme->divider;
 }
 
+// Where the bar starts: the day's arrival, or 04:00 without one.
+static int32_t ashore_from(const Day *day) {
+  return day->arrive != NO_TIME && day->arrive < day->all_aboard
+             ? day->arrive : day->index * MINUTES_PER_DAY + DAY_START;
+}
+
+#if defined(PBL_ROUND)
+// "Excursion back 11:30a" while a booked excursion is out.
+static int draw_excursion_back(GContext *ctx, int y, int w, int32_t now) {
+  for (int i = 0; i < data_event_count(); i++) {
+    Event *e = data_event(i);
+    if (is_excursion(e) && event_end(e) > now) {
+      char t[8], buf[28];
+      fmt_clock(t, sizeof(t), event_end(e));
+      snprintf(buf, sizeof(buf), "Excursion back %s", t);
+      draw_line(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), g_theme->sea_accent, PAD, y,
+                w, 18);
+      return y + 16;
+    }
+  }
+  return y;
+}
+
+// Round 2 (docs/mockups/round/NOTES.md): the bar is an arc along the bottom
+// edge, radius 121 and 8 px wide, from 140° on the left to 40° on the right
+// (screen angles, y down; 230° to 130° clockwise from 12 o'clock), with
+// rounded ends, a radial now tick and the two times just above its ends.
+#define ARC_R 121
+#define ARC_W 8
+#define ARC_START 230
+#define ARC_SPAN 100
+
+static GRect ring(int r) { return GRect(130 - r, 130 - r, 2 * r, 2 * r); }
+
+// The angle `part` of `whole` along the arc.
+static int32_t arc_angle(int32_t part, int32_t whole) {
+  return DEG_TO_TRIGANGLE(ARC_START) - DEG_TO_TRIGANGLE(ARC_SPAN) * part / whole;
+}
+
+static void arc_cap(GContext *ctx, int32_t angle, GColor color) {
+  graphics_context_set_fill_color(ctx, color);
+  graphics_fill_circle(ctx, gpoint_from_polar(ring(ARC_R), GOvalScaleModeFitCircle, angle), ARC_W / 2);
+}
+
+void draw_ashore_arc(GContext *ctx, int32_t now) {
+  const Day *day = data_day();
+  int32_t from = ashore_from(day);
+  int32_t span = day->all_aboard - from;
+  if (span <= 0) {
+    return;
+  }
+  // One degree at a time, in runs of one color.
+  int run = 0;
+  GColor color = bar_color(day, from, now);
+  arc_cap(ctx, arc_angle(0, 1), color);
+  for (int d = 1; d <= ARC_SPAN; d++) {
+    GColor next = d < ARC_SPAN ? bar_color(day, from + span * d / ARC_SPAN, now) : GColorClear;
+    if (!gcolor_equal(next, color)) {
+      graphics_context_set_fill_color(ctx, color);
+      graphics_fill_radial(ctx, ring(ARC_R + ARC_W / 2), GOvalScaleModeFitCircle, ARC_W,
+                           arc_angle(d, ARC_SPAN), arc_angle(run, ARC_SPAN));
+      if (d == ARC_SPAN) {
+        arc_cap(ctx, arc_angle(1, 1), color);
+      }
+      run = d;
+      color = next;
+    }
+  }
+  int32_t t = now - from;
+  t = t < 0 ? 0 : t > span ? span : t;
+  // The now tick: about 2 px wide, radius 114 to 128.
+  int32_t a = arc_angle(t, span);
+  graphics_context_set_fill_color(ctx, g_theme->text);
+  graphics_fill_radial(ctx, ring(128), GOvalScaleModeFitCircle, 14, a - TRIG_MAX_ANGLE / 720,
+                       a + TRIG_MAX_ANGLE / 720);
+
+  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  char buf[8];
+  graphics_context_set_text_color(ctx, g_theme->muted);
+  fmt_clock(buf, sizeof(buf), from);
+  graphics_draw_text(ctx, buf, small, GRect(35, 177, 90, 18), GTextOverflowModeFill,
+                     GTextAlignmentLeft, NULL);
+  fmt_clock(buf, sizeof(buf), day->all_aboard);
+  graphics_draw_text(ctx, buf, small, GRect(135, 177, 90, 18), GTextOverflowModeFill,
+                     GTextAlignmentRight, NULL);
+}
+#else
 // From the day's arrival (04:00 without one) to all-aboard, with a now tick,
 // the two times under it and "Excursion back 11:30a" while one is out.
 static int draw_ashore_bar(GContext *ctx, int y, int width, int32_t now) {
   const Day *day = data_day();
-  int32_t from = day->arrive != NO_TIME && day->arrive < day->all_aboard
-                     ? day->arrive : day->index * MINUTES_PER_DAY + DAY_START;
+  int32_t from = ashore_from(day);
   int32_t span = day->all_aboard - from;
   int w = width - 2 * PAD;
   for (int x = 0; x < w; x++) {
@@ -218,6 +332,7 @@ static int draw_ashore_bar(GContext *ctx, int y, int width, int32_t now) {
   }
   return y + 2;
 }
+#endif  // PBL_ROUND
 
 // A red triangle with a black "!", about the digits' cap height.
 static void draw_warning_sign(GContext *ctx, int x, int y) {
@@ -230,19 +345,32 @@ static void draw_warning_sign(GContext *ctx, int x, int y) {
   draw_bang(ctx, GPoint(x + 14, y + 10), 14, faded ? g_theme->bg : GColorBlack);
 }
 
-static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
+int draw_countdown(GContext *ctx, int y, int width, int32_t now, bool home) {
   const Day *day = data_day();
   int left = (int)(day->all_aboard - now);
 
   graphics_context_set_text_color(ctx, g_theme->port_accent);
   graphics_draw_text(ctx, "ALL ABOARD IN", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      GRect(PAD, y, width - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   y += 18;
 
   char count_buf[16];
   snprintf(count_buf, sizeof(count_buf), "%d:%02d", left / 60, left % 60);
   GFont big = fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD);
+#if defined(PBL_ROUND)
+  // The count and the warning sign centered together.
+  bool warn = in_warning(day, now);
+  int count_w = graphics_text_layout_get_content_size(count_buf, big, GRect(0, 0, width, 50),
+                                                      GTextOverflowModeFill, GTextAlignmentLeft).w;
+  int x = (width - count_w - (warn ? 39 : 0)) / 2;
+  graphics_context_set_text_color(ctx, g_theme->text);
+  graphics_draw_text(ctx, count_buf, big, GRect(x, y, count_w + 2, 50),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  if (warn) {
+    draw_warning_sign(ctx, x + count_w + 8, y + 12);
+  }
+#else
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, count_buf, big, GRect(PAD, y, width - 2 * PAD, 50),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
@@ -252,6 +380,7 @@ static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
                                                         GTextAlignmentLeft).w;
     draw_warning_sign(ctx, PAD + count_w + 8, y + 12);
   }
+#endif
   y += 50;
 
   char ship_buf[8], local_buf[8], both[40];
@@ -261,10 +390,18 @@ static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
   graphics_context_set_text_color(ctx, g_theme->muted);
   graphics_draw_text(ctx, both, fonts_get_system_font(FONT_KEY_GOTHIC_18),
                      GRect(PAD, y, width - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
+#if defined(PBL_ROUND)
+  // The arc, its times and the on-board hint are on the edge layer.
+  return draw_excursion_back(ctx, y + 22, width - 2 * PAD, now) + 4;
+#else
   y = draw_ashore_bar(ctx, y + 26, width, now);
+  if (!home) {
+    return y;
+  }
   draw_divider(ctx, y, width);
   return draw_onboard_hint(ctx, y + 4, width) + 4;
+#endif
 }
 
 // `route`: Select opens the route to this event, so its brief line ends with
@@ -276,7 +413,7 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
     graphics_context_set_text_color(ctx, g_theme->muted);
     graphics_draw_text(ctx, "Nothing starred today", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                        GRect(PAD, y, width - 2 * PAD, 30), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     return y + 36;
   }
 
@@ -297,8 +434,15 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
   }
 
   int label_x = PAD;
+#if defined(PBL_ROUND)
+  // The star and label centered together.
+  label_x = (width - (featured ? 0 : 16) -
+             graphics_text_layout_get_content_size(label, label_font, GRect(0, 0, width, 22),
+                                                   GTextOverflowModeTrailingEllipsis,
+                                                   GTextAlignmentLeft).w) / 2;
+#endif
   if (!featured) {
-    draw_star(ctx, GPoint(PAD + 6, y + 12), g_theme->sea_accent);
+    draw_star(ctx, GPoint(label_x + 6, y + 12), g_theme->sea_accent);
     label_x += 16;
   }
   graphics_context_set_text_color(ctx, g_theme->sea_accent);
@@ -309,10 +453,10 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
   GFont title_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   GRect title_box = GRect(PAD, y, width - 2 * PAD, 56);
   GSize title_size = graphics_text_layout_get_content_size(
-      e->title, title_font, title_box, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
+      e->title, title_font, title_box, GTextOverflowModeTrailingEllipsis, TEXT_ALIGN);
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, e->title, title_font, title_box, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   y += title_size.h + 4;
 
   // "12:00p · On Air" (a long venue wraps to a second line), then the deck in
@@ -327,18 +471,24 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
   GFont detail_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GRect detail_box = GRect(PAD, y, width - 2 * PAD, 40);
   GSize detail_size = graphics_text_layout_get_content_size(
-      detail, detail_font, detail_box, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
+      detail, detail_font, detail_box, GTextOverflowModeTrailingEllipsis, TEXT_ALIGN);
   graphics_context_set_text_color(ctx, g_theme->muted);
   graphics_draw_text(ctx, detail, detail_font, detail_box, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   y += detail_size.h + 2;
+#if defined(PBL_ROUND)
+  // `Route ›` is a bottom hint on the edge layer.
+  (void)route;
+  int hint_w = 0;
+#else
   int hint_w = route ? draw_hint_right(ctx, "Route", width - PAD, y) + 6 : 0;
+#endif
   y += draw_where_short(ctx, false, g_theme->muted, PAD, y, width - 2 * PAD - hint_w, &e->where);
   if (event_not_reserved(e->flags)) {
     graphics_context_set_text_color(ctx, g_theme->port_accent);
     graphics_draw_text(ctx, "Not reserved", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                        GRect(PAD, y, width - 2 * PAD, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 20;
   }
   const char *tag = event_final_tag(e);
@@ -346,7 +496,7 @@ static int draw_headline(GContext *ctx, int y, int width, int32_t now, int index
     graphics_context_set_text_color(ctx, g_theme->port_accent);
     graphics_draw_text(ctx, tag, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                        GRect(PAD, y, width - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 16;
   }
   return y + 4;
@@ -399,7 +549,7 @@ static void draw_line(GContext *ctx, const char *text, GFont font, GColor color,
                       int w, int h) {
   graphics_context_set_text_color(ctx, color);
   graphics_draw_text(ctx, text, font, GRect(x, y, w, h), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
 }
 
 static void draw_sail_countdown(GContext *ctx, int width) {
@@ -407,20 +557,32 @@ static void draw_sail_countdown(GContext *ctx, int width) {
   GFont medium = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   int w = width - 2 * PAD;
   int days = days_to_sail();
+#if defined(PBL_ROUND)
+  // "SAILS IN" is the top bar's label line (apply_style); "days" goes under
+  // the count (docs/mockups/round/DaysToSail).
+  int y = 0;
+#else
   int y = 2;
 
   draw_line(ctx, days > 1 ? "SAILS IN" : "SAILS", small, g_theme->muted, PAD, y, w, 18);
   y += 16;
+#endif
   if (days > 1) {
     char count[8];
     snprintf(count, sizeof(count), "%d", days);
     GFont big = fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS);
+#if defined(PBL_ROUND)
+    draw_line(ctx, count, big, g_theme->text, PAD, y, w, 50);
+    draw_line(ctx, "days", medium, g_theme->text, PAD, y + 44, w, 22);
+    y += 66;
+#else
     int count_w = graphics_text_layout_get_content_size(count, big, GRect(0, 0, w, 50),
                                                         GTextOverflowModeFill,
                                                         GTextAlignmentLeft).w;
     draw_line(ctx, count, big, g_theme->text, PAD, y, count_w + 2, 50);
     draw_line(ctx, "days", medium, g_theme->text, PAD + count_w + 6, y + 31, w - count_w - 6, 22);
     y += 50;
+#endif
   } else {
     draw_line(ctx, days == 1 ? "Tomorrow" : "Today", fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
               g_theme->text, PAD, y - 4, w, 34);
@@ -431,7 +593,12 @@ static void draw_sail_countdown(GContext *ctx, int width) {
   fmt_sail_line(sail, sizeof(sail), medium, w);
   draw_line(ctx, sail, medium, g_theme->muted, PAD, y, w, 22);
   y += 20;
-  if (data_meta()->ship_name[0]) {
+#if defined(PBL_ROUND)
+  bool ship = days > 3;  // no room beside the sync reminder
+#else
+  bool ship = true;
+#endif
+  if (ship && data_meta()->ship_name[0]) {
     draw_line(ctx, data_meta()->ship_name, small, g_theme->muted, PAD, y, w, 18);
     y += 16;
   }
@@ -460,8 +627,15 @@ static void draw_sail_countdown(GContext *ctx, int width) {
   } else {
     char line[32];
     snprintf(line, sizeof(line), "%d starred so far", starred);
-    draw_star(ctx, GPoint(PAD + 6, y + 9), g_theme->sea_accent);
-    draw_line(ctx, line, small, g_theme->text, PAD + 16, y, w - 16, 18);
+    int x = PAD;
+    int line_w = w - 16;
+#if defined(PBL_ROUND)
+    line_w = graphics_text_layout_get_content_size(line, small, GRect(0, 0, w, 18),
+                                                   GTextOverflowModeFill, GTextAlignmentLeft).w + 2;
+    x = (width - 16 - line_w) / 2;
+#endif
+    draw_star(ctx, GPoint(x + 6, y + 9), g_theme->sea_accent);
+    draw_line(ctx, line, small, g_theme->text, x + 16, y, line_w, 18);
   }
 }
 
@@ -598,16 +772,25 @@ static void draw_message(GContext *ctx, int width, const char *title, const char
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, title, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                      GRect(PAD, 10, width - 2 * PAD, 60), GTextOverflowModeWordWrap,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   graphics_context_set_text_color(ctx, g_theme->muted);
   graphics_draw_text(ctx, hint, fonts_get_system_font(FONT_KEY_GOTHIC_18),
                      GRect(PAD, 44, width - 2 * PAD, 100), GTextOverflowModeWordWrap,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
 }
+
+#if defined(PBL_ROUND)
+// What the round edge layer shows, set by the body (drawn just before it).
+enum { EDGE_NONE, EDGE_ARC, EDGE_ROUTE };
+static uint8_t s_edge_shows;
+#endif
 
 static void draw_body(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   const Day *day = data_day();
+#if defined(PBL_ROUND)
+  s_edge_shows = EDGE_NONE;
+#endif
   if (!data_ready()) {
     bool connected = connection_service_peek_pebble_app_connection();
     draw_message(ctx, b.size.w, connected ? "Loading..." : "Phone not connected",
@@ -640,13 +823,22 @@ static void draw_body(Layer *layer, GContext *ctx) {
   } else if (countdown) {
     // The bar takes the next items' place; they're one press away in Today
     // (docs/DESIGN.md §4.2).
-    y = draw_countdown(ctx, y, b.size.w, now);
+    y = draw_countdown(ctx, y, b.size.w, now, true);
+#if defined(PBL_ROUND)
+    s_edge_shows = EDGE_ARC;
+#endif
     draw_clash_count(ctx, PAD, y - 4, b.size.w - 2 * PAD, now);
     return;
   } else {
     bool featured = false;
     skip = find_headline(now, &featured);
+#if defined(PBL_ROUND)
+    bool route = skip >= 0 && routable(data_event(skip));
+    s_edge_shows = route ? EDGE_ROUTE : EDGE_NONE;
+    y = draw_headline(ctx, y, b.size.w, now, skip, featured, route);
+#else
     y = draw_headline(ctx, y, b.size.w, now, skip, featured, skip >= 0 && routable(data_event(skip)));
+#endif
   }
   y += draw_clash_count(ctx, PAD, y - 4, b.size.w - 2 * PAD, now);
 
@@ -684,6 +876,27 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   draw_body(layer, ctx);
   g_theme = theme;
 }
+
+#if defined(PBL_ROUND)
+// Round 2: the whole screen under the hints, for what sits along the bottom
+// edge outside the body: the time-ashore arc with its times and the on-board
+// hint, or `Route ›` (docs/mockups/round/HomePortArc, Main).
+static Layer *s_edge;
+
+static void edge_update_proc(Layer *layer, GContext *ctx) {
+  const Theme *theme = g_theme;
+  if (hints_shown()) {
+    g_theme = theme_faded();
+  }
+  if (s_edge_shows == EDGE_ARC) {
+    draw_ashore_arc(ctx, now_cruise());
+    draw_onboard_hint(ctx, 202, 260);
+  } else if (s_edge_shows == EDGE_ROUTE) {
+    draw_hint_right(ctx, "Route", 151, 221);  // centered: "Route ›" is about 42 px wide
+  }
+  g_theme = theme;
+}
+#endif
 
 // A label with a pointer toward its button: Back on the left, the others on
 // the right. `cy` is the button's height in window coordinates.
@@ -801,8 +1014,14 @@ static void apply_style(void) {
   window_set_background_color(s_window, g_theme->bg);
   // The countdown names the ship and date itself, so the bar just says Home.
   bool counting = sail_ahead();
+#if defined(PBL_ROUND)
+  // Round 2: the label line reads "SAILS IN" over the count.
+  const char *home = days_to_sail() > 1 ? "Sails in" : "Sails";
+#else
+  const char *home = "Home";
+#endif
   top_bar_set(s_top_bar, day->kind == DAY_PORT ? BAND_PORT : BAND_SEA, BAND_LABEL,
-              counting ? "Home"
+              counting ? home
               : data_ready() ? day->location
                              : (connection_service_peek_pebble_app_connection() ? "Loading..." : "No phone"));
   top_bar_set_right(s_top_bar, counting || !data_ready() ? ""
@@ -860,10 +1079,13 @@ static void window_load(Window *window) {
   GRect b = layer_get_bounds(root);
   s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_SEA, BAND_LABEL, "");
   layer_add_child(root, s_top_bar);
-  s_body = layer_create(BODY_FRAME(b));
+  s_body = layer_create(HOME_FRAME(b));
   layer_set_update_proc(s_body, body_update_proc);
   layer_add_child(root, s_body);
 #if defined(PBL_ROUND)
+  s_edge = layer_create(b);
+  layer_set_update_proc(s_edge, edge_update_proc);
+  layer_add_child(root, s_edge);
   s_hints = layer_create(GRect(HINTS_INSET_X, 0, b.size.w - 2 * HINTS_INSET_X, b.size.h));
 #else
   s_hints = layer_create(b);
@@ -885,6 +1107,9 @@ static void window_unload(Window *window) {
   hints_hide();
   layer_destroy(s_hints);
   s_hints = NULL;
+#if defined(PBL_ROUND)
+  layer_destroy(s_edge);
+#endif
   layer_destroy(s_body);
   top_bar_destroy(s_top_bar);
   s_body = NULL;

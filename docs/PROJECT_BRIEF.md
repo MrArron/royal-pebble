@@ -5,7 +5,7 @@ glances at what's next** without pulling out a phone, and making sure the
 wearer never misses all-aboard. All data is loaded before sailing; **at sea the
 app works with no internet at all**.
 
-This brief is the "what and why": purpose, constraints, what is built (1.6.0),
+This brief is the "what and why": purpose, constraints, what is built (1.6.7),
 the decisions still in force and what's left for later. How things look is in
 `DESIGN.md`; the work still to do before the sailing is in `PLAN.md`. When
 something here conflicts with a request in a session, ask before changing
@@ -23,7 +23,7 @@ direction.
   code HM). It is also the app's test cruise: the usage log and map notes
   collected on board drive the next round of fixes.
 - Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
-  (`CLAUDE.md`). Current: **1.6.0**, Round 2 phase (`PLAN.md` §3a).
+  (`CLAUDE.md`). Current: **1.6.7**, Round 2 phase (`PLAN.md` §3a).
 
 ## Constraints
 
@@ -98,14 +98,28 @@ Known facts:
 - Plain HTTP clients work for the public endpoints and for the sign-in from
   the phone; if Royal starts refusing, the sync tool impersonates a browser.
 
-## What's built (1.6.0)
+## What's built (1.6.7)
 
 Numbers are the brief's item numbers, used in code comments and PRs. Screens
 and wording: `DESIGN.md`.
 
 **Watches:** Pebble Time 2 (emery) and, from 1.6.0, Pebble Round 2 (gabbro)
 from the same .pbw; the Round 2 draws every screen inside the circle
-(`DESIGN.md` §15), its round designs arrive in the Round 2 phase.
+(`DESIGN.md` §15), its round designs arrive in the Round 2 phase: Home
+(timeline arc along the bottom edge) the morning summary from 1.6.1, and alerts, notices and the clash toast from 1.6.2. From 1.6.3 the
+directory's place card and the Route screen are built on the phone as
+pages of styled lines and drawn by one small watch renderer, laid out for
+each watch (`WATCH_PROTOCOL.md`, Page lines). From 1.6.4 the Round 2's
+lists (Today, the directory) keep the selected row centered on a rounded
+pill, and long pages show a scroll arc on the right edge. From 1.6.5 My info,
+the Ask card (and its phone-away and no-answer messages) and the On board?
+screen are centered too, with the On board? labels beside the buttons. From
+1.6.6 the Time 2 matches the Round 2's style: a rounded selection pill on
+its lists and My info (with a blue stateroom card), a thin scroll bar on
+the right edge of long pages instead of the triangles, and the all-aboard
+alert shows Home's countdown with the time-ashore bar. From 1.6.7 the phone words the voice card and the pages for
+each watch (`textfit.js`): the Round 2 gets short hints and lines cut to its
+narrow column, the Time 2's text is unchanged.
 
 **v1 (core)**
 
@@ -244,6 +258,12 @@ day).
 | Watch static (1.5.5 C code, the last watch change) | 61,984 B of 65,535; 1,504 B under the 62 KB budget | `tools/watch_size.py`, Sep 29 build |
 | Heap at launch | 69,088 B | same |
 | Pebble Round 2 (gabbro) static, 1.6.0 | 62,176 B; 1,312 B under the budget; heap at launch 68,896 B (same 128 KB app RAM as the Time 2) | `tools/watch_size.py`, 2026-10-02 |
+| Pebble Round 2 (gabbro) static, 1.6.1 (round Home, G3) | 62,920 B; 568 B under the budget; heap at launch 68,152 B. The Time 2 binary is unchanged (61,984 B) | `tools/watch_size.py`, 2026-10-02 |
+| Pebble Round 2 (gabbro) static, 1.6.2 (alerts, G4) | 63,472 B; 16 B under the budget. The Time 2 is 61,904 B (80 B smaller than 1.6.1) | `tools/watch_size.py`, 2026-10-02 |
+| Both watches, 1.6.3 (generic phone page, GP) | Time 2 58,776 B (3,128 B smaller; 4,712 B under the budget); Round 2 60,216 B (3,256 B smaller; 3,272 B under). The place card and Route layouts moved to the phone (`pagelines.js`) | `tools/watch_size.py`, 2026-10-02 |
+| Pebble Round 2 (gabbro) static, 1.6.4 (lists and scroll arc, G5) | 61,120 B (+904 B); 2,368 B under the budget. The Time 2's code is byte-identical (58,776 B) | `tools/watch_size.py`, 2026-10-03 |
+| Pebble Round 2 (gabbro) static, 1.6.5 (My info, Ask, On board?, G6) | 61,856 B (+736 B); 1,632 B under the budget. The Time 2's code is byte-identical (58,776 B) | `tools/watch_size.py`, 2026-10-03 |
+| Both watches, 1.6.6 (Time 2 matching style, G6a) | Time 2 59,056 B (+280 B; 4,432 B under the budget); Round 2 61,592 B (264 B smaller; 1,896 B under). The scroll bar, pill and stateroom card are shared helpers; the content-triangle code is gone | `tools/watch_size.py`, 2026-10-03 |
 | Free heap on the watch, Home open | about 30.7 KB (1.5.4, 115-event day) | usage log, 2026-09-28 |
 | Free heap at dictation start | 24-25 KB from Home and from a Route screen; dictation takes no app heap | usage log |
 | Events per watch day | 160 | `MAX_EVENTS` |

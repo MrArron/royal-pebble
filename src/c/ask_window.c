@@ -23,6 +23,19 @@
 #define SEND_RETRY_MS 500
 #define SEND_TRIES 5
 
+// Round 2 message cards (docs/mockups/round/PhoneAway, DictationFailed): one big
+// line, then a muted detail under it or a hint at the bottom edge.
+enum { MSG_NONE = 0, MSG_NOTE = 1, MSG_HINT = 2 };
+#if defined(PBL_ROUND)
+// The card is a column 200 wide and runs lower than the body (its last lines
+// are short), so a long question wraps in few lines and four rows fit: with
+// that many the first row drops its label and the gaps narrow.
+#define CARD_FRAME(b) GRect(30, TOP_BAR_HEIGHT, (b).size.w - 60, (b).size.h - TOP_BAR_HEIGHT - 28)
+#define MSG_HINT_Y 148
+#else
+#define CARD_FRAME(b) BODY_FRAME(b)
+#endif
+
 // Card actions (the phone's first byte) and flags.
 enum { ACT_NONE = 0, ACT_ROUTE = 1, ACT_CONFIRM = 2, ACT_ONBOARD = 3 };
 #define FLAG_REST 1
@@ -35,6 +48,7 @@ typedef struct {
   int send_tries;
   uint8_t action;
   uint8_t flags;         // FLAG_REST (ACT_ROUTE), FLAG_ONBOARD (ACT_ONBOARD)
+  uint8_t msg;           // Round 2: the watch's own message, MSG_NOTE or MSG_HINT
   int32_t ref;
   uint8_t count;
   char label[ROWS_MAX][LABEL_LEN];
@@ -53,30 +67,87 @@ static int32_t s_seq;
 
 // ---- Drawing -------------------------------------------------------------------
 
+#if defined(PBL_ROUND)
+// The hint on the Round 2: "Select: route · Hold: ask again" on two lines.
+static void split_hint(char *dst, const char *src) {
+  int n = 0;
+  while (*src && n < HINT_LEN) {
+    if ((uint8_t)src[0] == 0xC2 && (uint8_t)src[1] == 0xB7 && n > 0 && dst[n - 1] == ' ' && src[2] == ' ') {
+      dst[n - 1] = '\n';
+      src += 3;
+    } else {
+      dst[n++] = *src++;
+    }
+  }
+  dst[n] = '\0';
+}
+
+// A message the watch makes itself: Gothic 24 in the middle, a muted detail
+// under it or (MSG_HINT) a blue hint near the bottom edge.
+static void message_update(Layer *layer, GContext *ctx) {
+  Card *c = s_card;
+  int w = layer_get_bounds(layer).size.w;
+  GFont big = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  int big_h = text_height(c->value[0], big, w - 2 * PAD, 60);
+  int detail_h = c->msg == MSG_NOTE && c->hint[0] ? 8 + text_height(c->hint, small, w - 2 * PAD, 48) : 0;
+  int y = c->msg == MSG_NOTE ? (layer_get_bounds(layer).size.h - big_h - detail_h) / 2 - 14 : 40;
+  graphics_context_set_text_color(ctx, g_theme->text);
+  graphics_draw_text(ctx, c->value[0], big, GRect(PAD, y - 4, w - 2 * PAD, big_h + 8),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  graphics_context_set_text_color(ctx, c->msg == MSG_NOTE ? g_theme->muted : g_theme->sea_accent);
+  graphics_draw_text(ctx, c->hint, small, GRect(PAD, c->msg == MSG_NOTE ? y + big_h + 8 : MSG_HINT_Y,
+                                                w - 2 * PAD, 48),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+  scroll_page_fit(&c->page, 0);
+}
+#endif
+
 static void content_update(Layer *layer, GContext *ctx) {
   Card *c = s_card;
   int w = layer_get_bounds(layer).size.w;
+#if defined(PBL_ROUND)
+  if (c->msg) {
+    message_update(layer, ctx);
+    return;
+  }
+#endif
   GFont value_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   int y = 2;
   for (int i = 0; i < c->count; i++) {
+#if defined(PBL_ROUND)
+    bool tight = c->count > 3;
+    if (c->label[i][0] && !(tight && i == 0)) {
+#else
     if (c->label[i][0]) {
+#endif
       draw_label(ctx, c->label[i], y, w);
       y += 14;
     }
     int h = text_height(c->value[i], value_font, w - 2 * PAD, 66);
     graphics_context_set_text_color(ctx, g_theme->text);
     graphics_draw_text(ctx, c->value[i], value_font, GRect(PAD, y - 2, w - 2 * PAD, h + 4),
-                       GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                       GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
+#if defined(PBL_ROUND)
+    y += h + (tight ? 3 : 7);  // no dividers on the Round 2: the labels do the separating
+#else
     y += h + 5;
     draw_divider(ctx, y, w);
     y += 4;
+#endif
   }
   if (c->hint[0]) {
     graphics_context_set_text_color(ctx, g_theme->sea_accent);
-    int h = text_height(c->hint, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), w - 2 * PAD, 48);
-    graphics_draw_text(ctx, c->hint, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+#if defined(PBL_ROUND)
+    char hint[HINT_LEN + 1];
+    split_hint(hint, c->hint);
+#else
+    const char *hint = c->hint;
+#endif
+    int h = text_height(hint, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), w - 2 * PAD, 48);
+    graphics_draw_text(ctx, hint, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                        GRect(PAD, y, w - 2 * PAD, h + 2), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += h + 2;
   }
   scroll_page_fit(&c->page, y);
@@ -86,6 +157,9 @@ static void content_update(Layer *layer, GContext *ctx) {
 static void set_card(const char *label, const char *value, const char *hint) {
   Card *c = s_card;
   c->action = ACT_NONE;
+#if defined(PBL_ROUND)
+  c->msg = !label && value ? MSG_NOTE : MSG_NONE;
+#endif
   c->count = value ? 1 : 0;
   snprintf(c->label[0], LABEL_LEN, "%s", label ? label : "");
   snprintf(c->value[0], VALUE_LEN, "%s", value ? value : "");
@@ -106,7 +180,12 @@ static void stop_timer(void) {
 
 static void no_reply(void *context) {
   s_card->timer = NULL;
+#if defined(PBL_ROUND)
+  set_card(NULL, "No answer from the phone", "Hold: ask again");
+  s_card->msg = MSG_HINT;
+#else
   snprintf(s_card->hint, HINT_LEN, "No answer from the phone. Hold Select to ask again");
+#endif
   layer_mark_dirty(s_card->page.content);
 }
 
@@ -152,6 +231,9 @@ static void card_received(int32_t seq, const uint8_t *p, int length) {
   stop_timer();
   c->action = p[0];
   c->flags = p[1];
+#if defined(PBL_ROUND)
+  c->msg = MSG_NONE;
+#endif
   c->ref = codec_read_int32(p + 2);
   int count = p[6] < ROWS_MAX ? p[6] : ROWS_MAX;
   p += 7;
@@ -265,7 +347,7 @@ static void window_load(Window *window) {
   s_card->top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL_INFO, "Ask");
   top_bar_set_right(s_card->top_bar, "", false, 0);
   layer_add_child(root, s_card->top_bar);
-  scroll_page_create(&s_card->page, window, root, BODY_FRAME(b),
+  scroll_page_create(&s_card->page, window, root, CARD_FRAME(b),
                      content_update, click_config);
 }
 

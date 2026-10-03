@@ -1,293 +1,98 @@
 #include "screens.h"
-#include "codec.h"
 #include "comm.h"
 #include "fetch.h"
+#include "lines.h"
 #include "ui.h"
 #include "usage.h"
 
 // Route screen (docs/DESIGN.md §10.3): the walking route to a place, from
 // a place to its closest restroom, or to Home's NEXT event (§4.1), one line
 // per step with a drawn glyph.
-// The phone works out every line (docs/WATCH_PROTOCOL.md, Route screen); the
-// watch only draws them and keeps nothing once the screen closes.
-
-#define STEPS_MAX 8
-#define TEXT_LEN 40
-#define LEAD_LEN 64
-#define GPS_LEN 32
-#define INDICATOR_H 12
-#define GLYPH_W 13
-#define GLYPH_GAP 6
-
-// Step glyphs, as the phone numbers them (gpstext.js).
-enum { GLYPH_WALK = 0, GLYPH_CROSS = 1, GLYPH_ELEVATOR = 2, GLYPH_STAIRS = 3, GLYPH_ARRIVE = 4 };
-
-typedef struct {
-  uint8_t glyph;
-  char text[TEXT_LEN];
-} Step;
+// The phone builds the whole page as lines (docs/WATCH_PROTOCOL.md, Route
+// screen); the watch only draws them and keeps nothing once the screen closes.
 
 static Window *s_window;
 static Layer *s_top_bar;
-static ScrollLayer *s_scroll;
-static Layer *s_content;
-static Layer *s_more_above;
-static Layer *s_more_below;
+static ScrollPage s_page;
 
 static int32_t s_ref;
 static bool s_rest;
 static int32_t s_start;          // the event's start (Home's NEXT), else NO_TIME
 static Fetch s_fetch;
 
-static uint8_t s_flags;         // 1: shown less (not drawn differently yet)
-static int8_t s_small_decks;
-// The screen's texts and steps, on the heap while it's open (static data must
-// stay under 64 KB: docs/PLAN.md).
+// On the heap while the screen is open (static data must stay under 64 KB:
+// docs/PLAN.md).
 typedef struct {
   char venue[VENUE_LEN];  // the event's venue, as the phone is asked
-  char title[TEXT_LEN];   // the destination
-  char header[GPS_LEN];   // "FROM YOUR CABIN", "CLOSEST TO ROYAL THEATER"
-  char lead[LEAD_LEN];    // "Same area · your deck", or a message
-  char big[GPS_LEN];      // a restroom's "Deck 5 · Fore"
-  char small[TEXT_LEN];   // "100 m in all", "Same deck as Royal Theater"
-  char event[TITLE_LEN + 8];  // "12:00p Name That Tune Trivia" (event routes)
-  Step steps[STEPS_MAX];
+  char event[TITLE_LEN];  // the event's title, for the line under the steps
+  char title[40];         // the destination, until the page comes
+  char header[32];        // "FROM YOUR CABIN", "CLOSEST TO ROYAL THEATER"
+  uint8_t *lines;         // the phone's page
+  int length;
 } Route;
 static Route *s_r;
-static int s_count;
 
-// ---- Layout ------------------------------------------------------------------
+// ---- Drawing -----------------------------------------------------------------
 
-static void draw_text(GContext *ctx, const char *text, GFont font, GColor color, GRect box,
-                      GTextAlignment align) {
-  graphics_context_set_text_color(ctx, color);
-  graphics_draw_text(ctx, text, font, box, GTextOverflowModeTrailingEllipsis, align, NULL);
-}
-
-// A small filled triangle, `rows` tall, pointing up (dir > 0) or down.
-static void fill_triangle(GContext *ctx, int cx, int y, int rows, int dir) {
-  for (int i = 0; i < rows; i++) {
-    int half = dir > 0 ? i : rows - 1 - i;
-    graphics_fill_rect(ctx, GRect(cx - half, y + i, 2 * half + 1, 1), 0, GCornerNone);
-  }
-}
-
-// A step's glyph (docs/mockups/gps/NOTES.md), about 13 px in the sea accent,
-// on a Gothic 18 bold line whose top is at y: dot = walk, double-headed arrow
-// = cross the ship, square with ▲▼ = elevator, stair line = stairs, ring with
-// a dot = arrive.
-static void draw_glyph(GContext *ctx, int glyph, int x, int y) {
-  GColor color = g_theme->sea_accent;
-  int top = y + 6;
-  GPoint c = GPoint(x + GLYPH_W / 2, top + GLYPH_W / 2);
-  graphics_context_set_fill_color(ctx, color);
-  graphics_context_set_stroke_color(ctx, color);
-  graphics_context_set_stroke_width(ctx, 2);
-  switch (glyph) {
-    case GLYPH_WALK:
-      graphics_fill_circle(ctx, c, 3);
-      break;
-    case GLYPH_CROSS:
-      graphics_draw_line(ctx, GPoint(x + 1, c.y), GPoint(x + GLYPH_W - 2, c.y));
-      graphics_draw_line(ctx, GPoint(x + 1, c.y), GPoint(x + 4, c.y - 3));
-      graphics_draw_line(ctx, GPoint(x + 1, c.y), GPoint(x + 4, c.y + 3));
-      graphics_draw_line(ctx, GPoint(x + GLYPH_W - 2, c.y), GPoint(x + GLYPH_W - 5, c.y - 3));
-      graphics_draw_line(ctx, GPoint(x + GLYPH_W - 2, c.y), GPoint(x + GLYPH_W - 5, c.y + 3));
-      break;
-    case GLYPH_ELEVATOR:
-      graphics_context_set_stroke_width(ctx, 1);
-      graphics_draw_round_rect(ctx, GRect(x + 1, top, GLYPH_W - 2, GLYPH_W), 2);
-      graphics_draw_round_rect(ctx, GRect(x + 2, top + 1, GLYPH_W - 4, GLYPH_W - 2), 1);
-      fill_triangle(ctx, c.x, top + 3, 3, 1);
-      fill_triangle(ctx, c.x, top + GLYPH_W - 6, 3, -1);
-      break;
-    case GLYPH_STAIRS:
-      // Four treads rising to the right, 2 px thick, drawn as rectangles so
-      // they stay crisp (a thick line blurs into a slope).
-      for (int i = 0; i < 4; i++) {
-        int tx = x + 3 * i;
-        int ty = top + 10 - 3 * i;
-        graphics_fill_rect(ctx, GRect(tx, ty, 4, 2), 0, GCornerNone);
-        if (i < 3) {
-          graphics_fill_rect(ctx, GRect(tx + 2, ty - 3, 2, 3), 0, GCornerNone);
-        }
-      }
-      break;
-    default:  // GLYPH_ARRIVE
-      graphics_draw_circle(ctx, c, 5);
-      graphics_fill_circle(ctx, c, 2);
-      break;
-  }
-  graphics_context_set_stroke_width(ctx, 1);
-}
-
-// "2 decks · 100 m in all" (the arrow is drawn before it), or just the text.
-static void fmt_decks(char *buf, size_t size, int decks, const char *text) {
-  int n = decks < 0 ? -decks : decks;
-  if (n) {
-    snprintf(buf, size, "%d %s \xc2\xb7 %s", n, n == 1 ? "deck" : "decks", text);
-  } else {
-    snprintf(buf, size, "%s", text);
-  }
-}
-
-// The whole page: destination, header, then the steps (or loading / no phone),
-// then the summary. Draws when ctx isn't NULL; returns the height.
-static int layout(GContext *ctx, int w) {
-  GFont name_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-  GFont large = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-  GFont small = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
-  int tw = w - 2 * PAD;
-  int y = 2;
-  int h = text_height(s_r->title, name_font, tw, 58);
-  if (ctx) {
-    draw_text(ctx, s_r->title, name_font, g_theme->text, GRect(PAD, y - 4, tw, h + 4), GTextAlignmentLeft);
-  }
-  y += h + 2;
+// Until the page comes: the destination, the header and a divider, then
+// `Finding route…` or, with the phone away, `Connect your phone`. Laid out as
+// the phone lays out its pages (src/pkjs/pagelines.js). Returns the length.
+static int own_lines(uint8_t *buf) {
+  uint8_t *p = lines_put(buf, LINE_FONT_24 | LINE_COLOR(LINE_TEXT), LINE_PLAIN, -2, 58, s_r->title);
+  int8_t divider = 8;
+#if !defined(PBL_ROUND)
   if (s_r->header[0]) {
-    if (ctx) {
-      draw_text(ctx, s_r->header, small, g_theme->muted, GRect(PAD, y - 2, tw, 18), GTextAlignmentLeft);
-    }
-    y += 18;
+    p = lines_put(p, LINE_FONT_14 | LINE_COLOR(LINE_MUTED), LINE_PLAIN, 4, LINE_H14, s_r->header);
+    divider = 22 - LINE_H14;
   }
-  y += 2;
-  if (ctx) {
-    draw_divider(ctx, y, w);
-  }
-  y += 5;
-
-  if (s_fetch.state == FETCH_LOADING) {
-    if (ctx) {
-      draw_text(ctx, "Finding route\xe2\x80\xa6", large, g_theme->muted, GRect(PAD, y + 26, tw, 22),
-                GTextAlignmentCenter);
-    }
-    return y + 60;
-  }
+#endif
+  p = lines_put(p, 0, LINE_DIVIDER, divider, ROUTE_DIVIDER_INSET, "");
   if (s_fetch.state == FETCH_NO_PHONE) {
-    if (ctx) {
-      draw_text(ctx, "Connect your phone", large, g_theme->text, GRect(PAD, y + 16, tw, 22), GTextAlignmentCenter);
-      draw_text(ctx, "Select tries again", small, g_theme->muted, GRect(PAD, y + 38, tw, 18), GTextAlignmentCenter);
-    }
-    return y + 60;
+    p = lines_put(p, LINE_FONT_18 | LINE_CENTER | LINE_COLOR(LINE_TEXT), LINE_PLAIN, 21, LINE_H18,
+                  "Connect your phone");
+    p = lines_put(p, LINE_FONT_14 | LINE_CENTER | LINE_COLOR(LINE_MUTED), LINE_PLAIN, 22 - LINE_H18, LINE_H14,
+                  "Select tries again");
+  } else {
+    p = lines_put(p, LINE_FONT_18 | LINE_CENTER | LINE_COLOR(LINE_MUTED), LINE_PLAIN, 31, LINE_H18,
+                  "Finding route\xe2\x80\xa6");
   }
-
-  if (s_r->lead[0]) {
-    h = text_height(s_r->lead, large, tw, 66);
-    if (ctx) {
-      draw_text(ctx, s_r->lead, large, g_theme->text, GRect(PAD, y - 4, tw, h + 4), GTextAlignmentLeft);
-    }
-    y += h + 2;
-  }
-  int step_x = PAD + GLYPH_W + GLYPH_GAP;
-  int step_w = w - step_x - PAD;
-  for (int i = 0; i < s_count; i++) {
-    h = text_height(s_r->steps[i].text, large, step_w, 44);
-    if (ctx) {
-      draw_glyph(ctx, s_r->steps[i].glyph, PAD, y - 4);
-      draw_text(ctx, s_r->steps[i].text, large, g_theme->text, GRect(step_x, y - 4, step_w, h + 4), GTextAlignmentLeft);
-    }
-    y += h + 2;
-  }
-  if (s_r->big[0] || s_r->small[0] || s_r->event[0]) {
-    y += 2;
-    if (ctx) {
-      draw_divider(ctx, y, w);
-    }
-    y += 5;
-    if (s_r->big[0]) {
-      if (ctx) {
-        draw_text(ctx, s_r->big, large, g_theme->text, GRect(PAD, y - 4, tw, 22), GTextAlignmentLeft);
-      }
-      y += 20;
-    }
-    if (s_r->small[0]) {
-      if (ctx) {
-        char text[56];
-        fmt_decks(text, sizeof(text), s_small_decks, s_r->small);
-        draw_arrow_line(ctx, false, g_theme->muted, PAD, y - 2, tw, "", s_small_decks, text);
-      }
-      y += 18;
-    }
-    if (s_r->event[0]) {
-      h = text_height(s_r->event, small, tw, 34);
-      if (ctx) {
-        draw_text(ctx, s_r->event, small, g_theme->muted, GRect(PAD, y - 2, tw, h + 2), GTextAlignmentLeft);
-      }
-      y += h;
-    }
-  }
-  return y + 4;
+  return p - buf;
 }
 
 static void content_update(Layer *layer, GContext *ctx) {
-  layout(ctx, layer_get_bounds(layer).size.w);
-}
-
-// The content's scroll position as the user left it, for the usage log.
-static int s_scroll_y;
-static bool s_relayout;
-
-static void offset_changed(ScrollLayer *scroll, void *context) {
-  int y = scroll_layer_get_content_offset(scroll).y;
-  if (!s_relayout && y != s_scroll_y) {
-    usage_move(-s_scroll_y, -y);  // down makes the offset more negative
+  int w = layer_get_bounds(layer).size.w;
+  int y;
+  if (s_fetch.state == FETCH_READY) {
+    y = lines_draw(ctx, s_r->lines, s_r->length, w);
+  } else {
+    uint8_t buf[160];
+    y = lines_draw(ctx, buf, own_lines(buf), w);
   }
-  s_scroll_y = y;
-}
-
-// Sizes the content to the page and goes back to its top.
-static void relayout(void) {
-  if (!s_scroll) {
-    return;
-  }
-  GRect frame = layer_get_frame(scroll_layer_get_layer(s_scroll));
-  int h = layout(NULL, frame.size.w);
-  layer_set_frame(s_content, GRect(0, 0, frame.size.w, h));
-  scroll_layer_set_content_size(s_scroll, GSize(frame.size.w, h));
-  s_relayout = true;
-  scroll_layer_set_content_offset(s_scroll, GPointZero, false);
-  s_relayout = false;
-  s_scroll_y = 0;
-  layer_mark_dirty(s_content);
+  scroll_page_fit(&s_page, y);
 }
 
 // ---- Asking the phone --------------------------------------------------------
 
-static void state_changed(void *owner) { relayout(); }
+static void state_changed(void *owner) { scroll_page_top(&s_page); }
 
-static bool send_request(void *owner) {
-  return s_start != NO_TIME ? comm_request_event_route(s_start, s_r->venue) : comm_request_route(s_ref, s_rest);
-}
+static bool send_request(void *owner) { return comm_request_route(s_ref, s_rest, s_start, s_r->venue, s_r->event); }
 
-// uint8 flags, int8 decks, five texts, uint8 count, then each step's uint8
-// glyph and text. Stops at the first step that isn't whole.
 static void page_received(const RoutePageMsg *page) {
   if (!s_window || s_fetch.state == FETCH_READY || page->ref != s_ref || page->rest != s_rest ||
-      page->start != s_start || page->length < 2) {
+      page->start != s_start) {
     return;
   }
-  const uint8_t *p = page->data;
-  const uint8_t *end = p + page->length;
-  s_flags = p[0];
-  s_small_decks = (int8_t)p[1];
-  p += 2;
-  if (!codec_read_str(&p, end, s_r->title, sizeof(s_r->title)) ||
-      !codec_read_str(&p, end, s_r->header, sizeof(s_r->header)) ||
-      !codec_read_str(&p, end, s_r->lead, sizeof(s_r->lead)) ||
-      !codec_read_str(&p, end, s_r->big, sizeof(s_r->big)) ||
-      !codec_read_str(&p, end, s_r->small, sizeof(s_r->small))) {
+  free(s_r->lines);
+  s_r->lines = malloc(page->length);
+  if (!s_r->lines) {
     return;
   }
-  int count = p < end ? *p++ : 0;
-  s_count = 0;
-  while (s_count < count && s_count < STEPS_MAX && p < end) {
-    Step *st = &s_r->steps[s_count];
-    st->glyph = *p++;
-    if (!codec_read_str(&p, end, st->text, sizeof(st->text))) {
-      break;
-    }
-    s_count++;
-  }
+  memcpy(s_r->lines, page->lines, page->length);
+  s_r->length = page->length;
+#if defined(PBL_ROUND)
+  // The header sits in the top bar's label line (docs/mockups/round/Route).
+  top_bar_set_right(s_top_bar, page->label, false, 0);
+#endif
   fetch_done(&s_fetch);
 }
 
@@ -304,16 +109,15 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
   }
 }
 
-static void select_long_click(ClickRecognizerRef recognizer, void *context);
+static void select_long_click(ClickRecognizerRef recognizer, void *context) {
+  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
+  ask_window_push();
+}
 
 static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
   window_long_click_subscribe(BUTTON_ID_SELECT, 700, select_long_click, NULL);
 }
-
-// Muted triangles under the top bar and at the bottom while there's more
-// above or below, as on place pages.
-static void set_indicators(void) { set_scroll_indicators(s_scroll, s_more_above, s_more_below); }
 
 static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
@@ -321,52 +125,26 @@ static void window_load(Window *window) {
   window_set_background_color(window, g_theme->bg);
 
   s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL, "Route");
+#if defined(PBL_ROUND)
+  top_bar_set_right(s_top_bar, s_r->header, false, 0);
+#else
   top_bar_set_right(s_top_bar, "", false, 0);
+#endif
   layer_add_child(root, s_top_bar);
-
-  s_scroll = scroll_layer_create(BODY_FRAME(b));
-  scroll_layer_set_shadow_hidden(s_scroll, true);
-  scroll_layer_set_callbacks(s_scroll, (ScrollLayerCallbacks){.click_config_provider = click_config,
-                                                              .content_offset_changed_handler = offset_changed});
-  scroll_layer_set_click_config_onto_window(s_scroll, window);
-  s_content = layer_create(GRect(0, 0, b.size.w, b.size.h));
-  layer_set_update_proc(s_content, content_update);
-  scroll_layer_add_child(s_scroll, s_content);
-  layer_add_child(root, scroll_layer_get_layer(s_scroll));
-
-  s_more_above = layer_create(GRect(BODY_INSET_X, TOP_BAR_HEIGHT, b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
-  s_more_below = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - INDICATOR_H,
-                                    b.size.w - 2 * BODY_INSET_X, INDICATOR_H));
-  layer_add_child(root, s_more_above);
-  layer_add_child(root, s_more_below);
-  set_indicators();
+  scroll_page_create(&s_page, window, root, BODY_FRAME(b), content_update, click_config);
   fetch_start(&s_fetch);
 }
 
 static void window_unload(Window *window) {
   fetch_cancel(&s_fetch);
   comm_set_route_handlers(NULL, NULL, NULL);
-  layer_destroy(s_more_above);
-  layer_destroy(s_more_below);
-  layer_destroy(s_content);
-  scroll_layer_destroy(s_scroll);
-  s_scroll = NULL;
+  scroll_page_destroy(&s_page);
   top_bar_destroy(s_top_bar);
   window_destroy(window);
   s_window = NULL;
+  free(s_r->lines);
   free(s_r);
   s_r = NULL;
-  s_count = 0;
-}
-
-static void push(int32_t ref, bool rest, const char *title, const char *header);
-
-// Allocates the texts; false when there's no memory (the screen doesn't open).
-static bool alloc_route(void) {
-  if (!s_r) {
-    s_r = calloc(1, sizeof(Route));
-  }
-  return s_r != NULL;
 }
 
 static void window_appear(Window *window) {
@@ -377,36 +155,21 @@ static void window_appear(Window *window) {
   }
 }
 
-void route_window_push(int32_t ref, bool rest, const char *title, const char *header) {
-  if (s_window || !alloc_route()) {
+// Opens the screen (unless one is open or there's no memory); `venue` is
+// asked for with an event's `start` and `event` (its title).
+static void push(int32_t ref, bool rest, int32_t start, const char *title, const char *header,
+                 const char *event) {
+  if (s_window || !(s_r = calloc(1, sizeof(Route)))) {
     return;
   }
-  s_start = NO_TIME;
-  push(ref, rest, title, header);
-}
-
-void route_window_push_event(const Event *e) {
-  if (s_window || !alloc_route()) {
-    return;
-  }
-  s_start = e->start;
-  snprintf(s_r->venue, sizeof(s_r->venue), "%s", e->venue);
-  char time_buf[8];
-  fmt_clock(time_buf, sizeof(time_buf), e->start);
-  snprintf(s_r->event, sizeof(s_r->event), "%s %s", time_buf, e->title);
-  push(0, false, e->venue, "");
-}
-
-static void push(int32_t ref, bool rest, const char *title, const char *header) {
   s_fetch = (Fetch){.send = send_request, .changed = state_changed};
   s_ref = ref;
   s_rest = rest;
-  s_count = 0;
-  s_flags = 0;
-  s_small_decks = 0;
-  s_r->lead[0] = s_r->big[0] = s_r->small[0] = '\0';
+  s_start = start;
+  snprintf(s_r->venue, sizeof(s_r->venue), "%s", title);
   snprintf(s_r->title, sizeof(s_r->title), "%s", title);
   snprintf(s_r->header, sizeof(s_r->header), "%s", header);
+  snprintf(s_r->event, sizeof(s_r->event), "%s", event);
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
@@ -417,24 +180,24 @@ static void push(int32_t ref, bool rest, const char *title, const char *header) 
   window_stack_push(s_window, true);
 }
 
+void route_window_push(int32_t ref, bool rest, const char *title, const char *header) {
+  push(ref, rest, NO_TIME, title, header, "");
+}
+
+void route_window_push_event(const Event *e) { push(0, false, e->start, e->venue, "", e->title); }
+
 void route_window_close(void) {
   if (s_window) {
     window_stack_remove(s_window, false);
   }
 }
 
-static void select_long_click(ClickRecognizerRef recognizer, void *context) {
-  usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
-  ask_window_push();
-}
-
 void route_window_refresh(void) {
-  if (!s_window || !s_scroll) {
+  if (!s_window) {
     return;
   }
   // The theme may have changed (settings page).
   window_set_background_color(s_window, g_theme->bg);
-  set_indicators();
   layer_mark_dirty(s_top_bar);
-  layer_mark_dirty(s_content);
+  scroll_page_refresh(&s_page);
 }

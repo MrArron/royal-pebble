@@ -12,7 +12,15 @@
 #define BANG_W 3
 // Clash toast (docs/DESIGN.md §7.4): at the bottom, so the row just
 // starred stays in view.
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/ClashToast): a bordered card over the middle.
+#define TOAST_HEIGHT 70
+#define TOAST_WIDTH 200
+#define TOAST_FONT FONT_KEY_GOTHIC_18_BOLD
+#else
 #define TOAST_HEIGHT 46
+#define TOAST_FONT FONT_KEY_GOTHIC_14_BOLD
+#endif
 #define TOAST_MS 3000
 
 static Window *s_window;
@@ -52,12 +60,69 @@ static bool starts_group(int row, int32_t now) {
   return row == 0 || group_key(row, now) != group_key(row - 1, now);
 }
 
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/Today): the time on its own line above the
+// title ("12:00p", "NOW · ends 12:45") on a group's first row and the
+// selected one, with the star and clash "!" after it; the venue under the
+// title. A booked order adds "Meet 8:45a" to the time and shows "✓ Booked";
+// a final show adds its tag ("Last chance") in the port accent.
+static void fill_round_row(RoundRow *r, char *top, size_t size, int row, bool selected, int32_t now) {
+  Event *e = data_event(s_rows[row]);
+  bool in_progress = event_in_progress(e, now);
+  *r = (RoundRow){.top = top, .top_color = g_theme->muted, .title = e->title, .sub = e->venue};
+  char buf[8];
+  top[0] = '\0';
+  if (starts_group(row, now) || selected) {
+    if (!event_is_timed(e)) {
+      snprintf(top, size, "ALL DAY");
+    } else if (in_progress) {
+      fmt_clock(buf, sizeof(buf), event_end(e));
+      snprintf(top, size, "NOW \xc2\xb7 ends %s", buf);
+      r->top_color = g_theme->now_label;
+    } else {
+      fmt_clock(top, size, e->start);
+    }
+  }
+  const char *sep = top[0] ? " \xc2\xb7 " : "";
+  int n = 0;  // no strlen() on the watch (CLAUDE.md)
+  while (top[n]) {
+    n++;
+  }
+  if ((e->flags & EVENT_BOOKED) && !in_progress) {
+    if (e->booked.meet_before) {
+      fmt_clock(buf, sizeof(buf), e->start - e->booked.meet_before);
+      snprintf(top + n, size - n, "%sMeet %s", sep, buf);
+    }
+    r->sub = "Booked";
+    r->sub_checked = true;
+  } else if (!in_progress && event_final_tag(e)) {
+    snprintf(top + n, size - n, "%s%s", sep, event_final_tag(e));
+    r->top_color = g_theme->port_accent;
+  }
+  if (e->flags & EVENT_STARRED) {
+    r->icons |= ROUND_ROW_STAR;
+  }
+  if (data_clashes_with(s_rows[row], now, NULL) > 0) {
+    r->icons |= ROUND_ROW_BANG;
+  }
+}
+#endif
+
 // With nothing left, one row shows a message instead.
 static uint16_t get_num_rows(MenuLayer *menu, uint16_t section, void *context) {
   return s_row_count > 0 ? s_row_count : 1;
 }
 
 static int16_t get_cell_height(MenuLayer *menu, MenuIndex *index, void *context) {
+#if defined(PBL_ROUND)
+  if (index->row < s_row_count) {
+    RoundRow r;
+    char top[40];
+    bool selected = menu_layer_is_index_selected(menu, index);
+    fill_round_row(&r, top, sizeof(top), index->row, selected, now_cruise());
+    return round_row_height(&r, selected);
+  }
+#endif
   return ROW_HEIGHT;
 }
 
@@ -68,8 +133,12 @@ static int16_t get_separator_height(MenuLayer *menu, MenuIndex *index, void *con
 // The separator's index is the row below it.
 static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, void *context) {
   if (index->row > 0 && index->row < s_row_count && starts_group(index->row, now_cruise())) {
+#if defined(PBL_ROUND)
+    round_divider(ctx, cell, s_menu, index);
+#else
     GRect b = layer_get_bounds(cell);
     draw_divider(ctx, 0, b.size.w);
+#endif
   }
 }
 
@@ -77,6 +146,11 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   GRect b = layer_get_bounds(cell);
   bool highlighted = menu_cell_layer_is_highlighted(cell);
   GColor muted = highlighted ? g_theme->cursor_text : g_theme->muted;
+#if !defined(PBL_ROUND)
+  if (highlighted) {
+    fill_pill(ctx, PILL_ROW(b));
+  }
+#endif
   if (s_row_count == 0) {
     graphics_context_set_text_color(ctx, muted);
     graphics_draw_text(ctx, data_event_count() > 0 ? "Nothing left today" : "No events today",
@@ -86,6 +160,13 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   }
 
   int32_t now = now_cruise();
+#if defined(PBL_ROUND)
+  RoundRow r;
+  char top[40];
+  fill_round_row(&r, top, sizeof(top), index->row, highlighted, now);
+  round_row_draw(ctx, cell, &r, highlighted);
+  return;
+#endif
   Event *e = data_event(s_rows[index->row]);
   bool in_progress = event_in_progress(e, now);
   bool past = event_is_past(e, now);  // a no-length event just after its start
@@ -184,24 +265,31 @@ static void toast_update_proc(Layer *layer, GContext *ctx) {
   if (s_toast_event >= data_event_count()) {
     return;  // a new slice arrived meanwhile
   }
+#if defined(PBL_ROUND)
+  graphics_context_set_fill_color(ctx, g_theme->port_accent);
+  graphics_fill_rect(ctx, b, 12, GCornersAll);
+  graphics_context_set_fill_color(ctx, g_theme->bg);
+  graphics_fill_rect(ctx, grect_crop(b, 3), 9, GCornersAll);
+  int x = PAD, y1 = 12, y2 = 34;
+#else
   graphics_context_set_fill_color(ctx, g_theme->bg);
   graphics_fill_rect(ctx, b, 0, GCornerNone);
   graphics_context_set_fill_color(ctx, g_theme->port_accent);
   graphics_fill_rect(ctx, GRect(0, 0, b.size.w, 4), 0, GCornerNone);
   draw_bang(ctx, GPoint(PAD, 12), 24, g_theme->port_accent);
-
-  int x = PAD + 6 + 8;
+  int x = PAD + 6 + 8, y1 = 4, y2 = 18;
+#endif
   int w = b.size.w - x - PAD;
   graphics_context_set_text_color(ctx, g_theme->port_accent);
-  graphics_draw_text(ctx, "Clashes with", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
-                     GRect(x, 4, w, 18), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, "Clashes with", fonts_get_system_font(TOAST_FONT),
+                     GRect(x, y1, w, 22), GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
   Event *e = data_event(s_toast_event);
   char time_buf[8], buf[TITLE_LEN + 8];
   fmt_clock(time_buf, sizeof(time_buf), e->start);
   snprintf(buf, sizeof(buf), "%s %s", time_buf, e->title);
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(x, 18, w, 22), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GRect(x, y2, w, 22), GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
 }
 
 static void hide_toast(void *context) {
@@ -264,7 +352,7 @@ static void window_load(Window *window) {
   s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_SEA, BAND_LABEL, "Today");
   layer_add_child(root, s_top_bar);
 
-  s_menu = menu_layer_create(BODY_FRAME(b));
+  s_menu = menu_layer_create(LIST_FRAME(b));
   menu_layer_set_callbacks(s_menu, NULL, (MenuLayerCallbacks){
     .get_num_rows = get_num_rows,
     .get_cell_height = get_cell_height,
@@ -276,7 +364,7 @@ static void window_load(Window *window) {
     .selection_will_change = selection_will_change,
   });
   menu_layer_set_normal_colors(s_menu, g_theme->bg, g_theme->text);
-  menu_layer_set_highlight_colors(s_menu, g_theme->cursor_bg, g_theme->cursor_text);
+  menu_layer_set_highlight_colors(s_menu, LIST_CURSOR_BG, g_theme->cursor_text);
   menu_layer_set_click_config_onto_window(s_menu, window);
   s_rows = malloc(MAX_EVENTS * sizeof(int16_t));
   if (!s_rows) {
@@ -289,8 +377,13 @@ static void window_load(Window *window) {
   menu_layer_set_selected_index(s_menu, MenuIndex(0, first_current_row()), MenuRowAlignTop, false);
   layer_add_child(root, menu_layer_get_layer(s_menu));
 
+#if defined(PBL_ROUND)
+  s_toast = layer_create(GRect((b.size.w - TOAST_WIDTH) / 2, (b.size.h - TOAST_HEIGHT) / 2,
+                               TOAST_WIDTH, TOAST_HEIGHT));
+#else
   s_toast = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - TOAST_HEIGHT,
                                b.size.w - 2 * BODY_INSET_X, TOAST_HEIGHT));
+#endif
   layer_set_update_proc(s_toast, toast_update_proc);
   layer_set_hidden(s_toast, true);
   layer_add_child(root, s_toast);
@@ -325,7 +418,7 @@ void today_window_refresh(void) {
     // The theme may have changed (settings page).
     window_set_background_color(s_window, g_theme->bg);
     menu_layer_set_normal_colors(s_menu, g_theme->bg, g_theme->text);
-    menu_layer_set_highlight_colors(s_menu, g_theme->cursor_bg, g_theme->cursor_text);
+    menu_layer_set_highlight_colors(s_menu, LIST_CURSOR_BG, g_theme->cursor_text);
     layer_mark_dirty(s_top_bar);
   }
 }

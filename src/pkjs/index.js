@@ -13,6 +13,7 @@ var venues = require('./venues');
 var directory = require('./directory');
 var routestart = require('./routestart');
 var voicecard = require('./voicecard');
+var textfit = require('./textfit');
 var gpstext = require('./gpstext');
 var shipmap = require('./shipmap');
 var logLib = require('./log');
@@ -169,6 +170,13 @@ function watchInfo() {
   } catch (e) {
     return null;
   }
+}
+
+// How the watch's pages are laid out (pagelines.js): the Pebble Round 2's are
+// centered and shorter.
+function pageOpts() {
+  var w = watchInfo();
+  return {round: textfit.platformOf(w) === 'gabbro'};
 }
 
 function phoneText() {
@@ -399,7 +407,7 @@ function sendDirPage() {
   }
   var page = directory.buildPage(ref, ctx);
   mapProblem(page, data.isDemo);
-  var msg = directory.message(page);
+  var msg = directory.message(page, pageOpts());
   built = Date.now() - built;
   msg.msg_type = MSG_DIR_PAGE;
   s_sending = true;
@@ -424,7 +432,7 @@ function sendVoiceCard() {
   s_voice = null;
   var data = currentData();
   var ctx = ctxOf(data);
-  var card = voicecard.answer(turn.text, ctx, data.isDemo, turn.state);
+  var card = voicecard.answer(turn.text, ctx, data.isDemo, turn.state, textfit.platformOf(watchInfo()));
   s_sending = true;
   sendQueue([{msg_type: MSG_VOICE_CARD, voice_seq: turn.seq, voice_card: voicecard.packCard(card)}],
             function(ok, info) {
@@ -461,7 +469,7 @@ function sendRoute() {
   }
   var page = req.venue !== undefined ? directory.eventRoutePage(req, ctx) : directory.routePage(req.ref, req.rest, ctx);
   mapProblem(page, data.isDemo);
-  var msg = directory.routeMsg(page);
+  var msg = directory.routeMsg(page, {round: pageOpts().round, h24: req.h24});
   built = Date.now() - built;
   msg.msg_type = MSG_ROUTE_PAGE;
   s_sending = true;
@@ -1023,14 +1031,18 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
       }
       break;
     case MSG_ROUTE_REQUEST:
-      s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || '')}
-                                            : {ref: p.dir_ref | 0, rest: !!p.route_rest};
+      // route_rest bit 0: to the closest restroom; bit 1: the watch shows 24-hour time.
+      var h24 = !!((p.route_rest | 0) & 2);
+      var rest = !!((p.route_rest | 0) & 1);
+      s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || ''),
+                                               title: String(p.route_title || ''), h24: h24}
+                                            : {ref: p.dir_ref | 0, rest: rest, h24: h24};
       if (s_routeFrom && (p.route_start !== undefined || s_routeFrom.ref !== (p.dir_ref | 0) ||
-                          s_routeFrom.rest !== !!p.route_rest)) {
+                          s_routeFrom.rest !== rest)) {
         s_routeFrom = null;  // another route: back to where routes start
       }
       if (s_voiceRoute && p.route_start === undefined && s_voiceRoute.ref === (p.dir_ref | 0) &&
-          s_voiceRoute.rest === !!p.route_rest) {
+          s_voiceRoute.rest === rest) {
         // What the user did with a voice card (VOICE_FINAL_PLAN §10.1).
         usage.add('voice', 'turn ' + s_voiceRoute.seq + ' Select: route opened');
         var st = s_voiceRoute.start;

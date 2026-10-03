@@ -67,6 +67,13 @@ int reserved_width(bool large);
 // The same for any text: "✓ Booked" (docs/DESIGN.md §7.7).
 int draw_checked(GContext *ctx, const char *text, bool large, int x, int y, GColor color);
 int checked_width(const char *text, bool large);
+// The x to give draw_checked for a line on a page `width` wide: PAD on the
+// Time 2; on the Round 2 the negative width, which centers the line.
+#if defined(PBL_ROUND)
+#define CHECKED_X(width) (-(width))
+#else
+#define CHECKED_X(width) PAD
+#endif
 // "1 clash" in Gothic 14 bold, port accent. Draws nothing and returns 0 when
 // there are none; otherwise returns the line height.
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);
@@ -120,19 +127,14 @@ void draw_chevron(GContext *ctx, GColor color, int x, int y);
 int text_height(const char *text, GFont font, int w, int max_h);
 // ---- Scrolling pages ----------------------------------------------------------
 
-// Muted triangles in `above` and `below` while `scroll` has more above or below
-// (route and place pages). Call again when the theme changes.
-void set_scroll_indicators(ScrollLayer *scroll, Layer *above, Layer *below);
-
-// A page whose content scrolls with Up/Down when it doesn't fit, with muted
-// triangles while there's more above or below (as on route and place pages).
+// A page whose content scrolls with Up/Down when it doesn't fit, with a scroll
+// bar on the right edge (an arc on the Round 2) while it does.
 // The content layer's update proc draws, then calls scroll_page_fit with the
 // y where its content ends; the page resizes itself when that changes.
 typedef struct {
   ScrollLayer *scroll;
   Layer *content;
-  Layer *more_above;
-  Layer *more_below;
+  Layer *bar;  // scroll_bar_create
   AppTimer *fit_timer;
   int height;    // content height in use
   int wanted;    // content height the last draw asked for
@@ -147,9 +149,32 @@ void scroll_page_create(ScrollPage *p, Window *window, Layer *root, GRect frame,
 void scroll_page_fit(ScrollPage *p, int bottom);
 // Back to the top (new content).
 void scroll_page_top(ScrollPage *p);
-// Follows the theme (indicator colors) and redraws.
+// Follows the theme and redraws.
 void scroll_page_refresh(ScrollPage *p);
 void scroll_page_destroy(ScrollPage *p);
+
+// The scroll position on the right edge, beside Up and Down: a thin bar on the
+// Time 2, a short arc on the Round 2 (docs/mockups/round/NOTES.md). A
+// full-window layer that follows `scroll`, drawn only while it scrolls.
+Layer *scroll_bar_create(GRect window_bounds, ScrollLayer *scroll);
+
+// ---- Selection pill (docs/mockups/round/NOTES.md) ----------------------------
+
+// The cursor is a rounded pill: inset 4 px from the edges on the Time 2, as
+// wide as the list's column on the Round 2. Lists turn the menu's own
+// highlight off (the background color) and draw it in their rows.
+#if defined(PBL_ROUND)
+#define PILL_INSET 0
+#define PILL_RADIUS 14
+#else
+#define PILL_INSET 4
+#define PILL_RADIUS 8
+#endif
+#define LIST_CURSOR_BG g_theme->bg
+// Fills `r` with the cursor color and rounded corners.
+void fill_pill(GContext *ctx, GRect r);
+// The pill behind a list row (Time 2).
+#define PILL_ROW(b) GRect(PILL_INSET, 0, (b).size.w - 2 * PILL_INSET, (b).size.h)
 
 // A small-caps label ("STATEROOM") in Gothic 14 bold, muted, on a page `width`
 // wide (My info, Ask).
@@ -157,3 +182,39 @@ void draw_label(GContext *ctx, const char *text, int y, int width);
 // A sea-accent button hint with its `›` (Home's `Route ›`), right-aligned so
 // it ends at `right`, on a Gothic 14 bold line at y. Returns its width.
 int draw_hint_right(GContext *ctx, const char *text, int right, int y);
+
+// ---- Round 2 lists and scroll arc (docs/mockups/round/NOTES.md) -------------
+
+#if defined(PBL_ROUND)
+// Lists are wider than the body: the selected row's pill sits 12 px in from
+// the screen's edge (docs/mockups/round/Today, Directory).
+#define LIST_INSET_X 12
+#define LIST_FRAME(b)                                                     \
+  GRect(LIST_INSET_X, TOP_BAR_HEIGHT, (b).size.w - 2 * LIST_INSET_X, \
+        (b).size.h - TOP_BAR_HEIGHT - BODY_INSET_BOTTOM)
+
+// One row of a round list: centered lines; the selected row on a rounded pill
+// with a larger title, the others smaller and muted. `top` goes above the
+// title ("12:00p", "NOW · ends 12:45") in top_color, with a star (icons bit
+// 0) and a clash "!" (bit 1) after it; `sub` goes under it ("Booked" with a
+// check mark when sub_checked).
+typedef struct {
+  const char *top;
+  GColor top_color;
+  const char *title;
+  const char *sub;
+  uint8_t icons;
+  bool big;  // the selected title in Gothic 24 (directory), else 18
+  bool sub_checked;
+} RoundRow;
+#define ROUND_ROW_STAR 1
+#define ROUND_ROW_BANG 2
+
+int round_row_height(const RoundRow *r, bool selected);
+void round_row_draw(GContext *ctx, const Layer *cell, const RoundRow *r, bool selected);
+// A short centered divider between two rows, none beside the selected row.
+// The separator's index is the row below it.
+void round_divider(GContext *ctx, const Layer *cell, MenuLayer *menu, const MenuIndex *index);
+#else
+#define LIST_FRAME(b) BODY_FRAME(b)
+#endif

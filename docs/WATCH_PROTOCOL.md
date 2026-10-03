@@ -50,8 +50,8 @@ everything and switches to the new slice only on `END` with the same `slice_id`.
 | 4 | END | — |
 | 6 | NOTICE | `notice_count`, `notices` (bytes, below). No `slice_id`; sent after a slice. |
 | 7 | STAR_ACK | `star_ack`: the phone saved every star change up to this `seq`. No `slice_id`. |
-| 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_where` (place pages), `dir_gps` (place pages with a Ship GPS block), `dir_rows`. No `slice_id`; see Ship directory. |
-| 17 | ROUTE_PAGE | A Route screen: `dir_ref` and `route_rest` (echoing the request), `route_start` (echoed, event routes only), `route` (bytes). No `slice_id`; see Route screen. |
+| 8 | DIR_PAGE | A ship directory page: `dir_ref`, `dir_title`, `dir_label`, `dir_rel` (only when known), `dir_lines` (pages with a heading: its card as Page lines), `dir_rows`. No `slice_id`; see Ship directory. |
+| 17 | ROUTE_PAGE | A Route screen: `dir_ref` and `route_rest` (echoing the request's bit 0), `route_start` (echoed, event routes only), `route` (the page as Page lines), `dir_label` (Pebble Round 2 only: the header, for the top bar). No `slice_id`; see Route screen. |
 | 20 | VOICE_CARD | The answer to a voice turn: `voice_seq` (echoing VOICE), `voice_card` (bytes). No `slice_id`; see Voice. |
 
 `day_kind` 2 (none) means the date is outside the cruise; `day_status` then reads
@@ -114,7 +114,7 @@ buffers.
 | 13 | STAR_CHANGES | `star_count`, `star_changes` (bytes, below): stars changed on the watch and not yet acked |
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
-| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom, 401 for the route to the closest restroom from where you are, 500 + D for the closest one on deck D (1.5.9) and 100000 + N for the route to cabin N said by voice; `route_rest`: 1 for the route to its closest restroom, else 0. Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event. |
+| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom, 401 for the route to the closest restroom from where you are, 500 + D for the closest one on deck D (1.5.9) and 100000 + N for the route to cabin N said by voice; `route_rest`: bit 0 set for the route to its closest restroom; bit 1 set when the watch shows 24-hour time (1.6.3, for the times the phone writes on the page). Or, from Home, `route_start` (the event's start, cruise minutes) `route_venue` (its venue as the watch has it) and `route_title` (its title as the watch has it, 1.6.8) for the route to that event, with `route_rest` carrying only bit 1. |
 | 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
 | 19 | VOICE | `voice_seq` (the watch's turn number), `voice_text` (what dictation heard, ≤ 255 bytes) and `voice_state` (bit 0: today's `I'm on board` flag is set; bit 1: the watch shows 24-hour time, so card times match it). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
 
@@ -490,31 +490,29 @@ minute (a retry) saves nothing more.
 - `dir_label`: the top bar's right side (`by deck`, `by area`), replacing the
   day's status. `dir_rel` (int, decks from the cabin, deck pages only) replaces
   it with a drawn `↓1 deck` or `your deck`.
-- `dir_where`: a place page's where, 4 bytes as in Packed events. When the page
-  has `dir_gps`, its rel is left out: the FROM line replaces `↓1 deck from
-  cabin`.
-- `dir_gps` (place pages, `docs/DESIGN.md` §10.2): the Ship GPS block,
-  worked out on the phone (`directory.js` with `shipmap.js`, `gpstext.js` and
-  `routestart.js`): int8 decks to go (+ = up; the watch draws the arrow and
-  `1 deck` / `N decks`), uint8 flags, then the FROM header (`FROM YOUR CABIN`,
-  `FROM STUDIO B`) and the line's text (`160 m fore`, `Your deck · 50 m aft`),
-  each as uint8 length and UTF-8 bytes, at most 31 bytes. Flags: 1 the spot is
-  approximate (`Spot approximate`), 2 no stateroom on the Me tab (no FROM
-  block; the watch shows `Add your stateroom on the phone for walking
-  directions`, and the header and text are empty), 4 no route from the start
-  (a stateroom the map doesn't know, say: no FROM block, header and text
-  empty). Then, when there's a closest restroom, its int8 decks and text
-  (`30 m aft`) the same way; the watch reads it only if bytes are left. It is
-  measured from the venue (the entrance the FROM route reaches), and shows
-  with flags 2 and 4 too. Left out for Ashore, venues with no deck, ships with
-  no map, and flag 4 with no restroom. Units (feet, metres or steps) are the
-  phone's setting; the watch never converts.
-- `dir_bank` (elevator bank pages, `docs/DESIGN.md` §10.2): uint8 the
-  cabin's deck (0 unknown), uint8 count and the decks the bank stops at (at
-  most 24), then the line under the name (`Aft · Decks 3-17`) as uint8 length
-  and UTF-8 bytes. The watch draws `STOPS AT` and the deck chips. The page has
-  no `dir_where`; its `dir_gps` is the FROM block to the bank's lobby, with no
-  restroom.
+- `dir_lines` (1.6.3; pages whose first row is a heading: place pages, area
+  pages, the Map check page): the heading's card as Page lines (below),
+  built on the phone (`src/pkjs/pagelines.js`, `placeLines`) for the watch
+  it talks to. On a place page (`docs/DESIGN.md` §10.2) it is the name; for
+  an elevator bank its line (`Aft · Decks 3-17`), `STOPS AT` and the deck
+  chips (the cabin's deck filled); where the place is (`Deck 4 · Mid`, in
+  the port accent when `Ashore`) and, without a FROM block, how far from the
+  cabin (`↓1 deck from cabin`, `On your cabin deck`); its area; `Closest
+  restroom · 30 m aft` (two lines with a deck change) and `Hold Select for its
+  route`; then the Ship GPS block: a divider, the FROM header (`FROM YOUR
+  CABIN`, `FROM STUDIO B`), the line (`↓1 deck · 160 m fore`), `Spot
+  approximate` when the spot is, `Select for route ›` and a divider. With no
+  stateroom on the Me tab the block is the hint `Add your stateroom on the
+  phone for walking directions`; with no route from the start (a stateroom the
+  map doesn't know) it is left out but the restroom line stays. The phone
+  works all of it out (`directory.js` with `shipmap.js`, `gpstext.js` and
+  `routestart.js`); there is no GPS block ashore, for venues with no deck and
+  on ships with no map. Units (feet, metres or steps) are the phone's
+  setting. On the Pebble Round 2 the card is centered, the restroom line reads
+  `Restroom · 30 m aft`, its hint is left out when Select has one, and the
+  dividers are short (`docs/mockups/round/Place`). Until 1.6.2 the phone sent
+  `dir_where`, `dir_gps` and `dir_bank` and the watch laid the card out
+  itself.
 
 `dir_rows` is rows back to back, little-endian, in one message (at most 40 rows
 and 1500 bytes; when a page has more, the phone ends it with `N more`):
@@ -529,8 +527,13 @@ and 1500 bytes; when a page has more, the phone ends it with `N more`):
 | 1 + n | line 1, ≤ 39 bytes: the name, title or header text |
 | 1 + m | line 2, ≤ 31 bytes: an item's sub-line, or a place heading's area |
 
-On a place page the heading takes the cursor first, drawn without the
-highlight, so the page opens at its top; long pages show scroll arrows.
+The heading row's `flags` (1.6.3): 1 a place page, whose heading takes the
+cursor first, drawn without the highlight, so the page opens at its top (long
+pages show scroll arrows); 2 Select opens the route to the place; 4 Hold
+Select opens the route to its closest restroom. Its line 2 is the Route
+screen's header until that page comes (`FROM YOUR CABIN`); the area is on
+the card. `dir_rows` and `dir_lines` together are at most 1900 bytes (rows get
+1500 at most, less when the card is long).
 
 The watch formats event times (`2:00p - 3:00p`, `Now · until 3:00p`, `All
 day`) so they follow its 12/24h setting. A place page lists what's on there for
@@ -544,8 +547,7 @@ On a place page (`docs/DESIGN.md` §10.3), Select asks for the walking route
 to the place and Hold Select for the route from it to its closest restroom: the
 watch sends ROUTE_REQUEST with the page's `dir_ref` and `route_rest`, and the
 phone answers with ROUTE_PAGE (`directory.routePage`). The watch offers Select
-only when the page has a FROM block (`dir_gps` without flags 2 and 4) and Hold
-Select only on a venue with a restroom line. `dir_ref` 400 (`REF_CABIN`, only from a voice
+and Hold Select as the heading row's flags say (2 and 4). `dir_ref` 400 (`REF_CABIN`, only from a voice
 card) is the route to your stateroom from where routes start now (§10.4),
 401 (`REF_REST_HERE`) the route from there to the closest restroom, 500 + D
 (`REF_REST_DECK`, 1.5.9) the closest restroom on deck D (`closest restroom on
@@ -567,31 +569,85 @@ phone script is up waits for it, as on directory pages.
   `Closest restroom` line is measured from), so it works with no stateroom too.
 
 From Home (§4.1), Select asks for the route to the NEXT card's event: the
-request carries `route_start` and `route_venue` instead of `dir_ref` and
-`route_rest`, and the phone answers with `dir_ref` 0, `route_rest` 0 and the
+request carries `route_start`, `route_venue` and `route_title` instead of
+`dir_ref` and `route_rest`, and the phone answers with `dir_ref` 0, `route_rest` 0 and the
 same `route_start` (`directory.eventRoutePage`). The venue may be cut short on
 the watch, so the phone matches it against the day's events starting then. The
 route starts where you'll be before the event (§10.4, with the event as the
-target), and both lines under the steps are empty: the watch draws the event's
-time and title there itself (it formats the time for its 12/24h setting).
+target), and under the steps the page has the event's time and title instead
+of the summary (`12:00p Name That Tune Trivia`, the time in the watch's 12/24h
+setting from `route_rest` bit 1; on the Round 2 on two lines). The title is the
+matched event's, or, when the phone finds no match (no bundle, or its events
+differ from the watch's slice), the watch's own `route_title` (1.6.8), so it
+always shows.
 
-`route` is packed little-endian:
+`route` is the whole screen as Page lines (1.6.3, `pagelines.routeLines`):
+the destination (`Royal Theater`, `Restroom`), the header (`FROM YOUR CABIN`,
+`CLOSEST TO ROYAL THEATER`; on the Round 2 it goes in the top bar as
+`dir_label`, `CLOSEST TO` shortened to `NEAR`), a divider, the lead line
+(`Same area · your deck`, or a message such as `No route found` with no
+steps), each step with its glyph (walk, cross the ship, elevator, stairs,
+arrive; at most 8, a longer route keeps the arrival last; its whole text,
+wrapping to two lines, three on the Round 2, since 1.6.4), then, when any is
+there, a divider and the lines under the steps: a restroom's `Deck 5 · Fore`,
+the summary (`↓2 decks · 100 m in all`, `Same deck as Royal Theater`; `in all`
+is dropped when the planner isn't sure) and an event route's time and title.
+Units are the phone's setting, as on place pages. Until the page comes, and
+with the phone away, the watch draws the same layout itself: the title and
+header it was given, a divider and `Finding route…` or `Connect your phone` /
+`Select tries again`. Until 1.6.2 `route` held the texts and steps packed
+for the watch's own layout.
+
+## Page lines
+
+A page the phone lays out and the watch draws line by line (1.6.3,
+`src/c/lines.c`, `src/pkjs/pagelines.js`): a directory heading's card
+(`dir_lines`) and the Route screen (`route`). The watch has no wording or
+layout of its own for them, so a new phone-built screen costs the watch
+almost nothing. Lines follow each other:
 
 | Bytes | Field |
 |---|---|
-| 1 | `flags`: 1 shown less (the planner isn't sure, or the spot is approximate: `To Deck N`, then the overall distance; `in all` is dropped) |
-| 1 | `decks`: int8, the small line's deck change (+ = up); the watch draws the arrow and `1 deck` / `N decks` before it |
-| 1 + n | the destination (`Royal Theater`, `Restroom`), ≤ 39 bytes |
-| 1 + n | the header (`FROM YOUR CABIN`, `CLOSEST TO ROYAL THEATER`), ≤ 31 bytes |
-| 1 + n | the lead line above the steps (`Same area · your deck`, or a message such as `No route found` with no steps), ≤ 63 bytes |
-| 1 + n | the large line under the steps (a restroom's `Deck 5 · Fore`), ≤ 31 bytes |
-| 1 + n | the small line under the steps (`100 m in all`, `Same deck as Royal Theater`), ≤ 39 bytes |
-| 1 | how many steps (at most 8; a longer route keeps the arrival last) |
-| 1 + 1 + n | each step: its glyph (0 walk, 1 cross the ship, 2 elevator, 3 stairs, 4 arrive; the watch draws them) and text (`60 m fore`, `Fore stairs to Deck 5`), ≤ 39 bytes |
+| 1 | `style`: bits 0-1 the font (0 Gothic 14 bold, 1 Gothic 18 bold, 2 Gothic 24 bold), bit 2 centered, bits 3-5 the color token (the watch theme's field: 1 text, 2 muted, 3 divider, 4 port accent, 5 sea accent; the watch reads only these 3 bits since 1.6.8, so a token can't point past the theme), bits 6-7 unused |
+| 1 | `glyph`: 0 none, 1 an up arrow before the text, 2 a down arrow, 3 a `›` after the text, 4 a divider (no text), 5 deck chips, 8 + n a route step's glyph n (0 walk, 1 cross the ship, 2 elevator, 3 stairs, 4 arrive) with the text after it, left-aligned |
+| 1 | `space`: int8, pixels down from where the last line ended to this line's top |
+| 1 | `max_h`: the text's wrap limit in pixels (one line: 14, 18 or 24 for the three fonts); a divider's inset from each side |
+| 1 + n | the text (≤ 63 bytes); deck chips: the cabin's deck (255 none), then the decks |
 
-Both lines under the steps are empty on a `Same area` route; a divider is drawn
-before them only when one is there. Units are the phone's setting, as on place
-pages.
+The watch draws each text in a box at most `max_h` tall, with an ellipsis,
+and moves down by its measured height (by nothing for an empty text or a
+divider; by 23 px per row of 7 chips). The phone lays pages out with one
+line's height per font (14, 18 and 24 px; `lines.h` `LINE_H14` to
+`LINE_H24`), so a text that wraps pushes the rest down on its own. On the
+Pebble Time 2 the pages are pixel for pixel the 1.6.2 screens; on the Pebble
+Round 2 (`Pebble.getActiveWatchInfo().platform` is `gabbro`) they are
+centered, with short dividers (`docs/mockups/round/Place`, `Route`).
+
+## Text budgets
+
+The phone words what the watch draws, so the wording stays out of the C code
+(1.6.7, `src/pkjs/textfit.js`). It picks a watch from
+`Pebble.getActiveWatchInfo().platform`; a missing or unknown watch is the
+Pebble Time 2 (`emery`), whose text is exactly what it was before. For the
+Pebble Round 2 (`gabbro`, 168 px text column inside the circle) it works in
+characters per line, estimated from Gothic Bold's average glyph and checked on
+the emulator: 28 at Gothic 14, 23 at Gothic 18 and 20 at Gothic 24. The Time 2
+columns, used by the tests only, are 32, 26 and 22.
+
+- **Page lines** (`pagelines.js`): on the Round 2 each text is fitted to the
+  lines its box holds (`max_h` over the font's line height; a route step has
+  two characters less for its glyph). A text that doesn't fit is first
+  shortened (`Same deck as X` becomes `Same deck: X`), then cut at a word with
+  an ellipsis.
+- **Voice card** (`voicecard.js`, `answer(..., platform)`): the hint has a short
+  Round 2 form (`Select: route to X` becomes `Select: route`; `Select: all-aboard
+  alerts off for today` becomes `Select: alerts off today`), never more than two
+  lines, and a two-part hint (`a · b`) has each part on its own line (the watch
+  splits at the `·`). Row values are cut at three lines of Gothic 18.
+- The packed card and its byte limits (47 for the hint, 63 for a value) are the
+  same for both watches. `test/pkjs/textfit.test.js` checks that no hint, row,
+  place-page line or route line goes over its budget on either platform, and
+  that the Time 2's text is unchanged.
 
 ## Voice
 

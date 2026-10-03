@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
 How the watch app and the phone settings page look and behave, as built in
-1.6.0. One section per screen or feature. Designs that are approved but not
+1.6.6. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -51,8 +51,17 @@ code differ, the code is right and this file needs a fix.
   missing. Distances carry no `~`; the Help screen says once that every
   distance is approximate (owner, 2026-09-26). Times follow the watch's
   12/24-hour setting (`1:00p` in 12-hour style).
-- **Lists scroll** with Up/Down and the muted content triangles when a page
-  doesn't fit (details, reminders, place pages, routes, Ask).
+- **Lists scroll** with Up/Down. A page that doesn't fit (details, reminders,
+  place pages, routes, Ask) shows a thin scroll bar on the right edge, beside
+  Up and Down: track `divider` 1 px at x 195 from 6 px under the top bar to
+  6 px above the bottom, thumb `muted` 3 px with rounded ends, its length the
+  share of the page in view (at least 12 px). It replaced the content
+  triangles in 1.6.6 (G6a; mockup `round/PT2Event`); the Round 2 shows an arc
+  instead (§15).
+- **The cursor** on lists (Today, the directory, My info's rows) is a rounded
+  pill in `cursor_bg`, 8 px radius, inset 4 px from each side, with the row's
+  text where it was (since 1.6.6, G6a; mockups `round/PT2Today`,
+  `PT2Directory`, `PT2MyInfo`). It replaced the full-width bar.
 
 ## 2. Colors
 
@@ -477,8 +486,15 @@ Not reserved yet / ✓ Reserved
 
 Alerts at the day's **warning period** (30/60/90/120 min, Days tab; 30 by
 default, 60 at tender ports), then 30 and 15 minutes before all-aboard,
-without duplicates. Top bar `All aboard`, `ALL ABOARD IN` large (Gothic 28,
-port accent). Cancelled by I'm on board (§4.4).
+without duplicates. Top bar `All aboard`. Cancelled by I'm on board (§4.4).
+
+Since 1.6.6 (G6a; mockup `round/PT2AlertAllAboard`) an alert for today's
+all-aboard time, while it's still ahead, shows Home's countdown (§4.2):
+`ALL ABOARD IN`, the count with the warning sign in the warning window, the
+ship and local times, then the time-ashore bar with its end times and
+`Excursion back 4:30p` while one is out. No on-board hint or clash line
+(Select opens Home). Any other all-aboard alert keeps the text layout:
+`ALL ABOARD IN 15 MIN` large (Gothic 28, port accent), the port, the time.
 
 ### 8.3 To reserve (evening)
 
@@ -520,12 +536,16 @@ Top bar `My Info` in the gray band. Rows, top to bottom:
 
 1. `ON BOARD` undo row, while on board (§4.4).
 2. `Today's summary` / `Tomorrow's summary` (§5).
-3. `STATEROOM` (large) with deck and nearest stairs.
+3. The stateroom card: a `cursor_bg` rounded card (inset 4 px, 8 px radius)
+   with `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`
+   in the cursor text color (since 1.6.6, G6a; mockup `round/PT2MyInfo`).
 4. `MUSTER STATION`, `DINING ROOM` (`Not set` when empty), `SHIP CLOCK`
    note, `LAST SYNC` (`4:31a today`).
 5. `Ship directory` (§10.1).
 
-Up/Down pick a row; Select opens it.
+Up/Down pick a row (the undo row, the summary, Ship directory); Select opens
+it. The summary and Ship directory rows are plain Gothic 18 bold text, on the
+cursor's pill when selected.
 
 ## 10. Ship directory and Ship GPS
 
@@ -581,6 +601,11 @@ Flag a map problem             mapped ships only
 - **Flag a map problem:** Select saves the time, the place, what the page
   showed and the route start for Me > Map check, and shows `Flagged`.
 - Distances use the Me tab's unit (metres, feet or steps), rounded.
+- **Built on the phone (1.6.3):** the card above `LATER TODAY` is a page of
+  styled lines the phone lays out and the watch draws as sent
+  (`WATCH_PROTOCOL.md`, Page lines; `src/pkjs/pagelines.js`,
+  `src/c/lines.c`). The Time 2's card is pixel for pixel the 1.6.2 one; the
+  Round 2's is centered (§15). The list rows below it stay the watch's own.
 
 ### 10.3 Route screen
 
@@ -621,6 +646,11 @@ FROM YOUR CABIN                small caps, muted
   summary.
 - `Finding route…` while loading; `No route found`, `No restroom found`.
   Up/Down scroll; Hold Select asks by voice.
+- **Built on the phone (1.6.3):** the whole screen is a page of styled lines
+  from the phone, as the place card (§10.2); the time on Home's route follows
+  the watch's 12/24h setting, which the request carries. Until the page comes
+  (and with the phone away) the watch draws the title, header and
+  `Finding route…` / `Connect your phone` itself in the same layout.
 - **Route safety** (planner rules): every step walkable as written (no
   fore/aft run through cabin corridors that don't connect); change sides only
   where the plans show a link (lobby, promenade, open deck); no crew doors or
@@ -957,14 +987,125 @@ holds on the Round 2 unless this section says otherwise.
 - **Lists** (Today, directory): the firmware keeps the selected row in the
   middle of the column. A place page (§10.2), a single tall row, keeps its top
   in view instead.
-- **Home (§4):** the first line sits 0 px below the label line (4 px on the
-  Time 2) so the port-day countdown's last line fits. Button hints (§4.6) sit
-  at Up 70, Select 130, Down 190 on the right and Exit at 130 on the left
-  (window y), inside a 200 px column.
-- **On board? and Remove star? (§4.4, §6):** the edge labels (`Not yet` /
-  `Keep`, `Hold: yes` / `Hold: remove`) sit along the bottom of the body,
-  left and right, until G6 puts them on the bezel by their buttons.
-- **Scroll triangles, toasts:** inside the body column (top and bottom).
+- **Home (§4), round layout since 1.6.1 (G3; mockups `Main`,
+  `HomeNextDark`, `HomePortArc`, `HomePortArcDark`, `DaysToSail`):** the
+  body is a wider 210 px column (inset 25 px) from y 48 to 220, its first
+  line right under the label line, and every line is centered.
+  - NEXT card: the star and `NEXT · IN 20 MIN` centered together, the
+    title, `12:00p · On Air`, `Deck 4 Aft · ↓2`, tags and the clash count,
+    then a divider and **one** next item (`1:00p ★ Title` and its venue
+    line, each centered as one line; left out when it doesn't fit above the
+    body's bottom). `Route ›` is a centered bottom hint at y 221, outside
+    the body, while Select routes.
+  - All-aboard countdown: `ALL ABOARD IN`, the count (centered together
+    with the warning sign in the warning window), `4:30p ship · 4:30p
+    local`, `Excursion back 11:30a` and the clash count. The time-ashore bar
+    becomes an **arc along the bottom edge**: radius 121, 8 px wide, from
+    140° on the left to 40° on the right (screen angles), rounded ends,
+    the §4.2 colors one degree at a time, and the now tick as a 2 px radial
+    line (radius 114-128) in `text`. The start and all-aboard times sit
+    just above the arc's ends (Gothic 14 bold, `muted`, y 177), and `Hold
+    Select: on board` is centered at y 202 between them.
+  - Days to sail: the label line reads `SAILS IN` (`SAILS` on the last
+    day), then the count (LECO 42) with `days` under it, the sail line and
+    ship, a divider and `★ 3 starred so far`. In the last 3 days the ship
+    line is left out to make room for the sync reminder.
+  - Arrival card, messages: the same lines, centered; `Hold Select: on
+    board` (shorter than the Time 2's `I'm on board`).
+  - The arc, its times and the bottom hints are drawn on a full-screen layer
+    over the body, so they fade with the rest behind the button hints.
+  Button hints (§4.6) sit at Up 70, Select 130, Down 190 on the right and
+  Exit at 130 on the left (window y), inside a 200 px column.
+- **Morning summary (§5), since 1.6.1 (mockup `MorningSummary`):** today's
+  card puts `DAY 4 · PORT DAY` on the label line (no status after it) and
+  starts with the place; every line is centered, the star with its count.
+  Tomorrow's card keeps `TOMORROW` on the label line and the day label in
+  the body.
+- **Arrow lines** (`↓2 decks from cabin`, `Deck 4 Aft · ↓2`, route and
+  place lines) are centered in their box on the Round 2 since 1.6.1.
+- **On board? and Remove star? (§4.4, §6), since 1.6.5 (G6; mockup
+  `OnBoard`):** the title and the lines under it are centered in a 170 px
+  column (`Ends today's countdown` / `All-aboard alerts off.` / `Undo in My
+  info.` as one muted block; for Remove star? the event title and `9:00p ·
+  On Air`), with no divider. The edge labels sit by the buttons the G0 check
+  recorded (Back at the left middle, Down at the lower right, window y 130
+  and 190): `Not yet` / `Keep` is plain muted text with a `‹`, `Hold: yes` /
+  `Hold: remove` a pill 22 px in from the bezel with a `›`. The "On board"
+  confirmation was already centered. The real button positions still need
+  checking on the watch.
+- **Alerts and notices, since 1.6.2 (G4; mockups `AlertReminder`,
+  `AlertAllAboard`, `AlertToReserve`, `NoticeSchedule`, `ClashToast`):** every
+  line is centered, including the event details body a reminder shows (the
+  route line `↑2 decks · Fore → Mid`, `✓ Booked`, `✓ Reserved`, the star with
+  `Starred` are centered as one run). The all-aboard alert for the day's
+  all-aboard time shows Home's countdown (`ALL ABOARD IN`, the count with the
+  warning sign in the warning window, ship and local times) over the same
+  time-ashore arc and its end times, with `Select: Home` at the bottom;
+  other all-aboard alerts (the test alert) keep the `IN 15 MIN` layout. On
+  `PHONE NEEDED` the text is smaller so it clears the footer. The clash toast
+  is a bordered rounded card over the middle of Today (200 x 70, two lines)
+  instead of the bar at the bottom. Long alerts show the scroll arc (below)
+  since 1.6.4.
+- **Place card and Route screen, since 1.6.3 (GP; mockups `Place`,
+  `Route`):** both are phone-built pages (§10.2, §10.3), laid out for the
+  Round 2 on the phone. The place card is centered with short dividers
+  (150 px), `Restroom · 30 m aft` in place of `Closest restroom · …`, and
+  only `Select for route ›` as its hint (`Hold Select: restroom route`
+  when there's no route). The Route screen puts its header in the top
+  bar's label line (`ROUTE · FROM YOUR CABIN`, `CLOSEST TO` shortened to
+  `NEAR`), centers the title and the lines under the steps between short
+  dividers (110 px), keeps the steps left-aligned with their glyphs, and
+  puts Home's event time and title on two lines. A step wraps to three lines
+  there (two on the Time 2), so the longest Harmony arrival, `Playmakers
+  Sports Bar & Arcade · stbd side`, shows whole (1.6.4).
+- **Lists, since 1.6.4 (G5; mockups `Today`, `Directory`):** Today and the
+  directory's lists keep the selected row in the middle on a rounded pill
+  (14 px radius, 12 px in from the screen's edge, so the list is 236 px wide)
+  with every line centered. The selected row is larger (a directory name in
+  Gothic 24, an event title in Gothic 18, its second line in 14 bold); the
+  rows above and below are smaller (14 bold, second line in 14) and muted,
+  and short dividers (110 px) separate them, none beside the pill. Today's
+  time sits on its own line above the title (`12:00p`, `NOW · ends 12:45` in
+  the now color) on a group's first row and on the selected row, with the
+  star and the clash `!` after it (in the cursor text color on the pill); a
+  booked order adds `Meet 8:45a` to it and shows `✓ Booked` under the title,
+  and a final show adds `Last chance` / `Only show` to it in the port accent.
+  The venue is the line under the title. A directory event row has its time
+  above its title the same way. Headers (`FORE`, `DECK 8 · MID`) and the
+  `Connect your phone` message are centered. Under a place or area card the
+  selection isn't centered: rows keep their height and the selected one gets
+  a smaller pill, and the list narrows to the body column the card was laid
+  out for.
+- **Scroll arc, since 1.6.4 (mockup `Event`):** long pages (event details,
+  route, place and area pages, alerts, the Ask card) show their scroll
+  position as a short arc on the right edge beside Up and Down instead of the
+  triangles: from -35° to 35°, radius 123, track `divider` 2 px, thumb
+  `muted` 4 px sized to the share of the page on screen. Nothing shows when
+  the page fits.
+- **My info, since 1.6.5 (G6; mockup `MyInfo`):** the rows are centered on a
+  236 px column (the lists' width) that runs down to y 232. The stateroom is a
+  blue card (`cursor_bg`, 14 px radius): `STATEROOM`, the number in Gothic 28
+  bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
+  muted text and become a pill around their text, in Gothic 18 bold, when
+  under the cursor; the `ON BOARD` undo row is a centered pill. Muster
+  station, dining room, ship clock and last sync are labeled values with
+  110 px dividers. On `Ship directory` the page scrolls by whole rows, so no
+  label is cut under the top bar.
+- **Ask, since 1.6.5 (G6; mockups `VoiceCard`, `PhoneAway`,
+  `DictationFailed`):** the card is a 200 px column down to y 232 with
+  centered rows: the label in 14 bold caps, the value in Gothic 18 bold
+  (wraps, up to 66 px), no dividers. The hint is blue and centered; the
+  watch breaks `Select: route · Hold: ask again` at its `·` onto two lines.
+  A card with four rows drops the first row's label (`HEARD`) and narrows the
+  gaps so it fits with a two-line hint; a longer one scrolls with the arc.
+  The watch's own messages show as one Gothic 24 bold line in the middle
+  with a muted detail under it (`Voice is heard on the phone`, `Bring the
+  phone nearby, then hold Select to ask`) or, for `No answer from the
+  phone`, `Hold: ask again` in blue near the bottom edge. From 1.6.7 the phone
+  words the card for the Round 2 (`src/pkjs/textfit.js`): short hints
+  (`Select: route`, `Select: alerts off today`, `Nothing to change · Hold: ask
+  again`, `Undo: “Forget where I am”`), at most two lines, and row values cut
+  at three lines. The Time 2's card is unchanged.
 
 **Tools:** `tools/watch_size.py` checks both binaries against the 62 KB
 budget; `tools/screens.sh <dir>` installs on each emulator in turn and saves a

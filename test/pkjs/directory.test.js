@@ -2,7 +2,6 @@
 var assert = require('assert');
 var directory = require('../../src/pkjs/directory');
 var slice = require('../../src/pkjs/slice');
-var pack = require('../../src/pkjs/pack');
 
 var tests = [];
 function test(name, fn) { tests.push({name: name, fn: fn}); }
@@ -210,15 +209,16 @@ test('rows pack little-endian and stay inside one message', function() {
   });
 });
 
-test('message carries rel and where only when known', function() {
+test('message carries rel only when known, and lines only with a heading', function() {
   var m = directory.message(page(directory.REF_DECK + 5));
   assert.strictEqual(m.dir_title, 'Deck 5');
   assert.strictEqual(m.dir_rel, -1);
-  assert.ok(!('dir_where' in m));
+  assert.ok(!('dir_lines' in m));
   var p = page(find(page(directory.REF_DECK + 5).rows, 'Boleros').ref);
   var pm = directory.message(p);
   assert.ok(!('dir_rel' in pm));
-  assert.deepStrictEqual(pm.dir_where, pack.encodeWhere(p.where));
+  assert.ok(pm.dir_lines.length > 0);
+  assert.ok(!('dir_where' in pm) && !('dir_gps' in pm));
   assert.ok(!('dir_rel' in directory.message(page(directory.REF_DECKS))));
 });
 
@@ -271,7 +271,7 @@ test('GPS: approximate spots, owner-added venues, no GPS ashore or off the map',
   assert.strictEqual(moved.gps.flags, directory.GPS_APPROX);
   assert.strictEqual(moved.gps.decks, -2);
   assert.strictEqual(gpsPage('Perfect Day at CocoCay').gps, null);
-  assert.ok(!('dir_gps' in directory.message(gpsPage('Perfect Day at CocoCay'))));
+  assert.ok(directory.message(gpsPage('Perfect Day at CocoCay')).dir_lines.length > 0);
   var other = makeBundle();
   other.ship.code = 'XX';
   assert.strictEqual(directory.buildPage(directory.REF_PLACE, {bundle: other, settings: CABIN, now: NOW}).gps,
@@ -323,21 +323,19 @@ test('startReason says why a route starts where it does (usage log)', function()
   assert.strictEqual(directory.startReason(ctx(mine), {start: 1440 + 20 * 60}), 'stateroom');
 });
 
-test('GPS: dir_gps packs decks, flags, header and text', function() {
-  var g = {header: 'FROM YOUR CABIN', decks: -2, text: '160 m fore', flags: directory.GPS_APPROX};
-  var b = directory.encodeGps(g);
-  assert.deepStrictEqual(b.slice(0, 3), [254, 1, 15]);
-  assert.strictEqual(String.fromCharCode.apply(null, b.slice(3, 18)), 'FROM YOUR CABIN');
-  assert.strictEqual(b[18], 10);
-  assert.strictEqual(b.length, 29);
-  assert.deepStrictEqual(directory.message(gpsPage('Royal Theater')).dir_gps,
-                         directory.encodeGps(gpsPage('Royal Theater').gps));
-  // The restroom follows: int8 decks, then its text.
-  g.rest = {decks: 1, text: '20 m aft'};
-  var r = directory.encodeGps(g);
-  assert.deepStrictEqual(r.slice(0, 29), b);
-  assert.deepStrictEqual(r.slice(29, 31), [1, 8]);
-  assert.strictEqual(String.fromCharCode.apply(null, r.slice(31)), '20 m aft');
+test('GPS: the heading row says what Select and Hold Select do', function() {
+  var rows = directory.message(gpsPage('Royal Theater')).dir_rows;
+  // kind, ref, start, minutes, flags, then line 1 and line 2 (the route header).
+  assert.strictEqual(rows[0], directory.ROW_PLACE);
+  assert.strictEqual(rows[9], directory.HEAD_PLACE | directory.HEAD_ROUTE | directory.HEAD_REST);
+  var n = rows[10];
+  assert.strictEqual(String.fromCharCode.apply(null, rows.slice(11, 11 + n)), 'Royal Theater');
+  assert.strictEqual(String.fromCharCode.apply(null, rows.slice(12 + n, 12 + n + rows[11 + n])), 'FROM YOUR CABIN');
+  // No stateroom: no route, but the restroom route.
+  var none = directory.message(gpsPage('Studio B', {settings: {me: {deck: 'Deck 9'}}})).dir_rows;
+  assert.strictEqual(none[9], directory.HEAD_PLACE | directory.HEAD_REST);
+  // Ashore: a place page with nothing to route to.
+  assert.strictEqual(directory.message(gpsPage('Perfect Day at CocoCay')).dir_rows[9], directory.HEAD_PLACE);
 });
 
 test('GPS: closest restroom from the venue, in the owner units', function() {
@@ -444,24 +442,15 @@ test('route: to the closest restroom from the venue, as on the place page', func
   assert.strictEqual(route('Royal Theater', true, {settings: {me: {deck: 'Deck 9'}}}).title, 'Restroom');
 });
 
-test('route: ROUTE_PAGE packs flags, decks, texts and steps', function() {
-  var p = {ref: 1074, rest: true, title: 'Restroom', header: 'CLOSEST TO X', lead: '', big: 'Deck 4',
-           small: {decks: -1, text: 'ab'}, flags: 1, steps: [{glyph: 0, text: '5 m'}, {glyph: 4, text: 'Restroom'}]};
-  var b = directory.encodeRoute(p);
-  assert.deepStrictEqual(b.slice(0, 3), [1, 255, 8]);
-  var i = 3 + 8;
-  assert.strictEqual(b[i], 12);
-  i += 13;
-  assert.strictEqual(b[i], 0);  // lead
-  i += 1;
-  assert.strictEqual(b[i], 6);  // big
-  i += 7;
-  assert.deepStrictEqual(b.slice(i, i + 3), [2, 97, 98]);
-  i += 3;
-  assert.deepStrictEqual(b.slice(i, i + 5), [2, 0, 3, 53, 32]);
-  assert.strictEqual(b.length, i + 1 + 5 + 10);
+test('route: ROUTE_PAGE echoes the request and carries the page as lines', function() {
+  var p = route('Royal Theater', true);
   var m = directory.routeMsg(p);
-  assert.deepStrictEqual([m.dir_ref, m.route_rest], [1074, 1]);
+  assert.deepStrictEqual([m.dir_ref, m.route_rest], [p.ref, 1]);
+  assert.ok(m.route.length > 0);
+  assert.ok(!('dir_label' in m));
+  // The Round 2 shows the header in the top bar.
+  assert.strictEqual(p.header, 'CLOSEST TO ROYAL THEATER');
+  assert.strictEqual(directory.routeMsg(p, {round: true}).dir_label, 'NEAR ROYAL THEATER');
   // A route with a crossing: every step and the arrival fit.
   var boleros = route('Boleros').steps;
   assert.ok(boleros.some(function(s) { return s.glyph === 1 && s.text === 'Cross the ship'; }));
@@ -482,6 +471,7 @@ test('event route: steps without the summary, and route_start echoed', function(
   assert.deepStrictEqual(p.steps[p.steps.length - 1], {glyph: 4, text: 'Royal Theater'});
   assert.deepStrictEqual(p.steps, route('Royal Theater').steps);
   assert.deepStrictEqual([p.big, p.small.text], ['', '']);
+  assert.strictEqual(p.event.start, AT_3PM);
   var m = directory.routeMsg(p);
   assert.deepStrictEqual([m.dir_ref, m.route_rest, m.route_start], [0, 0, AT_3PM]);
   assert.strictEqual(directory.routeMsg(route('Royal Theater')).route_start, undefined);
@@ -511,6 +501,26 @@ test('event route: a venue cut short on the watch, and messages', function() {
   assert.ok(/stateroom/.test(none.lead));
   assert.strictEqual(eventRoute('Nowhere Lounge', AT_3PM).lead, 'No route found');
   assert.strictEqual(eventRoute('Perfect Day at CocoCay', AT_3PM).lead, 'No route found');
+});
+
+test('event route: the title under the steps always shows (the watch sends its own, 1.6.8)', function() {
+  var settings = {me: CABIN.me, personal: [{title: 'Party', venue: 'Royal Theater', date: '2027-03-07',
+                                            time: '15:00', minutes: 60}]};
+  function ev(venue, start, title, s, bundle) {
+    return directory.eventRoutePage({start: start, venue: venue, title: title},
+                                    {bundle: bundle === undefined ? makeBundle() : bundle, settings: s || CABIN,
+                                     stars: {}, now: NOW});
+  }
+  // A match: the phone's own (whole) title.
+  assert.strictEqual(ev('Royal Thea', AT_3PM, 'Par', settings).event.title, 'Party');
+  // The phone's events differ from the watch's slice: the watch's title.
+  var p = ev('Royal Theater', AT_3PM + 7, 'Mystery Party', settings);
+  assert.deepStrictEqual(p.event, {start: AT_3PM + 7, title: 'Mystery Party'});
+  assert.ok(p.steps.length > 0);
+  // No bundle on the phone: still the watch's title.
+  assert.strictEqual(ev('Royal Theater', AT_3PM, 'Mystery Party', settings, null).event.title, 'Mystery Party');
+  // An older watch sends none: an empty title, as before.
+  assert.strictEqual(ev('Royal Theater', AT_3PM + 7, undefined, settings).event.title, '');
 });
 
 test('elevator banks: deck rows, the Elevators area and bank pages', function() {
@@ -547,9 +557,7 @@ test('elevator banks: deck rows, the Elevators area and bank pages', function() 
   assert.ok(new RegExp('^Your deck' + DOT + '[0-9]+ m').test(aft.gps.text), aft.gps.text);
   assert.ok(!aft.gps.rest);
   var m = directory.message(aft);
-  assert.deepStrictEqual(m.dir_bank.slice(0, 16), [9, 14, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17]);
-  assert.strictEqual(m.dir_bank[16], m.dir_bank.length - 17);
-  assert.ok(!('dir_where' in m));
+  assert.ok(m.dir_lines.length > 0 && !('dir_bank' in m));
 
   // No banks on a ship with no map.
   assert.strictEqual(directory.bankDecksText([3, 4, 5], [3, 4, 5]), 'all decks');

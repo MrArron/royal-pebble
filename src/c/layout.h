@@ -28,13 +28,17 @@
 #define HINT_SELECT_CY 130
 #define HINT_DOWN_CY 190
 #define HINT_BACK_CY 130
-// "On board?" and "Remove star?" button labels (body coordinates): along the
-// bottom of the body until the round screen gets its own layout.
-#define EDGE_BACK_CY 160
-#define EDGE_DOWN_CY 160
+// "On board?" and "Remove star?" button labels (body coordinates, the body
+// being the whole screen under the top bar on the Round 2): each sits at its
+// button's height, Back at the left middle and Down at the lower right.
+#define EDGE_BACK_CY (HINT_BACK_CY - TOP_BAR_HEIGHT)
+#define EDGE_DOWN_CY (HINT_DOWN_CY - TOP_BAR_HEIGHT)
 // Home's first line (body coordinates): right under the label line, so the
 // port-day countdown's last line ("3 clashes") still fits.
 #define HOME_TOP 0
+// Home's body is wider than the 184 px column (docs/mockups/round/Main):
+// its centered lines are short at the top and the circle widens below.
+#define HOME_INSET_X 25
 
 #else
 
@@ -67,3 +71,12 @@
 #define BODY_FRAME(b)                                                     \
   GRect(BODY_INSET_X, TOP_BAR_HEIGHT, (b).size.w - 2 * BODY_INSET_X, \
         (b).size.h - TOP_BAR_HEIGHT - BODY_INSET_BOTTOM)
+
+// Home's body: the body on the Time 2, a wider column on the Round 2.
+#if defined(PBL_ROUND)
+#define HOME_FRAME(b)                                                     \
+  GRect(HOME_INSET_X, TOP_BAR_HEIGHT, (b).size.w - 2 * HOME_INSET_X, \
+        (b).size.h - TOP_BAR_HEIGHT - BODY_INSET_BOTTOM)
+#else
+#define HOME_FRAME(b) BODY_FRAME(b)
+#endif

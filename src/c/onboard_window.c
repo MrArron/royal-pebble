@@ -19,6 +19,15 @@
 // Button heights in the body's coordinates (window minus the top bar).
 #define BACK_CY EDGE_BACK_CY
 #define DOWN_CY EDGE_DOWN_CY
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/OnBoard): the body is the whole width under the
+// top bar, so the labels can sit by the bezel; the text keeps a 170 px column.
+#define OB_FRAME(b) GRect(0, TOP_BAR_HEIGHT, (b).size.w, (b).size.h - TOP_BAR_HEIGHT)
+#define COL_PAD 45
+#else
+#define OB_FRAME(b) BODY_FRAME(b)
+#define COL_PAD PAD
+#endif
 
 static Window *s_window;
 static Layer *s_top_bar;
@@ -55,17 +64,38 @@ static bool unstar_valid(void) {
 static void draw_text(GContext *ctx, const char *text, const char *font, GColor color, int y,
                       int w, int h, GTextAlignment align) {
   graphics_context_set_text_color(ctx, color);
-  graphics_draw_text(ctx, text, fonts_get_system_font(font), GRect(PAD, y, w - 2 * PAD, h),
+  graphics_draw_text(ctx, text, fonts_get_system_font(font), GRect(COL_PAD, y, w - 2 * COL_PAD, h),
                      GTextOverflowModeWordWrap, align, NULL);
 }
 
 // A button label drawn at the screen edge beside its button: a pill rounded on
-// the inside, in Gothic 14 bold.
+// the inside, in Gothic 14 bold. On the Round 2 the Back label is plain muted
+// text with a chevron toward its button and the other a full pill inset from
+// the bezel with a chevron on its outer end.
 static void draw_pill(GContext *ctx, const char *text, GColor fill, GColor text_color, bool left,
                       int cy, int screen_w) {
   GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
   int text_w = graphics_text_layout_get_content_size(text, font, GRect(0, 0, screen_w, 18),
                                                      GTextOverflowModeFill, GTextAlignmentLeft).w;
+#if defined(PBL_ROUND)
+  int w = text_w + 26;
+  int x = left ? 8 : screen_w - 22 - w;
+  if (left) {
+    text_color = g_theme->muted;
+    fill = g_theme->bg;
+  }
+  graphics_context_set_fill_color(ctx, fill);
+  graphics_fill_rect(ctx, GRect(x, cy - 11, w, 22), 11, GCornersAll);
+  graphics_context_set_text_color(ctx, text_color);
+  graphics_draw_text(ctx, text, font, GRect(x + (left ? 14 : 8), cy - 10, text_w + 2, 18),
+                     GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+  graphics_context_set_stroke_color(ctx, text_color);
+  graphics_context_set_stroke_width(ctx, 2);
+  int cx = left ? x + 3 : x + w - 9;
+  graphics_draw_line(ctx, GPoint(left ? cx + 3 : cx, cy - 4), GPoint(left ? cx : cx + 3, cy));
+  graphics_draw_line(ctx, GPoint(left ? cx : cx + 3, cy), GPoint(left ? cx + 3 : cx, cy + 4));
+  graphics_context_set_stroke_width(ctx, 1);
+#else
   int w = text_w + 12;
   GRect box = GRect(left ? 0 : screen_w - w, cy - 8, w, 16);
   graphics_context_set_fill_color(ctx, fill);
@@ -73,15 +103,22 @@ static void draw_pill(GContext *ctx, const char *text, GColor fill, GColor text_
   graphics_context_set_text_color(ctx, text_color);
   graphics_draw_text(ctx, text, font, GRect(box.origin.x + (left ? 5 : 7), box.origin.y - 2, text_w + 2, 18),
                      GTextOverflowModeFill, GTextAlignmentLeft, NULL);
+#endif
 }
 
 static void draw_ask(GContext *ctx, int w) {
+#if defined(PBL_ROUND)
+  draw_text(ctx, "On board?", FONT_KEY_GOTHIC_24_BOLD, g_theme->text, 4, w, 30, TEXT_ALIGN);
+  draw_text(ctx, "Ends today's countdown\nAll-aboard alerts off.\nUndo in My info.",
+            FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, 34, w, 54, TEXT_ALIGN);
+#else
   draw_text(ctx, "On board?", FONT_KEY_GOTHIC_24_BOLD, g_theme->text, 30, w, 30, GTextAlignmentLeft);
   draw_divider(ctx, 62, w);
   draw_text(ctx, "Ends today's countdown", FONT_KEY_GOTHIC_18_BOLD, g_theme->text, 64, w, 44,
             GTextAlignmentLeft);
   draw_text(ctx, "All-aboard alerts off.\nUndo in My info.", FONT_KEY_GOTHIC_14_BOLD, g_theme->muted,
             86, w, 36, GTextAlignmentLeft);
+#endif
   draw_pill(ctx, "Not yet", GColorDarkGray, GColorWhite, true, BACK_CY, w);
   draw_pill(ctx, "Hold: yes", g_theme->sea_accent, theme_is_dark() ? GColorBlack : GColorWhite, false,
             DOWN_CY, w);
@@ -89,23 +126,29 @@ static void draw_ask(GContext *ctx, int w) {
 
 // "Remove star?", the title (up to two lines) and "9:00p · On Air".
 static void draw_unstar(GContext *ctx, int w) {
+#if defined(PBL_ROUND)
+  draw_text(ctx, "Remove star?", FONT_KEY_GOTHIC_24_BOLD, g_theme->text, 8, w, 30, TEXT_ALIGN);
+  const int top = 44;
+#else
   draw_text(ctx, "Remove star?", FONT_KEY_GOTHIC_24_BOLD, g_theme->text, 30, w, 30, GTextAlignmentLeft);
   draw_divider(ctx, 62, w);
+  const int top = 64;
+#endif
   if (unstar_valid()) {
     Event *e = data_event(s_unstar);
     GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-    GRect box = GRect(PAD, 64, w - 2 * PAD, 44);
+    GRect box = GRect(COL_PAD, top, w - 2 * COL_PAD, 44);
     graphics_context_set_text_color(ctx, g_theme->text);
-    graphics_draw_text(ctx, e->title, font, box, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-    int y = 64 + graphics_text_layout_get_content_size(e->title, font, box, GTextOverflowModeTrailingEllipsis,
-                                                        GTextAlignmentLeft).h + 4;
+    graphics_draw_text(ctx, e->title, font, box, GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
+    int y = top + graphics_text_layout_get_content_size(e->title, font, box, GTextOverflowModeTrailingEllipsis,
+                                                        TEXT_ALIGN).h + 4;
     char time_buf[8] = "";
     if (e->start != NO_TIME) {
       fmt_clock(time_buf, sizeof(time_buf), e->start);
     }
     char buf[8 + VENUE_LEN + 4];
     snprintf(buf, sizeof(buf), "%s%s%s", time_buf, time_buf[0] && e->venue[0] ? " \xc2\xb7 " : "", e->venue);
-    draw_text(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, y, w, 18, GTextAlignmentLeft);
+    draw_text(ctx, buf, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, y, w, 18, TEXT_ALIGN);
   }
   draw_pill(ctx, "Keep", GColorDarkGray, GColorWhite, true, BACK_CY, w);
   draw_pill(ctx, "Hold: remove", g_theme->port_accent, theme_is_dark() ? GColorBlack : GColorWhite, false,
@@ -215,7 +258,7 @@ static void window_load(Window *window) {
   GRect b = layer_get_bounds(root);
   s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_PORT, BAND_LABEL, "");
   layer_add_child(root, s_top_bar);
-  s_body = layer_create(BODY_FRAME(b));
+  s_body = layer_create(OB_FRAME(b));
   layer_set_update_proc(s_body, body_update_proc);
   layer_add_child(root, s_body);
   apply_style();
