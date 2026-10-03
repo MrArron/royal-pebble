@@ -54,25 +54,41 @@ static void draw_more(GContext *ctx, GRect b);
 // watch, so the app needs the phone before then to have them all.
 static void draw_saved(GContext *ctx, GRect b, const Notice *n) {
   int w = b.size.w - 2 * PAD;
+#if defined(PBL_ROUND)
+#define HEAD_FONT FONT_KEY_GOTHIC_24_BOLD
+#define TY 28
+#define GAP 4
+#else
+#define HEAD_FONT FONT_KEY_GOTHIC_28_BOLD
+#define TY 36
+#define GAP 6
+#endif
   graphics_context_set_text_color(ctx, g_theme->port_accent);
-  graphics_draw_text(ctx, "PHONE NEEDED", fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
+  graphics_draw_text(ctx, "PHONE NEEDED", fonts_get_system_font(HEAD_FONT),
                      GRect(PAD, 2, w, 34), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   char when[16], text[96];
   fmt_when(when, sizeof(when), n->from);
   snprintf(text, sizeof(text), "Starred events and alerts from %s on aren't saved on the watch", when);
+  // The round body is narrower: smaller type keeps both paragraphs above the footer.
+#if defined(PBL_ROUND)
+  GFont title_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+  GFont note_font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+#else
   GFont title_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
-  GRect title_box = GRect(PAD, 36, w, 86);
+  GFont note_font = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+#endif
+  GRect title_box = GRect(PAD, TY, w, 86);
   GSize size = graphics_text_layout_get_content_size(text, title_font, title_box,
-                                                     GTextOverflowModeWordWrap, GTextAlignmentLeft);
+                                                     GTextOverflowModeWordWrap, TEXT_ALIGN);
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, text, title_font, title_box, GTextOverflowModeWordWrap,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   snprintf(text, sizeof(text), "Open Royal Pebble near your phone before %s and none are missed.", when);
   graphics_context_set_text_color(ctx, g_theme->muted);
-  graphics_draw_text(ctx, text, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(PAD, 36 + size.h + 6, w, 66), GTextOverflowModeWordWrap,
-                     GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, text, note_font,
+                     GRect(PAD, TY + size.h + GAP, w, 66), GTextOverflowModeWordWrap,
+                     TEXT_ALIGN, NULL);
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -90,17 +106,17 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_text_color(ctx, g_theme->port_accent);
   graphics_draw_text(ctx, head, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
                      GRect(PAD, 2, w, 34), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
 
   int y = 36;
   GFont title_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   GRect title_box = GRect(PAD, y, w, 58);
   GSize size = graphics_text_layout_get_content_size(n->title, title_font, title_box,
                                                      GTextOverflowModeTrailingEllipsis,
-                                                     GTextAlignmentLeft);
+                                                     TEXT_ALIGN);
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, n->title, title_font, title_box, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   y += size.h + 4;
 
   char from[16], to[16], first[64], second[64];
@@ -120,11 +136,11 @@ static void update_proc(Layer *layer, GContext *ctx) {
   bool moved = n->kind == NOTICE_MOVED;
   graphics_context_set_text_color(ctx, moved ? g_theme->text : g_theme->muted);
   graphics_draw_text(ctx, first, moved ? bold : regular, GRect(PAD, y, w, 22),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
   y += 24;
   graphics_context_set_text_color(ctx, moved ? g_theme->muted : g_theme->text);
   graphics_draw_text(ctx, second, moved ? regular : bold, GRect(PAD, y, w, 22),
-                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
 
   draw_more(ctx, b);
 }
@@ -138,7 +154,7 @@ static void draw_more(GContext *ctx, GRect b) {
     graphics_context_set_text_color(ctx, g_theme->muted);
     graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                        GRect(PAD, b.size.h - 22, w, 18), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
   }
 }
 

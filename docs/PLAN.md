@@ -1,6 +1,6 @@
 # Royal Pebble — Plan to the sailing
 
-The one active plan, as of 2026-10-02 (app 1.6.1). What is built is in
+The one active plan, as of 2026-10-02 (app 1.6.2). What is built is in
 `PROJECT_BRIEF.md`; screens are in `DESIGN.md`. Update this file as work lands
 and delete what's done once it's in the brief.
 
@@ -88,7 +88,7 @@ becomes an arc along the bottom edge.
 | G1 | Round mockups in `docs/mockups/round/` (done) | Owner approved; arc chosen |
 | G2 | `gabbro` target, `pebble-dev.json`, `watch_size.py` for both, `layout.h`, round-aware `ui.c` helpers, screenshot script | **Done in 1.6.0** (DESIGN.md §15): Time 2 code byte-identical (61,984 B), Round 2 62,176 B; nothing clipped on the gabbro emulator walk |
 | G3 | Home: centered time and next event, timeline arc | **Done in 1.6.1** (DESIGN.md §15): Time 2 code byte-identical (61,984 B), Round 2 62,920 B (568 B under budget); gabbro emulator matches the Home and summary mockups |
-| G4 | Alerts and notices | Alerts fire on time on the gabbro emulator |
+| G4 | Alerts and notices | **Done in 1.6.2** (DESIGN.md §15): centered alerts and notices, all-aboard alert with the arc, round clash toast; alerts fire on time in real time on the gabbro emulator. Time 2 61,904 B (-80 B), Round 2 63,472 B (16 B under budget). Scroll arc not built |
 | G5 | Directory and Route | Longest real step fits; 5-level directory walk |
 | G6 | My info, voice card, On board?, phone-away, dictation failed | 4-row card fits; long TRY text wraps |
 | G6a | Time 2 matching style: rounded selection pill, right-edge scroll bar on long pages, time-ashore bar on the all-aboard alert (shared `ui.c` helpers) | Mockup match on the Time 2; under the 62 KB budget; cost stated in the PR |
@@ -110,8 +110,10 @@ docs-only PRs don't bump. G2 is 1.6.0; G3-G7 take 1.6.Y.
 **Progress:** G0a-G0b measured (gabbro builds to the same size as emery, 128 KB
 app RAM, mic yes, no speaker). G1 approved. G2 done in 1.6.0: the Round 2
 build is plain but usable. G3 done in 1.6.1: round Home (arc, one next item,
-bottom hints) and morning summary. The Round 2 now has 568 B left under the
-budget for G4-G6. Next: G4.
+bottom hints) and morning summary. G4 done in 1.6.2: alerts, notices and the clash toast on the Round 2.
+The Round 2 has only 16 B left under the budget, so G5 and G6 must
+find their bytes first (the Time 2 has 1,584 B and its drop can be shared
+through common `ui.c` code). Next: G5.
 
 ## 4. Phase 6: Planning
 

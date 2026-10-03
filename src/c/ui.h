@@ -67,6 +67,13 @@ int reserved_width(bool large);
 // The same for any text: "✓ Booked" (docs/DESIGN.md §7.7).
 int draw_checked(GContext *ctx, const char *text, bool large, int x, int y, GColor color);
 int checked_width(const char *text, bool large);
+// The x to give draw_checked for a line on a page `width` wide: PAD on the
+// Time 2; on the Round 2 the negative width, which centers the line.
+#if defined(PBL_ROUND)
+#define CHECKED_X(width) (-(width))
+#else
+#define CHECKED_X(width) PAD
+#endif
 // "1 clash" in Gothic 14 bold, port accent. Draws nothing and returns 0 when
 // there are none; otherwise returns the line height.
 int draw_clash_count(GContext *ctx, int x, int y, int w, int32_t now);

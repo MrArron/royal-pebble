@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
 How the watch app and the phone settings page look and behave, as built in
-1.6.1. One section per screen or feature. Designs that are approved but not
+1.6.2. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -996,7 +996,21 @@ holds on the Round 2 unless this section says otherwise.
 - **On board? and Remove star? (§4.4, §6):** the edge labels (`Not yet` /
   `Keep`, `Hold: yes` / `Hold: remove`) sit along the bottom of the body,
   left and right, until G6 puts them on the bezel by their buttons.
-- **Scroll triangles, toasts:** inside the body column (top and bottom).
+- **Alerts and notices, since 1.6.2 (G4; mockups `AlertReminder`,
+  `AlertAllAboard`, `AlertToReserve`, `NoticeSchedule`, `ClashToast`):** every
+  line is centered, including the event details body a reminder shows (the
+  route line `↑2 decks · Fore → Mid`, `✓ Booked`, `✓ Reserved`, the star with
+  `Starred` are centered as one run). The all-aboard alert for the day's
+  all-aboard time shows Home's countdown (`ALL ABOARD IN`, the count with the
+  warning sign in the warning window, ship and local times) over the same
+  time-ashore arc and its end times, with `Select: Home` at the bottom;
+  other all-aboard alerts (the test alert) keep the `IN 15 MIN` layout. On
+  `PHONE NEEDED` the text is smaller so it clears the footer. The clash toast
+  is a bordered rounded card over the middle of Today (200 x 70, two lines)
+  instead of the bar at the bottom. Not built: the short scroll arc on the
+  right edge for long pages (the triangles stay, inside the body); it needs
+  a shared `ui.c` helper and the budget is used (G5/G6).
+- **Scroll triangles:** inside the body column (top and bottom).
 
 **Tools:** `tools/watch_size.py` checks both binaries against the 62 KB
 budget; `tools/screens.sh <dir>` installs on each emulator in turn and saves a

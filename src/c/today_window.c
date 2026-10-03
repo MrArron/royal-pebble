@@ -12,7 +12,15 @@
 #define BANG_W 3
 // Clash toast (docs/DESIGN.md §7.4): at the bottom, so the row just
 // starred stays in view.
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/ClashToast): a bordered card over the middle.
+#define TOAST_HEIGHT 70
+#define TOAST_WIDTH 200
+#define TOAST_FONT FONT_KEY_GOTHIC_18_BOLD
+#else
 #define TOAST_HEIGHT 46
+#define TOAST_FONT FONT_KEY_GOTHIC_14_BOLD
+#endif
 #define TOAST_MS 3000
 
 static Window *s_window;
@@ -184,24 +192,31 @@ static void toast_update_proc(Layer *layer, GContext *ctx) {
   if (s_toast_event >= data_event_count()) {
     return;  // a new slice arrived meanwhile
   }
+#if defined(PBL_ROUND)
+  graphics_context_set_fill_color(ctx, g_theme->port_accent);
+  graphics_fill_rect(ctx, b, 12, GCornersAll);
+  graphics_context_set_fill_color(ctx, g_theme->bg);
+  graphics_fill_rect(ctx, grect_crop(b, 3), 9, GCornersAll);
+  int x = PAD, y1 = 12, y2 = 34;
+#else
   graphics_context_set_fill_color(ctx, g_theme->bg);
   graphics_fill_rect(ctx, b, 0, GCornerNone);
   graphics_context_set_fill_color(ctx, g_theme->port_accent);
   graphics_fill_rect(ctx, GRect(0, 0, b.size.w, 4), 0, GCornerNone);
   draw_bang(ctx, GPoint(PAD, 12), 24, g_theme->port_accent);
-
-  int x = PAD + 6 + 8;
+  int x = PAD + 6 + 8, y1 = 4, y2 = 18;
+#endif
   int w = b.size.w - x - PAD;
   graphics_context_set_text_color(ctx, g_theme->port_accent);
-  graphics_draw_text(ctx, "Clashes with", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
-                     GRect(x, 4, w, 18), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, "Clashes with", fonts_get_system_font(TOAST_FONT),
+                     GRect(x, y1, w, 22), GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
   Event *e = data_event(s_toast_event);
   char time_buf[8], buf[TITLE_LEN + 8];
   fmt_clock(time_buf, sizeof(time_buf), e->start);
   snprintf(buf, sizeof(buf), "%s %s", time_buf, e->title);
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(x, 18, w, 22), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GRect(x, y2, w, 22), GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
 }
 
 static void hide_toast(void *context) {
@@ -289,8 +304,13 @@ static void window_load(Window *window) {
   menu_layer_set_selected_index(s_menu, MenuIndex(0, first_current_row()), MenuRowAlignTop, false);
   layer_add_child(root, menu_layer_get_layer(s_menu));
 
+#if defined(PBL_ROUND)
+  s_toast = layer_create(GRect((b.size.w - TOAST_WIDTH) / 2, (b.size.h - TOAST_HEIGHT) / 2,
+                               TOAST_WIDTH, TOAST_HEIGHT));
+#else
   s_toast = layer_create(GRect(BODY_INSET_X, b.size.h - BODY_INSET_BOTTOM - TOAST_HEIGHT,
                                b.size.w - 2 * BODY_INSET_X, TOAST_HEIGHT));
+#endif
   layer_set_update_proc(s_toast, toast_update_proc);
   layer_set_hidden(s_toast, true);
   layer_add_child(root, s_toast);
