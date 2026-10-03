@@ -109,7 +109,7 @@ int lines_draw(GContext *ctx, const uint8_t *p, int length, int w) {
       break;
     }
     GFont font = fonts_get_system_font(FONTS[style & 3]);
-    GColor color = (GColor){.argb = ((const uint8_t *)g_theme)[(style >> 3) & 15]};
+    GColor color = (GColor){.argb = ((const uint8_t *)g_theme)[(style >> 3) & 7]};
     GTextAlignment align = (style & LINE_CENTER) ? GTextAlignmentCenter : GTextAlignmentLeft;
     int x = PAD;
     int tw = w - 2 * PAD;

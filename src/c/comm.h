@@ -76,7 +76,7 @@ void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler 
 // Asks the phone for the route to place page `ref` (or to its closest
 // restroom), or with `start` not NO_TIME to the event at `start` (cruise
 // minutes) at `venue` (Home's NEXT); false if the outbox was busy.
-bool comm_request_route(int32_t ref, bool rest, int32_t start, const char *venue);
+bool comm_request_route(int32_t ref, bool rest, int32_t start, const char *venue, const char *title);
 
 // Voice (docs/WATCH_PROTOCOL.md, Voice): sends the transcript for voice turn
 // `seq` with the watch's `state` bits (1: on board today, 2: 24-hour clock), or with `text` NULL

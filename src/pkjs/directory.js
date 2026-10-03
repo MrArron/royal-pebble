@@ -865,7 +865,7 @@ function routePage(ref, rest, ctx) {
 }
 
 // The Route screen to an event (Home's NEXT, §4.1): `ev` is {start (cruise
-// minutes), venue (as the watch has it, maybe cut short)}. The route starts
+// minutes), venue and title (as the watch has them, maybe cut short)}. The route starts
 // where you'll be before the event (§10.4). As routePage, with `start` in place
 // of ref and rest, and no summary: `event` puts the event's time and title
 // under the steps.
@@ -902,7 +902,8 @@ function eventRoutePage(ev, ctx) {
   page.ref = 0;
   page.rest = false;
   page.start = ev.start;
-  // Under the steps: the event's time and title (the watch sends its clock style).
+  // Under the steps: the event's time and title (the watch sends its clock style
+  // and its own copy of the title, used when the phone's events differ).
   page.event = {start: ev.start, title: found ? found.title : String(ev.title || '')};
   return page;
 }

@@ -107,7 +107,15 @@ static void page_received(const DirPageMsg *page) {
   free(v->lines);
   v->lines = page->lines_length > 0 ? malloc(page->lines_length) : NULL;
   v->lines_length = v->lines ? page->lines_length : 0;
-  if (v->lines) {
+  if (!v->lines) {
+    // No card (out of memory, or none sent): a place's heading shows its name
+    // as an area heading, which the cursor skips, instead of an empty row.
+    for (int i = 0; i < count; i++) {
+      if (v->rows[i].kind == DIR_ROW_PLACE) {
+        v->rows[i].kind = DIR_ROW_HEADER;
+      }
+    }
+  } else {
     memcpy(v->lines, page->lines, v->lines_length);
     set_indicators(v);
 #if defined(PBL_ROUND)
