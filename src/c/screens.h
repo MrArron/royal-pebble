@@ -5,6 +5,14 @@
 // Each screen redraws itself on refresh (called every minute and after data or
 // theme changes). Refreshing a screen that isn't open does nothing.
 
+#if defined(PBL_ROUND)
+// Home's all-aboard countdown (ALL ABOARD IN, the count, the ship and local
+// times; returns the y below it) and its time-ashore arc with the end times,
+// both reused by the all-aboard alert (docs/mockups/round/AlertAllAboard).
+int draw_countdown(GContext *ctx, int y, int width, int32_t now);
+void draw_ashore_arc(GContext *ctx, int32_t now);
+#endif
+
 void home_window_push(void);
 void home_window_refresh(void);
 void home_window_destroy(void);

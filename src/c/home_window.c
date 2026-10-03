@@ -247,7 +247,7 @@ static void arc_cap(GContext *ctx, int32_t angle, GColor color) {
   graphics_fill_circle(ctx, gpoint_from_polar(ring(ARC_R), GOvalScaleModeFitCircle, angle), ARC_W / 2);
 }
 
-static void draw_ashore_arc(GContext *ctx, int32_t now) {
+void draw_ashore_arc(GContext *ctx, int32_t now) {
   const Day *day = data_day();
   int32_t from = ashore_from(day);
   int32_t span = day->all_aboard - from;
@@ -345,7 +345,12 @@ static void draw_warning_sign(GContext *ctx, int x, int y) {
   draw_bang(ctx, GPoint(x + 14, y + 10), 14, faded ? g_theme->bg : GColorBlack);
 }
 
-static int draw_countdown(GContext *ctx, int y, int width, int32_t now) {
+#if defined(PBL_ROUND)
+int  // shared with the all-aboard alert (screens.h)
+#else
+static int
+#endif
+draw_countdown(GContext *ctx, int y, int width, int32_t now) {
   const Day *day = data_day();
   int left = (int)(day->all_aboard - now);
 

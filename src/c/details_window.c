@@ -22,9 +22,9 @@ static int draw_line(GContext *ctx, const char *text, const char *font_key, GCol
   GRect box = GRect(x, y, w, max_h);
   GSize size = graphics_text_layout_get_content_size(text, font, box,
                                                      GTextOverflowModeTrailingEllipsis,
-                                                     GTextAlignmentLeft);
+                                                     TEXT_ALIGN);
   graphics_context_set_text_color(ctx, color);
-  graphics_draw_text(ctx, text, font, box, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft,
+  graphics_draw_text(ctx, text, font, box, GTextOverflowModeTrailingEllipsis, TEXT_ALIGN,
                      NULL);
   return y + size.h;
 }
@@ -129,7 +129,7 @@ int details_draw_event(GContext *ctx, int index, int width, int y,
     if (meet[0]) {
       y = draw_line(ctx, meet, FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y - 2, w, 18) + 2;
     }
-    draw_checked(ctx, "Booked", true, PAD, y, g_theme->sea_accent);
+    draw_checked(ctx, "Booked", true, CHECKED_X(width), y, g_theme->sea_accent);
     y += 22;
   }
 
@@ -150,7 +150,7 @@ int details_draw_event(GContext *ctx, int index, int width, int y,
   // Starred: "Not reserved yet" or "✓ Reserved"; unstarred: the plain note.
   bool track = (e->flags & EVENT_STARRED) && (e->flags & EVENT_RESERVATION);
   if (track && (e->flags & EVENT_RESERVED)) {
-    draw_reserved(ctx, true, PAD, y, g_theme->sea_accent);
+    draw_reserved(ctx, true, CHECKED_X(width), y, g_theme->sea_accent);
     y += 22;
   } else if (track) {
     y = draw_line(ctx, "Not reserved yet", FONT_KEY_GOTHIC_18_BOLD, g_theme->port_accent, PAD, y, w, 22) + 2;
@@ -176,9 +176,20 @@ static void body_update_proc(Layer *layer, GContext *ctx) {
   y += 8;
   if (e->flags & EVENT_STARRED) {
     bool track = (e->flags & EVENT_RESERVATION) != 0;
+#if defined(PBL_ROUND)
+    // The star and "Starred" centered together.
+    int star_x = (b.size.w - graphics_text_layout_get_content_size(
+                                 "Starred", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                                 GRect(0, 0, w, 22), GTextOverflowModeTrailingEllipsis,
+                                 TEXT_ALIGN).w) / 2 - 2;
+    draw_star(ctx, GPoint(star_x, y + 12), g_theme->sea_accent);
+    y = draw_line(ctx, "Starred", FONT_KEY_GOTHIC_18_BOLD, g_theme->sea_accent, PAD + 16, y,
+                  w - 16, 22);
+#else
     draw_star(ctx, GPoint(PAD + 6, y + 12), g_theme->sea_accent);
     y = draw_line(ctx, "Starred", FONT_KEY_GOTHIC_18_BOLD, g_theme->sea_accent, PAD + 16, y,
                   w - 16, 22);
+#endif
     if (e->flags & EVENT_BOOKED) {
       y = draw_line(ctx, "From your booking", FONT_KEY_GOTHIC_14_BOLD, g_theme->muted, PAD, y, w, 18);
     } else if (track) {

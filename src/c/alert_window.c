@@ -18,6 +18,9 @@
 static Window *s_window;
 static Layer *s_top_bar;
 static ScrollPage s_page;  // scrolls when the alert doesn't fit
+#if defined(PBL_ROUND)
+static Layer *s_edge;  // the whole screen, over the page: the time-ashore arc
+#endif
 static bool s_from_wakeup;
 
 // A copy of the alert being shown. The phone sends a fresh plan as soon as the
@@ -56,7 +59,7 @@ static int draw_from(GContext *ctx, const Alarm *a, FromKind from, int y, int w)
     graphics_context_set_text_color(ctx, g_theme->muted);
     graphics_draw_text(ctx, label, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                        GRect(PAD, y, w, 16), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 16;
     return y + draw_route_line(ctx, g_theme->text, PAD, y, w, &a->where, alarm_from_pos(a));
   }
@@ -68,7 +71,7 @@ static int draw_from(GContext *ctx, const Alarm *a, FromKind from, int y, int w)
   }
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, text, font, GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   return y + 22;
 }
 
@@ -79,7 +82,7 @@ static int draw_to_reserve(GContext *ctx, GRect b) {
   int y = 2;
   graphics_context_set_text_color(ctx, g_theme->sea_accent);
   graphics_draw_text(ctx, "TOMORROW", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+                     GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
   y += 24;
   int total = s_alarm.extra > s_reserve_count ? s_alarm.extra : s_reserve_count;
   int shown = 0;
@@ -96,13 +99,13 @@ static int draw_to_reserve(GContext *ctx, GRect b) {
     graphics_context_set_text_color(ctx, g_theme->text);
     graphics_draw_text(ctx, buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                        GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 22;
     if (r->venue[0]) {
       graphics_context_set_text_color(ctx, g_theme->muted);
       graphics_draw_text(ctx, r->venue, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                          GRect(PAD, y - 2, w, 18), GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+                         TEXT_ALIGN, NULL);
       y += 18;
     }
     shown++;
@@ -113,7 +116,7 @@ static int draw_to_reserve(GContext *ctx, GRect b) {
     graphics_context_set_text_color(ctx, g_theme->port_accent);
     graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                        GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 22;
   }
   return y;
@@ -134,7 +137,7 @@ static int draw_booked(GContext *ctx, const Alarm *a, int y, int w) {
     snprintf(line, sizeof(line), "Meet %s", meet_buf);
     graphics_context_set_text_color(ctx, g_theme->text);
     graphics_draw_text(ctx, line, f18, GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 22;
     if (a->extra > 0) {
       char end_buf[8];
@@ -145,29 +148,26 @@ static int draw_booked(GContext *ctx, const Alarm *a, int y, int w) {
     }
     graphics_context_set_text_color(ctx, g_theme->muted);
     graphics_draw_text(ctx, line, f14, GRect(PAD, y - 2, w, 18), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 16;
     graphics_context_set_text_color(ctx, g_theme->port_accent);
     graphics_draw_text(ctx, "Ashore", f18, GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 22;
   } else {
     snprintf(line, sizeof(line), "%s \xc2\xb7 Ashore", start_buf);
     graphics_context_set_text_color(ctx, g_theme->muted);
     graphics_draw_text(ctx, line, f18, GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 22;
   }
   GRect b = layer_get_bounds(s_page.content);
   draw_divider(ctx, y + 3, b.size.w);
   y += 6;
-  int x = PAD + draw_checked(ctx, "Booked", false, PAD, y, g_theme->sea_accent);
-  if (a->booked.guests) {
-    snprintf(line, sizeof(line), " \xc2\xb7 %d guest%s", a->booked.guests, a->booked.guests == 1 ? "" : "s");
-    graphics_context_set_text_color(ctx, g_theme->sea_accent);
-    graphics_draw_text(ctx, line, f14, GRect(x, y, PAD + w - x, 18), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
-  }
+  // "✓ Booked · 2 guests" in one run (both parts are sea accent, Gothic 14 bold).
+  snprintf(line, sizeof(line), a->booked.guests ? "Booked \xc2\xb7 %d guest%s" : "Booked",
+           a->booked.guests, a->booked.guests == 1 ? "" : "s");
+  draw_checked(ctx, line, false, CHECKED_X(b.size.w), y, g_theme->sea_accent);
   return y + 18;
 }
 
@@ -188,14 +188,39 @@ static void draw_more(GContext *ctx, int count, int y, int w) {
     graphics_context_set_text_color(ctx, g_theme->text);
     graphics_draw_text(ctx, more, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                        GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 22;
   }
   scroll_page_fit(&s_page, y);
 }
 
+#if defined(PBL_ROUND)
+// Round 2 (docs/mockups/round/AlertAllAboard): an all-aboard alert for today's
+// all-aboard time shows Home's countdown and its time-ashore arc.
+static bool shows_arc(void) {
+  return s_alarm.kind == ALARM_ALL_ABOARD && data_ready() && data_day()->all_aboard == s_alarm.ref &&
+         s_alarm.ref > now_cruise();
+}
+
+static void edge_update_proc(Layer *layer, GContext *ctx) {
+  if (shows_arc()) {
+    draw_ashore_arc(ctx, now_cruise());
+    graphics_context_set_text_color(ctx, g_theme->sea_accent);
+    graphics_draw_text(ctx, "Select: Home", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                       GRect(PAD, 202, 260 - 2 * PAD, 18), GTextOverflowModeTrailingEllipsis,
+                       TEXT_ALIGN, NULL);
+  }
+}
+#endif
+
 static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
+#if defined(PBL_ROUND)
+  if (shows_arc()) {
+    scroll_page_fit(&s_page, draw_countdown(ctx, 2, b.size.w, now_cruise()));
+    return;
+  }
+#endif
   if (s_alarm.kind == ALARM_TO_RESERVE) {
     scroll_page_fit(&s_page, draw_to_reserve(ctx, b));
     return;
@@ -227,7 +252,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
                      fonts_get_system_font(all_aboard ? FONT_KEY_GOTHIC_28_BOLD
                                                       : FONT_KEY_GOTHIC_18_BOLD),
                      GRect(PAD, y, w, 34), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   y += all_aboard ? 34 : 22;
 
   // Every reminder shows what its event's details page shows, with its "From"
@@ -246,10 +271,10 @@ static void update_proc(Layer *layer, GContext *ctx) {
   GRect title_box = GRect(PAD, y, w, 58);
   GSize size = graphics_text_layout_get_content_size(a->title, title_font, title_box,
                                                      GTextOverflowModeTrailingEllipsis,
-                                                     GTextAlignmentLeft);
+                                                     TEXT_ALIGN);
   graphics_context_set_text_color(ctx, g_theme->text);
   graphics_draw_text(ctx, a->title, title_font, title_box, GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   y += size.h + 4;
 
   if (booked) {
@@ -274,7 +299,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_text_color(ctx, g_theme->muted);
   graphics_draw_text(ctx, detail, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft, NULL);
+                     TEXT_ALIGN, NULL);
   y += 22;
   if (before) {
     // "Arrive by 9:45p" ("Meet" Ashore) under the time, as on the details page.
@@ -283,7 +308,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
     graphics_context_set_text_color(ctx, g_theme->text);
     graphics_draw_text(ctx, detail, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                        GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 22;
   }
 
@@ -295,7 +320,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
                                                                     : g_theme->text);
       graphics_draw_text(ctx, where, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                          GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                         GTextAlignmentLeft, NULL);
+                         TEXT_ALIGN, NULL);
       y += 22;
       FromKind from = alarm_from_kind(a);
       if (from == FROM_NONE) {
@@ -309,7 +334,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
     graphics_context_set_text_color(ctx, g_theme->port_accent);
     graphics_draw_text(ctx, "Not reserved", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                        GRect(PAD, y, w, 22), GTextOverflowModeTrailingEllipsis,
-                       GTextAlignmentLeft, NULL);
+                       TEXT_ALIGN, NULL);
     y += 20;
   }
   y += 4;
@@ -356,9 +381,17 @@ static void window_load(Window *window) {
   layer_add_child(root, s_top_bar);
   scroll_page_create(&s_page, window, root, BODY_FRAME(b),
                      update_proc, click_config);
+#if defined(PBL_ROUND)
+  s_edge = layer_create(b);
+  layer_set_update_proc(s_edge, edge_update_proc);
+  layer_add_child(root, s_edge);
+#endif
 }
 
 static void window_unload(Window *window) {
+#if defined(PBL_ROUND)
+  layer_destroy(s_edge);
+#endif
   scroll_page_destroy(&s_page);
   top_bar_destroy(s_top_bar);
   s_top_bar = NULL;
@@ -388,6 +421,9 @@ void alert_window_refresh(void) {
     window_set_background_color(s_window, g_theme->bg);
     layer_mark_dirty(s_top_bar);
     scroll_page_refresh(&s_page);
+#if defined(PBL_ROUND)
+    layer_mark_dirty(s_edge);
+#endif
   }
 }
 
@@ -432,6 +468,9 @@ void alert_window_push(int32_t at, bool from_wakeup) {
     top_bar_set(s_top_bar, data_ready() && data_day()->kind == DAY_PORT ? BAND_PORT : BAND_SEA,
                 BAND_LABEL, top_label(s_alarm.kind));
     scroll_page_top(&s_page);  // a new alert: from its top
+#if defined(PBL_ROUND)
+    layer_mark_dirty(s_edge);
+#endif
     return;
   }
   s_from_wakeup = from_wakeup;

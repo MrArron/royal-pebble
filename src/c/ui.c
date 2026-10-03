@@ -329,10 +329,15 @@ int checked_width(const char *text, bool large) {
 
 int draw_checked(GContext *ctx, const char *text, bool large, int x, int y, GColor color) {
   int size = check_size(large);
+  int w = text_size(text, reserved_font(large)).w;
+#if defined(PBL_ROUND)
+  if (x < 0) {
+    x = (-x - size - CHECK_GAP - w) / 2;  // a negative x: centered on a page -x wide
+  }
+#endif
   // On the capitals of the text beside it.
   draw_check(ctx, GPoint(x, y + (large ? 7 : 5)), size, color);
   int text_x = x + size + CHECK_GAP;
-  int w = text_size(text, reserved_font(large)).w;
   graphics_context_set_text_color(ctx, color);
   graphics_draw_text(ctx, text, reserved_font(large), GRect(text_x, y, w + 2, large ? 22 : 18),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
@@ -581,23 +586,34 @@ int draw_route_line(GContext *ctx, GColor color, int x, int y, int w, const Wher
   if (n == 0) {
     snprintf(decks, sizeof(decks), "Same deck");
   } else {
-    if (x + m.width < right) {
-      draw_arrow(ctx, x, y, m, to->rel, color);
-      x += m.width + 1;
-    }
     snprintf(decks, sizeof(decks), "%d %s", n, n == 1 ? "deck" : "decks");
   }
-  draw_run(ctx, font, decks, &x, y, right, height);
-
   from_pos &= WHERE_POS_MASK;
   int to_pos = to->bits & WHERE_POS_MASK;
   const char *from = POSITIONS[from_pos];
   const char *pos = POSITIONS[to_pos];
+  bool moves = from_pos && from_pos != to_pos;
+#if defined(PBL_ROUND)
+  // Centered: the line's width first.
+  int line_w = (n ? m.width + 1 : 0) + text_size(decks, font).w;
+  if (to_pos) {
+    line_w += text_size(" \xc2\xb7 ", font).w + text_size(pos, font).w +
+              (moves ? text_size(from, font).w + 4 + m.right_width : 0);
+  }
+  if (line_w < w) {
+    x += (w - line_w) / 2;
+  }
+#endif
+  if (n && x + m.width < right) {
+    draw_arrow(ctx, x, y, m, to->rel, color);
+    x += m.width + 1;
+  }
+  draw_run(ctx, font, decks, &x, y, right, height);
   if (!to_pos) {
     return height;
   }
   draw_run(ctx, font, " \xc2\xb7 ", &x, y, right, height);
-  if (from_pos && from_pos != to_pos) {
+  if (moves) {
     draw_run(ctx, font, from, &x, y, right, height);
     if (x + 2 + m.right_width + 2 < right) {
       draw_right_arrow(ctx, x + 2, y, m, color);
