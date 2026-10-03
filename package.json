@@ -1,7 +1,7 @@
 {
   "name": "cruise-watch",
   "author": "MrArron",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "keywords": [
     "pebble-app"
   ],
@@ -58,10 +58,8 @@
       "dir_title",
       "dir_label",
       "dir_rel",
-      "dir_where",
+      "dir_lines",
       "dir_rows",
-      "dir_gps",
-      "dir_bank",
       "arrive",
       "depart",
       "ship_name",

@@ -204,41 +204,10 @@ static void handle_dir_page(DictionaryIterator *iter) {
   Tuple *rel = dict_find(iter, MESSAGE_KEY_dir_rel);
   page.has_rel = rel != NULL;
   page.rel = (int8_t)tuple_int(rel);
-  Tuple *where = dict_find(iter, MESSAGE_KEY_dir_where);
-  if (where && where->type == TUPLE_BYTE_ARRAY && where->length >= 4) {
-    page.has_where = true;
-    codec_read_where(where->value->data, &page.where);
-  }
-  // int8 decks, uint8 flags, header, text, then optionally the restroom's int8
-  // decks and text (docs/WATCH_PROTOCOL.md, Ship directory).
-  Tuple *gps = dict_find(iter, MESSAGE_KEY_dir_gps);
-  if (gps && gps->type == TUPLE_BYTE_ARRAY && gps->length >= 4) {
-    const uint8_t *p = gps->value->data;
-    const uint8_t *end = p + gps->length;
-    page.gps.decks = (int8_t)p[0];
-    page.gps.flags = p[1];
-    p += 2;
-    page.has_gps = codec_read_str(&p, end, page.gps.header, sizeof(page.gps.header)) &&
-                   codec_read_str(&p, end, page.gps.text, sizeof(page.gps.text));
-    if (page.has_gps && p + 2 <= end) {
-      page.gps.rest_decks = (int8_t)p[0];
-      p++;
-      page.gps.has_rest = codec_read_str(&p, end, page.gps.rest_text, sizeof(page.gps.rest_text));
-    }
-  }
-  // uint8 cabin deck, uint8 count, the decks, text.
-  Tuple *bank = dict_find(iter, MESSAGE_KEY_dir_bank);
-  if (bank && bank->type == TUPLE_BYTE_ARRAY && bank->length >= 3) {
-    const uint8_t *p = bank->value->data;
-    const uint8_t *end = p + bank->length;
-    int count = p[1];
-    if (count <= DIR_BANK_DECKS && p + 2 + count < end) {
-      page.bank.cabin = p[0];
-      page.bank.count = count;
-      memcpy(page.bank.decks, p + 2, count);
-      p += 2 + count;
-      page.has_bank = codec_read_str(&p, end, page.bank.text, sizeof(page.bank.text));
-    }
+  Tuple *lines = dict_find(iter, MESSAGE_KEY_dir_lines);
+  if (lines && lines->type == TUPLE_BYTE_ARRAY) {
+    page.lines = lines->value->data;
+    page.lines_length = lines->length;
   }
   Tuple *rows = dict_find(iter, MESSAGE_KEY_dir_rows);
   if (rows && rows->type == TUPLE_BYTE_ARRAY) {
@@ -287,7 +256,10 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
       RoutePageMsg page = {.ref = find_int(iter, MESSAGE_KEY_dir_ref),
                            .rest = find_int(iter, MESSAGE_KEY_route_rest) != 0,
                            .start = find_int_or(iter, MESSAGE_KEY_route_start, NO_TIME),
-                           .data = route->value->data, .length = route->length};
+                           .lines = route->value->data, .length = route->length};
+#if defined(PBL_ROUND)
+      find_str(iter, MESSAGE_KEY_dir_label, page.label, sizeof(page.label));
+#endif
       s_on_route_page(&page);
     }
     return;
@@ -436,26 +408,20 @@ void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler 
   s_on_route_up = on_phone_up;
 }
 
-bool comm_request_route(int32_t ref, bool rest) {
+bool comm_request_route(int32_t ref, bool rest, int32_t start, const char *venue) {
   DictionaryIterator *iter;
   if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
     return false;
   }
   dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_ROUTE_REQUEST);
-  dict_write_int32(iter, MESSAGE_KEY_dir_ref, ref);
-  dict_write_int32(iter, MESSAGE_KEY_route_rest, rest ? 1 : 0);
-  s_outbox_msg = MSG_ROUTE_REQUEST;
-  return app_message_outbox_send() == APP_MSG_OK;
-}
-
-bool comm_request_event_route(int32_t start, const char *venue) {
-  DictionaryIterator *iter;
-  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
-    return false;
+  if (start != NO_TIME) {
+    dict_write_int32(iter, MESSAGE_KEY_route_start, start);
+    dict_write_cstring(iter, MESSAGE_KEY_route_venue, venue);
+  } else {
+    dict_write_int32(iter, MESSAGE_KEY_dir_ref, ref);
   }
-  dict_write_int32(iter, MESSAGE_KEY_msg_type, MSG_ROUTE_REQUEST);
-  dict_write_int32(iter, MESSAGE_KEY_route_start, start);
-  dict_write_cstring(iter, MESSAGE_KEY_route_venue, venue);
+  // Bit 1: the watch shows 24-hour time, for the times the phone writes.
+  dict_write_int32(iter, MESSAGE_KEY_route_rest, (rest ? 1 : 0) | (clock_is_24h_style() ? 2 : 0));
   s_outbox_msg = MSG_ROUTE_REQUEST;
   return app_message_outbox_send() == APP_MSG_OK;
 }
