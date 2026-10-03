@@ -23,6 +23,14 @@ test('the platform comes from the watch info; no info is the Time 2', function()
   assert.strictEqual(textfit.platformOf({}), 'emery');
   assert.strictEqual(textfit.platformOf(null), 'emery');
   assert.strictEqual(textfit.platformOf(undefined), 'emery');
+  // No usable platform: a model naming a round watch is the Round 2 (1.6.8).
+  assert.strictEqual(textfit.platformOf({model: 'qemu_platform_gabbro'}), 'gabbro');
+  assert.strictEqual(textfit.platformOf({platform: 'unknown', model: 'pebble_round_2_black'}), 'gabbro');
+  assert.strictEqual(textfit.platformOf({model: 'pebble_time_round_silver_14mm'}), 'gabbro');
+  // A known platform wins over the model; any other model is the Time 2.
+  assert.strictEqual(textfit.platformOf({platform: 'emery', model: 'round_test'}), 'emery');
+  assert.strictEqual(textfit.platformOf({model: 'qemu_platform_emery'}), 'emery');
+  assert.strictEqual(textfit.platformOf({model: 'pebble_time_2_black'}), 'emery');
   assert.strictEqual(textfit.budgetOf('nope'), textfit.PLATFORMS.emery);
 });
 

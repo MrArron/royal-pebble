@@ -9,8 +9,9 @@
 // uint8 max_h (the text's wrap limit in px; a divider's inset), then its text
 // as uint8 length and bytes.
 
-// style: bits 0-1 the font, bit 2 centered, bits 3-6 the color token (the
-// Theme field's index: 1 text, 2 muted, 4 port accent, 5 sea accent...).
+// style: bits 0-1 the font, bit 2 centered, bits 3-5 the color token (the
+// Theme field's index: 1 text, 2 muted, 4 port accent, 5 sea accent...; 3 bits
+// so it stays inside Theme's 12 fields).
 #define LINE_FONT_14 0
 #define LINE_FONT_18 1
 #define LINE_FONT_24 2

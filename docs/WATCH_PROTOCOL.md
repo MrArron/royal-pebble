@@ -114,7 +114,7 @@ buffers.
 | 13 | STAR_CHANGES | `star_count`, `star_changes` (bytes, below): stars changed on the watch and not yet acked |
 | 14 | SAVED | `saved_cutoff` (cruise minutes of the first starred event or alert the watch couldn't save, −1 when everything fit), `saved_bytes`, `saved_max` (the watch's storage limit). Sent after every save while the phone is connected; see Stored on the watch. |
 | 15 | DIR_REQUEST | `dir_ref`: the ship directory page to send (0 = the decks). |
-| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom, 401 for the route to the closest restroom from where you are, 500 + D for the closest one on deck D (1.5.9) and 100000 + N for the route to cabin N said by voice; `route_rest`: bit 0 set for the route to its closest restroom; bit 1 set when the watch shows 24-hour time (1.6.3, for the times the phone writes on the page). Or, from Home, `route_start` (the event's start, cruise minutes) and `route_venue` (its venue as the watch has it) for the route to that event, with `route_rest` carrying only bit 1. |
+| 16 | ROUTE_REQUEST | `dir_ref`: a place page (a venue or an elevator bank), or from a voice card 400 for the route to your stateroom, 401 for the route to the closest restroom from where you are, 500 + D for the closest one on deck D (1.5.9) and 100000 + N for the route to cabin N said by voice; `route_rest`: bit 0 set for the route to its closest restroom; bit 1 set when the watch shows 24-hour time (1.6.3, for the times the phone writes on the page). Or, from Home, `route_start` (the event's start, cruise minutes) `route_venue` (its venue as the watch has it) and `route_title` (its title as the watch has it, 1.6.8) for the route to that event, with `route_rest` carrying only bit 1. |
 | 18 | LOG | `log_entries` (bytes, see Usage log), `log_dropped` (entries lost since the last LOG because the watch's queue was full). |
 | 19 | VOICE | `voice_seq` (the watch's turn number), `voice_text` (what dictation heard, ≤ 255 bytes) and `voice_state` (bit 0: today's `I'm on board` flag is set; bit 1: the watch shows 24-hour time, so card times match it). Without `voice_text`, Select confirmed that turn's card (`I'm at...`). See Voice. |
 
@@ -569,14 +569,17 @@ phone script is up waits for it, as on directory pages.
   `Closest restroom` line is measured from), so it works with no stateroom too.
 
 From Home (§4.1), Select asks for the route to the NEXT card's event: the
-request carries `route_start` and `route_venue` instead of `dir_ref` and
-`route_rest`, and the phone answers with `dir_ref` 0, `route_rest` 0 and the
+request carries `route_start`, `route_venue` and `route_title` instead of
+`dir_ref` and `route_rest`, and the phone answers with `dir_ref` 0, `route_rest` 0 and the
 same `route_start` (`directory.eventRoutePage`). The venue may be cut short on
 the watch, so the phone matches it against the day's events starting then. The
 route starts where you'll be before the event (§10.4, with the event as the
 target), and under the steps the page has the event's time and title instead
 of the summary (`12:00p Name That Tune Trivia`, the time in the watch's 12/24h
-setting from `route_rest` bit 1; on the Round 2 on two lines).
+setting from `route_rest` bit 1; on the Round 2 on two lines). The title is the
+matched event's, or, when the phone finds no match (no bundle, or its events
+differ from the watch's slice), the watch's own `route_title` (1.6.8), so it
+always shows.
 
 `route` is the whole screen as Page lines (1.6.3, `pagelines.routeLines`):
 the destination (`Royal Theater`, `Restroom`), the header (`FROM YOUR CABIN`,
@@ -605,7 +608,7 @@ almost nothing. Lines follow each other:
 
 | Bytes | Field |
 |---|---|
-| 1 | `style`: bits 0-1 the font (0 Gothic 14 bold, 1 Gothic 18 bold, 2 Gothic 24 bold), bit 2 centered, bits 3-6 the color token (the watch theme's field: 1 text, 2 muted, 3 divider, 4 port accent, 5 sea accent) |
+| 1 | `style`: bits 0-1 the font (0 Gothic 14 bold, 1 Gothic 18 bold, 2 Gothic 24 bold), bit 2 centered, bits 3-5 the color token (the watch theme's field: 1 text, 2 muted, 3 divider, 4 port accent, 5 sea accent; the watch reads only these 3 bits since 1.6.8, so a token can't point past the theme), bits 6-7 unused |
 | 1 | `glyph`: 0 none, 1 an up arrow before the text, 2 a down arrow, 3 a `›` after the text, 4 a divider (no text), 5 deck chips, 8 + n a route step's glyph n (0 walk, 1 cross the ship, 2 elevator, 3 stairs, 4 arrive) with the text after it, left-aligned |
 | 1 | `space`: int8, pixels down from where the last line ended to this line's top |
 | 1 | `max_h`: the text's wrap limit in pixels (one line: 14, 18 or 24 for the three fonts); a divider's inset from each side |

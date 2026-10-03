@@ -180,6 +180,15 @@ test('map check: flags while the watch shows the demo are marked; problems found
                          [['flag', 'Fore elevators', true]]);
 });
 
+test('an event route carries the watch title to the footer when the phone has no match (1.6.8)', function() {
+  var c = companion();
+  c.handlers.appmessage({payload: {msg_type: 16, route_start: 2000, route_venue: 'Nowhere Lounge',
+                                   route_title: 'Mystery Party'}});
+  var sent = c.sent[c.sent.length - 1];
+  assert.strictEqual(sent.route_start, 2000);
+  assert.ok(Buffer.from(sent.route).toString('latin1').indexOf('Mystery Party') !== -1);
+});
+
 test('backing out saves nothing and is logged; turning the log off stops it', function() {
   var c = companion();
   c.handlers.showConfiguration();

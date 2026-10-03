@@ -24,6 +24,7 @@ static Fetch s_fetch;
 // docs/PLAN.md).
 typedef struct {
   char venue[VENUE_LEN];  // the event's venue, as the phone is asked
+  char event[TITLE_LEN];  // the event's title, for the line under the steps
   char title[40];         // the destination, until the page comes
   char header[32];        // "FROM YOUR CABIN", "CLOSEST TO ROYAL THEATER"
   uint8_t *lines;         // the phone's page
@@ -74,7 +75,7 @@ static void content_update(Layer *layer, GContext *ctx) {
 
 static void state_changed(void *owner) { scroll_page_top(&s_page); }
 
-static bool send_request(void *owner) { return comm_request_route(s_ref, s_rest, s_start, s_r->venue); }
+static bool send_request(void *owner) { return comm_request_route(s_ref, s_rest, s_start, s_r->venue, s_r->event); }
 
 static void page_received(const RoutePageMsg *page) {
   if (!s_window || s_fetch.state == FETCH_READY || page->ref != s_ref || page->rest != s_rest ||
@@ -155,8 +156,9 @@ static void window_appear(Window *window) {
 }
 
 // Opens the screen (unless one is open or there's no memory); `venue` is
-// asked for with an event's `start`.
-static void push(int32_t ref, bool rest, int32_t start, const char *title, const char *header) {
+// asked for with an event's `start` and `event` (its title).
+static void push(int32_t ref, bool rest, int32_t start, const char *title, const char *header,
+                 const char *event) {
   if (s_window || !(s_r = calloc(1, sizeof(Route)))) {
     return;
   }
@@ -167,6 +169,7 @@ static void push(int32_t ref, bool rest, int32_t start, const char *title, const
   snprintf(s_r->venue, sizeof(s_r->venue), "%s", title);
   snprintf(s_r->title, sizeof(s_r->title), "%s", title);
   snprintf(s_r->header, sizeof(s_r->header), "%s", header);
+  snprintf(s_r->event, sizeof(s_r->event), "%s", event);
   s_window = window_create();
   window_set_window_handlers(s_window, (WindowHandlers){
     .load = window_load,
@@ -178,10 +181,10 @@ static void push(int32_t ref, bool rest, int32_t start, const char *title, const
 }
 
 void route_window_push(int32_t ref, bool rest, const char *title, const char *header) {
-  push(ref, rest, NO_TIME, title, header);
+  push(ref, rest, NO_TIME, title, header, "");
 }
 
-void route_window_push_event(const Event *e) { push(0, false, e->start, e->venue, ""); }
+void route_window_push_event(const Event *e) { push(0, false, e->start, e->venue, "", e->title); }
 
 void route_window_close(void) {
   if (s_window) {

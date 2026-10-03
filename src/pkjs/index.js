@@ -1034,7 +1034,8 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
       // route_rest bit 0: to the closest restroom; bit 1: the watch shows 24-hour time.
       var h24 = !!((p.route_rest | 0) & 2);
       var rest = !!((p.route_rest | 0) & 1);
-      s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || ''), h24: h24}
+      s_route = p.route_start !== undefined ? {start: p.route_start | 0, venue: String(p.route_venue || ''),
+                                               title: String(p.route_title || ''), h24: h24}
                                             : {ref: p.dir_ref | 0, rest: rest, h24: h24};
       if (s_routeFrom && (p.route_start !== undefined || s_routeFrom.ref !== (p.dir_ref | 0) ||
                           s_routeFrom.rest !== rest)) {

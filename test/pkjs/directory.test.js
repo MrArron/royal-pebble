@@ -503,6 +503,26 @@ test('event route: a venue cut short on the watch, and messages', function() {
   assert.strictEqual(eventRoute('Perfect Day at CocoCay', AT_3PM).lead, 'No route found');
 });
 
+test('event route: the title under the steps always shows (the watch sends its own, 1.6.8)', function() {
+  var settings = {me: CABIN.me, personal: [{title: 'Party', venue: 'Royal Theater', date: '2027-03-07',
+                                            time: '15:00', minutes: 60}]};
+  function ev(venue, start, title, s, bundle) {
+    return directory.eventRoutePage({start: start, venue: venue, title: title},
+                                    {bundle: bundle === undefined ? makeBundle() : bundle, settings: s || CABIN,
+                                     stars: {}, now: NOW});
+  }
+  // A match: the phone's own (whole) title.
+  assert.strictEqual(ev('Royal Thea', AT_3PM, 'Par', settings).event.title, 'Party');
+  // The phone's events differ from the watch's slice: the watch's title.
+  var p = ev('Royal Theater', AT_3PM + 7, 'Mystery Party', settings);
+  assert.deepStrictEqual(p.event, {start: AT_3PM + 7, title: 'Mystery Party'});
+  assert.ok(p.steps.length > 0);
+  // No bundle on the phone: still the watch's title.
+  assert.strictEqual(ev('Royal Theater', AT_3PM, 'Mystery Party', settings, null).event.title, 'Mystery Party');
+  // An older watch sends none: an empty title, as before.
+  assert.strictEqual(ev('Royal Theater', AT_3PM + 7, undefined, settings).event.title, '');
+});
+
 test('elevator banks: deck rows, the Elevators area and bank pages', function() {
   var d5 = page(directory.REF_DECK + 5, {settings: CABIN});
   var names = d5.rows.map(function(r) { return r.line1; });

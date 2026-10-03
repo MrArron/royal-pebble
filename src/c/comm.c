@@ -408,7 +408,7 @@ void comm_set_route_handlers(CommRoutePageHandler on_page, CommDirFailedHandler 
   s_on_route_up = on_phone_up;
 }
 
-bool comm_request_route(int32_t ref, bool rest, int32_t start, const char *venue) {
+bool comm_request_route(int32_t ref, bool rest, int32_t start, const char *venue, const char *title) {
   DictionaryIterator *iter;
   if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
     return false;
@@ -417,6 +417,7 @@ bool comm_request_route(int32_t ref, bool rest, int32_t start, const char *venue
   if (start != NO_TIME) {
     dict_write_int32(iter, MESSAGE_KEY_route_start, start);
     dict_write_cstring(iter, MESSAGE_KEY_route_venue, venue);
+    dict_write_cstring(iter, MESSAGE_KEY_route_title, title);
   } else {
     dict_write_int32(iter, MESSAGE_KEY_dir_ref, ref);
   }

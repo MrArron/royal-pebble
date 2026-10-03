@@ -16,11 +16,16 @@ var PLATFORMS = {
   gabbro: {round: true, col: {14: 28, 18: 23, 24: 20}, hintLines: 2}
 };
 
-// The platform a watch info object names. A missing or unknown watch (the
-// phone can't tell, or it's an emulator without info) is the Time 2.
+// The platform a watch info object names, by its platform or, when that's
+// missing or unknown, a model naming a round watch (`..._round_...`,
+// `qemu_platform_gabbro`). Anything else (the phone can't tell, or an emulator
+// without info) is the Time 2.
 function platformOf(info) {
   var p = info && info.platform;
-  return p === 'gabbro' || p === 'chalk' ? 'gabbro' : 'emery';
+  if (p === 'gabbro' || p === 'chalk') {
+    return 'gabbro';
+  }
+  return !PLATFORMS[p] && /round|gabbro|chalk/i.test(String(info && info.model || '')) ? 'gabbro' : 'emery';
 }
 
 function budgetOf(platform) {
