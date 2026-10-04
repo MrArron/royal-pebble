@@ -132,7 +132,6 @@ Round 2 too, so they join its checklist.
 
 | Version | What |
 |---|---|
-| 1.6.14 | **G** (#99): no Last chance / Only show on announcements (Guest / Announcements); they stay featured |
 | 1.6.15 | **H** (#100): settings page Events row, option C1: the final-show chip becomes a filled tag in the details line, no wrapped or dangling separators, top-aligned row |
 
 ## 4. Phase 6: Planning

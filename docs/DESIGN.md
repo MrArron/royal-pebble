@@ -405,7 +405,9 @@ settings page's `Clashes · N` counts items. It's a warning, never a block.
 The final performance of a featured show in the cruise (matched by title
 across all days) is tagged `Last chance`; a featured show with one performance
 `Only show`. The phone sets the flags (bits 16 and 32); personal entries,
-unfeatured events and paid classes never get them. Shown on Today rows, details,
+unfeatured events, paid classes and announcements (Royal's `Announcements`
+subcategory, such as Junior Cruisers Curfew; since 1.6.14) never get them.
+Announcements stay featured otherwise (tomorrow card, Home's FEATURED pick). Shown on Today rows, details,
 Home, the tomorrow card and as an outlined chip on the settings page.
 
 ### 7.6 Ages, arrive-early and what-to-bring tags
@@ -854,6 +856,10 @@ period is 60 minutes today. Make it longer if you like.`
   events** (title starts with "Family" or contains "All Ages", or the venue is
   Adventure Ocean Theater). Note: `Events you star always show. Events with
   no age listed never hide. Casino games are in the Casino category below.`
+  Ages also come from titles (`(17 & Under)`), so Hide Teen and Kid only
+  events hides Junior Cruisers Curfew everywhere on the watch. Limit: a kids
+  announcement without an age in its title isn't caught (none in the
+  2026-10-01 data).
 - **CATEGORIES:** a switch per category expanding to subcategory chips, each
   with its count. Shop is hidden by default. **Casino** is its own category:
   events at Casino Royale (and `Expanded Casino`), Royal's `Casino`

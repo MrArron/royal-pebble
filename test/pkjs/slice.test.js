@@ -2105,6 +2105,53 @@ test('cutText keeps whole characters', function() {
   assert.strictEqual(pack.cutText(null, 5), '');
 });
 
+test('announcements stay featured but get no Last chance / Only show (#99)', function() {
+  var curfew = 'Junior Cruisers Curfew (17 & Under)';
+  var b = makeBundle([
+    [curfew, 2, 2, '2027-03-07', '01:00', 0, 1, 0, 0],
+    [curfew, 2, 2, '2027-03-08', '01:00', 0, 1, 0, 0],
+    ['Thank You For Cruising With Us', 2, 2, '2027-03-08', '20:00', 0, 1, 0, null],
+    ['Hairspray', 0, 0, '2027-03-07', '19:00', 90, 1, 0, null],
+    ['Hairspray', 0, 0, '2027-03-08', '21:00', 90, 1, 0, null],
+    ['Ice Show', 0, 0, '2027-03-08', '14:00', 60, 1, 0, null]
+  ]);
+  b.schedule.cats = [['Entertainment', 'Shows'], ['Shop', 'Retail'], ['Guest', 'Announcements']];
+  b.schedule.fields = b.schedule.fields.concat(['info']);
+  // The producers read "(17 & Under)" in the title as a maximum age of 17.
+  b.schedule.infos = [[[null, 17], null, []]];
+  var TAGS = slice.FLAG_LAST_CHANCE | slice.FLAG_ONLY_SHOW;
+  var finals = slice.finalShows(b);
+  assert.deepStrictEqual(Object.keys(finals).sort(), [
+    slice.starKey('Hairspray', '2027-03-08', '21:00', 'Studio B'),
+    slice.starKey('Ice Show', '2027-03-08', '14:00', 'Studio B')
+  ].sort());
+  function byTitle(events) {
+    var out = {};
+    events.forEach(function(e) { out[e.title] = e.flags; });
+    return out;
+  }
+  // Day 3: the curfew's last night and the farewell notice keep FEATURED, no tag;
+  // the shows still get theirs.
+  var flags = byTitle(slice.buildSlice(b, {}, {}, at('2027-03-08', 12, 0)).events);
+  assert.strictEqual(flags[curfew] & TAGS, 0);
+  assert.strictEqual(flags[curfew] & slice.FLAG_FEATURED, slice.FLAG_FEATURED);
+  assert.strictEqual(flags['Thank You For Cruising With Us'] & TAGS, 0);
+  assert.strictEqual(flags['Thank You For Cruising With Us'] & slice.FLAG_FEATURED, slice.FLAG_FEATURED);
+  assert.strictEqual(flags.Hairspray & TAGS, slice.FLAG_LAST_CHANCE);
+  assert.strictEqual(flags['Ice Show'] & TAGS, slice.FLAG_ONLY_SHOW);
+
+  // Hide Teen and Kid only events hides the curfew from the day and from
+  // tomorrow's featured count; without the filter it's there.
+  var sail = slice.daysFromIso(b.sailDate);
+  function titles(settings) {
+    return slice.buildEvents(b, settings, {}, 2, sail).map(function(e) { return e.title; });
+  }
+  assert.ok(titles({}).indexOf(curfew) !== -1);
+  assert.strictEqual(titles({ageFilters: ['young']}).indexOf(curfew), -1);
+  var all = slice.buildTomorrow(b, {}, {}, 1, sail).featured;
+  assert.strictEqual(slice.buildTomorrow(b, {ageFilters: ['young']}, {}, 1, sail).featured, all - 1);
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {
