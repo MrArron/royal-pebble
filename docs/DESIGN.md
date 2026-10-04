@@ -544,9 +544,12 @@ Top bar `My Info` in the gray band. Rows, top to bottom:
 
 1. `ON BOARD` undo row, while on board (§4.4).
 2. `Today's summary` / `Tomorrow's summary` (§5).
-3. The stateroom card: a `cursor_bg` rounded card (inset 4 px, 8 px radius)
-   with `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`
-   in the cursor text color (since 1.6.6, G6a; mockup `round/PT2MyInfo`).
+3. The stateroom card: a `port_accent` rounded card (inset 4 px, 8 px
+   radius; Windsor Tan in light, Chrome Yellow in dark) with `STATEROOM`, the
+   number in Gothic 28 bold and `Deck 9 · Aft stairs` in white (light) or
+   black (dark), as on the `On board?` labels (since 1.6.6, G6a; mockup
+   `round/PT2MyInfo`). It was the cursor's blue until 1.6.13, which made it
+   look selected next to the summary pill (owner, 2026-10-04).
 4. `MUSTER STATION`, `DINING ROOM` (`Not set` when empty), `SHIP CLOCK`
    note, `LAST SYNC` (`4:31a today`).
 5. `Ship directory` (§10.1).
@@ -1091,9 +1094,9 @@ holds on the Round 2 unless this section says otherwise.
   `muted` 4 px sized to the share of the page on screen. Nothing shows when
   the page fits.
 - **My info, since 1.6.5 (G6; mockup `MyInfo`):** the rows are centered on a
-  236 px column (the lists' width) that runs down to y 232. The stateroom is a
-  blue card (`cursor_bg`, 14 px radius): `STATEROOM`, the number in Gothic 28
-  bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
+  236 px column (the lists' width) that runs down to y 232. The stateroom is an
+  orange card (`port_accent`, as on the Time 2, since 1.6.13; blue before):
+  `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
   muted text and become a pill around their text, in Gothic 18 bold, when
   under the cursor; the `ON BOARD` undo row is a centered pill. Muster
   station, dining room, ship clock and last sync are labeled values with

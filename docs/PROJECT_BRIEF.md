@@ -115,7 +115,7 @@ pill, and long pages show a scroll arc on the right edge. From 1.6.5 My info,
 the Ask card (and its phone-away and no-answer messages) and the On board?
 screen are centered too, with the On board? labels beside the buttons. From
 1.6.6 the Time 2 matches the Round 2's style: a rounded selection pill on
-its lists and My info (with a blue stateroom card), a thin scroll bar on
+its lists and My info (with a stateroom card, orange since 1.6.13), a thin scroll bar on
 the right edge of long pages instead of the triangles, and the all-aboard
 alert shows Home's countdown with the time-ashore bar. From 1.6.7 the phone words the voice card and the pages for
 each watch (`textfit.js`): the Round 2 gets short hints and lines cut to its
