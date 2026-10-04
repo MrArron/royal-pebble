@@ -132,7 +132,6 @@ Round 2 too, so they join its checklist.
 
 | Version | What |
 |---|---|
-| 1.6.11 | **D**: Today on the Time 2 shows the time on the selected row as well as a group's first row (the Round 2 way), so a block of 6+ events keeps its time in view |
 | 1.6.12 | **C**: "I'm on board" moves to Hold Down on Home (both watches); Hold Select is always voice; hint text and the hints overlay follow |
 | 1.6.13 | **B**: My info's stateroom card fills with the clash orange (`port_accent`) so it doesn't look selected |
 | 1.6.14 | **G** (#99): no Last chance / Only show on announcements (Guest / Announcements); they stay featured |

@@ -173,7 +173,9 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   bool past = event_is_past(e, now);  // a no-length event just after its start
   GColor text = highlighted ? g_theme->cursor_text : (past ? g_theme->muted : g_theme->text);
 
-  if (starts_group(index->row, now)) {
+  // The time on a group's first row and on the selected row, so a long block
+  // keeps its time in view (the Round 2 way, 1.6.11).
+  if (starts_group(index->row, now) || highlighted) {
     char time_buf[8];
     const char *label = time_buf;
     GColor label_color = text;

@@ -313,8 +313,10 @@ NOW     Pool Games
 ```
 
 - Rows are a time column plus title and venue line. Events with the same
-  start are grouped: the time on the first row only, dividers only between
-  groups. In-progress events show `NOW` and `ends 11:45`.
+  start are grouped: the time on the group's first row and on the selected
+  row (in the cursor text color on the pill), dividers only between groups,
+  so a block of more than five events keeps its time in view (1.6.11, the
+  Round 2 way). In-progress events show `NOW` and `ends 11:45`.
 - Finished events drop off at their end, or 30 minutes after the start when
   there's no length.
 - ★ on starred rows; a drawn port-accent `!` after the star on clashing rows
