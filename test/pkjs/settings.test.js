@@ -492,6 +492,36 @@ test('Events rows: age, arrive-early and a Notes toggle (§12.5)', function() {
   assert.ok(script.indexOf('<ul class="notes" hidden>') !== -1, 'notes collapsed');
 });
 
+test('Events rows: details line of whole items, final tag first, top-aligned (C1)', function() {
+  var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY};
+  var html = config.buildPage(state, new Date(2027, 2, 6, 12, 0));
+  var script = pageScript(html);
+  new Function(script);
+  // Details line: .meta > .mrow > .mi items, each item carries its own dot.
+  assert.ok(script.indexOf('<span class="meta"><span class="mrow">') !== -1, 'details line');
+  assert.ok(script.indexOf("'<span class=\"mi\">' + b + '</span>'") !== -1, 'one .mi per item');
+  assert.ok(html.indexOf('.mrow{display:flex;flex-wrap:wrap;margin-left:-14px}') !== -1, 'items wrap whole');
+  assert.ok(html.indexOf('.mi{white-space:nowrap}') !== -1, 'no wrap inside an item');
+  assert.ok(html.indexOf('.mi::before{content:"·"') !== -1, 'separator drawn per item');
+  assert.strictEqual(script.indexOf("bits.join(' &middot; ')"), -1, 'no joined separator text');
+  // Final tag: filled .ftag, the first item of the line, no outlined chip.
+  assert.ok(script.indexOf("'<span class=\"ftag\">' + (fin === 2 ? 'Only show' : 'Last chance')") !== -1, 'final tag');
+  assert.ok(script.indexOf('var bits = [finalTag(e)];') !== -1, 'first item of the details line');
+  assert.strictEqual(html.indexOf('schip final'), -1, 'no final chip');
+  assert.strictEqual(html.indexOf('.schip.final'), -1, 'no final chip style');
+  assert.ok(html.indexOf('.ftag{') !== -1, 'tag style');
+  // Alignment: time and star at the top of the row.
+  assert.ok(html.indexOf('.ev{display:flex;gap:14px;align-items:flex-start;') !== -1, 'top-aligned row');
+  assert.ok(html.indexOf('margin-top:-10px;') !== -1, 'star on the first line');
+  // Order under the title: details, Notes, reservation line, other chips.
+  assert.ok(script.indexOf("'</b>' + metaLine(bits) + notesBlock(e) + eventExtras(e)") !== -1, 'line order');
+  assert.ok(script.indexOf('return e ? resBlock(e) + eventTags(e) :') !== -1, 'reservation before chips');
+  // Excursion rows use the same items.
+  assert.ok(script.indexOf("return metaLine(['All day from '") !== -1, 'all-day rental items');
+  assert.ok(script.indexOf("return metaLine([e.early ? esc(meetText(e))") !== -1, 'excursion items');
+  assert.strictEqual(script.indexOf("join(' · ')"), -1, 'no joined excursion line');
+});
+
 test('Events search: count line, day headers, My entries and Hidden on watch (§12.5)', function() {
   var state = {ships: [], cruise: null, status: {}, me: {}, api: royal.API, appKey: royal.APPKEY,
     personal: [{title: 'Trivia with friends', venue: 'Pub', date: '2027-03-07', time: '15:00', minutes: 0}]};

@@ -129,7 +129,8 @@ One line, 22 px, on every screen (alerts and schedule changes included):
 
 The app opens on Home (or the morning summary, §5). Up = My info, Down =
 Today, Select = route to the next event, Hold Select = Ask by voice (§11),
-Hold Up = next demo variant (demo data only), Back = exit.
+Hold Down = `On board?` while it's offered (§4.4), Hold Up = next demo
+variant (demo data only), Back = exit.
 
 ### 4.1 NEXT card (sea days, and port days once on board or after all-aboard)
 
@@ -175,7 +176,7 @@ ALL ABOARD IN                  Gothic 18 bold, port accent
 7:00a                  4:30p   Gothic 14 bold, muted
 Excursion back 11:30a          Gothic 14 bold, sea accent
 1 clash                        (only if any)
-Hold Select: I'm on board      Gothic 14 bold, sea accent
+Hold Down: I'm on board        Gothic 14 bold, sea accent
 ```
 
 - **Time-ashore bar** from the day's arrival (or 04:00 without one) to
@@ -207,7 +208,7 @@ From 04:00 until the arrival time, when the booking has one (`mine.arrival`):
 TERMINAL ARRIVAL               Gothic 18 bold, port accent
 11:30a                         Bitham 42 bold
 in 2 h 18 min                  Gothic 18, muted
-Hold Select: I'm on board
+Hold Down: I'm on board
 ──────────
 All aboard 3:30p               Gothic 18 bold
 Sails 4:00p                    Gothic 14 bold, muted (left out without depart)
@@ -222,13 +223,14 @@ cut with an ellipsis) without `in …` until on board or all-aboard.
 On embark and port days with an all-aboard time, the user can end the day's
 countdown:
 
-- **By voice** (the normal way, 1.5.4): Hold Select opens Ask; say `I'm on
-  board` (or `I'm ashore` to undo).
-- **With the phone away:** Hold Select opens the `On board?` screen:
+- **By button** (1.6.12; Hold Select was this before it became voice): Hold
+  Down on Home opens the `On board?` screen, phone or not:
   `On board?` (Gothic 24 bold), `Ends today's countdown`, `All-aboard alerts
   off.` / `Undo in My info.`, with edge labels `Hold: yes` beside Down (sea
-  accent pill) and `Not yet` beside Back. Hold Down confirms; Back cancels;
-  no timeout.
+  accent pill) and `Not yet` beside Back. Hold Down confirms (a fresh press:
+  the hold that opened it doesn't count); Back cancels; no timeout.
+- **By voice** (1.5.4): Hold Select opens Ask; say `I'm on board` (or `I'm
+  ashore` to undo). With the phone away Ask shows its no-phone card.
 - **Then:** a short buzz and a 2 s `✓ On board` screen; Home shows the NEXT
   card with the port band and the right label `on board`; the day's
   all-aboard alerts are cancelled. Reminders, Today, directory and routes
@@ -260,9 +262,10 @@ after a full sync` with the last sync date; the day before it reads
 
 On the first 3 user opens (not alerts or installs), and again after an update
 adds a button, Home fades to gray under white-outlined labels pointing at each
-button: `My info` (Up), `Today` (Down), `Route to next` (Select, only when
-there's an event to route to) or `Hold: on board` (when Select has nothing
-but on board is offered), `Exit` (Back). They show once Home has its data
+button: `My info` (Up), `Today` (Down; `Today · Hold: on board` while on
+board is offered), `Route to next` (Select, only when there's an event to
+route to), `Exit` (Back). Hints version 3 (1.6.12) shows them again for the
+move of on board to Hold Down. They show once Home has its data
 (after the morning summary). Up, Select and Down only dismiss them; Back
 exits. The open count and a hints version are kept on the watch. Help's
 **Always show button hints** switch shows them on every open.
@@ -313,8 +316,10 @@ NOW     Pool Games
 ```
 
 - Rows are a time column plus title and venue line. Events with the same
-  start are grouped: the time on the first row only, dividers only between
-  groups. In-progress events show `NOW` and `ends 11:45`.
+  start are grouped: the time on the group's first row and on the selected
+  row (in the cursor text color on the pill), dividers only between groups,
+  so a block of more than five events keeps its time in view (1.6.11, the
+  Round 2 way). In-progress events show `NOW` and `ends 11:45`.
 - Finished events drop off at their end, or 30 minutes after the start when
   there's no length.
 - ★ on starred rows; a drawn port-accent `!` after the star on clashing rows
@@ -400,8 +405,12 @@ settings page's `Clashes · N` counts items. It's a warning, never a block.
 The final performance of a featured show in the cruise (matched by title
 across all days) is tagged `Last chance`; a featured show with one performance
 `Only show`. The phone sets the flags (bits 16 and 32); personal entries,
-unfeatured events and paid classes never get them. Shown on Today rows, details,
-Home, the tomorrow card and as an outlined chip on the settings page.
+unfeatured events, paid classes and announcements (Royal's `Announcements`
+subcategory, such as Junior Cruisers Curfew; since 1.6.14) never get them.
+Announcements stay featured otherwise (tomorrow card, Home's FEATURED pick).
+Shown on Today rows, details, Home, the tomorrow card and, on the settings
+page, as a filled tag that is the first item of the event's details line
+(§12.5, since 1.6.15).
 
 ### 7.6 Ages, arrive-early and what-to-bring tags
 
@@ -539,9 +548,12 @@ Top bar `My Info` in the gray band. Rows, top to bottom:
 
 1. `ON BOARD` undo row, while on board (§4.4).
 2. `Today's summary` / `Tomorrow's summary` (§5).
-3. The stateroom card: a `cursor_bg` rounded card (inset 4 px, 8 px radius)
-   with `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`
-   in the cursor text color (since 1.6.6, G6a; mockup `round/PT2MyInfo`).
+3. The stateroom card: a `port_accent` rounded card (inset 4 px, 8 px
+   radius; Windsor Tan in light, Chrome Yellow in dark) with `STATEROOM`, the
+   number in Gothic 28 bold and `Deck 9 · Aft stairs` in white (light) or
+   black (dark), as on the `On board?` labels (since 1.6.6, G6a; mockup
+   `round/PT2MyInfo`). It was the cursor's blue until 1.6.13, which made it
+   look selected next to the summary pill (owner, 2026-10-04).
 4. `MUSTER STATION`, `DINING ROOM` (`Not set` when empty), `SHIP CLOCK`
    note, `LAST SYNC` (`4:31a today`).
 5. `Ship directory` (§10.1).
@@ -846,6 +858,10 @@ period is 60 minutes today. Make it longer if you like.`
   events** (title starts with "Family" or contains "All Ages", or the venue is
   Adventure Ocean Theater). Note: `Events you star always show. Events with
   no age listed never hide. Casino games are in the Casino category below.`
+  Ages also come from titles (`(17 & Under)`), so Hide Teen and Kid only
+  events hides Junior Cruisers Curfew everywhere on the watch. Limit: a kids
+  announcement without an age in its title isn't caught (none in the
+  2026-10-01 data).
 - **CATEGORIES:** a switch per category expanding to subcategory chips, each
   with its count. Shop is hidden by default. **Casino** is its own category:
   events at Casino Royale (and `Expanded Casino`), Royal's `Casino`
@@ -861,12 +877,19 @@ period is 60 minutes today. Make it longer if you like.`
   line, first 150; finds personal entries and booked orders too), day chips,
   and view chips `★ Starred`, `To reserve · N`, `Clashes · N` (each hidden at
   0).
-- **Event row:** time column · title, venue line (`Comedy Live · Ages 18+ ·
-  Arrive 15 min early`), chips (`Last chance`, `Clashes with Trivia 1:00p`,
-  `Reservation needed` + `✓ Mark reserved`, or `✓ Reserved` + `Not
-  reserved`), a `Notes · 2 ▾` toggle with the full notes, and a 48 px star
-  button. Unstarred events that need a reservation say `Reservation needed ·
-  star it to track`.
+- **Event row:** the time and a 48 px star sit at the top of the row, level
+  with the title's first line. Under the title, in order: the details line,
+  the `Notes · 2 ▾` toggle with the full notes, the reservation line, then
+  other chips (`Hidden on watch`, `Clashes with Trivia 1:00p`). The details
+  line is a row of items (`[Last chance] · Comedy Live · Ages 18+ · Arrive 15
+  min early · 50 min`; in results also the day). Each item carries its own
+  separator dot and never breaks inside, so the line wraps only between
+  items and never leaves a dot at a line start or end (the first item's dot
+  sits in a margin that is clipped). `Last chance` / `Only show` is a small
+  filled tag (warning container colours) and the first item. The reservation
+  line is `Reservation needed` + `✓ Mark reserved`, or `✓ Reserved` + `Not
+  reserved`; unstarred events that need one say `Reservation needed · star
+  it to track`.
 - **My entries:** personal entries (title, place, time) with Add. They
   get reminders like starred events.
 - **FROM YOUR BOOKING:** read-only card of booked orders at the top of their
@@ -876,8 +899,8 @@ period is 60 minutes today. Make it longer if you like.`
   one card per day and kind (`DAY 4 · NASSAU · SHORE EXCURSIONS`, `DAY 3 · SEA
   DAY · TOURS`). Each session has **Pick** (`✓ Picked`), which stars it and
   marks it reserved; only picked sessions reach the watch. Excursion
-  sub-line: `Meet 9:00a · 2 h 30 · Ages 6+`; all-day rentals `All day from
-  9:00a`. Booked products first; the rest fold behind `Show all N`.
+  sub-line (the same item row): `Meet 9:00a · 2 h 30 · Ages 6+`; all-day
+  rentals `All day from 9:00a`. Booked products first; the rest fold behind `Show all N`.
 
 ### 12.6 Me
 
@@ -1013,8 +1036,8 @@ holds on the Round 2 unless this section says otherwise.
     day), then the count (LECO 42) with `days` under it, the sail line and
     ship, a divider and `★ 3 starred so far`. In the last 3 days the ship
     line is left out to make room for the sync reminder.
-  - Arrival card, messages: the same lines, centered; `Hold Select: on
-    board` (shorter than the Time 2's `I'm on board`).
+  - Arrival card, messages: the same lines, centered; `Hold Down: on
+    board` (shorter than the Time 2's `I'm on board`), also on the arc edge.
   - The arc, its times and the bottom hints are drawn on a full-screen layer
     over the body, so they fade with the rest behind the button hints.
   Button hints (§4.6) sit at Up 70, Select 130, Down 190 on the right and
@@ -1086,9 +1109,9 @@ holds on the Round 2 unless this section says otherwise.
   `muted` 4 px sized to the share of the page on screen. Nothing shows when
   the page fits.
 - **My info, since 1.6.5 (G6; mockup `MyInfo`):** the rows are centered on a
-  236 px column (the lists' width) that runs down to y 232. The stateroom is a
-  blue card (`cursor_bg`, 14 px radius): `STATEROOM`, the number in Gothic 28
-  bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
+  236 px column (the lists' width) that runs down to y 232. The stateroom is an
+  orange card (`port_accent`, as on the Time 2, since 1.6.13; blue before):
+  `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
   muted text and become a pill around their text, in Gothic 18 bold, when
   under the cursor; the `ON BOARD` undo row is a centered pill. Muster
   station, dining room, ship clock and last sync are labeled values with
