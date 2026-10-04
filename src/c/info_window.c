@@ -99,8 +99,12 @@ static void draw_button(GContext *ctx, const char *text, int y, int width, bool 
 // The stateroom card: label, number and "Deck 9 · Aft stairs" on the cursor's
 // color (centered on the Round 2).
 static void draw_stateroom(GContext *ctx, const MyInfo *info, int y, int width) {
-  fill_pill(ctx, GRect(PILL_INSET, y, width - 2 * PILL_INSET, CARD_ROW_HEIGHT - 6));
-  graphics_context_set_text_color(ctx, g_theme->cursor_text);
+  // The clash orange, not the cursor's blue, so it doesn't look selected (owner,
+  // 2026-10-04). Text as on the On board? labels.
+  graphics_context_set_fill_color(ctx, g_theme->port_accent);
+  graphics_fill_rect(ctx, GRect(PILL_INSET, y, width - 2 * PILL_INSET, CARD_ROW_HEIGHT - 6), PILL_RADIUS,
+                     GCornersAll);
+  graphics_context_set_text_color(ctx, theme_is_dark() ? GColorBlack : GColorWhite);
   graphics_draw_text(ctx, "STATEROOM", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
                      GRect(PAD, y + 3, width - 2 * PAD, 16), GTextOverflowModeTrailingEllipsis,
                      TEXT_ALIGN, NULL);

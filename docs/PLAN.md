@@ -125,17 +125,11 @@ on the Round 2 once it arrives.
 
 ### 1.6 hardware-test fixes (from the Time 2 test of 1.6.8)
 
-The owner approved each of these on 2026-10-04; they come before G0c and G8.
-One small PR each, in this order. Each PR removes its line here and updates
-DESIGN.md (as built) and the brief where they describe it. C and B change the
-Round 2 too, so they join its checklist.
-
-| Version | What |
-|---|---|
-| 1.6.12 | **C**: "I'm on board" moves to Hold Down on Home (both watches); Hold Select is always voice; hint text and the hints overlay follow |
-| 1.6.13 | **B**: My info's stateroom card fills with the clash orange (`port_accent`) so it doesn't look selected |
-| 1.6.14 | **G** (#99): no Last chance / Only show on announcements (Guest / Announcements); they stay featured |
-| 1.6.15 | **H** (#100): settings page Events row, option C1: the final-show chip becomes a filled tag in the details line, no wrapped or dangling separators, top-aligned row |
+All seven (A-H, owner-approved 2026-10-04) are built in 1.6.9-1.6.15 (#97-#100
+and the stacked PRs); DESIGN.md describes them as built. Left: the owner's Time
+2 retest of 1.6.15, then G0c when the Round 2 arrives. C (Hold Down for on
+board) and B (orange stateroom card) change the Round 2 too and are in its
+checklist.
 
 ## 4. Phase 6: Planning
 
