@@ -652,7 +652,7 @@ columns, used by the tests only, are 32, 26 and 22.
 ## Voice
 
 Ask (`docs/DESIGN.md` §11, `src/c/ask_window.c`, `src/pkjs/voicecard.js`).
-Hold Select on Home (when `I'm on board` isn't offered) or on a Route screen
+Hold Select on Home or on a Route screen
 opens the Ask screen and starts the Pebble app's dictation (its own confirm
 step off). With the phone away the screen says `Voice is heard on the phone`
 and nothing is dictated. What was heard goes to the phone in VOICE with a new

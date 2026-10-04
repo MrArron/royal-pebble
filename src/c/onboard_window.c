@@ -7,7 +7,7 @@
 // Two confirmations share this window, both confirmed by Hold Down, with Back
 // leaving things unchanged and Up and Select doing nothing.
 //
-// "On board?" (docs/DESIGN.md §4.4), opened by Hold Select on Home:
+// "On board?" (docs/DESIGN.md §4.4), opened by Hold Down on Home:
 // after Hold Down, a short buzz and "On board" for about 2 s (any button
 // closes it early), then Home. The top bar stays Home's.
 //
