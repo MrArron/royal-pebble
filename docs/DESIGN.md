@@ -61,7 +61,10 @@ code differ, the code is right and this file needs a fix.
 - **The cursor** on lists (Today, the directory, My info's rows) is a rounded
   pill in `cursor_bg`, 8 px radius, inset 4 px from each side, with the row's
   text where it was (since 1.6.6, G6a; mockups `round/PT2Today`,
-  `PT2Directory`, `PT2MyInfo`). It replaced the full-width bar.
+  `PT2Directory`, `PT2MyInfo`). It replaced the full-width bar. The pill
+  jumps to the new row while the list scrolls smoothly: rows draw it by the
+  selected index, not the firmware's highlight, whose selection animation
+  overshoots 10 px into the next row (1.6.9, #97).
 
 ## 2. Colors
 
