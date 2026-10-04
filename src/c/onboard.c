@@ -52,7 +52,7 @@ bool onboard_silences(const Alarm *a) {
     return false;
   }
   OnboardState state;
-  // The warning belongs to the day of its all-aboard time (`ref`).
-  return read_state(&state) && state.day == cruise_day_index(now_cruise()) &&
-         cruise_day_index(a->ref) == state.day;
+  // The warning belongs to the day of its all-aboard time (`ref`). Not only
+  // today: the next morning's missed-alert check still has to skip them (#98).
+  return read_state(&state) && cruise_day_index(a->ref) == state.day;
 }
