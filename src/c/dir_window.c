@@ -261,7 +261,10 @@ static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, v
 static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *context) {
   View *v = context;
   int w = layer_get_bounds(cell).size.w;
-  bool highlighted = menu_cell_layer_is_highlighted(cell);
+  // By the selected row, not the cell's highlight: the firmware's selection animation
+  // clips the highlighted drawing to a band that overshoots the new row by 10 px
+  // into its neighbor, which drew a slice of the pill there.
+  bool highlighted = menu_layer_is_index_selected(v->menu, index);
   GColor text = highlighted ? g_theme->cursor_text : g_theme->text;
   GColor muted = highlighted ? g_theme->cursor_text : g_theme->muted;
   if (v->fetch.state != FETCH_READY || index->row >= v->row_count) {
