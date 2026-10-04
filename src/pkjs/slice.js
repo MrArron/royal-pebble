@@ -892,6 +892,7 @@ function scheduleEvents(bundle) {
              time: row[f.time] || null, minutes: row[f.minutes] || 0, featured: !!row[f.featured],
              paid: f.paid !== undefined && !!row[f.paid],
              excursion: ((sched.cats || [])[row[f.cat]] || [])[0] === EXCURSIONS,
+             sub: ((sched.cats || [])[row[f.cat]] || [])[1] || '',
              pid: f.pid !== undefined ? row[f.pid] || null : null};
     e.key = starKey(e.title, e.date, e.time, e.venue);
     return e;
@@ -1102,8 +1103,10 @@ function finalShows(bundle) {
   var sailDays = daysFromIso(bundle.sailDate);
   var byTitle = {};
   scheduleEvents(bundle).forEach(function(e) {
-    if (!e.featured || e.paid) {
-      return;  // paid classes are booked, not caught before they end
+    // Paid classes are booked, not caught before they end; announcements
+    // (Junior Cruisers Curfew) are notices, not shows (#99).
+    if (!e.featured || e.paid || /^announcements$/i.test(e.sub)) {
+      return;
     }
     var t = (e.title || '').trim().toLowerCase();
     var shows = byTitle[t] = byTitle[t] || {};

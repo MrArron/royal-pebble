@@ -156,6 +156,13 @@ var CSS = [
   'color:var(--on-surface-variant)}',
   '.ev-list button.ev{width:100%;background:none;color:inherit;text-align:left;min-height:56px}',
   '.ev-list .t>.muted{display:block}.ev-list .t>.bchip{margin-right:6px}',
+  '.meta{display:block;overflow:hidden;color:var(--on-surface-variant);font-size:14px}',
+  '.mrow{display:flex;flex-wrap:wrap;margin-left:-14px}',
+  '.mi{white-space:nowrap}',
+  '.mi::before{content:"\u00b7";display:inline-block;width:14px;text-align:center;',
+  'color:var(--on-surface-variant);font-weight:400}',
+  '.ftag{display:inline-block;padding:0 6px;border-radius:6px;background:var(--warning-container);',
+  'color:var(--on-warning-container);font-weight:700;font-size:12px;line-height:18px;vertical-align:1px}',
   '.bchip.pe{background:var(--tertiary-container);color:var(--on-tertiary-container)}',
   '.daychips{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:10px 16px 12px}',
   '.daychips .fchip{flex:none}',
@@ -166,8 +173,8 @@ var CSS = [
   '.mine-head small{font-size:13px;font-weight:700;letter-spacing:.4px}',
   '.addbtn{min-height:36px;padding:0 14px;border-radius:18px;background:#4B607C;color:#FFFFFF;font-weight:700;font-size:14px}',
   '.ev-list{background:var(--surface-low);border-radius:28px;padding:6px 0;margin:0 0 12px}',
-  '.ev{display:flex;gap:14px;align-items:center;padding:6px 8px 6px 20px}',
-  '.ev .tm{width:56px;flex:none;font-weight:600;color:var(--on-surface-variant)}',
+  '.ev{display:flex;gap:14px;align-items:flex-start;padding:6px 8px 6px 20px}',
+  '.ev .tm{width:56px;flex:none;font-weight:600;color:var(--on-surface-variant);padding-top:1px}',
   '.ev .t{flex:1;min-width:0}.ev b{display:block;font-weight:600}',
   '.notesbtn{display:block;background:none;padding:0;margin-top:4px;font:inherit;font-size:14px;font-weight:600;',
   'color:var(--primary);text-align:left}.notes{margin:4px 0 0;padding-left:18px;font-size:14px;line-height:19px;',
@@ -203,14 +210,14 @@ var CSS = [
   '.booked .textbtn{min-height:40px;font-size:14px}',
   '.xs{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--surface-high)}',
   '.xs .tm{width:52px;flex:none;font-weight:700;font-size:14px}.xs .t{flex:1;min-width:0}',
-  '.xs .t b{display:block;font-weight:600}.xs .t .muted{display:block;font-size:13px}',
+  '.xs .t b{display:block;font-weight:600}.xs .t .muted,.xs .t .meta{display:block;font-size:13px}',
   '.xpick{display:inline-flex;align-items:center;gap:4px;flex:none;min-height:40px;padding:0 12px;border-radius:8px;',
   'border:1px solid var(--outline);background:transparent;color:var(--primary);font:inherit;font-size:13px;font-weight:700}',
   '.xpick.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}',
   '.xpick svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}',
   '.mine .ev{width:100%;padding:8px 0;background:none;color:inherit;text-align:left;min-height:48px}',
   '.mine .ev .tm{color:inherit;font-weight:700}',
-  '.star{width:48px;height:48px;flex:none;border-radius:24px;background:transparent;',
+  '.star{width:48px;height:48px;flex:none;border-radius:24px;background:transparent;margin-top:-10px;',
   'color:var(--on-surface-variant);display:flex;align-items:center;justify-content:center}',
   '.star svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}',
   '.star[aria-pressed=true]{border-radius:16px;background:var(--warning-container);color:#8B5000}',
@@ -278,7 +285,7 @@ var CSS = [
   '.fstat .textbtn{flex:none;white-space:nowrap;padding:0 4px}',
   '.schip{min-height:28px;padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;line-height:1.3}',
   '.schip.edited{background:var(--warning-container);color:var(--on-warning-container)}',
-  '.schip.check,.schip.final,.schip.hid{box-shadow:inset 0 0 0 1px var(--outline);color:var(--on-surface-variant)}',
+  '.schip.check,.schip.hid{box-shadow:inset 0 0 0 1px var(--outline);color:var(--on-surface-variant)}',
   '.wprev{background:#161D1D;color:#FFFFFF;border-radius:28px;padding:16px 20px;margin:0 0 12px}',
   '.wprev small{display:block;font-size:12px;font-weight:600;color:#9CF1F0;letter-spacing:.5px;margin-bottom:4px}',
   '.wprev b,.wprev span{display:block;font-family:"Roboto Condensed","Arial Narrow",sans-serif;font-weight:700}',
@@ -2042,15 +2049,28 @@ function pageMain(S, V, CL, SH) {
     return text ? '<span class="tags">' + clashChip(text) + '</span>' : '';
   }
 
-  // Outlined "Last chance" / "Only show" chip (§7.5), then the clash chip.
-  // Search finds events in hidden categories too (docs/DESIGN.md
-  // §12.4); unless starred, they're marked.
+  // "Hidden on watch" and the clash chip; the final-show tag (§7.5) is the
+  // details line's first item instead (finalTag). Search finds events in
+  // hidden categories too (docs/DESIGN.md §12.4); unless starred, they're marked.
   function eventTags(e) {
-    var fin = finals[e.key];
-    var html = (fin ? '<span class="schip final">' + (fin === 2 ? 'Only show' : 'Last chance') + '</span>' : '') +
-      (hiddenOnWatch(e) && !isStarred(e.key) ? '<span class="schip hid">Hidden on watch</span>' : '') +
+    var html = (hiddenOnWatch(e) && !isStarred(e.key) ? '<span class="schip hid">Hidden on watch</span>' : '') +
       clashChip(clashes.byKey[e.key]);
     return html ? '<span class="tags">' + html + '</span>' : '';
+  }
+
+  // The filled "Last chance" / "Only show" tag, an item of the details line (§7.5).
+  function finalTag(e) {
+    var fin = finals[e.key];
+    return fin ? '<span class="ftag">' + (fin === 2 ? 'Only show' : 'Last chance') + '</span>' : '';
+  }
+
+  // A details line: items that wrap whole, each with its own separator dot
+  // (the first dot of every line sits in the margin the .meta box clips).
+  function metaLine(items) {
+    items = items.filter(Boolean);
+    return items.length ? '<span class="meta"><span class="mrow">' + items.map(function(b) {
+      return '<span class="mi">' + b + '</span>';
+    }).join('') + '</span></span>' : '';
   }
 
   function hiddenOnWatch(e) {
@@ -2081,7 +2101,7 @@ function pageMain(S, V, CL, SH) {
 
   function eventRow(e, withDate) {
     var on = isStarred(e.key);
-    var bits = [];
+    var bits = [finalTag(e)];
     if (withDate) {
       bits.push(esc(dayLabel(e.date)));
     }
@@ -2108,7 +2128,7 @@ function pageMain(S, V, CL, SH) {
         esc(shortClock(c.time)) : esc(c.venue)) + '</span>');
     }
     return '<div class="ev"><span class="tm">' + shortClock(e.time) + '</span><span class="t"><b>' + esc(e.title) +
-      '</b><span class="muted">' + bits.join(' &middot; ') + '</span>' + notesBlock(e) + eventExtras(e) + '</span>' +
+      '</b>' + metaLine(bits) + notesBlock(e) + eventExtras(e) + '</span>' +
       '<button class="star" data-act="star" data-key="' + esc(e.key) + '" aria-pressed="' + on + '" aria-label="' +
       (on ? 'Unstar ' : 'Star ') + esc(e.title) + '">' + STAR_SVG + '</button></div>';
   }
@@ -2301,10 +2321,9 @@ function pageMain(S, V, CL, SH) {
   // "Meet 9:00a · 2 h 30 · Ages 6+"; an all-day rental (no length) "All day from 9:00a".
   function excursionSub(e) {
     if (!e.minutes && e.time) {
-      return ['All day from ' + shortClock(e.time), e.age || ''].filter(Boolean).join(' \u00b7 ');
+      return metaLine(['All day from ' + esc(shortClock(e.time)), esc(e.age || '')]);
     }
-    return [e.early ? meetText(e) : '', e.minutes ? hoursText(e.minutes) : '', e.age || '']
-      .filter(Boolean).join(' \u00b7 ');
+    return metaLine([e.early ? esc(meetText(e)) : '', e.minutes ? esc(hoursText(e.minutes)) : '', esc(e.age || '')]);
   }
 
   // "DAY 4 · NASSAU · SHORE EXCURSIONS"
@@ -2347,7 +2366,7 @@ function pageMain(S, V, CL, SH) {
         list.map(function(e) {
           var on = isStarred(e.key);
           return '<div class="xs"><span class="tm">' + shortClock(e.time) + '</span><span class="t"><b>' +
-            esc(e.title) + '</b><span class="muted">' + esc(excursionSub(e)) + '</span></span>' +
+            esc(e.title) + '</b>' + excursionSub(e) + '</span>' +
             '<button class="xpick' + (on ? ' on' : '') + '" data-act="xPick" data-key="' + esc(e.key) +
             '" aria-pressed="' + on + '" aria-label="' + (on ? 'Unpick ' : 'Pick ') + esc(e.title) + ' ' +
             esc(shortClock(e.time)) + '">' + (on ? CHECK_SVG + 'Picked' : 'Pick') + '</button></div>';
