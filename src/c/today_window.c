@@ -144,7 +144,8 @@ static void draw_separator(GContext *ctx, const Layer *cell, MenuIndex *index, v
 
 static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *context) {
   GRect b = layer_get_bounds(cell);
-  bool highlighted = menu_cell_layer_is_highlighted(cell);
+  // By the selected row, not the cell's highlight (see dir_window.c draw_row).
+  bool highlighted = menu_layer_is_index_selected(s_menu, index);
   GColor muted = highlighted ? g_theme->cursor_text : g_theme->muted;
 #if !defined(PBL_ROUND)
   if (highlighted) {
@@ -172,7 +173,9 @@ static void draw_row(GContext *ctx, const Layer *cell, MenuIndex *index, void *c
   bool past = event_is_past(e, now);  // a no-length event just after its start
   GColor text = highlighted ? g_theme->cursor_text : (past ? g_theme->muted : g_theme->text);
 
-  if (starts_group(index->row, now)) {
+  // The time on a group's first row and on the selected row, so a long block
+  // keeps its time in view (the Round 2 way, 1.6.11).
+  if (starts_group(index->row, now) || highlighted) {
     char time_buf[8];
     const char *label = time_buf;
     GColor label_color = text;

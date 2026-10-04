@@ -159,11 +159,11 @@ static void draw_next_items(GContext *ctx, int y, int width, int bottom, int32_t
 static void draw_line(GContext *ctx, const char *text, GFont font, GColor color, int x, int y,
                       int w, int h);
 
-// "Hold Select: I'm on board" under the countdown and the arrival time (§4.4).
+// "Hold Down: I'm on board" under the countdown and the arrival time (§4.4).
 #if defined(PBL_ROUND)
-#define ONBOARD_HINT "Hold Select: on board"
+#define ONBOARD_HINT "Hold Down: on board"
 #else
-#define ONBOARD_HINT "Hold Select: I'm on board"
+#define ONBOARD_HINT "Hold Down: I'm on board"
 #endif
 static int draw_onboard_hint(GContext *ctx, int y, int width) {
   graphics_context_set_text_color(ctx, g_theme->sea_accent);
@@ -675,7 +675,7 @@ static bool shows_headline(int32_t now) {
   return shows_day(now) && !shows_arrival(now) && !shows_countdown(now);
 }
 
-// Hold Select says "I'm on board": on the arrival card or the countdown.
+// Hold Down says "I'm on board": on the arrival card or the countdown.
 static bool offers_onboard(int32_t now) { return shows_arrival(now) || shows_countdown(now); }
 
 // TERMINAL ARRIVAL, the time large with "in 2 h 18 min" (or Royal's text),
@@ -853,7 +853,7 @@ static void draw_body(Layer *layer, GContext *ctx) {
 // setting). Any press dismisses them. Raise HINTS_VERSION when an update adds a
 // button to Home, so they show again.
 #define KEY_HINTS 7
-#define HINTS_VERSION 2  // 1: Select routes to the next event; 2: hold Select, on board
+#define HINTS_VERSION 3  // 1: Select routes to the next event; 2: hold Select, on board; 3: hold Down
 #define HINT_OPENS 3
 #define HINT_MS 3000
 
@@ -936,10 +936,9 @@ static void hints_update_proc(Layer *layer, GContext *ctx) {
   int32_t now = now_cruise();
   if (route_target(now) >= 0) {
     draw_hint_label(ctx, "Route to next", GColorCobaltBlue, false, HINT_SELECT_CY, w);
-  } else if (offers_onboard(now)) {
-    draw_hint_label(ctx, "Hold: on board", GColorCobaltBlue, false, HINT_SELECT_CY, w);
   }
-  draw_hint_label(ctx, "Today", GColorBlack, false, HINT_DOWN_CY, w);
+  draw_hint_label(ctx, offers_onboard(now) ? "Today \xc2\xb7 Hold: on board" : "Today", GColorBlack, false,
+                  HINT_DOWN_CY, w);
   draw_hint_label(ctx, "Exit", GColorDarkGray, true, HINT_BACK_CY, w);
 }
 
@@ -1053,16 +1052,20 @@ static void select_click(ClickRecognizerRef recognizer, void *context) {
   }
 }
 
+// Ask by voice (§11), where "I'm on board" is one of the commands; with the
+// phone away Ask shows its no-phone card.
 static void select_long_click(ClickRecognizerRef recognizer, void *context) {
-  bool offered = offers_onboard(now_cruise());
   usage_press(BUTTON_ID_SELECT, USAGE_LONG, -1);
-  // Ask by voice (§11), where "I'm on board" is one of the commands (owner,
-  // 2026-09-28). With the phone away there's no voice, so the "On board?"
-  // screen takes Hold Select while it's offered.
-  if (offered && !connection_service_peek_pebble_app_connection()) {
+  ask_window_push();
+}
+
+// "On board?" while it's offered, phone or not (§4.4, owner 2026-10-04): Hold
+// Select is voice, and the screen is confirmed with Hold Down too.
+static void down_long_click(ClickRecognizerRef recognizer, void *context) {
+  bool offered = offers_onboard(now_cruise());
+  usage_press(BUTTON_ID_DOWN, USAGE_LONG | (offered ? 0 : USAGE_NOTHING), -1);
+  if (offered) {
     onboard_window_push();
-  } else {
-    ask_window_push();
   }
 }
 
@@ -1072,6 +1075,7 @@ static void click_config(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click);
   window_long_click_subscribe(BUTTON_ID_UP, 700, up_long_click, NULL);
   window_long_click_subscribe(BUTTON_ID_SELECT, 700, select_long_click, NULL);
+  window_long_click_subscribe(BUTTON_ID_DOWN, 700, down_long_click, NULL);
 }
 
 static void window_load(Window *window) {
