@@ -72,7 +72,7 @@ made-up sail date.
 | `AlertToReserve` | Round to-reserve alert |
 | `NoticeSchedule` | Round schedule change |
 | `ClashToast` | Round clash toast over Today |
-| `MyInfo` | Round My info |
+| `MyInfo` | Round My info (the stateroom card is orange `port_accent` since 1.6.13, not the blue drawn here) |
 | `Directory` | Round directory, deck list |
 | `Place` | Round place page, scroll arc |
 | `Route` | Round route from Home |
@@ -81,7 +81,7 @@ made-up sail date.
 | `PhoneAway` | Round Ask with the phone away |
 | `DictationFailed` | Round Ask, no answer from the phone |
 | `PT2Today` | Time 2 Today, pill selection |
-| `PT2MyInfo` | Time 2 My info, pill selection |
+| `PT2MyInfo` | Time 2 My info, pill selection (the stateroom card is orange `port_accent` since 1.6.13, not the blue drawn here) |
 | `PT2Directory` | Time 2 directory, pill selection |
 | `PT2Event` | Time 2 event details, right-edge scroll bar |
 | `PT2AlertAllAboard` | Time 2 all-aboard alert with the time-ashore bar |

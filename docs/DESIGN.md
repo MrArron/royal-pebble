@@ -405,8 +405,12 @@ settings page's `Clashes · N` counts items. It's a warning, never a block.
 The final performance of a featured show in the cruise (matched by title
 across all days) is tagged `Last chance`; a featured show with one performance
 `Only show`. The phone sets the flags (bits 16 and 32); personal entries,
-unfeatured events and paid classes never get them. Shown on Today rows, details,
-Home, the tomorrow card and as an outlined chip on the settings page.
+unfeatured events, paid classes and announcements (Royal's `Announcements`
+subcategory, such as Junior Cruisers Curfew; since 1.6.14) never get them.
+Announcements stay featured otherwise (tomorrow card, Home's FEATURED pick).
+Shown on Today rows, details, Home, the tomorrow card and, on the settings
+page, as a filled tag that is the first item of the event's details line
+(§12.5, since 1.6.15).
 
 ### 7.6 Ages, arrive-early and what-to-bring tags
 
@@ -544,9 +548,12 @@ Top bar `My Info` in the gray band. Rows, top to bottom:
 
 1. `ON BOARD` undo row, while on board (§4.4).
 2. `Today's summary` / `Tomorrow's summary` (§5).
-3. The stateroom card: a `cursor_bg` rounded card (inset 4 px, 8 px radius)
-   with `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`
-   in the cursor text color (since 1.6.6, G6a; mockup `round/PT2MyInfo`).
+3. The stateroom card: a `port_accent` rounded card (inset 4 px, 8 px
+   radius; Windsor Tan in light, Chrome Yellow in dark) with `STATEROOM`, the
+   number in Gothic 28 bold and `Deck 9 · Aft stairs` in white (light) or
+   black (dark), as on the `On board?` labels (since 1.6.6, G6a; mockup
+   `round/PT2MyInfo`). It was the cursor's blue until 1.6.13, which made it
+   look selected next to the summary pill (owner, 2026-10-04).
 4. `MUSTER STATION`, `DINING ROOM` (`Not set` when empty), `SHIP CLOCK`
    note, `LAST SYNC` (`4:31a today`).
 5. `Ship directory` (§10.1).
@@ -851,6 +858,10 @@ period is 60 minutes today. Make it longer if you like.`
   events** (title starts with "Family" or contains "All Ages", or the venue is
   Adventure Ocean Theater). Note: `Events you star always show. Events with
   no age listed never hide. Casino games are in the Casino category below.`
+  Ages also come from titles (`(17 & Under)`), so Hide Teen and Kid only
+  events hides Junior Cruisers Curfew everywhere on the watch. Limit: a kids
+  announcement without an age in its title isn't caught (none in the
+  2026-10-01 data).
 - **CATEGORIES:** a switch per category expanding to subcategory chips, each
   with its count. Shop is hidden by default. **Casino** is its own category:
   events at Casino Royale (and `Expanded Casino`), Royal's `Casino`
@@ -866,12 +877,19 @@ period is 60 minutes today. Make it longer if you like.`
   line, first 150; finds personal entries and booked orders too), day chips,
   and view chips `★ Starred`, `To reserve · N`, `Clashes · N` (each hidden at
   0).
-- **Event row:** time column · title, venue line (`Comedy Live · Ages 18+ ·
-  Arrive 15 min early`), chips (`Last chance`, `Clashes with Trivia 1:00p`,
-  `Reservation needed` + `✓ Mark reserved`, or `✓ Reserved` + `Not
-  reserved`), a `Notes · 2 ▾` toggle with the full notes, and a 48 px star
-  button. Unstarred events that need a reservation say `Reservation needed ·
-  star it to track`.
+- **Event row:** the time and a 48 px star sit at the top of the row, level
+  with the title's first line. Under the title, in order: the details line,
+  the `Notes · 2 ▾` toggle with the full notes, the reservation line, then
+  other chips (`Hidden on watch`, `Clashes with Trivia 1:00p`). The details
+  line is a row of items (`[Last chance] · Comedy Live · Ages 18+ · Arrive 15
+  min early · 50 min`; in results also the day). Each item carries its own
+  separator dot and never breaks inside, so the line wraps only between
+  items and never leaves a dot at a line start or end (the first item's dot
+  sits in a margin that is clipped). `Last chance` / `Only show` is a small
+  filled tag (warning container colours) and the first item. The reservation
+  line is `Reservation needed` + `✓ Mark reserved`, or `✓ Reserved` + `Not
+  reserved`; unstarred events that need one say `Reservation needed · star
+  it to track`.
 - **My entries:** personal entries (title, place, time) with Add. They
   get reminders like starred events.
 - **FROM YOUR BOOKING:** read-only card of booked orders at the top of their
@@ -881,8 +899,8 @@ period is 60 minutes today. Make it longer if you like.`
   one card per day and kind (`DAY 4 · NASSAU · SHORE EXCURSIONS`, `DAY 3 · SEA
   DAY · TOURS`). Each session has **Pick** (`✓ Picked`), which stars it and
   marks it reserved; only picked sessions reach the watch. Excursion
-  sub-line: `Meet 9:00a · 2 h 30 · Ages 6+`; all-day rentals `All day from
-  9:00a`. Booked products first; the rest fold behind `Show all N`.
+  sub-line (the same item row): `Meet 9:00a · 2 h 30 · Ages 6+`; all-day
+  rentals `All day from 9:00a`. Booked products first; the rest fold behind `Show all N`.
 
 ### 12.6 Me
 
@@ -1091,9 +1109,9 @@ holds on the Round 2 unless this section says otherwise.
   `muted` 4 px sized to the share of the page on screen. Nothing shows when
   the page fits.
 - **My info, since 1.6.5 (G6; mockup `MyInfo`):** the rows are centered on a
-  236 px column (the lists' width) that runs down to y 232. The stateroom is a
-  blue card (`cursor_bg`, 14 px radius): `STATEROOM`, the number in Gothic 28
-  bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
+  236 px column (the lists' width) that runs down to y 232. The stateroom is an
+  orange card (`port_accent`, as on the Time 2, since 1.6.13; blue before):
+  `STATEROOM`, the number in Gothic 28 bold and `Deck 9 · Aft stairs`. The summary and directory rows are plain
   muted text and become a pill around their text, in Gothic 18 bold, when
   under the cursor; the `ON BOARD` undo row is a centered pill. Muster
   station, dining room, ship clock and last sync are labeled values with
