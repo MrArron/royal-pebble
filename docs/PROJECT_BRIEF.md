@@ -321,8 +321,8 @@ entries (6.4 KB heap).
   dictation) on Android; the airplane-mode test passed 12/12 on 2026-09-28,
   and 1.5.4 passed a full watch test the same day, dictation in airplane mode
   included. Item 30 (native Android companion) is not needed.
-- **Hold Select on Home always asks by voice** (2026-09-28); the `On board?`
-  screen remains for when the phone is away.
+- **Hold Select on Home always asks by voice** (2026-09-28); since 1.6.12
+  (owner, 2026-10-04) Hold Down opens the `On board?` screen, phone or not.
 - **Casino is a category,** shown by default (2026-09-27).
 - **Usage log scope:** log anything that could improve the app, cabin details
   included, never in the repo (2026-09-26).

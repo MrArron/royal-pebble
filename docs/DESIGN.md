@@ -129,7 +129,8 @@ One line, 22 px, on every screen (alerts and schedule changes included):
 
 The app opens on Home (or the morning summary, §5). Up = My info, Down =
 Today, Select = route to the next event, Hold Select = Ask by voice (§11),
-Hold Up = next demo variant (demo data only), Back = exit.
+Hold Down = `On board?` while it's offered (§4.4), Hold Up = next demo
+variant (demo data only), Back = exit.
 
 ### 4.1 NEXT card (sea days, and port days once on board or after all-aboard)
 
@@ -175,7 +176,7 @@ ALL ABOARD IN                  Gothic 18 bold, port accent
 7:00a                  4:30p   Gothic 14 bold, muted
 Excursion back 11:30a          Gothic 14 bold, sea accent
 1 clash                        (only if any)
-Hold Select: I'm on board      Gothic 14 bold, sea accent
+Hold Down: I'm on board        Gothic 14 bold, sea accent
 ```
 
 - **Time-ashore bar** from the day's arrival (or 04:00 without one) to
@@ -207,7 +208,7 @@ From 04:00 until the arrival time, when the booking has one (`mine.arrival`):
 TERMINAL ARRIVAL               Gothic 18 bold, port accent
 11:30a                         Bitham 42 bold
 in 2 h 18 min                  Gothic 18, muted
-Hold Select: I'm on board
+Hold Down: I'm on board
 ──────────
 All aboard 3:30p               Gothic 18 bold
 Sails 4:00p                    Gothic 14 bold, muted (left out without depart)
@@ -222,13 +223,14 @@ cut with an ellipsis) without `in …` until on board or all-aboard.
 On embark and port days with an all-aboard time, the user can end the day's
 countdown:
 
-- **By voice** (the normal way, 1.5.4): Hold Select opens Ask; say `I'm on
-  board` (or `I'm ashore` to undo).
-- **With the phone away:** Hold Select opens the `On board?` screen:
+- **By button** (1.6.12; Hold Select was this before it became voice): Hold
+  Down on Home opens the `On board?` screen, phone or not:
   `On board?` (Gothic 24 bold), `Ends today's countdown`, `All-aboard alerts
   off.` / `Undo in My info.`, with edge labels `Hold: yes` beside Down (sea
-  accent pill) and `Not yet` beside Back. Hold Down confirms; Back cancels;
-  no timeout.
+  accent pill) and `Not yet` beside Back. Hold Down confirms (a fresh press:
+  the hold that opened it doesn't count); Back cancels; no timeout.
+- **By voice** (1.5.4): Hold Select opens Ask; say `I'm on board` (or `I'm
+  ashore` to undo). With the phone away Ask shows its no-phone card.
 - **Then:** a short buzz and a 2 s `✓ On board` screen; Home shows the NEXT
   card with the port band and the right label `on board`; the day's
   all-aboard alerts are cancelled. Reminders, Today, directory and routes
@@ -260,9 +262,10 @@ after a full sync` with the last sync date; the day before it reads
 
 On the first 3 user opens (not alerts or installs), and again after an update
 adds a button, Home fades to gray under white-outlined labels pointing at each
-button: `My info` (Up), `Today` (Down), `Route to next` (Select, only when
-there's an event to route to) or `Hold: on board` (when Select has nothing
-but on board is offered), `Exit` (Back). They show once Home has its data
+button: `My info` (Up), `Today` (Down; `Today · Hold: on board` while on
+board is offered), `Route to next` (Select, only when there's an event to
+route to), `Exit` (Back). Hints version 3 (1.6.12) shows them again for the
+move of on board to Hold Down. They show once Home has its data
 (after the morning summary). Up, Select and Down only dismiss them; Back
 exits. The open count and a hints version are kept on the watch. Help's
 **Always show button hints** switch shows them on every open.
@@ -1015,8 +1018,8 @@ holds on the Round 2 unless this section says otherwise.
     day), then the count (LECO 42) with `days` under it, the sail line and
     ship, a divider and `★ 3 starred so far`. In the last 3 days the ship
     line is left out to make room for the sync reminder.
-  - Arrival card, messages: the same lines, centered; `Hold Select: on
-    board` (shorter than the Time 2's `I'm on board`).
+  - Arrival card, messages: the same lines, centered; `Hold Down: on
+    board` (shorter than the Time 2's `I'm on board`), also on the arc edge.
   - The arc, its times and the bottom hints are drawn on a full-screen layer
     over the body, so they fade with the rest behind the button hints.
   Button hints (§4.6) sit at Up 70, Select 130, Down 190 on the right and
