@@ -82,6 +82,21 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
   online check-in. **In the bundle** as `arrival` when set. *Unverified format*;
   the sync tool converts common time spellings to `HH:MM` and otherwise keeps
   Royal's text.
+- **Linked bookings (owner, 2026-10-24).** A family member's reservation
+  linked to the account lists in `profileBookings` beside your own, with the
+  same ship and sail date, and Royal may list it first. Both producers used to
+  take the first match and filled the Me tab and purchases from the wrong
+  booking. Now, when several match, they ask the profile (endpoint 1) once and
+  keep the booking whose `passengers` or `passengersInStateroom` holds the
+  signed-in guest: the same Crown & Anchor number (`loyaltyInformation.
+  crownAndAnchorId` against a guest's `loyaltyNumber`), else the same first and
+  last name (`personalInformation`), with the birth date when both list one.
+  *Unverified:* those field names on the profile and on booking guests (from
+  jdeath's project and the September shape report); when nothing matches the
+  first booking is kept and `mine.bookingUnsure` is set, and the usage log says
+  "not sure which is yours". Re-run the explorer to confirm. When no booking
+  matches the chosen sailing, the error lists the ship and date of each booking
+  on the account, so a wrong date in the picker shows.
 - `hasFlight`, `onlineCheckinStatus` (empty before check-in),
   `passengersInStateroom` (cabin mates' names and ages) are also there. Not
   copied: the app has no use for them and they are personal.

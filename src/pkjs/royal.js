@@ -739,104 +739,185 @@ function fetchMine(auth, code, date8, sched, callback) {
       return;
     }
     var bookings = ((json || {}).payload || {}).profileBookings || [];
-    var b = bookings.filter(function(x) {
+    var match = bookings.filter(function(x) {
       return x.shipCode === code && String(x.sailDate || '').replace(/-/g, '') === date8;
-    })[0];
-    if (!b) {
-      callback('Signed in, but found no booking on your account for that ship and date.');
+    });
+    if (!match.length) {
+      callback('Signed in, but found no booking on your account for that ship and date.' + bookingList(bookings));
       return;
     }
-    // Guarantee bookings list "GTY" until a cabin is assigned; a real one has digits.
-    var room = String(b.stateroomNumber || '');
-    var me = (b.passengers || []).filter(function(p) { return String(p.passengerId) === String(b.passengerId); })[0];
-    var mine = {
-      stateroom: /[0-9]/.test(room) ? room : null,
-      deck: orNone(b.deckNumber),
-      muster: orNone(b.musterStation),
-      // Terminal arrival appointment, empty until online check-in is done
-      arrival: me ? (hhmm(me.arrivalTime) || orNone(me.arrivalTime)) : null,
-      orders: []
-    };
-    fetchVoyage(auth, code, date8, function(err2, voyage) {
-      if (err2) {
-        mine.voyageError = err2;
-      } else {
-        mine.ports = voyage.ports;
-        mine.embarkTimeZone = voyage.embarkTimeZone;
+    if (match.length === 1) {
+      mineFor(auth, code, date8, pub, match[0], 0, false, callback);
+      return;
+    }
+    pickOwnBooking(auth, match, function(b, unsure) {
+      mineFor(auth, code, date8, pub, b, match.length - 1, unsure, callback);
+    });
+  });
+}
+
+// ' Your account has: HM 2026-12-12, WN 2028-01-01.' (ship and date only), so
+// a sailing picked by mistake shows which one to pick; '' with no bookings.
+function bookingList(bookings) {
+  var seen = {};
+  var list = bookings.map(function(b) {
+    var d = String(b.sailDate || '').replace(/-/g, '');
+    return (b.shipCode || '?') + ' ' + (d.length >= 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8) : '?');
+  }).filter(function(t) {
+    return seen[t] ? false : (seen[t] = true);
+  });
+  return list.length ? ' Your account has: ' + list.join(', ') + '.' : '';
+}
+
+function letters(text) {
+  return String(text || '').toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function digits(text) {
+  return String(text || '').replace(/[^0-9]/g, '');
+}
+
+// The signed-in guest's name, birth date and Crown & Anchor number from the
+// account profile, for telling their booking from a linked one.
+function guestIdentity(profile) {
+  var info = profile.personalInformation || profile;
+  var loyalty = profile.loyaltyInformation || {};
+  return {first: letters(info.firstName), last: letters(info.lastName),
+          birth: digits(info.birthdate || info.birthDate), loyalty: digits(loyalty.crownAndAnchorId)};
+}
+
+// Whether the signed-in guest is among the booking's guests: the same Crown &
+// Anchor number, or the same first and last name (and birth date when both
+// list one).
+function sailsOn(booking, me) {
+  var guests = (booking.passengers || []).concat(booking.passengersInStateroom || []);
+  return guests.some(function(p) {
+    var number = digits(p.loyaltyNumber || p.crownAndAnchorId);
+    if (me.loyalty && number) {
+      return number === me.loyalty;
+    }
+    var birth = digits(p.birthdate || p.birthDate);
+    return !!(me.first && me.last && letters(p.firstName) === me.first && letters(p.lastName) === me.last &&
+              !(me.birth && birth && birth !== me.birth));
+  });
+}
+
+// Several bookings on one sailing: a family member's reservation linked to
+// the account lists beside the guest's own. Theirs is the one they sail on,
+// told apart by the account profile (one extra call). callback(booking,
+// unsure); unsure means none or several matched and the first was kept.
+function pickOwnBooking(auth, match, callback) {
+  authGet(auth, API + '/en/royal/web/v3/guestAccounts/' + encodeURIComponent(auth['account-id']), null,
+          function(err, json) {
+    if (err) {
+      callback(match[0], true);
+      return;
+    }
+    var me = guestIdentity((json || {}).payload || {});
+    var own = match.filter(function(b) { return sailsOn(b, me); });
+    callback((own.length ? own : match)[0], own.length !== 1);
+  });
+}
+
+// fetchMine for the chosen booking `b`; `others` bookings on the same sailing
+// were set aside.
+function mineFor(auth, code, date8, pub, b, others, unsure, callback) {
+  // Guarantee bookings list "GTY" until a cabin is assigned; a real one has digits.
+  var room = String(b.stateroomNumber || '');
+  var me = (b.passengers || []).filter(function(p) { return String(p.passengerId) === String(b.passengerId); })[0];
+  var mine = {
+    stateroom: /[0-9]/.test(room) ? room : null,
+    deck: orNone(b.deckNumber),
+    muster: orNone(b.musterStation),
+    // Terminal arrival appointment, empty until online check-in is done
+    arrival: me ? (hhmm(me.arrivalTime) || orNone(me.arrivalTime)) : null,
+    orders: []
+  };
+  if (others) {
+    mine.otherBookings = others;
+    if (unsure) {
+      mine.bookingUnsure = true;
+    }
+  }
+  fetchVoyage(auth, code, date8, function(err2, voyage) {
+    if (err2) {
+      mine.voyageError = err2;
+    } else {
+      mine.ports = voyage.ports;
+      mine.embarkTimeZone = voyage.embarkTimeZone;
+    }
+    var params = {passengerId: b.passengerId, reservationId: b.bookingId, sailingId: code + date8,
+                  includeMedia: 'false'};
+    var base = COMMERCE + '/calendar/v1/' + code + '/orderHistory';
+    authGet(auth, base, params, function(err3, json3) {
+      if (err3) {
+        mine.ordersError = err3;
+        callback(null, mine);
+        return;
       }
-      var params = {passengerId: b.passengerId, reservationId: b.bookingId, sailingId: code + date8,
-                    includeMedia: 'false'};
-      var base = COMMERCE + '/calendar/v1/' + code + '/orderHistory';
-      authGet(auth, base, params, function(err3, json3) {
-        if (err3) {
-          mine.ordersError = err3;
-          callback(null, mine);
-          return;
-        }
-        var history = (json3 || {}).payload || {};
-        var orders = (history.myOrders || []).concat(history.ordersOthersHaveBookedForMe || [])
-          .filter(function(o) { return o.orderCode && o.status !== 'CANCELLED'; });
-        series(orders, function(order, nextOrder) {
-          authGet(auth, base + '/' + order.orderCode, params, function(err4, json4) {
-            if (err4) {
-              nextOrder();
+      var history = (json3 || {}).payload || {};
+      var orders = (history.myOrders || []).concat(history.ordersOthersHaveBookedForMe || [])
+        .filter(function(o) { return o.orderCode && o.status !== 'CANCELLED'; });
+      series(orders, function(order, nextOrder) {
+        authGet(auth, base + '/' + order.orderCode, params, function(err4, json4) {
+          if (err4) {
+            nextOrder();
+            return;
+          }
+          var items = ((json4 || {}).payload || {}).orderHistoryDetailItems || [];
+          series(items, function(item, nextItem) {
+            var summary = item.productSummary || {};
+            var guests = (item.guests || []).filter(function(g) { return g.orderStatus !== 'CANCELLED'; });
+            if (!guests.length || item.status === 'CANCELLED') {
+              nextItem();
               return;
             }
-            var items = ((json4 || {}).payload || {}).orderHistoryDetailItems || [];
-            series(items, function(item, nextItem) {
-              var summary = item.productSummary || {};
-              var guests = (item.guests || []).filter(function(g) { return g.orderStatus !== 'CANCELLED'; });
-              if (!guests.length || item.status === 'CANCELLED') {
-                nextItem();
-                return;
-              }
-              var cat = summary.productTypeCategory || {};
-              var entry = {title: clean(summary.title), category: cat.id !== undefined ? cat.id : '',
-                           guests: guests.length};
-              mine.orders.push(entry);
-              // Timed bookings (shore excursions, and probably dining and shows)
-              // carry the booked session; packages and credits don't.
-              var offering = item.offering || {};
-              var dt = isoParts(offering.dateTime);
-              if (!dt[0]) {
-                nextItem();
-                return;
-              }
-              entry.date = dt[0];
-              entry.time = dt[1];
-              if (isCount(offering.dayOfCruise)) {
-                entry.day = offering.dayOfCruise;
-              }
-              if (offering.portCode) {
-                entry.port = offering.portCode;
-              }
-              var p = pub[JSON.stringify([entry.title.toLowerCase(), dt[0], dt[1]])] || {};
-              Object.keys(p).forEach(function(k) { entry[k] = p[k]; });
-              if ('meet' in entry && 'minutes' in entry) {
-                nextItem();
-                return;
-              }
-              offeringTimes(auth, code, date8, b, summary, offering, function(err5, times) {
-                if (!err5) {
-                  Object.keys(times).forEach(function(k) { entry[k] = times[k]; });
-                }
-                nextItem();
-              });
-            }, nextOrder);
-          });
-        }, function() {
-          mine.orders = mine.orders.map(function(o, i) { return [o, i]; }).sort(function(x, y) {
-            var a = [x[0].date || '9999', x[0].time || '', x[0].title];
-            var c = [y[0].date || '9999', y[0].time || '', y[0].title];
-            for (var i = 0; i < 3; i++) {
-              if (a[i] !== c[i]) {
-                return a[i] < c[i] ? -1 : 1;
-              }
+            var cat = summary.productTypeCategory || {};
+            var entry = {title: clean(summary.title), category: cat.id !== undefined ? cat.id : '',
+                         guests: guests.length};
+            mine.orders.push(entry);
+            // Timed bookings (shore excursions, and probably dining and shows)
+            // carry the booked session; packages and credits don't.
+            var offering = item.offering || {};
+            var dt = isoParts(offering.dateTime);
+            if (!dt[0]) {
+              nextItem();
+              return;
             }
-            return x[1] - y[1];
-          }).map(function(x) { return x[0]; });
-          callback(null, mine);
+            entry.date = dt[0];
+            entry.time = dt[1];
+            if (isCount(offering.dayOfCruise)) {
+              entry.day = offering.dayOfCruise;
+            }
+            if (offering.portCode) {
+              entry.port = offering.portCode;
+            }
+            var p = pub[JSON.stringify([entry.title.toLowerCase(), dt[0], dt[1]])] || {};
+            Object.keys(p).forEach(function(k) { entry[k] = p[k]; });
+            if ('meet' in entry && 'minutes' in entry) {
+              nextItem();
+              return;
+            }
+            offeringTimes(auth, code, date8, b, summary, offering, function(err5, times) {
+              if (!err5) {
+                Object.keys(times).forEach(function(k) { entry[k] = times[k]; });
+              }
+              nextItem();
+            });
+          }, nextOrder);
         });
+      }, function() {
+        mine.orders = mine.orders.map(function(o, i) { return [o, i]; }).sort(function(x, y) {
+          var a = [x[0].date || '9999', x[0].time || '', x[0].title];
+          var c = [y[0].date || '9999', y[0].time || '', y[0].title];
+          for (var i = 0; i < 3; i++) {
+            if (a[i] !== c[i]) {
+              return a[i] < c[i] ? -1 : 1;
+            }
+          }
+          return x[1] - y[1];
+        }).map(function(x) { return x[0]; });
+        callback(null, mine);
       });
     });
   });
@@ -874,9 +955,12 @@ function downloadWithLogin(ship, sailDate, email, password, callback) {
 // counts only, never the stateroom or titles.
 function mineSummary(mine) {
   var timed = mine.orders.filter(function(o) { return o.time; }).length;
+  var others = mine.otherBookings;
   return 'booking found: ' + mine.orders.length + ' purchases (' + timed + ' timed), ' +
     (mine.ports ? mine.ports.length + ' port days' : 'port details skipped') +
-    (mine.ordersError ? ', purchases skipped' : '');
+    (mine.ordersError ? ', purchases skipped' : '') +
+    (others ? ', ' + others + ' linked booking' + (others > 1 ? 's' : '') + ' on this sailing set aside' +
+              (mine.bookingUnsure ? ' (not sure which is yours)' : '') : '');
 }
 
 module.exports = {

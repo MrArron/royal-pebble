@@ -40,16 +40,17 @@ class Reply:
 
 
 class FakeSession:
-    def __init__(self, fail=()):
+    def __init__(self, fail=(), replies=None):
         self.fail, self.calls = fail, []
+        self.replies = dict(REPLIES, **(replies or {}))
 
     def request(self, method, url, params=None, headers=None, data=None, timeout=None):
         path = url.replace(cs.COMMERCE, "").replace(cs.API + "/en/royal/web", "").replace(cs.API, "")
         self.calls.append(path)
         assert headers["Access-Token"] == "t" and method == "GET"
-        if path in self.fail or path not in REPLIES:
+        if path in self.fail or path not in self.replies:
             return Reply(404, {})
-        return Reply(200, REPLIES[path])
+        return Reply(200, self.replies[path])
 
 
 class HhmmTest(unittest.TestCase):
@@ -134,8 +135,49 @@ class FetchMineTest(unittest.TestCase):
             self.assertIsNone(cs.fetch_mine(FakeSession(), AUTH, SHIP, DATE8)["stateroom"])
         finally:
             REPLIES["/v1/profileBookings/enriched/ACC1"]["payload"]["profileBookings"][1]["stateroomNumber"] = "1234"
-        with self.assertRaises(cs.SyncError):
+        with self.assertRaisesRegex(cs.SyncError, r"Your account has: WN 2028-01-01, HM 2027-03-06\.$"):
             cs.fetch_mine(FakeSession(), AUTH, SHIP, "20270307")
+
+
+def with_linked(profile):
+    """A family member's booking linked to the account, on the same sailing and
+    listed before the guest's own (made-up guests and cabins). Keep in step
+    with test/pkjs/royal.test.js."""
+    own = json.loads(json.dumps(REPLIES["/v1/profileBookings/enriched/ACC1"]))
+    bookings = own["payload"]["profileBookings"]
+    bookings[1]["passengers"][1].update(firstName="Alex", lastName="Sample", birthdate="1980-05-01")
+    bookings.insert(1, {"shipCode": "HM", "sailDate": "20270306", "bookingId": "R7", "passengerId": "P7",
+                        "stateroomNumber": "4321", "deckNumber": "4", "musterStation": "A1",
+                        "passengers": [{"passengerId": "P7", "firstName": "Alex", "lastName": "Sample",
+                                        "birthdate": "2010-02-02"},
+                                       {"passengerId": "P8", "firstName": "Sam", "lastName": "Sample"}]})
+    replies = {"/v1/profileBookings/enriched/ACC1": own}
+    if profile is not None:
+        replies["/v3/guestAccounts/ACC1"] = {"payload": profile}
+    return replies
+
+
+class LinkedBookingTest(unittest.TestCase):
+    def test_own_booking_chosen(self):
+        sess = FakeSession(replies=with_linked(
+            {"personalInformation": {"firstName": "ALEX", "lastName": "sample", "birthdate": "19800501"}}))
+        mine = cs.fetch_mine(sess, AUTH, SHIP, DATE8)
+        self.assertEqual((mine["stateroom"], mine["muster"], mine["otherBookings"]), ("1234", "Z9", 1))
+        self.assertNotIn("bookingUnsure", mine)
+        self.assertEqual(len(sess.calls), 8)  # the fixture's 7 and the profile
+
+    def test_loyalty_number_wins(self):
+        replies = with_linked({"personalInformation": {"firstName": "Alex", "lastName": "Sample"},
+                               "loyaltyInformation": {"crownAndAnchorId": "555"}})
+        bookings = replies["/v1/profileBookings/enriched/ACC1"]["payload"]["profileBookings"]
+        bookings[2]["passengers"][1]["loyaltyNumber"] = "555"
+        bookings[1]["passengers"][0]["loyaltyNumber"] = "777"
+        self.assertEqual(cs.fetch_mine(FakeSession(replies=replies), AUTH, SHIP, DATE8)["stateroom"], "1234")
+
+    def test_unsure_keeps_first(self):
+        for profile in (None, {"personalInformation": {"firstName": "Pat", "lastName": "Other"}}):
+            mine = cs.fetch_mine(FakeSession(replies=with_linked(profile)), AUTH, SHIP, DATE8)
+            self.assertEqual((mine["stateroom"], mine["bookingUnsure"]), ("4321", True))
 
 
 def product(**extra):
