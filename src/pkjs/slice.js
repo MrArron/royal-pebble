@@ -1375,7 +1375,9 @@ function buildSlice(bundle, settings, stars, now, testAt) {
 // My info's lines (docs/DESIGN.md §12.6). me.src says where each saved
 // Me field came from: a hand edit ('edited') always wins, a filled-in value
 // follows the latest sync, and an empty field (or settings saved before 1.3.3,
-// with no src) falls back to the booking and the cabin table.
+// with no src) falls back to the booking and the cabin table. A filled-in
+// value the latest sync no longer has (a guarantee booking, where an earlier
+// download had a linked booking's cabin) is dropped, not kept.
 function myInfo(bundle, me) {
   var mine = bundle.mine || {};
   var src = me.src || {};
@@ -1383,6 +1385,9 @@ function myInfo(bundle, me) {
   function pick(f, live) {
     if (src[f] === 'edited') {
       return me[f] || '';
+    }
+    if (src[f] && bundle.mine) {
+      return live;
     }
     return src[f] ? live || me[f] || '' : me[f] || live || '';
   }

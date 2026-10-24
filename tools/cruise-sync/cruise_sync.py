@@ -639,6 +639,68 @@ def public_excursion_times(schedule) -> dict:
     return out
 
 
+def booking_list(bookings: list) -> str:
+    """' Your account has: HM 2026-12-12, WN 2028-01-01.' (ship and date only),
+    so a sailing picked by mistake shows which one to pick; '' with no bookings."""
+    seen = []
+    for b in bookings:
+        d = str(b.get("sailDate") or "").replace("-", "")
+        text = f"{b.get('shipCode') or '?'} " + (f"{d[0:4]}-{d[4:6]}-{d[6:8]}" if len(d) >= 8 else "?")
+        if text not in seen:
+            seen.append(text)
+    return f" Your account has: {', '.join(seen)}." if seen else ""
+
+
+def _letters(text) -> str:
+    return re.sub(r"[^a-z]", "", str(text or "").lower())
+
+
+def _digits(text) -> str:
+    return re.sub(r"[^0-9]", "", str(text or ""))
+
+
+def guest_identity(profile: dict) -> dict:
+    """The signed-in guest's name, birth date and Crown & Anchor number from
+    the account profile, for telling their booking from a linked one."""
+    info = profile.get("personalInformation") or profile
+    loyalty = profile.get("loyaltyInformation") or {}
+    return {"first": _letters(info.get("firstName")), "last": _letters(info.get("lastName")),
+            "birth": _digits(info.get("birthdate") or info.get("birthDate")),
+            "loyalty": _digits(loyalty.get("crownAndAnchorId"))}
+
+
+def sails_on(booking: dict, me: dict) -> bool:
+    """Whether the signed-in guest is among the booking's guests: the same
+    Crown & Anchor number, or the same first and last name (and birth date when
+    both list one)."""
+    for p in (booking.get("passengers") or []) + (booking.get("passengersInStateroom") or []):
+        number = _digits(p.get("loyaltyNumber") or p.get("crownAndAnchorId"))
+        if me["loyalty"] and number:
+            if number == me["loyalty"]:
+                return True
+            continue
+        birth = _digits(p.get("birthdate") or p.get("birthDate"))
+        if (me["first"] and me["last"] and _letters(p.get("firstName")) == me["first"]
+                and _letters(p.get("lastName")) == me["last"] and not (me["birth"] and birth and birth != me["birth"])):
+            return True
+    return False
+
+
+def pick_own_booking(sess, auth: dict, match: list) -> tuple:
+    """Several bookings on one sailing: a family member's reservation linked
+    to the account lists beside the guest's own. Theirs is the one they sail
+    on, told apart by the account profile (one extra call). Returns (booking,
+    unsure); unsure means none or several matched and the first was kept."""
+    try:
+        profile = get_json(sess, "GET", f"{API}/en/royal/web/v3/guestAccounts/{auth['account-id']}",
+                           headers=auth).get("payload") or {}
+    except SyncError:
+        return match[0], True
+    me = guest_identity(profile)
+    own = [b for b in match if sails_on(b, me)]
+    return (own[0], False) if len(own) == 1 else ((own or match)[0], True)
+
+
 def fetch_mine(sess, auth: dict, code: str, date8: str, schedule=None) -> dict:
     """Stateroom, cabin details and purchased add-ons for the matching booking
     (docs/DATA_FORMAT.md, mine). Parts that fail are skipped with a note.
@@ -651,8 +713,10 @@ def fetch_mine(sess, auth: dict, code: str, date8: str, schedule=None) -> dict:
     bookings = (res.get("payload") or {}).get("profileBookings") or []
     match = [b for b in bookings if b.get("shipCode") == code and str(b.get("sailDate", "")).replace("-", "") == date8]
     if not match:
-        raise SyncError("Logged in, but found no booking on your account for that ship and date.")
-    b = match[0]
+        raise SyncError("Logged in, but found no booking on your account for that ship and date." + booking_list(bookings))
+    b, unsure = match[0], False
+    if len(match) > 1:
+        b, unsure = pick_own_booking(sess, auth, match)
     # Guarantee bookings list "GTY" until a cabin is assigned; a real one has digits.
     room = str(b.get("stateroomNumber") or "")
     me = [p for p in b.get("passengers") or [] if str(p.get("passengerId")) == str(b.get("passengerId"))]
@@ -662,6 +726,10 @@ def fetch_mine(sess, auth: dict, code: str, date8: str, schedule=None) -> dict:
             # Terminal arrival appointment, empty until online check-in is done
             "arrival": (hhmm(me[0].get("arrivalTime")) or or_none(me[0].get("arrivalTime"))) if me else None,
             "orders": []}
+    if len(match) > 1:
+        mine["otherBookings"] = len(match) - 1
+        if unsure:
+            mine["bookingUnsure"] = True
 
     try:
         mine.update(fetch_voyage(sess, auth, code, date8))
@@ -803,6 +871,9 @@ def main(argv=None) -> int:
         timed = sum(1 for o in mine["orders"] if o.get("time"))
         print(f"  Your booking: stateroom {mine.get('stateroom') or 'not assigned yet'}"
               f", deck {mine.get('deck') or '-'}, muster station {mine.get('muster') or 'not listed'}")
+        if mine.get("otherBookings"):
+            print(f"  Linked bookings on this sailing set aside: {mine['otherBookings']}"
+                  + (" (couldn't tell which is yours; the first was used)" if mine.get("bookingUnsure") else ""))
         print(f"  Purchased items: {len(mine['orders'])} ({timed} with a booked time)")
         if mine.get("ports"):
             print(f"  Port details (gangway times, locations): {len(mine['ports'])} days")

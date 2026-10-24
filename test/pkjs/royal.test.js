@@ -173,7 +173,8 @@ function b64url(obj) {
 }
 var TOKEN = b64url({alg: 'none'}) + '.' + b64url({sub: 'ACC1', name: 'x'}) + '.sig';
 
-// Installs a fake XHR. opts: {fail: [paths], login: {status, body}}. Returns
+// Installs a fake XHR. opts: {fail: [paths], login: {status, body}, replies:
+// {path: body} over the fixture's}. Returns
 // the calls: [{method, path, query, headers, body}].
 function fakeRoyal(opts) {
   opts = opts || {};
@@ -185,6 +186,7 @@ function fakeRoyal(opts) {
   extra['/v3/products'] = {payload: {products: [product({productTitle: 'Beach Day', productID: 'X1',
     productType: {productType: 'SHOREX'}, productLocation: {}, offering: [
       {offeringDate: '20270309', offeringTime: '0900', meetingTime: '0845', offeringDurationInMinutes: '150'}]})]}};
+  Object.keys(opts.replies || {}).forEach(function(k) { extra[k] = opts.replies[k]; });
   global.XMLHttpRequest = function() {
     var x = this;
     var call = {headers: {}};
@@ -265,12 +267,62 @@ test('login data: public meeting times save the catalog call; parts fail softly'
   assert.strictEqual(royal.mineSummary(r.mine), 'booking found: 0 purchases (0 timed), 2 port days, purchases skipped');
 });
 
-test('login data: no booking for the sailing is an error', function() {
+test('login data: no booking for the sailing is an error that lists the account\'s sailings', function() {
   var calls = fakeRoyal();
   var err = null;
   royal.fetchMine(AUTH, 'HM', '20270307', null, function(e) { err = e; });
   assert.ok(/no booking/.test(err));
+  assert.ok(/Your account has: WN 2028-01-01, HM 2027-03-06\.$/.test(err), err);
   assert.strictEqual(calls.length, 1);
+});
+
+// A family member's booking linked to the account, on the same sailing and
+// listed before the guest's own (made-up guests and cabins).
+function withLinked(profile) {
+  var own = JSON.parse(JSON.stringify(LOGIN.replies['/v1/profileBookings/enriched/ACC1']));
+  var list = own.payload.profileBookings;
+  list[1].passengers[1].firstName = 'Alex';
+  list[1].passengers[1].lastName = 'Sample';
+  list[1].passengers[1].birthdate = '1980-05-01';
+  list.splice(1, 0, {shipCode: 'HM', sailDate: '20270306', bookingId: 'R7', passengerId: 'P7',
+                     stateroomNumber: '4321', deckNumber: '4', musterStation: 'A1',
+                     passengers: [{passengerId: 'P7', firstName: 'Alex', lastName: 'Sample', birthdate: '2010-02-02'},
+                                  {passengerId: 'P8', firstName: 'Sam', lastName: 'Sample'}]});
+  var replies = {'/v1/profileBookings/enriched/ACC1': own};
+  if (profile) {
+    replies['/v3/guestAccounts/ACC1'] = {payload: profile};
+  }
+  return {replies: replies};
+}
+
+test('login data: a linked booking on the same sailing is set aside for your own', function() {
+  var r = mineOf(null, withLinked({personalInformation: {firstName: 'ALEX', lastName: 'sample', birthdate: '19800501'}}));
+  assert.strictEqual(r.err, null);
+  assert.strictEqual(r.mine.stateroom, '1234');
+  assert.strictEqual(r.mine.muster, 'Z9');
+  assert.strictEqual(r.mine.otherBookings, 1);
+  assert.strictEqual(r.mine.bookingUnsure, undefined);
+  var history = r.calls.filter(function(c) { return c.path === '/calendar/v1/HM/orderHistory'; })[0];
+  assert.ok(/(^|&)reservationId=R1(&|$)/.test(history.query), history.query);
+  assert.strictEqual(r.calls.length, 8);  // the fixture's 7 and the profile
+  assert.strictEqual(royal.mineSummary(r.mine),
+    'booking found: 2 purchases (1 timed), 2 port days, 1 linked booking on this sailing set aside');
+  // The Crown & Anchor number wins over the name.
+  var linked = withLinked({personalInformation: {firstName: 'Alex', lastName: 'Sample'},
+                           loyaltyInformation: {crownAndAnchorId: '555'}});
+  linked.replies['/v1/profileBookings/enriched/ACC1'].payload.profileBookings[2].passengers[1].loyaltyNumber = '555';
+  linked.replies['/v1/profileBookings/enriched/ACC1'].payload.profileBookings[1].passengers[0].loyaltyNumber = '777';
+  assert.strictEqual(mineOf(null, linked).mine.stateroom, '1234');
+});
+
+test('login data: bookings that can\'t be told apart keep the first, marked unsure', function() {
+  var r = mineOf(null, withLinked(null));  // no profile reply
+  assert.strictEqual(r.mine.stateroom, '4321');
+  assert.strictEqual(r.mine.bookingUnsure, true);
+  assert.ok(/set aside \(not sure which is yours\)$/.test(royal.mineSummary(r.mine)));
+  r = mineOf(null, withLinked({personalInformation: {firstName: 'Pat', lastName: 'Other'}}));
+  assert.strictEqual(r.mine.stateroom, '4321');
+  assert.strictEqual(r.mine.bookingUnsure, true);
 });
 
 test('login data: time spellings like the sync tool', function() {
