@@ -775,7 +775,12 @@ can't talk to the phone script while open; everything returns on close
 - Values filled from somewhere carry a chip (`From booking`, `From cabin
   table`, `From ship map`, `From Royal`). A hand edit shows the `Edited`
   warning chip, `Your change is kept. Ship map says …` and a `Use ship map` /
-  `Use booking` button; an edited field is never refilled by itself.
+  `Use booking` button; an edited field is never refilled by itself. A filled
+  value always follows the latest booking, also when that booking no longer
+  has one (a guarantee cabin): the field empties rather than keeping an earlier
+  download's value. When the account lists several bookings on the sailing (a
+  linked family booking), the Advanced download uses the one you sail on
+  (`docs/ROYAL_LOGIN_DATA.md`, Linked bookings).
 - Past days and finished events and entries are hidden.
 
 ### 12.2 Cruise

@@ -135,6 +135,12 @@ test('My info: booking and cabin table fill empty fields, hand edits win', funct
   i = info({stateroom: '8226', deck: 'Deck 9', stairs: '', muster: '',
             src: {stateroom: 'booking', deck: 'edited', muster: 'edited'}});
   assert.deepStrictEqual([i.deck, i.stairs, i.muster], ['Deck 9', '', 'Not set']);
+  // An earlier sync's cabin (a linked booking's) goes once the booking is a guarantee.
+  b.mine = {stateroom: 'GTY', orders: []};
+  i = info({stateroom: '8226', deck: 'Deck 8', stairs: 'Aft stairs, port', muster: 'B2',
+            src: {stateroom: 'booking', deck: 'cabin', stairs: 'map', muster: 'booking'}});
+  assert.deepStrictEqual([i.stateroom, i.deck, i.stairs, i.muster], ['-', '', '', 'Not set']);
+  b.mine = {stateroom: '8226', deck: '8', muster: 'B4', orders: []};
   // A typed stateroom that isn't the booking's.
   i = info({stateroom: '8130', deck: 'Deck 8', stairs: 'Forward stairs, port', muster: 'B4',
             src: {stateroom: 'edited', deck: 'cabin', stairs: 'map', muster: 'booking'}});
