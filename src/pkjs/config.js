@@ -1850,12 +1850,14 @@ function pageMain(S, V, CL, SH) {
     return DAYS[d.getDay()] + ' ' + d.getDate();
   }
 
-  // A shore excursion session that login data also has (slice.js inOrders):
-  // it shows once, under FROM YOUR BOOKING.
+  // An event that login data also has (a shore excursion session, slice.js
+  // inOrders, or a booked show or class, bookedAt): it shows once, under
+  // FROM YOUR BOOKING.
   function inOrders(e) {
     var t = (e.title || '').trim().toLowerCase();
     return (S.orders || []).some(function(o) {
-      return o.excursion && o.date === e.date && o.time === e.time && (o.title || '').trim().toLowerCase() === t;
+      return !!o.excursion === !!e.excursion && o.date === e.date && o.time === e.time &&
+        (o.title || '').trim().toLowerCase() === t;
     });
   }
 
@@ -1889,11 +1891,11 @@ function pageMain(S, V, CL, SH) {
       e.excursion = e.cat[0] === 'Shore excursions';  // docs/DATA_FORMAT.md
       if (e.excursion) {
         e.reservation = true;  // picked means booked, so it takes a reserved mark (slice.js)
-        e.booked = inOrders(e);
         if (!e.minutes) {
           e.early = 0;  // an all-day rental meets at its listed time (slice.js)
         }
       }
+      e.booked = inOrders(e);
       var ageRange = Array.isArray(inf) && Array.isArray(inf[0]) ? inf[0] : [];
       var tableName = e.venue && V.lookup(schedTable, e.venue,
         Object.prototype.hasOwnProperty.call(schedV.codes, e.venue) ? schedV.codes[e.venue] : null);
@@ -1960,7 +1962,8 @@ function pageMain(S, V, CL, SH) {
 
   // Upcoming starred events that need a reservation and aren't marked.
   function needsReserving(e) {
-    return e.reservation && isStarred(e.key) && !isReserved(e.key) && !isFinished(e.date, e.time, e.minutes);
+    return e.reservation && !e.booked && isStarred(e.key) && !isReserved(e.key) &&
+      !isFinished(e.date, e.time, e.minutes);
   }
 
   var toReserve = 0;
@@ -2232,7 +2235,7 @@ function pageMain(S, V, CL, SH) {
     return '<div class="ev"><span class="tm">' + shortClock(o.time) + '</span><span class="t"><b>' +
       esc(o.title) + '</b>' + (line.some(Boolean) ? '<span class="muted">' +
       line.filter(Boolean).map(esc).join(' &middot; ') + '</span>' : '') +
-      '<span class="muted">Ashore &middot; ' + esc(o.port) + '</span>' +
+      '<span class="muted">' + (o.venue ? esc(o.venue) : 'Ashore &middot; ' + esc(o.port)) + '</span>' +
       '<span class="bchip">' + CHECK_SVG + 'Booked &middot; &starf; on the watch</span></span></div>';
   }
 

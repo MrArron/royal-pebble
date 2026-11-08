@@ -52,9 +52,14 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
   `CODE-HMYYYYMMDD-A`) or `dateTime`. **In the bundle** as `meet`, `end` and
   `minutes`. *Unverified:* whether the catalog page's offering for the booked
   session is always the one returned; `meetingLocation` was `null` everywhere.
-- *Unverified:* dining, shows, spa and other timed bookings. Probably the same
-  `offering` fields; other categories should appear as `pt_dining` and similar.
-  Book one and re-run the explorer to check.
+- **Shows (owner's sailing, 2026-11-08):** free theater reservations made in
+  the Royal app come through order history as `pt_show` items with the same
+  `offering` fields (date, time, cruise day) and the catalog's end time. Their
+  `portCode` is a venue code (`AQUA_HM`, `ICE_HM`, `ROYAL_HM`, sometimes none),
+  not a port. Title, date and time match the public schedule's session, so the
+  app shows a booked show once, as that event at its venue (`docs/DESIGN.md`
+  §7.7). *Unverified:* dining and spa. Probably the same `offering` fields as
+  `pt_dining` and similar; book one and re-run the explorer to check.
 - **To check (owner, 2026-09-28): the main dining room assignment.** Royal
   assigns every stateroom a dining room (on the SeaPass and in the Royal app).
   Once the owner's sailing has its schedule (about two weeks before),
@@ -82,6 +87,21 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
   online check-in. **In the bundle** as `arrival` when set. *Unverified format*;
   the sync tool converts common time spellings to `HH:MM` and otherwise keeps
   Royal's text.
+- **Linked bookings (owner, 2026-10-24).** A family member's reservation
+  linked to the account lists in `profileBookings` beside your own, with the
+  same ship and sail date, and Royal may list it first. Both producers used to
+  take the first match and filled the Me tab and purchases from the wrong
+  booking. Now, when several match, they ask the profile (endpoint 1) once and
+  keep the booking whose `passengers` or `passengersInStateroom` holds the
+  signed-in guest: the same Crown & Anchor number (`loyaltyInformation.
+  crownAndAnchorId` against a guest's `loyaltyNumber`), else the same first and
+  last name (`personalInformation`), with the birth date when both list one.
+  *Unverified:* those field names on the profile and on booking guests (from
+  jdeath's project and the September shape report); when nothing matches the
+  first booking is kept and `mine.bookingUnsure` is set, and the usage log says
+  "not sure which is yours". Re-run the explorer to confirm. When no booking
+  matches the chosen sailing, the error lists the ship and date of each booking
+  on the account, so a wrong date in the picker shows.
 - `hasFlight`, `onlineCheckinStatus` (empty before check-in),
   `passengersInStateroom` (cabin mates' names and ages) are also there. Not
   copied: the app has no use for them and they are personal.
@@ -90,9 +110,11 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
 
 - `itinerary.portInfo[]` has `gangwayDown` and `gangwayUp` on port days (4 of 8
   days on a 7-night sailing; not on sea, embark or debark days). **In the
-  bundle** under `ports` by cruise day. *Unverified:* the format (not a plain
-  `HH:MM` or ISO time; the sync tool keeps Royal's text when it can't read it)
-  and the meaning. A readable `gangwayUp` is the day's all-aboard by default
+  bundle** under `ports` by cruise day. Format (owner's sailing, November
+  2026): `HHMMSS` (`153000`), read as `HH:MM` from 1.6.17; before that the
+  bundle kept the text and no all-aboard came from it. The sailing seen also
+  listed `gangwayUp` on embark day and `gangwayDown` on debark day. *Unverified:*
+  the meaning. A readable `gangwayUp` is the day's all-aboard by default
   (Phase 3 item 23), shifted in 5-minute steps on the Days tab. Still to check
   against the Daily Planner on board that it's when you must be back.
 - `portInfo[].pointsOfInterest[]` sometimes has `latitude`/`longitude` (3 of

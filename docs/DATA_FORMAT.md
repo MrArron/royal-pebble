@@ -163,7 +163,7 @@ text. One compact JSON object, ASCII only.
   - `embarkTimeZone`: the embarkation port's time zone name, e.g.
     `America/New_York`.
   - `ports[]`: port days with extra details, by itinerary `day`. `gangwayDown`,
-    `gangwayUp`: `HH:MM`, or Royal's text when it isn't a readable time
+    `gangwayUp`: `HH:MM` (Royal sends `HHMMSS`), or Royal's text when it isn't a readable time
     (port-local like the itinerary). A readable `gangwayUp` is the day's
     all-aboard by default (`docs/DESIGN.md` §12.3); its meaning is
     still to be checked on board. `lat`,
@@ -181,6 +181,13 @@ text. One compact JSON object, ASCII only.
     time, when there is exactly one); the product page (logged in) is asked
     only when either is still missing, and its values win. Packages and
     credits have none of these.
+  - `otherBookings`: present when the account lists more than one booking for
+    this ship and sail date (a family member's reservation linked to the
+    account): how many were set aside. The one used is the booking the
+    signed-in guest sails on, matched against the account profile by Crown &
+    Anchor number, else first and last name (and birth date when both list
+    one). `bookingUnsure: true` when none or several matched and the first
+    listed was kept.
   - `voyageError`, `ordersError`: a message when that part couldn't be fetched.
   - Changes to `mine` are additive and don't bump `v`. Before September 2026,
     `orders` entries could hold a `when` object instead of `date`/`time`; ignore it.

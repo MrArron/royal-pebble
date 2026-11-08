@@ -135,6 +135,12 @@ test('My info: booking and cabin table fill empty fields, hand edits win', funct
   i = info({stateroom: '8226', deck: 'Deck 9', stairs: '', muster: '',
             src: {stateroom: 'booking', deck: 'edited', muster: 'edited'}});
   assert.deepStrictEqual([i.deck, i.stairs, i.muster], ['Deck 9', '', 'Not set']);
+  // An earlier sync's cabin (a linked booking's) goes once the booking is a guarantee.
+  b.mine = {stateroom: 'GTY', orders: []};
+  i = info({stateroom: '8226', deck: 'Deck 8', stairs: 'Aft stairs, port', muster: 'B2',
+            src: {stateroom: 'booking', deck: 'cabin', stairs: 'map', muster: 'booking'}});
+  assert.deepStrictEqual([i.stateroom, i.deck, i.stairs, i.muster], ['-', '', '', 'Not set']);
+  b.mine = {stateroom: '8226', deck: '8', muster: 'B4', orders: []};
   // A typed stateroom that isn't the booking's.
   i = info({stateroom: '8130', deck: 'Deck 8', stairs: 'Forward stairs, port', muster: 'B4',
             src: {stateroom: 'edited', deck: 'cabin', stairs: 'map', muster: 'booking'}});
@@ -1718,6 +1724,39 @@ test('booked orders: the reminder is before the meeting time, with no directions
   assert.strictEqual(r.venue, 'St. Thomas');
   assert.strictEqual(r.from, venues.FROM_NONE);
   assert.deepStrictEqual(r.booked, {meetBefore: 15, guests: 2, excursion: true});
+});
+
+// A show booked in the Royal app (pt_show) that the schedule also lists:
+// one event at its venue, starred and booked, not "to reserve" (§7.7).
+test('booked shows: once, as the schedule event at its venue, booked', function() {
+  var b = makeBundle([['Voices', 0, 0, '2027-03-07', '21:00', 40, 1, 1],
+                      ['Voices', 0, 0, '2027-03-07', '22:30', 40, 1, 1]]);
+  b.mine = {stateroom: null, orders: [{title: 'Voices', category: 'pt_show', guests: 3, date: '2027-03-07',
+                                        time: '21:00', day: 2, port: 'ICE_HM', end: '21:40', minutes: 40}]};
+  var sail = slice.daysFromIso(b.sailDate);
+  var events = slice.buildEvents(b, {hiddenCats: ['Entertainment']}, {}, 1, sail);
+  assert.strictEqual(events.length, 1);  // the other show is hidden, the booked one never
+  var e = events[0];
+  assert.deepStrictEqual([e.title, e.venue, e.start], ['Voices', 'Studio B', 1440 + 1260]);
+  assert.strictEqual(e.flags, slice.FLAG_FEATURED | slice.FLAG_STARRED | slice.FLAG_BOOKED);
+  assert.deepStrictEqual(e.booked, {meetBefore: 0, guests: 3, excursion: false});
+  assert.notStrictEqual(e.where.ashore, true);
+  // Never to reserve, even with the reserve alert due.
+  assert.strictEqual(slice.buildTomorrow(b, {}, {}, 0, sail).toReserve, 0);
+  // Its reminder is an ordinary one at the venue.
+  var r = slice.buildAlarms(b, {reminderLead: 15}, {}, at('2027-03-07', 12, 0)).filter(function(a) {
+    return a.kind === slice.ALARM_REMINDER && a.title === 'Voices';
+  })[0];
+  assert.strictEqual(r.ref, 1440 + 1260);
+  assert.strictEqual(r.booked, undefined);
+  assert.strictEqual(r.notReserved, false);
+  // The settings page lists it with its venue.
+  assert.strictEqual(slice.bookedList(b, {})[0].venue, 'Studio B');
+  // Not in the schedule: still the booked order, Ashore at the day's place.
+  b.mine.orders[0].time = '20:00';
+  e = slice.buildEvents(b, {}, {}, 1, sail).filter(function(x) { return x.flags & slice.FLAG_BOOKED; })[0];
+  assert.strictEqual(e.where.ashore, true);
+  assert.strictEqual(slice.bookedList(b, {})[0].venue, undefined);
 });
 
 // Shore excursions (docs/DESIGN.md §7.7): a snorkel (meet 30 min early,

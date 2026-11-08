@@ -292,6 +292,11 @@ test('GPS: no stateroom gives the hint flag; the booking stateroom counts', func
   assert.strictEqual(gpsPage('Studio B', {settings: {}, bundle: bundle}).gps.header, 'FROM YOUR CABIN');
   bundle.mine = {stateroom: 'GTY'};
   assert.strictEqual(gpsPage('Studio B', {settings: {}, bundle: bundle}).gps.flags, directory.GPS_NO_CABIN);
+  // A cabin the Me tab filled from an earlier sync (a linked booking's) follows the booking; a typed one stays.
+  var filled = {me: {stateroom: '9254', src: {stateroom: 'booking'}}};
+  assert.strictEqual(gpsPage('Studio B', {settings: filled, bundle: bundle}).gps.flags, directory.GPS_NO_CABIN);
+  filled.me.src.stateroom = 'edited';
+  assert.strictEqual(gpsPage('Studio B', {settings: filled, bundle: bundle}).gps.header, 'FROM YOUR CABIN');
 });
 
 test('GPS: a stop on now (or just ended) is the start (§10.4)', function() {

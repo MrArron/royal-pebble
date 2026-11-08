@@ -716,6 +716,19 @@ function inOrders(orders, title, date, time) {
   });
 }
 
+// The booked order (not a shore excursion: a show, a class) for this schedule
+// event, same title, date and start time, or null. Such an event goes to the
+// watch once, as the schedule's event at its venue, booked.
+function bookedAt(orders, title, date, time) {
+  for (var i = 0; i < orders.length; i++) {
+    var o = orders[i];
+    if (!o.excursion && o.date === date && o.time === time && sameTitle(o.title, title)) {
+      return o;
+    }
+  }
+  return null;
+}
+
 // countOnly (for dayLoad): hide nothing, don't trim to MAX_EVENTS, and give each
 // event a filter could hide its `cat` and `ages` (ageMask).
 function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
@@ -749,7 +762,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     var ages = cat ? ageMask(d.ageMin, d.ageMax, title, venue ? finder.entry(venue).name : '') : 0;
     if (stars[key]) {
       flags |= FLAG_STARRED;
-    } else if (paid || (cat && isHidden(hidden, cat)) || (ages & hideAges)) {
+    } else if (!(flags & FLAG_STARRED) && (paid || (cat && isHidden(hidden, cat)) || (ages & hideAges))) {
       // Filtered out unless starred. A paid session is starred when the owner
       // picks it under Booked activities, so the others never reach the watch.
       return;
@@ -786,6 +799,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   (sched.fields || []).forEach(function(name, i) { f[name] = i; });
   var vnames = venues.scheduleVenues(bundle).names;
   var orders = bookedOrders(bundle);
+  var atVenue = [];  // orders that went as their schedule event (bookedAt)
   (sched.events || []).forEach(function(row) {
     var venue = vnames[row[f.venue]];
     var cat = eventCat(row[f.title], venue, (sched.cats || [])[row[f.cat]] || []);
@@ -803,8 +817,19 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
       flags |= FLAG_RESERVATION;
       port = excursionPort(bundle, settings, sailDays, row[f.date]);
     }
+    // A booked show or class: starred and booked at its venue, with
+    // directions; booked stands in for reserved (§7.7).
+    var order = port === undefined ? bookedAt(orders, row[f.title], row[f.date], row[f.time]) : null;
+    if (order) {
+      atVenue.push(order);
+      flags = (flags & ~FLAG_RESERVATION) | FLAG_STARRED | FLAG_BOOKED;
+    }
+    var n = events.length;
     add(row[f.title], venue, row[f.date], row[f.time], row[f.minutes], flags, cat,
         f.paid !== undefined && !!row[f.paid], f.info === undefined ? null : row[f.info], port);
+    if (order && events.length > n) {
+      events[n].booked = {meetBefore: order.meetBefore, guests: order.guests, excursion: false};
+    }
   });
 
   (settings.personal || []).forEach(function(p) {
@@ -815,7 +840,7 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
   // the day's port, Ashore. Never filtered out.
   orders.forEach(function(o) {
     var start = eventStart(sailDays, o.date, o.time);
-    if (start < from || start >= to) {
+    if (start < from || start >= to || atVenue.indexOf(o) !== -1) {
       return;
     }
     var port = dayPort(bundle, settings, sailDays, o.date);
@@ -939,11 +964,23 @@ function bookedOrders(bundle) {
 }
 
 // bookedOrders with `port`, the day's location as the watch shows it (Settings
-// > Days edits included), for the settings page's FROM YOUR BOOKING card.
+// > Days edits included), for the settings page's FROM YOUR BOOKING card. A
+// booked show or class in the schedule (bookedAt) adds `venue`, its venue.
 function bookedList(bundle, settings) {
   var sailDays = daysFromIso(bundle.sailDate);
+  var sched = bundle.schedule || {};
+  var f = {};
+  (sched.fields || []).forEach(function(name, i) { f[name] = i; });
+  var vnames = venues.scheduleVenues(bundle).names;
   return bookedOrders(bundle).map(function(o) {
     o.port = dayPort(bundle, settings, sailDays, o.date);
+    (sched.events || []).some(function(row) {
+      if (!o.excursion && bookedAt([o], row[f.title], row[f.date], row[f.time])) {
+        o.venue = vnames[row[f.venue]] || '';
+        return true;
+      }
+      return false;
+    });
     return o;
   });
 }
@@ -1253,7 +1290,7 @@ function buildAlarms(bundle, settings, stars, now, testAt) {
       });
     }
     days[d].forEach(function(e) {
-      if (e.booked) {
+      if (e.booked && e.where === ASHORE) {
         // Before the meeting time when there is one (§8.1); Ashore, no directions.
         alarms.push({at: e.start - e.booked.meetBefore - lead, ref: e.start, kind: ALARM_REMINDER,
                      extra: e.minutes, title: e.title, venue: e.venue, where: e.where,
@@ -1375,7 +1412,9 @@ function buildSlice(bundle, settings, stars, now, testAt) {
 // My info's lines (docs/DESIGN.md §12.6). me.src says where each saved
 // Me field came from: a hand edit ('edited') always wins, a filled-in value
 // follows the latest sync, and an empty field (or settings saved before 1.3.3,
-// with no src) falls back to the booking and the cabin table.
+// with no src) falls back to the booking and the cabin table. A filled-in
+// value the latest sync no longer has (a guarantee booking, where an earlier
+// download had a linked booking's cabin) is dropped, not kept.
 function myInfo(bundle, me) {
   var mine = bundle.mine || {};
   var src = me.src || {};
@@ -1383,6 +1422,9 @@ function myInfo(bundle, me) {
   function pick(f, live) {
     if (src[f] === 'edited') {
       return me[f] || '';
+    }
+    if (src[f] && bundle.mine) {
+      return live;
     }
     return src[f] ? live || me[f] || '' : me[f] || live || '';
   }

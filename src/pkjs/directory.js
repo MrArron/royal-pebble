@@ -343,8 +343,12 @@ function spotsOf(ship, v, cabin) {
 }
 
 // The stateroom from the Me tab, else the booking's (a guarantee has none).
+// One the Me tab filled from an earlier sync follows the latest booking.
 function stateroom(ctx) {
-  var room = String(((ctx.settings || {}).me || {}).stateroom || ((ctx.bundle || {}).mine || {}).stateroom || '');
+  var me = (ctx.settings || {}).me || {};
+  var mine = (ctx.bundle || {}).mine;
+  var auto = mine && me.src && me.src.stateroom && me.src.stateroom !== 'edited';
+  var room = String((auto ? mine.stateroom : me.stateroom || (mine || {}).stateroom) || '');
   return /^[0-9]+$/.test(room) ? room : '';
 }
 
