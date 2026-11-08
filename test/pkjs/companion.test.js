@@ -7,6 +7,24 @@ var path = require('path');
 var tests = [];
 function test(name, fn) { tests.push({name: name, fn: fn}); }
 
+function testAt(name, now, fn) {
+  test(name, function() {
+    var RealDate = global.Date;
+    var ms = now.getTime();
+    global.Date = class extends RealDate {
+      constructor(...args) {
+        super(...(args.length ? args : [ms]));
+      }
+      static now() { return ms; }
+    };
+    try {
+      fn();
+    } finally {
+      global.Date = RealDate;
+    }
+  });
+}
+
 // A fresh companion: {handlers, store, sent, opened, flushTimers()}.
 function companion(initial) {
   var store = {};
@@ -378,7 +396,8 @@ test('download with login: a refused sign-in saves nothing; no booking keeps the
 // Voice (1.5.9): "I'm at" is set when its card is shown (1.5.10; Select or Hold
 // keep it), kept in phone storage, used by later routes, logged, and cleared by
 // Forget where I am. Cabin 8200 is made up.
-test('voice: the spoken start is set when shown, survives a restart and is forgotten', function() {
+// At noon, a start 91 minutes ago is still on the same watch day.
+testAt('voice: the spoken start is set when shown, survives a restart and is forgotten', new Date(2027, 2, 8, 12), function() {
   var c = companion({bundle: JSON.stringify(savedCruise()), settings: JSON.stringify({me: {stateroom: '8200'}})});
   c.handlers.ready();
   function ask(seq, text) {
