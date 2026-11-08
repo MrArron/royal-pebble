@@ -3124,7 +3124,9 @@ function pageMain(S, V, CL, SH) {
   function meAuto(f) {
     var b = MR.booking || {};
     if (f === 'stateroom') {
-      return b.stateroom ? {value: b.stateroom, src: 'booking'} : null;
+      // A booking without a cabin (a guarantee) still says something: none yet,
+      // so a typed cabin shows as Edited with Use booking to clear it.
+      return b.stateroom || b.found ? {value: b.stateroom || '', src: 'booking'} : null;
     }
     if (f === 'muster') {
       return b.muster ? {value: b.muster, src: 'booking'} : null;
@@ -3197,8 +3199,11 @@ function pageMain(S, V, CL, SH) {
     }
     var chip = $(f + 'Src');
     var kept = $(f + 'Kept');
-    chip.hidden = !a || (!meEdited[f] && $(f).value.trim() !== a.value);
+    chip.hidden = !a || (!meEdited[f] && (!a.value || $(f).value.trim() !== a.value));
     kept.hidden = !a || !meEdited[f];
+    if (f === 'stateroom') {
+      $(f).placeholder = a && !a.value ? 'Not assigned yet' : '';
+    }
     if (!a) {
       return;
     }
@@ -3206,7 +3211,8 @@ function pageMain(S, V, CL, SH) {
     chip.textContent = meEdited[f] ? 'Edited' : 'From ' + name;
     chip.className = meEdited[f] ? 'fsrc edit' : 'fsrc';
     kept.innerHTML = '<span>Your change is kept. ' + esc(name.charAt(0).toUpperCase() + name.slice(1)) +
-      ' says ' + esc(a.value) + '.</span><button type="button" data-f="' + f + '">Use ' + esc(name) + '</button>';
+      ' says ' + (a.value ? esc(a.value) : 'no cabin assigned yet') + '.</span><button type="button" data-f="' + f +
+      '">Use ' + esc(name) + '</button>';
   }
 
   function meShowAll(keepRoom) {
@@ -4062,7 +4068,10 @@ function meRef(bundle, mapDecks) {
     decks: Object.keys(decks).map(Number).sort(function(a, b) { return a - b; }),
     generic: cabins.GENERIC_STAIRS,
     dining: dining,
-    booking: {stateroom: room, deck: deck ? 'Deck ' + deck : '', muster: String(mine.muster || '').trim()}
+    // found: a login download found the booking, so an empty stateroom means
+    // none assigned yet (a guarantee), not unknown.
+    booking: {stateroom: room, deck: deck ? 'Deck ' + deck : '', muster: String(mine.muster || '').trim(),
+              found: !!(bundle && bundle.mine)}
   };
 }
 
