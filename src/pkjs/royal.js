@@ -563,7 +563,8 @@ function pad2(n) {
 }
 
 // Royal's many time spellings -> 'HH:MM' (24h), or null when it isn't one.
-// Handles '2027-03-09T07:00:00', '20270309T070000', '7:00 AM', '17:30' and '1730'.
+// Handles '2027-03-09T07:00:00', '20270309T070000', '7:00 AM', '17:30', '1730' and
+// '173000' (gangway times, November 2026).
 function hhmm(text) {
   var s = clean(text);
   if (!s) {
@@ -576,7 +577,7 @@ function hhmm(text) {
       var h12 = (+m[1]) % 12 + (m[3].toLowerCase() === 'p' ? 12 : 0);
       return +m[2] < 60 ? pad2(h12) + ':' + m[2] : null;
     }
-    m = /^(\d{1,2}):(\d{2})(?::\d{2})?(\s.*)?$/.exec(s) || /^(\d{2})(\d{2})$/.exec(s);
+    m = /^(\d{1,2}):(\d{2})(?::\d{2})?(\s.*)?$/.exec(s) || /^(\d{2})(\d{2})(?:[0-5]\d)?$/.exec(s);
   }
   if (!m) {
     return null;

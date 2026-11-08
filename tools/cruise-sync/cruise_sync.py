@@ -522,7 +522,8 @@ def _quote(value: str) -> str:
 
 def hhmm(text):
     """Royal's many time spellings -> 'HH:MM' (24h), or None when it isn't one.
-    Handles '2027-03-09T07:00:00', '20270309T070000', '7:00 AM', '17:30' and '1730'."""
+    Handles '2027-03-09T07:00:00', '20270309T070000', '7:00 AM', '17:30', '1730' and
+    '173000' (gangway times, November 2026)."""
     s = clean(text)
     if not s:
         return None
@@ -532,7 +533,7 @@ def hhmm(text):
         if m:
             h = int(m.group(1)) % 12 + (12 if m.group(3).lower() == "p" else 0)
             return f"{h:02d}:{m.group(2)}" if int(m.group(2)) < 60 else None
-        m = re.fullmatch(r"(\d{1,2}):(\d{2})(?::\d{2})?(\s.*)?", s) or re.fullmatch(r"(\d{2})(\d{2})", s)
+        m = re.fullmatch(r"(\d{1,2}):(\d{2})(?::\d{2})?(\s.*)?", s) or re.fullmatch(r"(\d{2})(\d{2})(?:[0-5]\d)?", s)
     if not m:
         return None
     h, mi = int(m.group(1)), int(m.group(2))

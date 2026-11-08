@@ -453,6 +453,13 @@ Lists and Home don't show ages or tags; details is one press away.
   aren't Ashore and read `Arrive by`. All-day rentals show at their listed
   time with no end.
 - A picked excursion that's also in the login data shows once, as booked.
+- **Booked shows and classes** (a non-excursion order whose title, date and
+  time match a schedule event, e.g. a theater reservation): that event, at its
+  venue with deck lines, routes and "From", starred and booked (locked star,
+  `✓ Booked`, never "to reserve"), never filtered out. The order isn't sent
+  separately. On the settings page it's under FROM YOUR BOOKING with its venue
+  instead of `Ashore`. Orders the schedule doesn't list stay booked orders,
+  Ashore.
 
 ## 8. Alerts
 

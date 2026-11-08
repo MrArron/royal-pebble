@@ -57,7 +57,8 @@ class HhmmTest(unittest.TestCase):
     def test_spellings(self):
         for raw, want in (("2027-03-09T07:05:00", "07:05"), ("20270309T173000", "17:30"), ("7:00 AM", "07:00"),
                           ("12:15 pm", "12:15"), ("12:15 AM", "00:15"), ("17:30", "17:30"), ("1730", "17:30"),
-                          ("5:30 p.m.", "17:30"), ("", None), (None, None), ("see planner", None), ("2575", None)):
+                          ("5:30 p.m.", "17:30"), ("", None), (None, None), ("see planner", None), ("2575", None),
+                          ("153000", "15:30"), ("073000", "07:30"), ("157500", None), ("1530000", None)):
             self.assertEqual(cs.hhmm(raw), want, raw)
 
 
