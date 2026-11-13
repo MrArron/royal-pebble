@@ -1,0 +1,110 @@
+name: Verify upstream price script
+
+# Daily: if jdeath/CheckRoyalCaribbeanPrice changed its script, copy it into the Android app's
+# python/upstream/ folder, run our checks and open a pull request. Merging that PR (after you try
+# it against a real booking, see docs/PRICE_SCRIPT_UPDATES.md) publishes the verified copy.
+#
+# One-time repo setting: Settings > Actions > General > "Allow GitHub Actions to create and
+# approve pull requests".
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: verify-upstream
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.repository == 'MrArron/royal-pebble'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # The token is not kept in .git/config: the checks below run jdeath's code, which must not
+      # be able to reach it. It is passed only to the final push and PR step.
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compare with upstream and copy the script in if it changed
+        id: sync
+        run: python tools/verify-upstream/verify_upstream.py sync --upstream-dir upstream-src
+
+      - name: Skip if a branch for this upstream commit already exists
+        id: existing
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          SHORT: ${{ steps.sync.outputs.short }}
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" "auto/upstream-script-${SHORT}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "A branch for ${SHORT} already exists; nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.sync.outputs.changed == 'true' && steps.existing.outputs.exists == 'false'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r upstream-src/requirements.txt PyYAML requests pytest
+
+      - name: Verify
+        id: verify
+        if: steps.sync.outputs.changed == 'true' && steps.existing.outputs.exists == 'false'
+        continue-on-error: true
+        run: |
+          python tools/verify-upstream/verify_upstream.py verify \
+            --upstream-dir upstream-src --report-md verify-report.md
+
+      - name: Open the pull request
+        if: steps.sync.outputs.changed == 'true' && steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHORT: ${{ steps.sync.outputs.short }}
+          UP_DATE: ${{ steps.sync.outputs.date }}
+          UP_SUBJECT: ${{ steps.sync.outputs.subject }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+        run: |
+          branch="auto/upstream-script-${SHORT}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add android/app/src/main/python/upstream
+          git commit -m "Price script: upstream ${SHORT} (${UP_DATE})"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
+
+          {
+            echo "Upstream \`jdeath/CheckRoyalCaribbeanPrice\` changed its script: \`${SHORT}\` (${UP_DATE}), ${UP_SUBJECT}"
+            echo
+            echo "Upstream diff: https://github.com/jdeath/CheckRoyalCaribbeanPrice/commits/main/CheckRoyalCaribbeanPrice.py"
+            echo
+            echo "## Automatic checks"
+            echo
+            cat verify-report.md
+            echo
+            echo "## Before merging"
+            echo
+            echo "1. Check out this branch and run \`python tools/verify-upstream/verify_upstream.py checklist --config <your config.yaml> --redact\`."
+            echo "2. Compare the check-in label, per-guest status, final payment date and balance with royalcaribbean.com."
+            echo "3. Merge. Merging publishes this copy as the verified script the app downloads (see docs/PRICE_SCRIPT_UPDATES.md)."
+          } > pr-body.md
+
+          args=(--base main --head "$branch" --title "Price script: verify upstream ${SHORT} (${UP_DATE})" --body-file pr-body.md --assignee MrArron)
+          if [ "$VERIFY_OUTCOME" != "success" ]; then
+            args+=(--draft)
+            sed -i '1i **Automatic checks failed. This is a draft; do not merge until they pass.**\n' pr-body.md
+          fi
+          gh pr create "${args[@]}"
+          gh pr edit "$branch" --add-reviewer MrArron || true

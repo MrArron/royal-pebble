@@ -1,0 +1,60 @@
+name: Publish verified price script
+
+# When a merge changes the script copy under android/.../python/upstream/, publish it as the
+# script the Android app is allowed to download: a rolling release `price-script-latest` plus an
+# unchanging release `price-script-<upstream short sha>`. Each has the script, UPSTREAM_VERSION
+# and VERIFIED.json (sha256, upstream commit, verified date). See docs/PRICE_SCRIPT_UPDATES.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/app/src/main/python/upstream/**"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-verified-script
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.repository == 'MrArron/royal-pebble'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the verified copy and its manifest
+        id: build
+        run: python tools/verify-upstream/verify_upstream.py publish --out dist
+
+      - name: Publish releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHORT: ${{ steps.build.outputs.short }}
+          VERIFIED_ON: ${{ steps.build.outputs.verified_on }}
+        run: |
+          files=(dist/CheckRoyalCaribbeanPrice.py dist/UPSTREAM_VERSION dist/VERIFIED.json)
+          # Rolling release: the app reads this one.
+          if gh release view price-script-latest >/dev/null 2>&1; then
+            gh release edit price-script-latest --title "Verified price script (${SHORT}, ${VERIFIED_ON})" \
+              --notes-file dist/release-notes.md --latest=false
+          else
+            gh release create price-script-latest --target "$GITHUB_SHA" --latest=false \
+              --title "Verified price script (${SHORT}, ${VERIFIED_ON})" --notes-file dist/release-notes.md
+          fi
+          gh release upload price-script-latest "${files[@]}" --clobber
+          # Fixed release per upstream commit: a record, and a way to roll back.
+          if ! gh release view "price-script-${SHORT}" >/dev/null 2>&1; then
+            gh release create "price-script-${SHORT}" "${files[@]}" --target "$GITHUB_SHA" --latest=false \
+              --title "Verified price script ${SHORT}" --notes-file dist/release-notes.md
+          fi

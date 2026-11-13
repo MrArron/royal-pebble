@@ -16,6 +16,10 @@ tools/shipmap/decks/
 tools/shipmap/out/
 *.check.json
 
+# Verify-upstream working folders (tools/verify-upstream)
+/upstream-src/
+/dist/
+
 # Python
 __pycache__/
 *.pyc
