@@ -333,7 +333,9 @@ entries (6.4 KB heap).
   ashore), with a "Leave now" alert at all-aboard minus the walk back.
 - Native Android companion app (only if PebbleKit JS runs out; nothing needs
   it now). Phase 0 link test: `android/linktest/`, findings in
-  `docs/WATCH_PROTOCOL.md` (Android companion app).
+  `docs/WATCH_PROTOCOL.md` (Android companion app). Phase 2's watch side is
+  built (1.6.20): price drop, check-in and final payment notices
+  (`docs/WATCH_PROTOCOL.md` Booking notices); the app that sends them isn't.
 - A quick "remind me in N minutes" timer, lap counter, spending log (Royal's
   onboard credit is a starting balance), currency conversion, Celebrity
   support.

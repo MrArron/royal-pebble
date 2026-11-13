@@ -343,7 +343,7 @@ delivered; undelivered ones wait for the next slice (e.g. the next app start).
 
 | Bytes | Field |
 |---|---|
-| 1 | `kind`: 0 moved (the star moved with it), 1 cancelled (star dropped), 2 check (several new times; star dropped) |
+| 1 | `kind`: 0 moved (the star moved with it), 1 cancelled (star dropped), 2 check (several new times; star dropped); 4-7 booking notices (below). 3 is the watch's own `PHONE NEEDED` and never sent. The watch skips kinds above 7 |
 | 4 | `from`: int32 cruise minutes, the old start (−1 untimed) |
 | 4 | `to`: int32 cruise minutes, the new start if moved, else `from` |
 | 1 + n | title, ≤ 39 bytes |
@@ -358,6 +358,31 @@ stored. The same screen shows the watch's own `PHONE NEEDED` notice when some
 starred events or alerts didn't fit in its storage (see Stored on the watch);
 notices that arrive while one is on screen are added to it. While an alert is on screen they wait, and appear when it closes, so
 they never cover an all-aboard warning.
+
+### Booking notices
+
+Since 1.6.20 the same NOTICE message carries price and check-in alerts, sent by
+the optional Android companion app from its background checks (PebbleKit JS
+sends none). The layout above is unchanged; `from` and `to` are −1, the title
+is the add-on or the sailing (≤ 39 bytes), and `venue` and `old venue` are two
+lines of text made on the phone (≤ 23 bytes each; first bold, second muted).
+Prices and dates are formatted on the phone, so these lines don't follow the
+watch's 12/24h setting. `pack.js` has the reference encoders
+(`priceDropNotice`, `checkinOpenNotice`, `checkinDoneNotice`, `paymentNotice`,
+tests in `test/pkjs/booking-notices.test.js`):
+
+| `kind` | Head | Title | First line | Second line |
+|---|---|---|---|---|
+| 4 | `PRICE DROP` | the item | `Save $20.00` | `Was $109 now $89` |
+| 5 | `CHECK-IN OPEN` | the sailing | `2 of 3 guests to go` or `Not checked in yet` | `Closes Dec 9` or `Check in on Royal app` |
+| 6 | `CHECKED IN` | the sailing | `All guests checked in` | `Boarding 11:30a-12:00p`, or empty |
+| 7 | `PAYMENT DUE` | the sailing | `$1,235 due Dec 20` | `In 5 days`, `Due tomorrow`, `Due today`, `Overdue` |
+
+Amounts show cents below $100 and whole dollars from $100 (both prices in
+whole dollars when either is), so two prices fit one line. The top bar reads `Booking` on these and `Schedule` on the others.
+A watch app before 1.6.20 would show kinds 4-7 as `CANCELLED`, so install
+1.6.20 or later on the watch before the Android app sends them. An Android-app NOTICE needs no slice and doesn't touch stars, so
+it can't disturb a JS sync, but it shouldn't be sent between `BEGIN` and `END`.
 
 ## Star changes
 

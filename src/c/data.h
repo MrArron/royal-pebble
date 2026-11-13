@@ -190,6 +190,13 @@ typedef enum {
   NOTICE_CANCELLED = 1,  // a starred event is gone; its star was dropped
   NOTICE_CHECK = 2,      // several new times match; the star was dropped
   NOTICE_SAVED = 3,      // starred events or alerts from `from` on didn't fit in storage
+  // Booking notices (an Android companion app's price and check-in checks):
+  // title, then `venue` and `old_venue` as two lines of phone-made text.
+  NOTICE_PRICE = 4,          // an add-on or cabin price dropped
+  NOTICE_CHECKIN_OPEN = 5,   // online check-in is open and not done
+  NOTICE_CHECKIN_DONE = 6,   // every guest is checked in
+  NOTICE_PAYMENT = 7,        // the final payment is coming up
+  NOTICE_LAST = NOTICE_PAYMENT,
 } NoticeKind;
 
 #define MAX_NOTICES 8

@@ -5,7 +5,9 @@
 
 // Shown when a re-sync moved or cancelled starred events: "Schedule" in the top
 // bar, then "MOVED" with the new and old time, like the alert screen. Also when
-// starred events or alerts didn't fit in the watch's storage (NOTICE_SAVED). Up and Down step
+// starred events or alerts didn't fit in the watch's storage (NOTICE_SAVED), and
+// for booking notices from the Android app (price drop, check-in, final
+// payment: "Booking" in the top bar, two lines of the phone's text). Up and Down step
 // through several; Select or Back closes. It never covers an alert: while one
 // is open the notices wait and appear when it closes.
 
@@ -18,6 +20,15 @@ static Notice *s_notices;
 static int s_count;
 static int s_index;
 static bool s_pending;
+
+// NOTICE_PRICE on.
+static const char *const BOOKING_HEADS[] = {"PRICE DROP", "CHECK-IN OPEN", "CHECKED IN", "PAYMENT DUE"};
+
+// "Booking" in the top bar for price and check-in notices, else "Schedule".
+static void set_bar(void) {
+  top_bar_set(s_top_bar, BAND_INFO, BAND_LABEL_INFO,
+              s_notices[s_index].kind >= NOTICE_PRICE ? "Booking" : "Schedule");
+}
 
 static const char *const WEEKDAYS[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 
@@ -101,7 +112,9 @@ static void update_proc(Layer *layer, GContext *ctx) {
     return;
   }
 
-  const char *head = n->kind == NOTICE_MOVED ? "MOVED"
+  bool booking = n->kind >= NOTICE_PRICE;
+  const char *head = booking ? BOOKING_HEADS[n->kind - NOTICE_PRICE]
+                     : n->kind == NOTICE_MOVED ? "MOVED"
                      : n->kind == NOTICE_CHECK ? "CHECK TIMES" : "CANCELLED";
   graphics_context_set_text_color(ctx, g_theme->port_accent);
   graphics_draw_text(ctx, head, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
@@ -122,7 +135,11 @@ static void update_proc(Layer *layer, GContext *ctx) {
   char from[16], to[16], first[64], second[64];
   fmt_when(from, sizeof(from), n->from);
   fmt_when(to, sizeof(to), n->to);
-  if (n->kind == NOTICE_MOVED) {
+  if (booking) {
+    // The phone made both lines (prices, dates, guests).
+    snprintf(first, sizeof(first), "%s", n->venue);
+    snprintf(second, sizeof(second), "%s", n->old_venue);
+  } else if (n->kind == NOTICE_MOVED) {
     fmt_line(first, sizeof(first), "Now ", to, n->venue);
     // Only what changed: the old time, the old venue, or both.
     fmt_line(second, sizeof(second), "Was ", n->from != n->to ? from : "", n->old_venue);
@@ -133,7 +150,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   }
   GFont bold = fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
   GFont regular = fonts_get_system_font(FONT_KEY_GOTHIC_18);
-  bool moved = n->kind == NOTICE_MOVED;
+  bool moved = booking || n->kind == NOTICE_MOVED;
   graphics_context_set_text_color(ctx, moved ? g_theme->text : g_theme->muted);
   graphics_draw_text(ctx, first, moved ? bold : regular, GRect(PAD, y, w, 22),
                      GTextOverflowModeTrailingEllipsis, TEXT_ALIGN, NULL);
@@ -163,6 +180,7 @@ static void step(int delta) {
   if (next >= 0 && next < s_count) {
     usage_move(s_index, next);
     s_index = next;
+    set_bar();
     layer_mark_dirty(s_layer);
   }
 }
@@ -187,8 +205,8 @@ static void window_load(Window *window) {
   Layer *root = window_get_root_layer(window);
   GRect b = layer_get_bounds(root);
   window_set_background_color(window, g_theme->bg);
-  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL_INFO,
-                             "Schedule");
+  s_top_bar = top_bar_create(TOP_BAR_FRAME(b), BAND_INFO, BAND_LABEL_INFO, "");
+  set_bar();
   layer_add_child(root, s_top_bar);
   s_layer = layer_create(BODY_FRAME(b));
   layer_set_update_proc(s_layer, update_proc);

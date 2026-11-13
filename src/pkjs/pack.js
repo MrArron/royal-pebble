@@ -141,6 +141,75 @@ function encodeNotice(n) {
                                [oldVenue.length], oldVenue);
 }
 
+// Booking notices (docs/WATCH_PROTOCOL.md, Booking notices): sent by the
+// Android companion app from its price and check-in checks, packed like the
+// schedule change notices above. `from` and `to` are -1; the watch shows the
+// title, then `venue` (bold) and `oldVenue` as two lines of text made here,
+// each cut to 23 bytes. These are the reference for the app's own encoder.
+var NOTICE_PRICE = 4;
+var NOTICE_CHECKIN_OPEN = 5;
+var NOTICE_CHECKIN_DONE = 6;
+var NOTICE_PAYMENT = 7;
+var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// "$89.50", or whole dollars from $100 (or when `whole` is set) so two prices
+// fit a line: "$1,235".
+function money(amount, symbol, whole) {
+  var cents = Math.round(Math.abs(amount) * 100);
+  var dollars = whole || cents >= 10000;
+  var text = String(dollars ? Math.round(cents / 100) : Math.floor(cents / 100));
+  text = (symbol || '$') + text.replace(/\B(?=(\d{3})+$)/g, ',') +
+    (dollars ? '' : '.' + ('0' + cents % 100).slice(-2));
+  return (amount < 0 ? '-' : '') + text;
+}
+
+// "Sep 13" from "2026-09-13".
+function shortDate(date) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date || '');
+  return m ? MONTHS[+m[2] - 1] + ' ' + (+m[3]) : '';
+}
+
+function bookingNotice(kind, title, first, second) {
+  return {kind: kind, from: -1, to: -1, title: title || 'Your cruise', venue: first || '', oldVenue: second || ''};
+}
+
+// An add-on or cabin price fell below what was paid: {item, paid, now, symbol}.
+function priceDropNotice(d) {
+  // Both prices in one format: whole dollars when either is $100 or more.
+  var whole = Math.max(Math.abs(d.paid), Math.abs(d.now)) >= 99.995;
+  return bookingNotice(NOTICE_PRICE, d.item, 'Save ' + money(d.paid - d.now, d.symbol),
+                       'Was ' + money(d.paid, d.symbol, whole) + ' now ' + money(d.now, d.symbol, whole));
+}
+
+// Online check-in is open: {sailing, guests, done, closes ("YYYY-MM-DD", optional)}.
+function checkinOpenNotice(d) {
+  var guests = d.guests | 0;
+  var left = guests - (d.done | 0);
+  var first = guests > 1 ? left + ' of ' + guests + ' guests to go' : 'Not checked in yet';
+  return bookingNotice(NOTICE_CHECKIN_OPEN, d.sailing, first,
+                       d.closes ? 'Closes ' + shortDate(d.closes) : 'Check in on Royal app');
+}
+
+// "11:30a-12:00p" from Royal's "11:30 AM - 12:00 PM".
+function compactWindow(text) {
+  return (text || '').replace(/\s*([AaPp])\.?[Mm]\.?/g, function(all, ap) { return ap.toLowerCase(); })
+    .replace(/\s*-\s*/g, '-').trim();
+}
+
+// Every guest is checked in: {sailing, boarding (Royal's boarding window, optional)}.
+function checkinDoneNotice(d) {
+  return bookingNotice(NOTICE_CHECKIN_DONE, d.sailing, 'All guests checked in',
+                       d.boarding ? 'Boarding ' + compactWindow(d.boarding) : '');
+}
+
+// Final payment coming up: {sailing, due "YYYY-MM-DD", balance, symbol, today "YYYY-MM-DD"}.
+function paymentNotice(d) {
+  var days = Math.round((Date.parse(d.due) - Date.parse(d.today)) / 86400000);
+  var second = isNaN(days) ? '' : days < 0 ? 'Overdue' : days === 0 ? 'Due today'
+    : days === 1 ? 'Due tomorrow' : 'In ' + days + ' days';
+  return bookingNotice(NOTICE_PAYMENT, d.sailing, money(d.balance, d.symbol) + ' due ' + shortDate(d.due), second);
+}
+
 function packNotices(notices) {
   var bytes = [];
   notices.forEach(function(n) { bytes = bytes.concat(encodeNotice(n)); });
@@ -253,6 +322,10 @@ function encodeStarChange(c) {
 module.exports = {packEvents: packEvents, packAlarms: packAlarms, packNotices: packNotices,
                   encodeEvent: encodeEvent, encodeAlarm: encodeAlarm, encodeWhere: encodeWhere,
                   encodeNotice: encodeNotice, utf8: utf8, cutText: cutText,
+                  priceDropNotice: priceDropNotice, checkinOpenNotice: checkinOpenNotice,
+                  checkinDoneNotice: checkinDoneNotice, paymentNotice: paymentNotice, money: money,
+                  NOTICE_PRICE: NOTICE_PRICE, NOTICE_CHECKIN_OPEN: NOTICE_CHECKIN_OPEN,
+                  NOTICE_CHECKIN_DONE: NOTICE_CHECKIN_DONE, NOTICE_PAYMENT: NOTICE_PAYMENT,
                   decodeStarChanges: decodeStarChanges, encodeStarChange: encodeStarChange,
                   decodeLogEntries: decodeLogEntries, encodeLogEntry: encodeLogEntry,
                   TITLE_MAX: TITLE_MAX, VENUE_MAX: VENUE_MAX,
