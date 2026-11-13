@@ -1,0 +1,6 @@
+# change "royal" to "celebrity" if needed
+logFile: "output.txt"
+accountInfo: 
+  - username: "user@gmail.com"
+    password: "pa$$word"
+    cruiseLine: "royal"
