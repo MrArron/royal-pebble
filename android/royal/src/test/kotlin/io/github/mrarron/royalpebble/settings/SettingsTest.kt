@@ -348,3 +348,44 @@ class SettingsTest {
         }
     }
 }
+
+class ReadinessTest {
+    private val ship = RoyalParse.Ship("HM", "Harmony of the Seas")
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    @Test
+    fun pastedBundlesAreChecked() {
+        assertEquals("That text is not valid cruise data", Readiness.parse("hello").second)
+        assertEquals("Not a cruise data bundle", Readiness.parse("{}").second)
+        assertEquals("Unsupported bundle version 2", Readiness.parse("""{"format":"cruise-watch","v":2}""").second)
+        assertEquals("Missing sail date", Readiness.parse("""{"format":"cruise-watch","v":1}""").second)
+        val demo = DemoBundle.make(LocalDateTime.of(2027, 3, 8, 12, 0)).bundle
+        // The demo has no `paid`/`pid` fields; the required ones are enough.
+        assertNull(Readiness.parse(demo.toString()).second)
+        assertEquals("Schedule is missing \"time\"",
+            Readiness.parse(demo.toString().replace("\"time\",", "")).second)
+    }
+
+    @Test
+    fun readyChecksTellWhatIsLeft() {
+        val demo = DemoBundle.make(LocalDateTime.of(2027, 3, 8, 12, 0))
+        val none = JsonObject(emptyMap())
+        val checks = Readiness.checks(demo.bundle, none, demo.stars, null)
+        assertEquals(listOf(false, false, true), checks.map { it.ok })  // demo: debark day has no events; no stateroom given
+        assertTrue(checks[2].text.startsWith("Busiest day "))
+        val room = Readiness.checks(demo.bundle, none, demo.stars, "1234")
+        assertTrue(room[1].ok)
+    }
+
+    @Test
+    fun aDownloadedSailingCountsItsDays() {
+        val s = CruiseStore(File(tmp.root, "c"))
+        DownloadService(RoyalClient(FakeRoyal(), sleep = {}), s).download(ship, "2027-03-06")
+        val b = s.bundle()!!
+        val checks = Readiness.checks(b, s.settings(), s.stars(), s.booking()?.stateroom)
+        assertEquals(3, checks.size)
+        assertTrue(checks[1].ok)
+        assertTrue(Readiness.dayLoad(b, s.settings(), s.stars()).isNotEmpty())
+    }
+}
