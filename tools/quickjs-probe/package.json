@@ -1,0 +1,10 @@
+{
+  "name": "quickjs-probe",
+  "private": true,
+  "description": "Phase 0 probe: do src/pkjs slice/pack modules give byte-identical output in QuickJS and Node?",
+  "scripts": {"probe": "node probe.js"},
+  "dependencies": {
+    "quickjs-emscripten": "0.32.0",
+    "@jitl/quickjs-ng-wasmfile-release-sync": "0.32.0"
+  }
+}
