@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import io.github.mrarron.royalpricecheck.ui.ChipKind
 import io.github.mrarron.royalpricecheck.ui.StatusChip
 import androidx.compose.foundation.layout.fillMaxWidth
