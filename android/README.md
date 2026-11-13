@@ -37,4 +37,21 @@ downloads jdeath's file directly instead (not verified by us).
 ## Tests
 
 - Bridge: `python -m pytest tests` (needs `requests PyYAML apprise pytest`).
-- Kotlin unit tests: `./gradlew testDebugUnitTest`.
+- Kotlin unit tests: `./gradlew :royal:test testDebugUnitTest`.
+
+## Royal client and cruise store (`royal/`)
+
+Plain Kotlin, no Android, so `./gradlew :royal:test` runs offline on any JVM.
+
+- `RoyalParse` / `RoyalClient`: the parsing and every request of `src/pkjs/royal.js` (ships,
+  sail dates, itinerary, schedule pages, sign-in, booking, voyage, order history, catalog
+  times). `tools/cruise-sync/cruise_sync.py` is the reference for headers and retries: browser
+  user agent on every call, up to 3 tries with 2 s and 4 s pauses for network trouble and 5xx
+  on GETs, never for 4xx or the sign-in. Error texts are the JS's fixed wording.
+- `CruiseStore`: the sailing (bundle, with the booking's `mine`), stars and reserved marks,
+  reservations and settings, one file per key under `src/pkjs/index.js`'s localStorage names,
+  so the reused JS packer can read it as it is. Moving stars on a re-download
+  (`slice.reconcileStars`) is a hook for the JS engine; until it is wired in, stars stay put.
+- Tests read the shared fixtures in `test/fixtures/` (the same expected schedule and booking as
+  `test/pkjs/royal.test.js` and `test_cruise_sync.py`) and compare output as JSON text, so the
+  Kotlin bundle matches `JSON.stringify` byte for byte. Nothing sends slices to the watch yet.

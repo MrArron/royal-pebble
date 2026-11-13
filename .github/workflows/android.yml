@@ -4,12 +4,14 @@ on:
   push:
     paths:
       - "android/**"
+      - "test/fixtures/**"
       - ".github/workflows/android.yml"
     tags:
       - "android-v*"
   pull_request:
     paths:
       - "android/**"
+      - "test/fixtures/**"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
@@ -52,7 +54,7 @@ jobs:
           echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
 
       - name: Unit tests
-        run: ./gradlew --no-daemon testDebugUnitTest
+        run: ./gradlew --no-daemon :royal:test testDebugUnitTest
 
       - name: Build APK
         run: ./gradlew --no-daemon assembleRelease
