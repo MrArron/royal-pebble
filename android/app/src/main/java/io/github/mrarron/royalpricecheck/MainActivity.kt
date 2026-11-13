@@ -244,6 +244,12 @@ private fun SettingsTab(vm: MainViewModel) {
         }
         Text("Checks run only with a network connection. Keep them at 6 hours or slower to be gentle with Royal's servers. You are told only about things that are new since the last check.", style = MaterialTheme.typography.bodySmall)
         Text("Background checks save your password encrypted with the Android Keystore. Turning them off deletes it.", style = MaterialTheme.typography.bodySmall)
+        Text("Watch alerts", style = MaterialTheme.typography.titleMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Switch(vm.watchAlerts, vm::changeWatchAlerts)
+            Text("Send new price drops, check-in changes and payment reminders to my Pebble")
+        }
+        Text("Each alert is sent once, after a check finds it. If Royal Pebble isn't open on the watch, the alert waits for the next check. Needs Royal Pebble 1.6.20 or later on the watch.", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Switch(vm.useLatest, vm::changeUseLatest)
             Text("Use the newest downloaded script when available")
