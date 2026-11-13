@@ -202,12 +202,12 @@ private fun SettingsTab(vm: MainViewModel) {
         Text("Background checks", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0 to "Off", 6 to "6 h", 12 to "12 h", 24 to "24 h").forEach { (h, label) ->
-                FilterChip(vm.autoHours == h, { vm.setAutoHours(h) }, label = { Text(label) })
+                FilterChip(vm.autoHours == h, { vm.changeAutoHours(h) }, label = { Text(label) })
             }
         }
         Text("Checks run only with a network connection. Keep them at 6 hours or slower to be gentle with Royal's servers.", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Switch(vm.useLatest, vm::setUseLatest)
+            Switch(vm.useLatest, vm::changeUseLatest)
             Text("Use the newest downloaded script when available")
         }
         OutlinedButton(onClick = vm::updateScript) { Text("Update script now") }

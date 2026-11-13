@@ -48,13 +48,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         status = "Saved."
     }
 
-    fun setAutoHours(h: Int) {
+    fun changeAutoHours(h: Int) {
         Prefs.setAutoCheckHours(ctx, h)
         CheckWorker.schedule(ctx, h)
         autoHours = h
     }
 
-    fun setUseLatest(v: Boolean) {
+    fun changeUseLatest(v: Boolean) {
         Prefs.setUseLatestScript(ctx, v)
         useLatest = v
     }
