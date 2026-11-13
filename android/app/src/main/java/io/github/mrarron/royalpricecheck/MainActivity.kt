@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -101,6 +102,7 @@ private fun SummaryTab(vm: MainViewModel) {
                 if (vm.running) CircularProgressIndicator(Modifier.padding(4.dp))
             }
             if (!vm.hasConfig) Text("Enter your account on the Account tab first.")
+            vm.status?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         if (r == null) {
             item { Text("No check has run yet.") }
@@ -149,6 +151,13 @@ private fun DropCard(d: PriceDrop) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(d.itemName, style = MaterialTheme.typography.titleSmall)
+            if (d.alert) {
+                Text(
+                    if (d.decision == "rebook") "Rebook" else "Consider rebooking",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
             Text(d.guestName)
             Text(
                 "Paid ${Notifier.money(d.paid, d.currency)} → now ${Notifier.money(d.current, d.currency)} " +
@@ -188,11 +197,39 @@ private fun AccountTab(vm: MainViewModel) {
         Button(onClick = { vm.saveSimple(user, pass, line); pass = "" }, enabled = user.isNotBlank() && pass.isNotEmpty()) {
             Text("Save account")
         }
+        Text(
+            "Your password is never written to config.yaml. It stays in memory until you close the app. " +
+                "Only while background checks are on, it is also saved encrypted with the Android Keystore; " +
+                "turning them off deletes it.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (vm.missingPasswords.isNotEmpty()) PasswordPrompt(vm)
         Text("Advanced: config.yaml", style = MaterialTheme.typography.titleMedium)
         Text("Stored only in this app's private storage. The full options are in the price checker's docs.", style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(yaml, { yaml = it }, modifier = Modifier.fillMaxWidth(), minLines = 8, textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp))
         OutlinedButton(onClick = { vm.saveConfig(yaml) }) { Text("Save config") }
         vm.status?.let { Text(it) }
+    }
+}
+
+@Composable
+private fun PasswordPrompt(vm: MainViewModel) {
+    val typed = remember(vm.missingPasswords) { mutableStateMapOf<Int, String>() }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Password needed", style = MaterialTheme.typography.titleSmall)
+            Text("The app was restarted, so the password is gone from memory. Enter it again.", style = MaterialTheme.typography.bodySmall)
+            vm.missingPasswords.forEach { i ->
+                OutlinedTextField(
+                    typed[i] ?: "", { typed[i] = it }, label = { Text("Password for account ${i + 1}") },
+                    singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Button(
+                onClick = { vm.enterPasswords(typed.filterValues { it.isNotEmpty() }.toMap()); typed.clear() },
+                enabled = typed.values.any { it.isNotEmpty() },
+            ) { Text("Use password") }
+        }
     }
 }
 
@@ -205,13 +242,19 @@ private fun SettingsTab(vm: MainViewModel) {
                 FilterChip(vm.autoHours == h, { vm.changeAutoHours(h) }, label = { Text(label) })
             }
         }
-        Text("Checks run only with a network connection. Keep them at 6 hours or slower to be gentle with Royal's servers.", style = MaterialTheme.typography.bodySmall)
+        Text("Checks run only with a network connection. Keep them at 6 hours or slower to be gentle with Royal's servers. You are told only about things that are new since the last check.", style = MaterialTheme.typography.bodySmall)
+        Text("Background checks save your password encrypted with the Android Keystore. Turning them off deletes it.", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Switch(vm.useLatest, vm::changeUseLatest)
             Text("Use the newest downloaded script when available")
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Switch(vm.followUpstream, vm::changeFollowUpstream)
+            Text("Advanced: follow jdeath's main branch directly (not verified by Royal Pebble)")
+        }
         OutlinedButton(onClick = vm::updateScript) { Text("Update script now") }
         vm.status?.let { Text(it) }
+        if (vm.scriptVersion.isNotBlank()) Text("Downloaded script: ${vm.scriptVersion}", style = MaterialTheme.typography.bodySmall)
         Text("Bundled script: ${BuildConfig.UPSTREAM_VERSION}", style = MaterialTheme.typography.bodySmall)
         Text("App ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall)
     }
