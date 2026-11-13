@@ -332,7 +332,8 @@ entries (6.4 KB heap).
 - Back-to-the-ship distance and direction (phone GPS pin dropped going
   ashore), with a "Leave now" alert at all-aboard minus the walk back.
 - Native Android companion app (only if PebbleKit JS runs out; nothing needs
-  it now).
+  it now). Phase 0 link test: `android/linktest/`, findings in
+  `docs/WATCH_PROTOCOL.md` (Android companion app).
 - A quick "remind me in N minutes" timer, lap counter, spending log (Royal's
   onboard credit is a starting balance), currency conversion, Celebrity
   support.
