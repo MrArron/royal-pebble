@@ -385,7 +385,7 @@ class ReadinessTest {
         val b = s.bundle()!!
         val checks = Readiness.checks(b, s.settings(), s.stars(), s.booking()?.stateroom)
         assertEquals(3, checks.size)
-        assertTrue(checks[1].ok)
+        assertFalse(checks[1].ok)  // a plain download has no stateroom
         assertTrue(Readiness.dayLoad(b, s.settings(), s.stars()).isNotEmpty())
     }
 }
