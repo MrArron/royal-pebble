@@ -1,0 +1,90 @@
+name: Android app
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+    tags:
+      - "android-v*"
+  pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      # Chaquopy needs a build Python matching its target version (3.12).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bridge tests
+        run: |
+          python -m pip install requests PyYAML apprise pytest
+          python -m pytest tests
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/android-v* ]]; then
+            echo "VERSION_NAME=${GITHUB_REF_NAME#android-v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION_NAME=0.1.0-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+          echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Name the APK and record its size
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/royal-pebble-android-${VERSION_NAME}.apk"
+          ls -l dist
+          {
+            echo "### APK size"
+            echo
+            du -h dist/*.apk | awk '{print "- " $2 ": " $1}'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: royal-pebble-android
+          path: android/dist/*.apk
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/android-v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: royal-pebble-android
+          path: dist
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Android app ${GITHUB_REF_NAME#android-v}" --notes "Sideload APK. Built from $GITHUB_SHA."
+          gh release upload "$GITHUB_REF_NAME" dist/*.apk --repo "$GITHUB_REPOSITORY" --clobber

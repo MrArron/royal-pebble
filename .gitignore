@@ -33,3 +33,6 @@ Thumbs.db
 
 # Claude session outputs (handoffs, review files); never in the repo
 Claude outputs/
+
+# Android app build output (android/.gitignore holds the rest)
+android/local.properties
