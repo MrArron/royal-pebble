@@ -23,6 +23,8 @@ FAKE_SCRIPT = textwrap.dedent('''
     print("\\tPassenger Check-In Status: COMPLETED")
     print("\\tAssigned Boarding Window: Not Selected")
     print("user=" + cfg["accountInfo"][0]["username"])
+    print("history=" + cfg["historyDb"])
+    print("pw=" + cfg["accountInfo"][0]["password"])
     db = sqlite3.connect(cfg["historyDb"])
     db.executescript("""
       CREATE TABLE runs (run_id INTEGER PRIMARY KEY, started_at TEXT, finished_at TEXT, status TEXT, error_summary TEXT);
@@ -85,12 +87,14 @@ def test_run_streams_output_and_summarizes(fake_upstream):
     assert drop["item_name"] == "Deluxe Beverage" and drop["alert"] is True
 
 
-def test_runtime_config_points_history_at_app_storage(fake_upstream):
+def test_runtime_config_points_history_at_app_storage_and_is_removed(fake_upstream):
     work, cfg = fake_upstream
-    rcp_runner.run(str(cfg), str(work), Collector(), True)
-    runtime = (work / "runtime-config.yaml").read_text()
-    assert str(work / "history.db") in runtime
-    assert "p'w" in rcp_runner.yaml.safe_load(runtime)["accountInfo"][0]["password"]
+    out = Collector()
+    rcp_runner.run(str(cfg), str(work), out, True)
+    assert f"history={work / 'history.db'}" in out.lines
+    assert "pw=p'w" in out.lines
+    # the runtime copy holds the password, so it must not stay on disk
+    assert not (work / "runtime-config.yaml").exists()
 
 
 def test_crash_is_reported_not_raised(fake_upstream, tmp_path, monkeypatch):
@@ -113,7 +117,7 @@ def test_prefers_downloaded_script_when_present(fake_upstream):
         f.write("def456 2026-11-12")
     out = Collector()
     result = json.loads(rcp_runner.run(str(cfg), str(work), out, True))
-    assert "latest from GitHub (def456" in result["script"]
+    assert "downloaded (def456" in result["script"]
     assert "downloaded copy ran" in out.lines
     # ...but the bundled copy is used when the toggle is off
     result = json.loads(rcp_runner.run(str(cfg), str(work), Collector(), False))
@@ -123,3 +127,64 @@ def test_prefers_downloaded_script_when_present(fake_upstream):
 def test_bundled_upstream_script_compiles():
     import py_compile
     py_compile.compile(os.path.join(PY_SRC, "upstream", rcp_runner.SCRIPT_NAME), doraise=True)
+
+
+BIG_SCRIPT = ("# padding\n" * 2000 + "def main():\n    pass\n").encode()
+
+
+def _fake_fetch(monkeypatch, files):
+    def fetch(url, timeout=60):
+        for name, body in files.items():
+            if url.endswith(name):
+                return body
+        raise OSError("404 " + url)
+    monkeypatch.setattr(rcp_runner, "_fetch", fetch)
+
+
+def test_update_downloads_verified_copy_and_checks_sha(tmp_path, monkeypatch):
+    import hashlib
+    manifest = {"sha256": hashlib.sha256(BIG_SCRIPT).hexdigest(), "upstreamCommit": "abcdef1234567",
+                "upstreamDate": "2026-11-01", "verifiedOn": "2026-11-05"}
+    _fake_fetch(monkeypatch, {"VERIFIED.json": json.dumps(manifest).encode(),
+                              rcp_runner.SCRIPT_NAME: BIG_SCRIPT})
+    result = json.loads(rcp_runner.update_script(str(tmp_path)))
+    assert result["ok"] is True
+    assert "abcdef1" in result["version"] and "verified by Royal Pebble 2026-11-05" in result["version"]
+    assert "verified by Royal Pebble" in rcp_runner.downloaded_version(str(tmp_path))
+
+
+def test_update_refuses_checksum_mismatch_and_keeps_old_copy(tmp_path, monkeypatch):
+    script, version = rcp_runner._downloaded_paths(str(tmp_path))
+    os.makedirs(os.path.dirname(script))
+    open(script, "w").write("print('old')\n")
+    open(version, "w").write("old")
+    _fake_fetch(monkeypatch, {"VERIFIED.json": json.dumps({"sha256": "0" * 64}).encode(),
+                              rcp_runner.SCRIPT_NAME: BIG_SCRIPT})
+    result = json.loads(rcp_runner.update_script(str(tmp_path)))
+    assert result["ok"] is False and "checksum" in result["error"]
+    assert open(script).read() == "print('old')\n"
+    assert not os.path.exists(script + ".download")
+
+
+def test_update_follow_upstream_uses_jdeath_url(tmp_path, monkeypatch):
+    seen = []
+
+    def fetch(url, timeout=60):
+        seen.append(url)
+        if "api.github.com" in url:
+            return b"[]"
+        return BIG_SCRIPT
+    monkeypatch.setattr(rcp_runner, "_fetch", fetch)
+    result = json.loads(rcp_runner.update_script(str(tmp_path), True))
+    assert result["ok"] is True and "not verified" in result["version"]
+    assert rcp_runner.UPSTREAM_RAW_URL in seen
+    assert not any("royal-pebble" in u for u in seen)
+
+
+def test_update_rejects_script_that_does_not_compile(tmp_path, monkeypatch):
+    import hashlib
+    bad = BIG_SCRIPT + b"def (\n"
+    _fake_fetch(monkeypatch, {"VERIFIED.json": json.dumps({"sha256": hashlib.sha256(bad).hexdigest()}).encode(),
+                              rcp_runner.SCRIPT_NAME: bad})
+    result = json.loads(rcp_runner.update_script(str(tmp_path)))
+    assert result["ok"] is False

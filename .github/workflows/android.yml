@@ -51,6 +51,9 @@ jobs:
           fi
           echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
 
+      - name: Unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+
       - name: Build APK
         run: ./gradlew --no-daemon assembleRelease
 

@@ -21,6 +21,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var autoHours by mutableStateOf(0); private set
     var useLatest by mutableStateOf(true); private set
     var status by mutableStateOf<String?>(null); private set
+    var followUpstream by mutableStateOf(false); private set
+    var scriptVersion by mutableStateOf(""); private set
+    var missingPasswords by mutableStateOf<List<Int>>(emptyList()); private set
     val log = mutableStateListOf<String>()
 
     init {
@@ -28,10 +31,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun reload() {
+        runCatching { Prefs.migratePlainPasswords(ctx) }
         hasConfig = Prefs.hasConfig(ctx)
         config = Prefs.readConfig(ctx)
         autoHours = Prefs.autoCheckHours(ctx)
         useLatest = Prefs.useLatestScript(ctx)
+        followUpstream = Prefs.followUpstream(ctx)
+        scriptVersion = runCatching { PythonBridge.downloadedVersion(ctx) }.getOrDefault("")
+        refreshMissing()
         result = Prefs.loadLastResult(ctx)
         log.clear()
         log.addAll(Prefs.loadLastLog(ctx))
@@ -42,16 +49,43 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveConfig(yaml: String) {
-        Prefs.writeConfig(ctx, yaml)
-        config = yaml
+        config = Prefs.saveConfigScrubbed(ctx, yaml)
         hasConfig = true
-        status = "Saved."
+        refreshMissing()
+        status = "Saved. Your password is not stored in the file."
+    }
+
+    private fun refreshMissing() {
+        missingPasswords = ConfigPasswords.inject(config, PasswordVault.all(ctx)).missing
+    }
+
+    /** Passwords typed again after a restart (index -> password). */
+    fun enterPasswords(passwords: Map<Int, String>) {
+        PasswordVault.remember(passwords)
+        if (autoHours > 0) PasswordVault.saveEncrypted(ctx)
+        refreshMissing()
+        status = if (missingPasswords.isEmpty()) "Password ready." else null
     }
 
     fun changeAutoHours(h: Int) {
+        if (h > 0) {
+            refreshMissing()
+            if (!hasConfig || ConfigPasswords.extract(config).indices.isEmpty()) {
+                status = "Save your account on the Account tab first."
+                return
+            }
+            if (missingPasswords.isNotEmpty()) {
+                status = "Enter your password on the Account tab first; background checks need it."
+                return
+            }
+            PasswordVault.saveEncrypted(ctx) // only while checks are on
+        } else {
+            PasswordVault.deleteSaved(ctx)
+        }
         Prefs.setAutoCheckHours(ctx, h)
         CheckWorker.schedule(ctx, h)
         autoHours = h
+        status = null
     }
 
     fun changeUseLatest(v: Boolean) {
@@ -59,8 +93,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         useLatest = v
     }
 
+    fun changeFollowUpstream(v: Boolean) {
+        Prefs.setFollowUpstream(ctx, v)
+        followUpstream = v
+    }
+
     fun runNow() {
         if (running) return
+        refreshMissing()
+        if (missingPasswords.isNotEmpty()) {
+            status = "Password needed. Enter it on the Account tab."
+            return
+        }
         running = true
         status = null
         log.clear()
@@ -89,6 +133,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching { PythonBridge.updateScript(ctx) }.getOrElse { false to (it.message ?: "failed") }
             }
             status = if (ok) "Script updated: $msg" else "Update failed, keeping the current copy: $msg"
+            if (ok) scriptVersion = msg
         }
     }
 }

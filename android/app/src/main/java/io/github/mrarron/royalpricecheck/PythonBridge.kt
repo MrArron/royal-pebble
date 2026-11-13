@@ -28,21 +28,42 @@ object PythonBridge {
     fun run(context: Context, onLine: (String) -> Unit): RunResult {
         val config = Prefs.configFile(context)
         if (!config.exists()) {
-            return RunResult.failure("No configuration yet. Open Settings and enter your account.")
+            return RunResult.failure("No configuration yet. Open the Account tab and enter your account.")
         }
-        val json = module(context).callAttr(
-            "run",
-            config.absolutePath,
-            workDir(context).absolutePath,
-            LineSink { onLine(it) },
-            Prefs.useLatestScript(context),
-        ).toString()
-        return RunResult.parse(json, System.currentTimeMillis())
+        // The password lives in PasswordVault, not in config.yaml; put it into a short-lived copy.
+        val injected = ConfigPasswords.inject(config.readText(), PasswordVault.all(context))
+        if (injected.missing.isNotEmpty()) {
+            return RunResult.failure(
+                "Password needed. Open the Account tab and enter it again " +
+                    "(it is only kept after a restart while background checks are on).",
+            )
+        }
+        val temp = File(workDir(context), "injected-config.yaml")
+        try {
+            temp.writeText(injected.yaml)
+            val json = module(context).callAttr(
+                "run",
+                temp.absolutePath,
+                workDir(context).absolutePath,
+                LineSink { onLine(it) },
+                Prefs.useLatestScript(context),
+            ).toString()
+            return RunResult.parse(json, System.currentTimeMillis())
+        } finally {
+            temp.delete()
+        }
     }
 
-    /** Download the newest upstream script from GitHub. Returns (ok, version-or-error). */
+    /**
+     * Download a newer price script: the copy Royal Pebble verified, or jdeath's main branch when
+     * the advanced setting is on. Returns (ok, version-or-error).
+     */
     fun updateScript(context: Context): Pair<Boolean, String> {
-        val json = JSONObject(module(context).callAttr("update_script", workDir(context).absolutePath).toString())
+        val json = JSONObject(
+            module(context).callAttr(
+                "update_script", workDir(context).absolutePath, Prefs.followUpstream(context),
+            ).toString(),
+        )
         return if (json.optBoolean("ok")) true to json.optString("version")
         else false to json.optString("error")
     }

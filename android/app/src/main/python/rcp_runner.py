@@ -13,6 +13,7 @@ would run it on a computer. This module only:
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import locale
@@ -29,6 +30,11 @@ import urllib.request
 
 import yaml
 
+# Default source: the copy Royal Pebble has verified (see docs/PRICE_SCRIPT_UPDATES.md).
+VERIFIED_BASE_URL = (
+    "https://github.com/MrArron/royal-pebble/releases/download/price-script-latest/"
+)
+# Advanced setting "follow jdeath's main branch directly": untested upstream changes.
 UPSTREAM_RAW_URL = (
     "https://raw.githubusercontent.com/jdeath/CheckRoyalCaribbeanPrice/refs/heads/main/"
     "CheckRoyalCaribbeanPrice.py"
@@ -73,27 +79,48 @@ def downloaded_version(work_dir: str) -> str:
         return "unknown"
 
 
-def update_script(work_dir: str) -> str:
-    """Download the newest upstream script. Returns a JSON status string; never raises."""
+def _fetch(url: str, timeout: int = 60) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": "RoyalPriceCheck-Android"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def _looks_like_script(body: bytes) -> bool:
+    return len(body) >= 10_000 and b"def main" in body
+
+
+def update_script(work_dir: str, follow_upstream: bool = False) -> str:
+    """
+    Download a newer price script. Returns a JSON status string; never raises.
+
+    Default: the copy Royal Pebble has verified. VERIFIED.json names its sha256; the download must
+    match it. With follow_upstream, take jdeath's main branch directly (not verified by us).
+    Either way the file must compile, and the previous copy is kept on any failure.
+    """
     script, version_file = _downloaded_paths(work_dir)
     os.makedirs(os.path.dirname(script), exist_ok=True)
     tmp = script + ".download"
     try:
-        sha = ""
-        try:
-            req = urllib.request.Request(UPSTREAM_COMMITS_URL, headers={"Accept": "application/vnd.github+json",
-                                                                        "User-Agent": "RoyalPriceCheck-Android"})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                commits = json.loads(r.read().decode("utf-8"))
+        if follow_upstream:
+            sha = ""
+            try:
+                commits = json.loads(_fetch(UPSTREAM_COMMITS_URL, 20).decode("utf-8"))
                 if commits:
-                    sha = f"{commits[0]['sha']} {commits[0]['commit']['committer']['date'][:10]}"
-        except Exception:
-            pass  # version label is cosmetic; the download below is what matters
-
-        req = urllib.request.Request(UPSTREAM_RAW_URL, headers={"User-Agent": "RoyalPriceCheck-Android"})
-        with urllib.request.urlopen(req, timeout=60) as r:
-            body = r.read()
-        if len(body) < 10_000 or b"def main" not in body:
+                    sha = f"{commits[0]['sha']} {commits[0]['commit']['committer']['date'][:10]} (jdeath main, not verified)"
+            except Exception:  # noqa: BLE001
+                pass  # the label is cosmetic; the download is what matters
+            body = _fetch(UPSTREAM_RAW_URL)
+            label = sha or "jdeath main, not verified"
+        else:
+            manifest = json.loads(_fetch(VERIFIED_BASE_URL + "VERIFIED.json", 20).decode("utf-8"))
+            body = _fetch(VERIFIED_BASE_URL + SCRIPT_NAME)
+            if hashlib.sha256(body).hexdigest() != str(manifest.get("sha256", "")).lower():
+                raise ValueError("download does not match the verified checksum")
+            label = (
+                f"{str(manifest.get('upstreamCommit', ''))[:7]} {manifest.get('upstreamDate', '')}, "
+                f"verified by Royal Pebble {manifest.get('verifiedOn', '')}"
+            ).strip()
+        if not _looks_like_script(body):
             raise ValueError("downloaded file does not look like the price check script")
         with open(tmp, "wb") as f:
             f.write(body)
@@ -101,8 +128,8 @@ def update_script(work_dir: str) -> str:
         py_compile.compile(tmp, doraise=True)
         os.replace(tmp, script)
         with open(version_file, "w", encoding="utf-8") as f:
-            f.write(sha or "downloaded")
-        return json.dumps({"ok": True, "version": sha or "downloaded"})
+            f.write(label)
+        return json.dumps({"ok": True, "version": label})
     except Exception as e:  # noqa: BLE001
         with contextlib.suppress(OSError):
             os.remove(tmp)
@@ -118,7 +145,7 @@ def delete_downloaded(work_dir: str) -> None:
 def _choose_script(work_dir: str, prefer_downloaded: bool):
     script, _ = _downloaded_paths(work_dir)
     if prefer_downloaded and os.path.exists(script):
-        return script, f"latest from GitHub ({downloaded_version(work_dir)})"
+        return script, f"downloaded ({downloaded_version(work_dir)})"
     return os.path.join(BUNDLED_DIR, SCRIPT_NAME), f"bundled ({bundled_version()})"
 
 
@@ -257,6 +284,10 @@ def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = Tru
             sys.argv = old_argv
             with contextlib.suppress(OSError):
                 os.chdir(old_cwd)
+
+        # runtime-config.yaml holds the password; don't leave it on disk.
+        with contextlib.suppress(OSError):
+            os.remove(os.path.join(work_dir, "runtime-config.yaml"))
 
         summary = summarize(db_path) if db_path else {}
         summary.update({
