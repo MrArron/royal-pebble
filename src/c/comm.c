@@ -120,7 +120,10 @@ static int decode_notices(Notice *notices, const uint8_t *p, int length) {
         !codec_read_str(&p, end, n->old_venue, sizeof(n->old_venue))) {
       break;
     }
-    count++;
+    // A kind this build doesn't know (a newer phone app) is skipped.
+    if (n->kind <= NOTICE_LAST) {
+      count++;
+    }
   }
   return count;
 }
@@ -271,7 +274,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     Notice *notices = bytes && bytes->type == TUPLE_BYTE_ARRAY ? malloc(MAX_NOTICES * sizeof(Notice)) : NULL;
     if (notices) {
       int count = decode_notices(notices, bytes->value->data, bytes->length);
-      APP_LOG(APP_LOG_LEVEL_INFO, "%d of %d schedule change notices", count,
+      APP_LOG(APP_LOG_LEVEL_INFO, "%d of %d notices", count,
               (int)find_int(iter, MESSAGE_KEY_notice_count));
       if (count > 0 && s_on_notices) {
         s_on_notices(notices, count);
