@@ -42,7 +42,7 @@ An alert counts as sent only once the watch acknowledges it; otherwise it waits 
 At most 8 go in one message, the rest follow on the next check. Switching alerts on sends the
 alerts that are current right now, once. Code: `royal/.../alerts/` (detection, encoders, `WatchSender`
 interface; plain Kotlin, tested with a fake sender and against pack.js bytes) and
-`WatchAlertBridge.kt` (app side).
+`WatchAlertBridge.kt` (app side; sends through `WatchLink.sendNotice`, which waits for a slice in progress and opens Royal Pebble on the watch when another app is open).
 
 ## Script updates
 
