@@ -532,6 +532,15 @@ product id, else its title): gray band, top bar `Schedule`, `MOVED` /
 8:00p` (muted), and `1 of 3 · Down for next`. The settings page shows the same
 in **Changed since your last sync** (§12.2).
 
+**Booking notices, since 1.6.20** (sent by the optional Android companion app's
+price and check-in checks, `docs/WATCH_PROTOCOL.md` Booking notices): the same
+screen and buzz, top bar `Booking`, then `PRICE DROP` / `CHECK-IN OPEN` /
+`CHECKED IN` / `PAYMENT DUE`, the title (the add-on or the sailing) and two
+lines the phone wrote: bold `Save $20.00` over muted `Was $109 now $89.00`;
+`2 of 3 guests to go` / `Check in on Royal app`; `All guests checked in` /
+`Boarding 11:30a-12:00p`; `$1,235 due Dec 20` / `In 5 days`. They mix with
+schedule notices in one `1 of N` run, the top bar following each one.
+
 ### 8.5 Silent morning sync
 
 A wakeup at about 04:30 ship time (moved 5 minutes at a time, up to 04:55,
