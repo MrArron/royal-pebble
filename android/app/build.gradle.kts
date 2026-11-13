@@ -28,8 +28,8 @@ android {
         versionName = signingEnv["VERSION_NAME"] ?: "0.1.0"
         buildConfigField("String", "UPSTREAM_VERSION", "\"${upstreamVersion.replace("\"", "")}\"")
         ndk {
-            // Phones/tablets (arm64) and the emulator (x86_64)
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            // Real phones only (arm64). Add "x86_64" here to run on the Android emulator.
+            abiFilters += listOf("arm64-v8a")
         }
     }
 
