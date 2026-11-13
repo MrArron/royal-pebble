@@ -134,6 +134,39 @@ test('settings page: opened, closed, setting changes and log settings', function
   assert.ok(html.indexOf('setting  theme: (none) -> \\"dark\\"') !== -1);
 });
 
+// docs/WATCH_PROTOCOL.md, Android companion app: with the Android app serving
+// the watch, this side sends nothing and answers nothing; inside the app (its
+// host sets __host.android) the same file always serves.
+test('with the Android app serving the watch, PebbleKit JS stays quiet', function() {
+  var c = companion({settings: JSON.stringify({androidServes: true})});
+  c.handlers.ready();
+  c.handlers.appmessage({payload: {msg_type: 10}});
+  c.handlers.appmessage({payload: {msg_type: 15, dir_ref: 0}});
+  c.handlers.appmessage({payload: {msg_type: 19, voice_seq: 1, voice_text: 'where is the theater', voice_state: 0}});
+  c.run();
+  assert.strictEqual(c.sent.length, 0, JSON.stringify(c.sent.map(function(m) { return m.msg_type; })));
+  assert.ok(has(c.log(), /^phone  the Android app serves the watch: this side stays quiet$/), c.log().join('\n'));
+
+  // Turned off on the settings page: a slice goes out at once.
+  c.handlers.webviewclosed({response: JSON.stringify({action: 'save', androidServes: false})});
+  c.run();
+  assert.ok(c.sent.length > 0 && c.sent[0].msg_type === 1);
+  assert.strictEqual(JSON.parse(c.store.settings).androidServes, false);
+  assert.ok(has(c.log(), /^setting  androidServes: true -> false$/), c.log().join('\n'));
+});
+
+test('inside the Android app the companion serves even with androidServes saved', function() {
+  global.__host = {android: true};
+  try {
+    var c = companion({settings: JSON.stringify({androidServes: true})});
+    c.handlers.ready();
+    c.run();
+    assert.ok(c.sent.length > 0 && c.sent[0].msg_type === 1);
+  } finally {
+    delete global.__host;
+  }
+});
+
 // A saved cruise on Harmony (made-up), sailing yesterday.
 function savedCruise() {
   var d = new Date(Date.now() - 24 * 3600 * 1000);

@@ -51,7 +51,7 @@ class WatchServerSessionTest {
         val sent = ArrayList<WireDict>()
         val runtime = QuickJsRuntime()
         val server = WatchServer(
-            scope = this, runtime = runtime, script = JsBundle.build(JsBundle.Dir(File(repo, "src/pkjs"))),
+            scope = this, runtime = runtime, script = { JsBundle.build(JsBundle.Dir(File(repo, "src/pkjs"))) },
             keys = keys, store = store, sink = { sent += it; true }, clock = { now }, pinClock = true,
         )
         server.start(null) { ms -> -TimeZone.getDefault().getOffset(ms) / 60000 }
@@ -78,6 +78,7 @@ class WatchServerSessionTest {
             val app = runApp(r["spec"]!!.jsonObject, dir)
             val js = r["node"]!!.jsonObject
             val jsSent = js["sent"]!!.jsonArray.map { AppMessageCodec.toWire(it.jsonObject, keys) }
+            assertEquals("$scenario: companion loads", null, app.server.startError)
             assertEquals("$scenario: engine problems", 0, app.server.errors)
             assertEquals("$scenario: time zone", null, app.server.timeZoneDrift)
             assertEquals("$scenario: message count", jsSent.size, app.sent.size)

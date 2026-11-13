@@ -90,6 +90,9 @@ chaquopy {
 
 dependencies {
     implementation(project(":royal"))
+    implementation(project(":watch"))
+    // QuickJS, which runs src/pkjs/index.js to serve the watch (android/watch).
+    implementation("app.cash.zipline:zipline-android:1.28.0")
     // The watch link (docs/WATCH_PROTOCOL.md, Android companion app).
     implementation("io.rebble.pebblekit2:client:1.3.2")
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

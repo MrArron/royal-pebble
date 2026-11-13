@@ -47,7 +47,8 @@ fun interface WatchSink {
 class WatchServer(
     private val scope: CoroutineScope,
     private val runtime: JsRuntime,
-    private val script: String,
+    /** The bundled phone companion (JsBundle.build), made on the engine's thread. */
+    private val script: () -> String,
     private val keys: MessageKeys,
     private val store: StoreDir,
     private val sink: WatchSink,
@@ -82,6 +83,11 @@ class WatchServer(
     var lastError: String? = null
         private set
 
+    /** Why the companion didn't load, or null. */
+    @Volatile
+    var startError: String? = null
+        private set
+
     /** Messages that couldn't be sent because they didn't convert (a bug in the JS); for the app log. */
     var badMessages = 0
         private set
@@ -94,16 +100,23 @@ class WatchServer(
     fun start(watchInfo: String?, expectedOffset: (Long) -> Int) {
         check(loop == null) { "started twice" }
         loop = scope.launch {
-            runtime.evaluate(JsBundle.hostScript(), "host.js")
-            if (pinClock) eval("__host.setClock(${clock()})")
-            eval("__host.setConsole(${onConsole != null})")
-            eval("__host.setWatch(${str(watchInfo)})")
-            eval("__host.load(${str(JsonObject(store.readAll().mapValues { JsonPrimitive(it.value) }).toString())})")
-            runtime.evaluate(script, "royal-pebble-pkjs.js")
-            val now = clock()
-            val got = (runtime.evaluate("String(new Date($now).getTimezoneOffset())", "tz.js") as String).toInt()
-            timeZoneDrift = (got - expectedOffset(now)).takeIf { it != 0 }
-            drain()
+            try {
+                runtime.evaluate(JsBundle.hostScript(), "host.js")
+                if (pinClock) eval("__host.setClock(${clock()})")
+                eval("__host.setConsole(${onConsole != null})")
+                eval("__host.setWatch(${str(watchInfo)})")
+                eval("__host.load(${str(JsonObject(store.readAll().mapValues { JsonPrimitive(it.value) }).toString())})")
+                runtime.evaluate(script(), "royal-pebble-pkjs.js")
+                val now = clock()
+                val got = (runtime.evaluate("String(new Date($now).getTimezoneOffset())", "tz.js") as String).toInt()
+                timeZoneDrift = (got - expectedOffset(now)).takeIf { it != 0 }
+                drain()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // The companion didn't load: nothing is answered (the app says so).
+                startError = e.message ?: e.toString()
+            }
             for (input in inputs) {
                 if (input is Input.Call) {
                     try {
@@ -113,6 +126,7 @@ class WatchServer(
                     }
                     continue
                 }
+                if (startError != null) continue
                 // index.js's guard() logs what it throws in the usage log; what it
                 // queued before that still goes out.
                 try {
@@ -149,6 +163,11 @@ class WatchServer(
     /** A message from the watch: PebbleKit JS's `appmessage`. */
     fun received(dict: WireDict) {
         inputs.trySend(Input.Message(dict))
+    }
+
+    /** What Pebble.getActiveWatchInfo() returns from now on (JSON), once the app knows the watch. */
+    fun watchInfo(json: String?) {
+        inputs.trySend(Input.Call({ if (startError == null) eval("__host.setWatch(${str(json)})") }, CompletableDeferred()))
     }
 
     /** Runs [block] on the engine's thread between inputs (tests: move the pinned clock). */
