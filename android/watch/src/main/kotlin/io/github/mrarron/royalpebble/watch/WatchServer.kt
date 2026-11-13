@@ -63,6 +63,7 @@ class WatchServer(
         object Ready : Input
         class Message(val dict: WireDict) : Input
         object Tick : Input
+        object StoreChanged : Input
         class Call(val block: () -> Unit, val done: CompletableDeferred<Unit>) : Input
     }
 
@@ -151,6 +152,7 @@ class WatchServer(
                 eval("__host.event('appmessage', ${str(AppMessageCodec.toJs(input.dict, keys).toString())})")
             }
             Input.Tick -> sync()
+            Input.StoreChanged -> { sync(); eval("__host.event('storechanged', null)") }
             is Input.Call -> {}
         }
     }
@@ -158,6 +160,14 @@ class WatchServer(
     /** Royal Pebble opened on the watch: PebbleKit JS's `ready` (index.js sends a slice). */
     fun ready() {
         inputs.trySend(Input.Ready)
+    }
+
+    /**
+     * The app's own screens saved cruise data or settings in the store: the JS
+     * reads the changes and sends the watch a fresh slice (index.js `storechanged`).
+     */
+    fun storeChanged() {
+        inputs.trySend(Input.StoreChanged)
     }
 
     /** A message from the watch: PebbleKit JS's `appmessage`. */

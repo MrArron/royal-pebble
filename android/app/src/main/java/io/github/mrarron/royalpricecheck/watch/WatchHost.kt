@@ -67,6 +67,16 @@ object WatchHost {
         s.received(dict)
     }
 
+    /**
+     * The app saved cruise data or settings in the store (a download, a
+     * settings screen, a star): while serving, the watch gets a fresh slice.
+     * Does nothing when the app isn't serving the watch.
+     */
+    @Synchronized
+    fun storeChanged() {
+        server?.storeChanged()
+    }
+
     /** Royal Pebble closed on the watch. */
     @Synchronized
     fun closed() = stop()

@@ -60,6 +60,12 @@ class WatchServerSessionTest {
             when {
                 "ready" in s -> server.ready()
                 "message" in s -> server.received(AppMessageCodec.toWire(s["message"]!!.jsonObject, keys))
+                "storeChanged" in s -> {
+                    // Written by someone else (the app's screens), as CruiseStore does.
+                    val other = StoreDir(dir)
+                    for ((k, v) in s["storeChanged"]!!.jsonObject) other.write(k, v.jsonPrimitive.content)
+                    server.storeChanged()
+                }
                 "advance" in s -> {
                     now += s["advance"]!!.jsonPrimitive.long
                     server.clockMoved()
