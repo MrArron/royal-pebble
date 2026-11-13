@@ -122,6 +122,48 @@ buffers.
 
 The phone also sends a slice by itself whenever the app starts (`ready`).
 
+## Android companion app (PebbleKit Android 2)
+
+Phase 0 of the native Android app checks whether an Android app can share the
+watch with PebbleKit JS. The test app is `android/linktest/` (see its README).
+What follows is read from the Core Pebble app's source (`coredevices/mobileapp`,
+`libpebble3`, as of 2026-11-08) and PebbleKit Android 2 1.3.2, and **confirmed on
+the Pebble Time 2 with a Pixel on 2026-11-13** (Royal Pebble 1.6.19, Pebble app
+`coredevices.coreapp`): the app's NOTICE showed on the watch (watch ACKed), and
+the app's log listed REQUEST, SAVED, LOG, DIR_REQUEST, ROUTE_REQUEST and VOICE
+while PebbleKit JS answered them as usual.
+
+- **The watch app has to list the Android app.** `package.json` has a
+  `pebble.companionApp.android` entry naming the Android package
+  (`io.github.mrarron.royalpebble.linktest` for now), with `required: false`.
+  Without it the Pebble app never starts a PebbleKit Android 2 session for
+  Royal Pebble, and every send from an Android app fails with
+  `FailedDifferentAppOpen`. `required: false` means a phone without the
+  Android app gets no "needs a companion app" error and nothing changes for it.
+- **Both get every watch → phone message.** When Royal Pebble opens on the
+  watch, the Pebble app starts PebbleKit JS and, because the app lists a
+  companion, a PebbleKit Android 2 session too (`appMessageToMultipleCompanions`,
+  on by default and not a user setting). Each message from the watch goes to
+  both. Both answer it, so the watch can get two ACKs for one message; the first
+  one settles it. The Android app should always ACK, never NACK.
+- **Both can send.** PebbleKit JS sends as today. The Android app can send
+  while Royal Pebble is open on the watch (the session ends when it closes) and
+  can open it with `startAppOnTheWatch`. Messages from both go through the same
+  AppMessage channel, so two senders must not interleave a slice
+  (`BEGIN`…`END`); only one side should own slices at a time.
+- **The Android app is optional.** If it isn't installed, the Pebble app tries
+  to bind it, fails, stays quiet (`required: false`) and leaves the replies to
+  JS. So the watch works with or without it.
+- **Permission.** The Pebble app may ask the first time the Android app talks to
+  Royal Pebble (Pebble app permissions, 2026-10); allow it.
+- **Keys.** AppMessage keys are 10000 + the key's index in `messageKeys`
+  (`build/js/message_keys.json`): `msg_type` 10000, `notice_count` 10026,
+  `notices` 10027. Reordering `messageKeys` changes them for both phone sides.
+- **Installing.** CloudPebble rebuilds the manifest from its own project
+  fields and drops `companionApp`, so a build with this entry must come from
+  `pebble build` (the `.pbw` in `build/`), installed by opening it in the
+  Pebble app.
+
 ## Packed events
 
 `EVENTS.events` is a byte array of events back to back, little-endian:
