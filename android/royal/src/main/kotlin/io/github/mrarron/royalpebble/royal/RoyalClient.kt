@@ -78,7 +78,7 @@ class RoyalClient(
         if (res.status == 403) return Reply(res.status, null, ERR_REFUSED)
         if (res.status >= 400) return Reply(res.status, null, errStatus(res.status))
         return try {
-            Reply(res.status, Json.parseToJsonElement(res.body), null)
+            Reply(res.status, parseJson(res.body), null)
         } catch (e: Exception) {
             Reply(res.status, null, ERR_INVALID)
         }

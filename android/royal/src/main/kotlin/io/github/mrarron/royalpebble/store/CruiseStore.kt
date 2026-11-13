@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
+import io.github.mrarron.royalpebble.royal.parseJson
 import java.io.File
 import java.io.IOException
 
@@ -67,7 +68,7 @@ class CruiseStore(
         val f = file(key)
         if (!f.exists()) return null
         return try {
-            Json.parseToJsonElement(f.readText(Charsets.UTF_8))
+            parseJson(f.readText(Charsets.UTF_8))
         } catch (e: Exception) {
             null
         }

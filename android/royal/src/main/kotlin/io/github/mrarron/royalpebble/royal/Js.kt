@@ -12,6 +12,19 @@ import kotlin.math.floor
 // null), `x || {}` falls back on any falsy value, String(x) spells numbers
 // without a trailing ".0". Keep them boring; the parity tests lean on them.
 
+/**
+ * JSON.parse: like Json.parseToJsonElement, but an unquoted word on its own
+ * ("<html>", which kotlinx reads as a literal) is not valid data.
+ */
+fun parseJson(text: String): JsonElement {
+    val e = kotlinx.serialization.json.Json.parseToJsonElement(text)
+    if (e is JsonPrimitive && e !is JsonNull && !e.isString && e.content != "true" && e.content != "false" &&
+        !Regex("-?(0|[1-9]\\d*)(\\.\\d+)?([eE][+-]?\\d+)?").matches(e.content)) {
+        throw IllegalArgumentException("not JSON")
+    }
+    return e
+}
+
 internal operator fun JsonElement?.get(key: String): JsonElement? = (this as? JsonObject)?.get(key)
 
 /** JS `x || {}` then `.key`: an object, or empty. */
@@ -134,5 +147,6 @@ internal fun toJson(v: Any?): JsonElement = when (v) {
     is Double -> jsNumber(v)
     is Number -> JsonPrimitive(v)
     is List<*> -> JsonArray(v.map { toJson(it) })
+    is Map<*, *> -> JsonObject(v.entries.associate { (k, x) -> k.toString() to toJson(x) })
     else -> error("not JSON: $v")
 }

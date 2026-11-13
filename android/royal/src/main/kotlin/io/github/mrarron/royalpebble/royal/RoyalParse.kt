@@ -354,7 +354,7 @@ object RoyalParse {
             }
         }
         return try {
-            val sub = kotlinx.serialization.json.Json.parseToJsonElement(out.toString())["sub"]
+            val sub = parseJson(out.toString())["sub"]
             if (sub.truthy()) sub.jsString() else null
         } catch (e: Exception) {
             null
