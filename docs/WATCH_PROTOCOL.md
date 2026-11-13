@@ -127,8 +127,11 @@ The phone also sends a slice by itself whenever the app starts (`ready`).
 Phase 0 of the native Android app checks whether an Android app can share the
 watch with PebbleKit JS. The test app is `android/linktest/` (see its README).
 What follows is read from the Core Pebble app's source (`coredevices/mobileapp`,
-`libpebble3`, as of 2026-11-08) and PebbleKit Android 2 1.3.2; **not yet
-confirmed on the Pebble Time 2** (the test checklist is in the linktest README).
+`libpebble3`, as of 2026-11-08) and PebbleKit Android 2 1.3.2, and **confirmed on
+the Pebble Time 2 with a Pixel on 2026-11-13** (Royal Pebble 1.6.19, Pebble app
+`coredevices.coreapp`): the app's NOTICE showed on the watch (watch ACKed), and
+the app's log listed REQUEST, SAVED, LOG, DIR_REQUEST, ROUTE_REQUEST and VOICE
+while PebbleKit JS answered them as usual.
 
 - **The watch app has to list the Android app.** `package.json` has a
   `pebble.companionApp.android` entry naming the Android package
