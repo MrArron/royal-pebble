@@ -2,7 +2,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.chaquo.python")
 }
@@ -18,12 +17,12 @@ val upstreamVersion = rootProject.file("app/src/main/python/upstream/UPSTREAM_VE
 
 android {
     namespace = "io.github.mrarron.royalpricecheck"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "io.github.mrarron.royalpricecheck"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = (signingEnv["VERSION_CODE"] ?: "1").toInt()
         versionName = signingEnv["VERSION_NAME"] ?: "0.1.0"
         buildConfigField("String", "UPSTREAM_VERSION", "\"${upstreamVersion.replace("\"", "")}\"")
@@ -63,9 +62,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -94,6 +90,11 @@ chaquopy {
 
 dependencies {
     implementation(project(":royal"))
+    implementation(project(":watch"))
+    // QuickJS, which runs src/pkjs/index.js to serve the watch (android/watch).
+    implementation("app.cash.zipline:zipline-android:1.28.0")
+    // The watch link (docs/WATCH_PROTOCOL.md, Android companion app).
+    implementation("io.rebble.pebblekit2:client:1.3.2")
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     implementation("androidx.core:core-ktx:1.15.0")
@@ -104,6 +105,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     testImplementation("junit:junit:4.13.2")
 }

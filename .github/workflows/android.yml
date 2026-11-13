@@ -5,6 +5,8 @@ on:
     paths:
       - "android/**"
       - "test/fixtures/**"
+      - "src/pkjs/**"
+      - "package.json"
       - ".github/workflows/android.yml"
     tags:
       - "android-v*"
@@ -12,6 +14,8 @@ on:
     paths:
       - "android/**"
       - "test/fixtures/**"
+      - "src/pkjs/**"
+      - "package.json"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
@@ -54,7 +58,7 @@ jobs:
           echo "VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
 
       - name: Unit tests
-        run: ./gradlew --no-daemon :royal:test testDebugUnitTest
+        run: ./gradlew --no-daemon :royal:test :watch:test testDebugUnitTest
 
       - name: Build APK
         run: ./gradlew --no-daemon assembleRelease
