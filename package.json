@@ -1,7 +1,7 @@
 {
   "name": "cruise-watch",
   "author": "MrArron",
-  "version": "1.6.20",
+  "version": "1.6.21",
   "keywords": [
     "pebble-app"
   ],
@@ -24,6 +24,9 @@
         "url": "https://github.com/MrArron/royal-pebble",
         "required": false,
         "apps": [
+          {
+            "package": "io.github.mrarron.royalpricecheck"
+          },
           {
             "package": "io.github.mrarron.royalpebble.linktest"
           }
