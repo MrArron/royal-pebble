@@ -786,6 +786,15 @@ Events, Me; **Save** is a pill at the top right of every screen. The page
 can't talk to the phone script while open; everything returns on close
 (`pebblejs://close#`).
 
+**Android app.** The native Cruise screens (`android/`) wear the same look:
+the palette above as a fixed Material 3 scheme (`ui/RoyalTheme.kt`, no dynamic
+colour), a dark scheme in the same teal for a phone set to dark (the settings
+page itself is light only), bottom navigation for the six screens (Cruise, Days,
+Filters, Events, Me, Share), the screen name with a **Save** pill at the top
+right (Me holds its edits until Save; the other screens save as you go, so the
+pill reads `Saved`), `From booking` and `Edited` chips, and a watch-colours
+preview card under Me > Theme.
+
 ### 12.1 Shared patterns
 
 - Values filled from somewhere carry a chip (`From booking`, `From cabin

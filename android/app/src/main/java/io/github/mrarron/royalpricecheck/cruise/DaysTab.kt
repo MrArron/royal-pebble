@@ -62,10 +62,13 @@ private fun DayCard(vm: CruiseViewModel, d: ItineraryDay, v: SettingsRules.DayVi
             Text("Day ${d.day} · ${CruiseData.sailText(d.date)}", style = MaterialTheme.typography.labelLarge)
             Text(v.port.ifBlank { "Day ${d.day}" } + if (v.tender) "  (tender)" else "", style = MaterialTheme.typography.titleMedium)
             val summary = when {
-                v.allAboard != null -> "All aboard ${mmText(v.allAboard)}" + if (v.edited) " · Edited" else ""
-                else -> v.type.lowercase().replaceFirstChar { it.uppercase() } + if (v.edited) " · Edited" else ""
+                v.allAboard != null -> "All aboard ${mmText(v.allAboard)}"
+                else -> v.type.lowercase().replaceFirstChar { it.uppercase() }
             }
-            Text(summary)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(summary)
+                if (v.edited) io.github.mrarron.royalpricecheck.ui.StatusChip("Edited", io.github.mrarron.royalpricecheck.ui.ChipKind.Edited)
+            }
             if (!expanded) return@Column
 
             // Ship clock vs local clock.
