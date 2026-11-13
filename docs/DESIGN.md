@@ -536,7 +536,7 @@ in **Changed since your last sync** (§12.2).
 price and check-in checks, `docs/WATCH_PROTOCOL.md` Booking notices): the same
 screen and buzz, top bar `Booking`, then `PRICE DROP` / `CHECK-IN OPEN` /
 `CHECKED IN` / `PAYMENT DUE`, the title (the add-on or the sailing) and two
-lines the phone wrote: bold `Save $20.00` over muted `Was $109 now $89.00`;
+lines the phone wrote: bold `Save $20.00` over muted `Was $109 now $89`;
 `2 of 3 guests to go` / `Check in on Royal app`; `All guests checked in` /
 `Boarding 11:30a-12:00p`; `$1,235 due Dec 20` / `In 5 days`. They mix with
 schedule notices in one `1 of N` run, the top bar following each one.

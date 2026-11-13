@@ -35,13 +35,15 @@ test('money', function() {
   assert.strictEqual(pack.money(12355), '$12,355');
   assert.strictEqual(pack.money(0.1 + 0.2), '$0.30');
   assert.strictEqual(pack.money(-5), '-$5.00');
+  assert.strictEqual(pack.money(89.5, '$', true), '$90');
   assert.strictEqual(pack.money(45, '£'), '£45.00');
 });
 
 test('price drop', function() {
   var n = pack.priceDropNotice({item: 'The Key', paid: 109, now: 89});
   assert.deepStrictEqual(n, {kind: pack.NOTICE_PRICE, from: -1, to: -1, title: 'The Key',
-                             venue: 'Save $20.00', oldVenue: 'Was $109 now $89.00'});
+                             venue: 'Save $20.00', oldVenue: 'Was $109 now $89'});
+  assert.strictEqual(pack.priceDropNotice({item: 'Wi-Fi', paid: 25, now: 19.99}).oldVenue, 'Was $25.00 now $19.99');
   // A big cabin drop still fits the 23-byte line.
   var cabin = pack.priceDropNotice({item: 'Balcony cabin', paid: 12355.4, now: 11235.4});
   assert.strictEqual(cabin.oldVenue, 'Was $12,355 now $11,235');

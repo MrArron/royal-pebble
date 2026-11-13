@@ -373,13 +373,13 @@ tests in `test/pkjs/booking-notices.test.js`):
 
 | `kind` | Head | Title | First line | Second line |
 |---|---|---|---|---|
-| 4 | `PRICE DROP` | the item | `Save $20.00` | `Was $109 now $89.00` |
+| 4 | `PRICE DROP` | the item | `Save $20.00` | `Was $109 now $89` |
 | 5 | `CHECK-IN OPEN` | the sailing | `2 of 3 guests to go` or `Not checked in yet` | `Closes Dec 9` or `Check in on Royal app` |
 | 6 | `CHECKED IN` | the sailing | `All guests checked in` | `Boarding 11:30a-12:00p`, or empty |
 | 7 | `PAYMENT DUE` | the sailing | `$1,235 due Dec 20` | `In 5 days`, `Due tomorrow`, `Due today`, `Overdue` |
 
-Amounts show cents below $100 and whole dollars from $100, so two prices fit
-one line. The top bar reads `Booking` on these and `Schedule` on the others.
+Amounts show cents below $100 and whole dollars from $100 (both prices in
+whole dollars when either is), so two prices fit one line. The top bar reads `Booking` on these and `Schedule` on the others.
 A watch app before 1.6.20 would show kinds 4-7 as `CANCELLED`, so install
 1.6.20 or later on the watch before the Android app sends them. An Android-app NOTICE needs no slice and doesn't touch stars, so
 it can't disturb a JS sync, but it shouldn't be sent between `BEGIN` and `END`.

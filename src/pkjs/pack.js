@@ -152,12 +152,14 @@ var NOTICE_CHECKIN_DONE = 6;
 var NOTICE_PAYMENT = 7;
 var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// "$89.50", or whole dollars from $100 so two prices fit a line: "$1,235".
-function money(amount, symbol) {
+// "$89.50", or whole dollars from $100 (or when `whole` is set) so two prices
+// fit a line: "$1,235".
+function money(amount, symbol, whole) {
   var cents = Math.round(Math.abs(amount) * 100);
-  var whole = cents >= 10000 ? String(Math.round(cents / 100)) : String(Math.floor(cents / 100));
-  whole = whole.replace(/\B(?=(\d{3})+$)/g, ',');
-  var text = (symbol || '$') + whole + (cents >= 10000 ? '' : '.' + ('0' + cents % 100).slice(-2));
+  var dollars = whole || cents >= 10000;
+  var text = String(dollars ? Math.round(cents / 100) : Math.floor(cents / 100));
+  text = (symbol || '$') + text.replace(/\B(?=(\d{3})+$)/g, ',') +
+    (dollars ? '' : '.' + ('0' + cents % 100).slice(-2));
   return (amount < 0 ? '-' : '') + text;
 }
 
@@ -173,8 +175,10 @@ function bookingNotice(kind, title, first, second) {
 
 // An add-on or cabin price fell below what was paid: {item, paid, now, symbol}.
 function priceDropNotice(d) {
+  // Both prices in one format: whole dollars when either is $100 or more.
+  var whole = Math.max(Math.abs(d.paid), Math.abs(d.now)) >= 99.995;
   return bookingNotice(NOTICE_PRICE, d.item, 'Save ' + money(d.paid - d.now, d.symbol),
-                       'Was ' + money(d.paid, d.symbol) + ' now ' + money(d.now, d.symbol));
+                       'Was ' + money(d.paid, d.symbol, whole) + ' now ' + money(d.now, d.symbol, whole));
 }
 
 // Online check-in is open: {sailing, guests, done, closes ("YYYY-MM-DD", optional)}.
