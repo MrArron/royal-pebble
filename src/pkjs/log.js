@@ -17,7 +17,7 @@
 var slice = require('./slice');
 
 // Kept in step with package.json's version (test/pkjs/log.test.js checks).
-var APP_VERSION = '1.6.21';
+var APP_VERSION = '1.6.22';
 
 var STORE_LOG = 'usageLog';     // {on, label, entries, chars, dropped, version}
 var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
@@ -436,6 +436,11 @@ var STATUS = {'-1': 'E_ERROR', '-2': 'E_UNKNOWN', '-3': 'E_INTERNAL', '-4': 'E_I
               '-5': 'E_OUT_OF_MEMORY', '-6': 'E_OUT_OF_STORAGE', '-7': 'E_OUT_OF_RESOURCES', '-8': 'E_RANGE',
               '-9': 'E_DOES_NOT_EXIST', '-10': 'E_INVALID_OPERATION', '-11': 'E_BUSY', '-12': 'E_AGAIN'};
 
+// A watch message's name, "REQUEST (10)".
+function msgTypeName(v) {
+  return named(MSG_TYPES, v);
+}
+
 function named(table, v) {
   var n = table[v];
   return n ? n + ' (' + v + ')' : String(v);
@@ -571,7 +576,8 @@ function watchEntry(e, sailIso) {
 }
 
 // The export header. `info`: {bundle, watch (Pebble.getActiveWatchInfo()),
-// phone (text), label, count, dropped, now (Date)}.
+// phone (text), label, count, dropped, now (Date), serving (who serves the
+// watch, index.js servingText; optional)}.
 function header(info) {
   var b = info.bundle;
   var w = info.watch;
@@ -585,10 +591,11 @@ function header(info) {
     'App ' + APP_VERSION + ', ' + (b ? 'bundle v' + (b.v || '?') + ' made ' + (b.generated || '?') +
       ', ship ' + ((b.ship && b.ship.code) || '?') + ', sails ' + b.sailDate : 'no cruise saved (demo)'),
     'Watch ' + ((w && (w.model || w.platform)) || 'unknown') + ', firmware ' + fw + '; phone ' + (info.phone || 'unknown'),
-    'Device: ' + (info.label || '(no label)'),
+    'Device: ' + (info.label || '(no label)')
+  ].concat(info.serving ? ['Serving: ' + info.serving] : []).concat([
     info.count + ' entries' + (info.dropped ? ', ' + info.dropped + ' oldest dropped when full' : '') +
       '; times on the phone clock, now ' + zone
-  ].join('\n');
+  ]).join('\n');
 }
 
 // "Android 17, Pixel 11 Pro XL, WebView Chrome 153.0.8010.36" from the phone
@@ -645,5 +652,6 @@ module.exports = {
   encodedLength: encodedLength,
   header: header,
   phoneFromUa: phoneFromUa,
-  diffSettings: diffSettings
+  diffSettings: diffSettings,
+  msgTypeName: msgTypeName
 };

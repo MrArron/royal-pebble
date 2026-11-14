@@ -21,10 +21,13 @@ import java.util.concurrent.TimeUnit
 /**
  * The gate for serving the watch from the app: for the same saved data and the
  * same watch session, the app (WatchServer running the bundled src/pkjs in
- * QuickJS) sends the watch exactly what PebbleKit JS sends (index.js in Node,
- * android/watch/src/test/js/session.js), compared as AppMessages byte for byte,
- * and leaves the same storage behind, usage log included. Needs `node`
- * (skipped without it; CI and the Pebble SDK machine have it).
+ * QuickJS) sends the watch exactly what the same code sends in Node
+ * (android/watch/src/test/js/session.js), compared as AppMessages byte for byte,
+ * and leaves the same storage behind, usage log included. Both run as the
+ * Android app (__host.android, the same host info), so they differ from
+ * PebbleKit JS only where index.js means to: the usage log's "[app]" tag and
+ * the empty cruise in place of the demo. Needs `node` (skipped without it; CI
+ * and the Pebble SDK machine have it).
  */
 class WatchServerSessionTest {
     private val repo = File(System.getProperty("repo") ?: "../..")
@@ -53,6 +56,7 @@ class WatchServerSessionTest {
         val server = WatchServer(
             scope = this, runtime = runtime, script = { JsBundle.build(JsBundle.Dir(File(repo, "src/pkjs"))) },
             keys = keys, store = store, sink = { sent += it; true }, clock = { now }, pinClock = true,
+            hostInfo = spec["host"]?.toString(),
         )
         server.start(null) { ms -> -TimeZone.getDefault().getOffset(ms) / 60000 }
         for (step in spec["steps"]!!.jsonArray) {
@@ -100,8 +104,8 @@ class WatchServerSessionTest {
     }
 
     @Test
-    fun demoSessionIsTheSameAsPebbleKitJs() = check("demo")
+    fun noCruiseSessionIsTheSameAsInNode() = check("empty")
 
     @Test
-    fun savedSailingSessionIsTheSameAsPebbleKitJs() = check("sailing")
+    fun savedSailingSessionIsTheSameAsInNode() = check("sailing")
 }

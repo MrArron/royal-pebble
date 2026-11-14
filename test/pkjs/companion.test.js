@@ -25,8 +25,14 @@ function testAt(name, now, fn) {
   });
 }
 
-// A fresh companion: {handlers, store, sent, opened, flushTimers()}.
-function companion(initial) {
+// A fresh companion: {handlers, store, sent, opened, flushTimers()}. With
+// `host`, it runs as in the Android app (host.js's __host, android/watch).
+function companion(initial, host) {
+  if (host) {
+    global.__host = {android: true, info: host};
+  } else {
+    delete global.__host;
+  }
   var store = {};
   Object.keys(initial || {}).forEach(function(k) { store[k] = initial[k]; });
   var timers = [];
@@ -75,9 +81,44 @@ test('start-up and a watch sync are logged with the watch and the send', functio
   c.handlers.appmessage({payload: {msg_type: 10}});
   var lines = c.log();
   assert.ok(has(lines, /^phone  companion started .*watch pebble_time_2 firmware 4\.9\.0/), lines.join('\n'));
-  assert.ok(has(lines, /^sync  watch asked for data$/));
-  assert.ok(has(lines, /^slice  demo \d+, day -?\d+, \d+ events, \d+ alerts, \d+ messages, built in \d+ ms, sent in \d+ ms, about \d+ bytes$/),
+  assert.ok(has(lines, /^phone  \[js\] PebbleKit JS \d+\.\d+\.\d+; settings page switch Android app serves the watch: off, so this side serves the watch; data: demo \d+$/),
             lines.join('\n'));
+  assert.ok(has(lines, /^sync  \[js\] watch asked for data$/));
+  assert.ok(has(lines, /^slice  \[js\] demo \d+, day -?\d+, \d+ events, \d+ alerts, \d+ messages, built in \d+ ms, sent in \d+ ms, about \d+ bytes$/),
+            lines.join('\n'));
+});
+
+test('in the Android app with no cruise saved: an empty cruise, not the demo, and who serves', function() {
+  var c = companion({}, {version: '0.1.0-abc1234', commit: 'abc1234', serves: true, wireLog: false});
+  c.handlers.ready();
+  c.run();
+  var begin = c.sent.filter(function(m) { return m.msg_type === 1; })[0];
+  var info = c.sent.filter(function(m) { return m.msg_type === 2; })[0];
+  assert.strictEqual(begin.is_demo, 0);
+  assert.strictEqual(begin.event_count, 0);
+  assert.strictEqual(begin.alarm_count, 0);
+  assert.strictEqual(begin.day_kind, 2, 'no cruise day');
+  assert.strictEqual(begin.day_status, 'NO CRUISE YET');
+  assert.strictEqual(begin.day_index, 0, 'not a countdown to a sailing');
+  assert.strictEqual(info.info_clock, 'No cruise downloaded in the app');
+  var lines = c.log();
+  assert.ok(has(lines, /^phone  \[app\] Android app 0\.1\.0-abc1234 \(abc1234\) serves the watch with JS [\d.]+; app switch App serves the watch: on, watch message log: off; data: no cruise$/),
+            lines.join('\n'));
+  assert.ok(has(lines, /^slice  \[app\] no cruise, day 0, 0 events, 0 alerts/), lines.join('\n'));
+  // Next demo does nothing here, and star changes aren't kept.
+  c.sent.length = 0;
+  c.handlers.appmessage({payload: {msg_type: 12}});
+  c.run();
+  assert.strictEqual(c.sent.length, 0);
+  // A download in the app: the real cruise from then on.
+  c.store.bundle = JSON.stringify({format: 'cruise-watch', v: 1, generated: '2027-03-01T12:00:00Z',
+                                   ship: {code: 'HM', name: 'Harmony of the Seas'}, sailDate: '2027-03-07',
+                                   itinerary: [], schedule: {cats: [], venues: [], events: []}});
+  c.handlers.storechanged();
+  c.run();
+  assert.ok(has(c.log(), /^sync  \[app\] the Android app saved new data: cruise HM 2027-03-07$/), c.log().join('\n'));
+  assert.strictEqual(c.sent.filter(function(m) { return m.msg_type === 1; })[0].day_status.indexOf('NO CRUISE'), -1);
+  delete global.__host;
 });
 
 test('the watch storage report is logged only when it changes', function() {
@@ -87,9 +128,9 @@ test('the watch storage report is logged only when it changes', function() {
   c.handlers.appmessage({payload: report});
   report.saved_bytes = 4314;
   c.handlers.appmessage({payload: report});
-  var lines = c.log().filter(function(l) { return /^watch  storage/.test(l); });
-  assert.deepStrictEqual(lines, ['watch  storage: schedule uses 193 of 1048576 bytes',
-                                 'watch  storage: schedule uses 4314 of 1048576 bytes']);
+  var lines = c.log().filter(function(l) { return /^watch  \[js\] storage/.test(l); });
+  assert.deepStrictEqual(lines, ['watch  [js] storage: schedule uses 193 of 1048576 bytes (demo 0)',
+                                 'watch  [js] storage: schedule uses 4314 of 1048576 bytes (demo 0)']);
 });
 
 test('watch log entries are added at the watch time, and a full queue is reported', function() {
@@ -146,6 +187,15 @@ test('with the Android app serving the watch, PebbleKit JS stays quiet', functio
   c.run();
   assert.strictEqual(c.sent.length, 0, JSON.stringify(c.sent.map(function(m) { return m.msg_type; })));
   assert.ok(has(c.log(), /^phone  the Android app serves the watch: this side stays quiet$/), c.log().join('\n'));
+  assert.ok(has(c.log(), /^phone  \[js\] PebbleKit JS [\d.]+; settings page switch Android app serves the watch: on, so this side stays quiet/),
+            c.log().join('\n'));
+  // Each kind of message it leaves to the app is logged once.
+  c.handlers.appmessage({payload: {msg_type: 10}});
+  var quiet = c.log().filter(function(l) { return /\[js\] quiet/.test(l); });
+  assert.deepStrictEqual(quiet, [
+    "phone  [js] quiet: left the watch's REQUEST (10) to the Android app (logged once until PebbleKit JS restarts)",
+    "phone  [js] quiet: left the watch's DIR_REQUEST (15) to the Android app (logged once until PebbleKit JS restarts)",
+    "phone  [js] quiet: left the watch's VOICE (19) to the Android app (logged once until PebbleKit JS restarts)"]);
 
   // Turned off on the settings page: a slice goes out at once.
   c.handlers.webviewclosed({response: JSON.stringify({action: 'save', androidServes: false})});
@@ -156,9 +206,8 @@ test('with the Android app serving the watch, PebbleKit JS stays quiet', functio
 });
 
 test('inside the Android app the companion serves even with androidServes saved', function() {
-  global.__host = {android: true};
   try {
-    var c = companion({settings: JSON.stringify({androidServes: true})});
+    var c = companion({settings: JSON.stringify({androidServes: true})}, {});
     c.handlers.ready();
     c.run();
     assert.ok(c.sent.length > 0 && c.sent[0].msg_type === 1);
@@ -452,14 +501,14 @@ testAt('voice: the spoken start is set when shown, survives a restart and is for
   c.handlers.appmessage({payload: {msg_type: 19, voice_seq: 1}});
   assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Solarium', 'Select keeps it');
   var lines = c.log();
-  assert.ok(has(lines, /^voice  turn 1 heard "I'm at the solarium" -> SET_LOCATION A=Solarium \(exact\): confirm setting start Solarium/),
+  assert.ok(has(lines, /^voice  \[js\] turn 1 heard "I'm at the solarium" -> SET_LOCATION A=Solarium \(exact\): confirm setting start Solarium/),
             lines.join('\n'));
   assert.ok(has(lines, /^voice  turn 1 card shown: start set to Solarium for 90 min$/), lines.join('\n'));
   assert.ok(has(lines, /^voice  turn 1 Select: start Solarium kept$/), lines.join('\n'));
   // A later route starts there, also after the phone script restarts.
   var to = ask(2, 'how do I get to the windjammer');
   route(to.ref);
-  assert.ok(has(c.log(), /^route  to place \d+: "Windjammer Marketplace", FROM SOLARIUM, .*start: said "I'm at" Solarium at/),
+  assert.ok(has(c.log(), /^route  \[js\] to place \d+: "Windjammer Marketplace", FROM SOLARIUM, .*start: said "I'm at" Solarium at/),
             c.log().join('\n'));
   var store = JSON.parse(JSON.stringify(c.store));
   c = companion(store);
@@ -479,7 +528,7 @@ testAt('voice: the spoken start is set when shown, survives a restart and is for
   ask(8, 'where can I get a drink');
   assert.strictEqual(JSON.parse(c.store.spokenStart).venue, 'Solarium', 'Hold keeps it');
   assert.ok(has(c.log(), /^voice  turn 7 asked again: start Solarium kept$/), c.log().join('\n'));
-  assert.ok(has(c.log(), /^voice  turn 8 heard "where can I get a drink" -> CLOSEST_BAR: route \d+ \(FROM Solarium, /),
+  assert.ok(has(c.log(), /^voice  \[js\] turn 8 heard "where can I get a drink" -> CLOSEST_BAR: route \d+ \(FROM Solarium, /),
             c.log().join('\n'));
   // Forget where I am.
   assert.strictEqual(ask(5, 'forget where I am').action, 2);

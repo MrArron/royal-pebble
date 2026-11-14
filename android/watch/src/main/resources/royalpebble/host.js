@@ -106,8 +106,14 @@
   };
 
   g.__host = {
-    // Marks index.js as running in the Android app (index.js appServes()).
+    // Marks index.js as running in the Android app (index.js SIDE).
     android: true,
+    // What the app tells index.js about itself, for the usage log (index.js
+    // hostInfo): {version, commit, serves, wireLog}, or null.
+    info: null,
+    setInfo: function(json) {
+      g.__host.info = json ? JSON.parse(json) : null;
+    },
 
     // Replaces the whole storage with {key: text} (JSON text of an object).
     load: function(json) {

@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
-/** Settings > Watch: "App serves the watch" and the wire log. */
+/** Settings > Watch: "App serves the watch", the test log and the watch message log. */
 @Composable
 fun WatchCard() {
     val c = LocalContext.current
@@ -42,7 +42,7 @@ fun WatchCard() {
                 Switch(serves, { v ->
                     serves = v
                     WatchPrefs.setServes(c, v)
-                    if (!v) WatchHost.stop()
+                    WatchHost.servesChanged(c, v)
                 })
                 Text("App serves the watch")
             }
@@ -50,26 +50,34 @@ fun WatchCard() {
                 "This app sends Royal Pebble its schedule and answers the watch (directory, routes, voice, " +
                     "stars) instead of the Pebble app's own phone side. Turn on \"Android app serves the watch\" " +
                     "on Royal Pebble's settings page (Me > Help) too, so the two don't both answer. " +
-                    "The watch then uses this app's cruise data: the demo cruise until you download one here.",
+                    "The watch then uses this app's cruise data: until you download a cruise here, it shows " +
+                    "NO CRUISE YET.",
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(status, style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Switch(wire, { v -> wire = v; WatchPrefs.setWireLog(c, v) })
+                Switch(wire, { v ->
+                    wire = v
+                    WatchPrefs.setWireLog(c, v)
+                    WatchHost.logApp(c, "switch", "watch message log: " + if (v) "off -> on" else "on -> off")
+                })
                 Text("Log every message to and from the watch")
             }
-            if (wire) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = {
-                        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                            .putExtra(Intent.EXTRA_TEXT, WatchHost.wireLogText(c))
-                        c.startActivity(Intent.createChooser(send, "Share the watch log"))
-                    }) { Text("Share log") }
-                    OutlinedButton(onClick = { WatchHost.clearWireLog(c) }) { Text("Clear") }
-                }
-                Text("The log holds your cruise's titles and cabin details. Keep it private.",
-                    style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(Intent.EXTRA_TEXT, WatchHost.testLogText(c))
+                    c.startActivity(Intent.createChooser(send, "Share the test log"))
+                }) { Text("Share test log") }
+                OutlinedButton(onClick = {
+                    WatchHost.clearWireLog(c)
+                    WatchHost.clearAppLog(c)
+                }) { Text("Clear") }
             }
+            Text("The test log says which build and switches served the watch, then the app's usage log" +
+                (if (wire) " and every watch message" else "") + ". It holds your cruise's titles and cabin " +
+                "details. Keep it private.",
+                style = MaterialTheme.typography.bodySmall)
         }
     }
 }
