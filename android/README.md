@@ -27,6 +27,23 @@ editable `config.yaml`), Settings (background checks off / 6 / 12 / 24 h, script
 WorkManager, with a network constraint. A notification appears only for things that are new since
 the previous check (new rebook alerts, a changed check-in label, a failed check).
 
+## Watch alerts
+
+Settings, "Watch alerts" (off by default): after a check (background or Run now) the app sends what
+is new to the Pebble as one NOTICE message (`docs/WATCH_PROTOCOL.md`, Booking notices):
+
+- a price drop flagged rebook or consider-booking (again only if the price falls further);
+- check-in open, then checked in (with the boarding window when the label has one);
+- final payment due, at 7, 3, 1 and 0 days and once when overdue (only while a balance is due). The
+  price script reports whether a balance is due, not the amount, so the notice reads
+  "Balance due Dec 20".
+
+An alert counts as sent only once the watch acknowledges it; otherwise it waits for the next check.
+At most 8 go in one message, the rest follow on the next check. Switching alerts on sends the
+alerts that are current right now, once. Code: `royal/.../alerts/` (detection, encoders, `WatchSender`
+interface; plain Kotlin, tested with a fake sender and against pack.js bytes) and
+`WatchAlertBridge.kt` (app side; sends through `WatchLink.sendNotice`, which waits for a slice in progress and opens Royal Pebble on the watch when another app is open).
+
 ## Script updates
 
 "Update script now" downloads the copy Royal Pebble has verified from the `price-script-latest`

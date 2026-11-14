@@ -21,6 +21,7 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         val log = ArrayList<String>()
         val result = runCatching { PythonBridge.run(c) { log.add(it) } }
             .getOrElse { RunResult.failure("${it::class.java.simpleName}: ${it.message}") }
+        WatchAlertBridge.afterCheck(c, result)?.let { log.add(it) }
         Prefs.saveLast(c, result, log)
         Notifier.notifyChanges(c, previous, result, background = true)
         Result.success()

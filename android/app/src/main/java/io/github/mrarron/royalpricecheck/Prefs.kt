@@ -60,6 +60,14 @@ object Prefs {
     fun autoCheckHours(c: Context) = sp(c).getInt("auto_check_hours", 0) // 0 = off
     fun setAutoCheckHours(c: Context, v: Int) = sp(c).edit().putInt("auto_check_hours", v).apply()
 
+    /** Send new price drops, check-in changes and payment reminders to the watch (off until turned on). */
+    fun watchAlerts(c: Context) = sp(c).getBoolean("watch_alerts", false)
+    fun setWatchAlerts(c: Context, v: Boolean) = sp(c).edit().putBoolean("watch_alerts", v).apply()
+
+    /** Keys of the alerts the watch has acknowledged, so each is sent once. */
+    fun watchAlertKeys(c: Context): Set<String> = sp(c).getStringSet("watch_alert_sent", emptySet()) ?: emptySet()
+    fun setWatchAlertKeys(c: Context, keys: Set<String>) = sp(c).edit().putStringSet("watch_alert_sent", keys).apply()
+
     fun notifiedKeys(c: Context): Set<String> = sp(c).getStringSet("notified", emptySet()) ?: emptySet()
     fun setNotifiedKeys(c: Context, keys: Set<String>) = sp(c).edit().putStringSet("notified", keys).apply()
 

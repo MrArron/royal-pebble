@@ -20,6 +20,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var hasConfig by mutableStateOf(false); private set
     var autoHours by mutableStateOf(0); private set
     var useLatest by mutableStateOf(true); private set
+    var watchAlerts by mutableStateOf(false); private set
     var status by mutableStateOf<String?>(null); private set
     var followUpstream by mutableStateOf(false); private set
     var scriptVersion by mutableStateOf(""); private set
@@ -36,6 +37,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         config = Prefs.readConfig(ctx)
         autoHours = Prefs.autoCheckHours(ctx)
         useLatest = Prefs.useLatestScript(ctx)
+        watchAlerts = Prefs.watchAlerts(ctx)
         followUpstream = Prefs.followUpstream(ctx)
         scriptVersion = runCatching { PythonBridge.downloadedVersion(ctx) }.getOrDefault("")
         refreshMissing()
@@ -88,6 +90,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         status = null
     }
 
+    fun changeWatchAlerts(v: Boolean) {
+        Prefs.setWatchAlerts(ctx, v)
+        watchAlerts = v
+    }
+
     fun changeUseLatest(v: Boolean) {
         Prefs.setUseLatestScript(ctx, v)
         useLatest = v
@@ -118,6 +125,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         viewModelScope.launch(Dispatchers.Main) { log.add(line) }
                     }
                 }.getOrElse { RunResult.failure("${it::class.java.simpleName}: ${it.message}") }
+            }
+            withContext(Dispatchers.IO) { WatchAlertBridge.afterCheck(ctx, r) }?.let {
+                lines.add(it)
+                log.add(it)
             }
             Prefs.saveLast(ctx, r, lines)
             Notifier.notifyChanges(ctx, previous, r, background = false)
