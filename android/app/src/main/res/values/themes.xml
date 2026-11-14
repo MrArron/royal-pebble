@@ -1,3 +1,5 @@
 <resources>
-    <style name="Theme.RoyalPriceCheck" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.RoyalPriceCheck" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F4FBFA</item>
+    </style>
 </resources>
