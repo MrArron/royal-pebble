@@ -257,5 +257,6 @@ private fun SettingsTab(vm: MainViewModel) {
         if (vm.scriptVersion.isNotBlank()) Text("Downloaded script: ${vm.scriptVersion}", style = MaterialTheme.typography.bodySmall)
         Text("Bundled script: ${BuildConfig.UPSTREAM_VERSION}", style = MaterialTheme.typography.bodySmall)
         Text("App ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall)
+        io.github.mrarron.royalpricecheck.watch.WatchCard()
     }
 }

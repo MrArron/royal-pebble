@@ -6,6 +6,7 @@
 // it) or the phone app's pebblejs://close# URL:
 //   {action: 'save' | 'download' | 'download-login', me, theme, reminderLead, reserveAlertAt,
 //    days: {date: {offset, buffer, allAboard, shift, warn, edit} | null}, showFeatured, alwaysHints, hiddenCats,
+//    androidServes (Help > Android app serves the watch),
 //    ageFilters: [adult, young, family] (the Ages switches turned on),
 //    shipSides: {ship, all, decks, confirmed} (Help > Port and starboard, mapped ships only),
 //    stars: {starKey: true | false} (changes only), starTimes: {starKey: ms} (when
@@ -413,6 +414,11 @@ var HELP_HTML = [
   '<span class="muted">Label the watch\'s buttons on Home every time Royal Pebble opens, not just the ',
   'first 3 times</span></span>',
   '<button class="switch" role="switch" id="hints" aria-label="Always show button hints"></button></div>',
+  '<div class="card switch-row"><span class="t"><b>Android app serves the watch</b>',
+  '<span class="muted">Only with the Royal Pebble Android app installed and its App serves the watch switch ',
+  'on. This page then stops sending the watch anything: the watch gets its schedule, directory, routes and ',
+  'voice answers from the app, using the app\'s cruise data</span></span>',
+  '<button class="switch" role="switch" id="androidServes" aria-label="Android app serves the watch"></button></div>',
   '<div class="card keys"><h2>Watch buttons</h2>',
   HELP_KEYS.map(function(k) {
     return '<h3>' + k[0] + '</h3><div class="rows">' + k[1].map(function(r) {
@@ -1678,6 +1684,7 @@ function pageMain(S, V, CL, SH) {
     });
   }
   makeSwitch('hints', S.alwaysHints === true);
+  makeSwitch('androidServes', S.androidServes === true);
   makeSwitch('testAlerts', S.testAlerts === true);
   function hintsOn() {
     return switchOn('hints');
@@ -3901,6 +3908,7 @@ function pageMain(S, V, CL, SH) {
     }
     r.showFeatured = featuredOn();
     r.alwaysHints = hintsOn();
+    r.androidServes = switchOn('androidServes');
     if (switchOn('testAlerts') !== (S.testAlerts === true)) {
       r.testAlerts = switchOn('testAlerts');  // only when flipped, so an hour ending here doesn't restart it
     }
@@ -4007,7 +4015,7 @@ function pad2(n) {
 }
 
 // state: {ships, cruise, status, itinerary, days, categories, hiddenCats, ageFilters, showFeatured, schedule, stars,
-//         personal, venues, me, theme, reminderLead, reserveAlertAt, units, alwaysHints,
+//         personal, venues, me, theme, reminderLead, reserveAlertAt, units, alwaysHints, androidServes,
 //         shipSides ({ship, name, decks, all, flipDecks, confirmed} or null), gpsShips (names), api, appKey}
 function buildPage(state, now) {
   now = now || new Date();

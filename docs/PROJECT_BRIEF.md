@@ -336,6 +336,10 @@ entries (6.4 KB heap).
   `docs/WATCH_PROTOCOL.md` (Android companion app). Phase 2's watch side is
   built (1.6.20): price drop, check-in and final payment notices
   (`docs/WATCH_PROTOCOL.md` Booking notices); the app that sends them isn't.
+  Phase 3 serving (1.6.21): the app can serve the watch by running
+  `src/pkjs/index.js` in QuickJS behind two switches, off by default
+  (`docs/WATCH_PROTOCOL.md`, App serves the watch); byte-for-byte equal to
+  PebbleKit JS in tests, not yet tried on the watch.
 - A quick "remind me in N minutes" timer, lap counter, spending log (Royal's
   onboard credit is a starting balance), currency conversion, Celebrity
   support.

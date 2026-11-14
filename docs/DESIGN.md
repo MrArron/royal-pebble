@@ -950,6 +950,11 @@ period is 60 minutes today. Make it longer if you like.`
 A screen under Me (Back arrow). Cards:
 
 - **Always show button hints** switch.
+- **Android app serves the watch** switch (1.6.21): only with the Royal
+  Pebble Android app's **App serves the watch** switch on. This side then
+  sends nothing and answers nothing (no slices on start or after a save, no
+  replies to the watch); the app does both from its own cruise data
+  (`docs/WATCH_PROTOCOL.md`, App serves the watch). Off by default.
 - **Watch buttons:** every press and hold per screen (`HELP_KEYS` in
   `config.js`; keep in step with the watch's click handlers).
 - **Good to know:** sync before sailing, the 04:00 day change, where routes

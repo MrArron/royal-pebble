@@ -218,6 +218,16 @@ function currentData() {
   return {bundle: s_demo.bundle, settings: s_demo.settings, stars: s_demo.stars, isDemo: true};
 }
 
+// The Royal Pebble Android app serves the watch instead (docs/WATCH_PROTOCOL.md,
+// Android companion app; Me > Help > Android app serves the watch): this side
+// then sends nothing and answers nothing, so the two never both answer. The
+// app runs this same file in its own engine, whose host marks it
+// (__host.android), and there it always serves.
+function appServes() {
+  return !(typeof __host !== 'undefined' && __host && __host.android) &&
+    load(STORE_SETTINGS, {}).androidServes === true;
+}
+
 function sailDateInt(iso) {
   var p = iso.split('-');
   return (+p[0]) * 10000 + (+p[1]) * 100 + (+p[2]);
@@ -272,6 +282,9 @@ function testAlertsOn() {
 }
 
 function sendSlice() {
+  if (appServes()) {
+    return;
+  }
   if (s_sending) {
     s_resend = true;
     return;
@@ -655,6 +668,7 @@ function pageState(ships) {
     reserveAlertAt: slice.reserveAlertAt(settings),
     units: settings.units || 'm',
     alwaysHints: settings.alwaysHints === true,
+    androidServes: settings.androidServes === true,
     // For Help > Port and starboard: only on a ship with a map (§12.7).
     shipSides: shipSidesState(bundle, settings),
     gpsShips: shipmap.shipNames(),
@@ -852,6 +866,10 @@ function settingsClosed(text) {
   if (typeof r.alwaysHints === 'boolean') {
     settings.alwaysHints = r.alwaysHints;
   }
+  // The Android app serves the watch: this side stays quiet (appServes).
+  if (typeof r.androidServes === 'boolean') {
+    settings.androidServes = r.androidServes;
+  }
   // Port/starboard flip and "sides confirmed", kept per ship (§12.7).
   var sides = cleanShipSides(r.shipSides);
   if (sides) {
@@ -1008,10 +1026,25 @@ Pebble.addEventListener('ready', guard('ready', function() {
             ((w && (w.model || w.platform)) || 'unknown') + (w && w.firmware ? ' firmware ' + w.firmware.major + '.' +
             w.firmware.minor + '.' + w.firmware.patch : '') + ', log ' + usage.count() + ' entries, ' +
             Math.round(usage.chars() / 1024) + ' KB');
+  if (appServes()) {
+    usage.add('phone', 'the Android app serves the watch: this side stays quiet');
+    return;
+  }
+  sendSlice();
+}));
+
+// Only in the Android app (android/watch WatchServer.storeChanged): its own
+// screens saved cruise data or settings, so the watch gets a fresh slice, as
+// after the settings page closes here. PebbleKit JS never fires it.
+Pebble.addEventListener('storechanged', guard('storechanged', function() {
+  usage.add('sync', 'the Android app saved new data');
   sendSlice();
 }));
 
 Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
+  if (appServes()) {
+    return;
+  }
   var p = e.payload;
   switch (p.msg_type) {
     case MSG_REQUEST:
