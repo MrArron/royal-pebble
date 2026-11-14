@@ -22,6 +22,7 @@ object PasswordVault {
     private const val ALIAS = "royal_pebble_password_vault"
     private const val PREF = "vault"
     private const val KEY_BLOB = "blob"
+    private const val KEY_PEBBLE = "pebble_blob"
 
     private val session = HashMap<Int, String>()
     private val lock = Any()
@@ -90,6 +91,44 @@ object PasswordVault {
     /** Delete the saved copy and the Keystore key. The in-memory copy stays until the app closes. */
     fun deleteSaved(c: Context) = synchronized(lock) {
         sp(c).edit().remove(KEY_BLOB).apply()
+        // The Royal Pebble login (below) shares the key: keep it while that copy is saved.
+        if (!hasPebbleLogin(c)) deleteKey()
+    }
+
+    private fun deleteKey() {
         runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(ALIAS) }
+    }
+
+    // ---- The Royal Pebble login (the Cruise screens' "Download with login") ----
+    // One email and password, separate from the price checker's accounts. In memory for this session
+    // after a download; saved encrypted only when the owner ticks "Remember on this phone".
+
+    private var pebbleSession: Pair<String, String>? = null
+
+    /** The email and password to offer: this session's, else the saved copy. */
+    fun pebbleLogin(c: Context): Pair<String, String>? = synchronized(lock) {
+        pebbleSession ?: runCatching {
+            val blob = sp(c).getString(KEY_PEBBLE, null) ?: return@runCatching null
+            val o = JSONObject(decrypt(blob) ?: return@runCatching null)
+            o.getString("email") to o.getString("password")
+        }.getOrNull()
+    }
+
+    fun hasPebbleLogin(c: Context): Boolean = sp(c).contains(KEY_PEBBLE)
+
+    /** Keeps the login for this session; with [persist] also encrypted on the phone. */
+    fun rememberPebbleLogin(c: Context, email: String, password: String, persist: Boolean) = synchronized(lock) {
+        pebbleSession = email to password
+        if (persist) {
+            val o = JSONObject().put("email", email).put("password", password)
+            sp(c).edit().putString(KEY_PEBBLE, encrypt(o.toString())).apply()
+        }
+    }
+
+    /** Forgets the login everywhere; the Keystore key goes too unless the price checker still uses it. */
+    fun forgetPebbleLogin(c: Context) = synchronized(lock) {
+        pebbleSession = null
+        sp(c).edit().remove(KEY_PEBBLE).apply()
+        if (!hasSaved(c)) deleteKey()
     }
 }

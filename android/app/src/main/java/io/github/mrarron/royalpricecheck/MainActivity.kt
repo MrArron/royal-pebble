@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AppScreen(vm: MainViewModel, dark: Boolean) {
     var tab by rememberSaveable { mutableIntStateOf(if (vm.hasConfig) 0 else 3) }
-    val titles = listOf("Summary", "Log", "Account", "Settings")
+    val titles = listOf("Summary", "Log", "Account", "Settings", "Cruise")
 
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) {
@@ -84,6 +84,9 @@ private fun AppScreen(vm: MainViewModel, dark: Boolean) {
                 0 -> SummaryTab(vm)
                 1 -> LogTab(vm, dark)
                 2 -> AccountTab(vm)
+                4 -> io.github.mrarron.royalpricecheck.cruise.CruiseHost(
+                    androidx.lifecycle.viewmodel.compose.viewModel<io.github.mrarron.royalpricecheck.cruise.CruiseViewModel>(),
+                )
                 else -> SettingsTab(vm)
             }
         }
