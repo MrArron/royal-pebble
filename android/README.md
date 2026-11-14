@@ -1,4 +1,4 @@
-# Royal Pebble for Android (price and booking checker)
+# Royal Pebble for Android (price and booking checker, and the watch)
 
 An optional add-on: it runs jdeath's
 [`CheckRoyalCaribbeanPrice.py`](https://github.com/jdeath/CheckRoyalCaribbeanPrice) unchanged
@@ -54,7 +54,8 @@ downloads jdeath's file directly instead (not verified by us).
 ## Tests
 
 - Bridge: `python -m pytest tests` (needs `requests PyYAML apprise pytest`).
-- Kotlin unit tests: `./gradlew :royal:test testDebugUnitTest`.
+- Kotlin unit tests: `./gradlew :royal:test :watch:test testDebugUnitTest`. The app's tests need a
+  Java 21 runtime (PebbleKit Android 2 ships Java 21 class files; Android Studio's bundled JDK is 21).
 
 ## Royal client and cruise store (`royal/`)
 
@@ -72,3 +73,18 @@ Plain Kotlin, no Android, so `./gradlew :royal:test` runs offline on any JVM.
 - Tests read the shared fixtures in `test/fixtures/` (the same expected schedule and booking as
   `test/pkjs/royal.test.js` and `test_cruise_sync.py`) and compare output as JSON text, so the
   Kotlin bundle matches `JSON.stringify` byte for byte. Nothing sends slices to the watch yet.
+
+## Serving the watch (`watch/` and `app/.../watch/`)
+
+Optional and off by default: Settings > Watch > **App serves the watch** (and, on Royal
+Pebble's settings page, Me > Help > **Android app serves the watch**, so PebbleKit JS stays
+quiet). The app then sends the watch its slices and answers every request by running
+`src/pkjs/index.js` itself in QuickJS (Zipline), with its localStorage in the cruise store's
+folder. Details: `docs/WATCH_PROTOCOL.md`, App serves the watch.
+
+- `watch/` (plain Kotlin, `./gradlew :watch:test`): the JS host (`host.js`), the bundler, the
+  server loop and the AppMessage conversion. Its test runs whole watch sessions in QuickJS and
+  in Node (needs `node`) and checks every message is the same, byte for byte.
+- `app/.../watch/`: the PebbleKit Android 2 listener service, `WatchLink` (the only sender, also
+  `sendNotice` for background checks), `WatchHost` (`storeChanged()` after the app saves) and the
+  Settings > Watch card.

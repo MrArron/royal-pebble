@@ -1033,6 +1033,14 @@ Pebble.addEventListener('ready', guard('ready', function() {
   sendSlice();
 }));
 
+// Only in the Android app (android/watch WatchServer.storeChanged): its own
+// screens saved cruise data or settings, so the watch gets a fresh slice, as
+// after the settings page closes here. PebbleKit JS never fires it.
+Pebble.addEventListener('storechanged', guard('storechanged', function() {
+  usage.add('sync', 'the Android app saved new data');
+  sendSlice();
+}));
+
 Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
   if (appServes()) {
     return;

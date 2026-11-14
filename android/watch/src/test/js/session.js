@@ -113,6 +113,10 @@ var SCENARIOS = {
     common(steps, now, b.sailDate, sl);
     steps.push({message: {msg_type: MSG.VOICE, voice_seq: 5, voice_text: 'take me to my cabin', voice_state: 0}});
     steps.push({message: {msg_type: MSG.ROUTE_REQUEST, dir_ref: 400, route_rest: 0}});
+    // The app's own settings screen saves a change (WatchServer.storeChanged).
+    var lighter = JSON.parse(JSON.stringify(settings));
+    lighter.theme = 'light';
+    steps.push({storeChanged: {settings: JSON.stringify(lighter)}});
     steps.push({advance: 20 * 3600 * 1000});  // the next watch day
     steps.push({message: {msg_type: MSG.REQUEST}});
     return {now: now, store: {bundle: JSON.stringify(b), settings: JSON.stringify(settings), stars: JSON.stringify(stars)},
@@ -190,6 +194,9 @@ function runNode(spec) {
         handlers.ready({});
       } else if (step.message) {
         handlers.appmessage({payload: JSON.parse(JSON.stringify(step.message))});
+      } else if (step.storeChanged) {
+        Object.keys(step.storeChanged).forEach(function(k) { store[k] = step.storeChanged[k]; });
+        handlers.storechanged({});
       } else if (step.advance) {
         clock += step.advance;
       }
