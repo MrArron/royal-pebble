@@ -41,10 +41,12 @@ jobs:
           python -m pip install requests PyYAML apprise pytest
           python -m pytest tests
 
+      # PebbleKit Android 2 ships Java 21 class files, so the app's unit
+      # tests need a Java 21 runtime (the code still targets Java 17).
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - uses: gradle/actions/setup-gradle@v4
 

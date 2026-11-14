@@ -134,8 +134,9 @@ the app's log listed REQUEST, SAVED, LOG, DIR_REQUEST, ROUTE_REQUEST and VOICE
 while PebbleKit JS answered them as usual.
 
 - **The watch app has to list the Android app.** `package.json` has a
-  `pebble.companionApp.android` entry naming the Android package
-  (`io.github.mrarron.royalpebble.linktest` for now), with `required: false`.
+  `pebble.companionApp.android` entry naming the Android packages (the app,
+  `io.github.mrarron.royalpricecheck`, and the link test,
+  `io.github.mrarron.royalpebble.linktest`), with `required: false`.
   Without it the Pebble app never starts a PebbleKit Android 2 session for
   Royal Pebble, and every send from an Android app fails with
   `FailedDifferentAppOpen`. `required: false` means a phone without the
@@ -163,6 +164,69 @@ while PebbleKit JS answered them as usual.
   fields and drops `companionApp`, so a build with this entry must come from
   `pebble build` (the `.pbw` in `build/`), installed by opening it in the
   Pebble app.
+
+### App serves the watch (1.6.21)
+
+The Android app (`android/`) can do everything PebbleKit JS does for the
+watch: slices (`BEGIN`, `INFO`, `EVENTS`, `ALARMS`, `END`, then notices) and
+every reply (`REQUEST`, `DIR_REQUEST` → `DIR_PAGE`, `ROUTE_REQUEST` →
+`ROUTE_PAGE`, `VOICE` → `VOICE_CARD`, `STAR_CHANGES` → `STAR_ACK`, `SAVED`,
+`LOG`, `DEMO_NEXT`). It doesn't port that code: it runs `src/pkjs/index.js`
+itself in an embedded QuickJS (Zipline), so the two can't drift.
+
+- **Two switches, both off by default.** The app's Settings > Watch > **App
+  serves the watch**, and on the settings page Me > Help > **Android app
+  serves the watch** (`settings.androidServes`), which makes PebbleKit JS send
+  and answer nothing (`index.js` `appServes()`). Both answer every message
+  otherwise (see above), so turn on both or neither. With only the app's on,
+  the two would interleave slices; with only the page's on, nothing answers.
+- **Host.** `android/watch/src/main/resources/royalpebble/host.js` gives
+  `index.js` what PebbleKit JS gives it: `Pebble` (`addEventListener`,
+  `sendAppMessage` with its callbacks, `getActiveWatchInfo` from PebbleKit
+  Android 2's connected watch), `localStorage`, `setTimeout`, `console`. It
+  sets `__host.android`, so the app's copy ignores `androidServes`.
+  `JsBundle` packs `src/pkjs` (shipped in the APK as Java resources) into one
+  script.
+- **Order.** `WatchServer` handles one thing at a time on one thread (the
+  watch app opening = `ready`, a message, a due timer, a store change): it
+  runs the JS, then sends its messages one at a time, each followed by its
+  result (ACK = success), then fires due timers, as PebbleKit JS does.
+- **Bytes.** `AppMessageCodec` turns the JS's message objects into
+  AppMessages exactly as the Pebble app does for PebbleKit JS (libpebble3
+  `PKJSApp`): arrays → bytes, strings → text (the Pebble app adds the NUL),
+  whole numbers → int32 (uint32 past int32), other numbers cut to int32, null
+  dropped. Messages from the watch reach the JS with key names, numbers and
+  byte arrays of 0..255, as PebbleKit JS gets them.
+- **Storage.** `localStorage` is the cruise store's folder
+  (`files/cruise`, one `<key>.json` per key, `CruiseStore`'s layout), so the
+  app's downloads and settings screens and the JS share one copy. Keys the
+  app's screens changed are read again before each input; after a save the
+  app calls `WatchHost.storeChanged()`, which fires `storechanged` in
+  `index.js` (only the app does): a fresh slice, as after the settings page
+  closes. The JS settings page isn't used by the app, so PebbleKit JS's own
+  storage and the app's are separate cruises.
+- **Time.** QuickJS reads local time through the C library; the app sets
+  `TZ` to the phone's zone and checks the engine's `getTimezoneOffset`
+  against Android's (shown on the Watch card when they differ).
+- **One sender.** `WatchLink` is the app's only way to the watch: one message
+  at a time, and a `NOTICE` from background checks (`sendNotice`) waits for a
+  slice under way to reach `END`.
+- **The gate.** `android/watch` `WatchServerSessionTest` (`./gradlew
+  :watch:test`, in CI) runs whole watch sessions through the app's
+  `WatchServer` in QuickJS and through `index.js` in Node
+  (`android/watch/src/test/js/session.js`), with the same saved data, clock
+  and time zone (America/New_York), and compares every AppMessage key by key
+  and byte by byte, and the storage left behind, usage log included. Sessions:
+  the demo (and two Next demo presses) and a saved sailing with stars and a
+  made-up cabin; each sends `ready`, `REQUEST`, four directory pages, place,
+  restroom and event routes, five voice turns (a route, `I'm at` and its
+  confirm, a restroom, an unanswered one), star changes (one matching, one
+  not), two `SAVED` reports, a `LOG` and, an hour later, a `REQUEST`; the
+  sailing also asks the route to the cabin, then a settings change saved by
+  the app's screens, then the next watch day.
+- **Wire log.** Settings > Watch can log every message to and from the
+  watch (`files/watch-wire.log`, the format of `AppMessageCodec.describe`,
+  shared from the app). It holds cruise text: never commit one.
 
 ## Packed events
 
