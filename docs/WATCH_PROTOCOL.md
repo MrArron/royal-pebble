@@ -184,7 +184,9 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
   `index.js` what PebbleKit JS gives it: `Pebble` (`addEventListener`,
   `sendAppMessage` with its callbacks, `getActiveWatchInfo` from PebbleKit
   Android 2's connected watch), `localStorage`, `setTimeout`, `console`. It
-  sets `__host.android`, so the app's copy ignores `androidServes`.
+  sets `__host.android`, so the app's copy ignores `androidServes`, and
+  `__host.info` (`{version, commit, serves, wireLog}`, from `WatchHost`) for
+  the usage log (1.6.22).
   `JsBundle` packs `src/pkjs` (shipped in the APK as Java resources) into one
   script.
 - **Order.** `WatchServer` handles one thing at a time on one thread (the
@@ -204,7 +206,11 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
   app calls `WatchHost.storeChanged()`, which fires `storechanged` in
   `index.js` (only the app does): a fresh slice, as after the settings page
   closes. The JS settings page isn't used by the app, so PebbleKit JS's own
-  storage and the app's are separate cruises.
+  storage and the app's are separate cruises. With no cruise downloaded in
+  the app it sends no demo: an empty cruise sailing today, which the watch
+  shows as No cruise today / `NO CRUISE YET` (My info's clock note: No
+  cruise downloaded in the app), and Next demo does nothing (1.6.22). Before,
+  a new install showed the demo even when PebbleKit JS had a real cruise.
 - **Time.** QuickJS reads local time through the C library; the app sets
   `TZ` to the phone's zone and checks the engine's `getTimezoneOffset`
   against Android's (shown on the Watch card when they differ).
@@ -216,8 +222,11 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
   `WatchServer` in QuickJS and through `index.js` in Node
   (`android/watch/src/test/js/session.js`), with the same saved data, clock
   and time zone (America/New_York), and compares every AppMessage key by key
-  and byte by byte, and the storage left behind, usage log included. Sessions:
-  the demo (and two Next demo presses) and a saved sailing with stars and a
+  and byte by byte, and the storage left behind, usage log included. Both
+  runs are the app (Node gets the same `__host`), so the gate checks the
+  engines; where the app differs from PebbleKit JS on purpose (the `[app]`
+  tag, no demo) `test/pkjs/companion.test.js` checks it. Sessions:
+  no cruise saved (and a Next demo press) and a saved sailing with stars and a
   made-up cabin; each sends `ready`, `REQUEST`, four directory pages, place,
   restroom and event routes, five voice turns (a route, `I'm at` and its
   confirm, a restroom, an unanswered one), star changes (one matching, one
@@ -227,6 +236,16 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
 - **Wire log.** Settings > Watch can log every message to and from the
   watch (`files/watch-wire.log`, the format of `AppMessageCodec.describe`,
   shared from the app). It holds cruise text: never commit one.
+- **Test log (1.6.22).** Settings > Watch > **Share test log** shares one
+  text (`TestLog`): a header (app version and commit, the bundled Royal
+  Pebble JS version, phone, both app switches, the server's status, the
+  app's saved cruise as ship and date), the app's own lines
+  (`files/watch-app.log`: switch changes, server start and stop with message
+  and error counts, Royal Pebble opened while the switch is off, alerts the
+  app sent and whether the watch took them), the usage log `index.js` keeps
+  in the app's store (PebbleKit JS's is separate), and the wire log when it's
+  on. Same line style as the usage log. Clear empties the app's lines and the
+  wire log, not the usage log.
 
 ## Packed events
 
@@ -922,7 +941,7 @@ didn't open the app are missed.
 
 ## Demo data
 
-Until real cruise data is saved in settings, the phone builds a demo bundle
+Until real cruise data is saved in settings, PebbleKit JS builds a demo bundle
 around the current time (`src/pkjs/demo.js`) and sends it like real data. Hold Up
 on the watch's Home for the next demo variant (port/sea × light/dark, then an
 embark day with a terminal arrival under an hour out). Port days arrive 3
@@ -931,4 +950,5 @@ port day is an alert test: a starred event 17 minutes out and all-aboard 18
 minutes out (inside the warning period, so Home shows the warning sign), so a reminder buzzes about 2 minutes after switching and an
 all-aboard warning a minute later. A starred show at Royal Theater ends 7
 minutes before that event, so the reminder shows "From" directions. The demo's variant and start time are kept for
-12 hours so alert launches don't move it.
+12 hours so alert launches don't move it. The Android app has no demo (App
+serves the watch, above).

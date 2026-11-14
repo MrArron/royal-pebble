@@ -244,4 +244,33 @@ function make(now, variant) {
   return {bundle: bundle, settings: settings, stars: stars};
 }
 
-module.exports = {make: make, VARIANTS: 5};
+// No cruise saved in the Android app (index.js, isEmpty): a bundle with no
+// days and no events, sailing today, so the watch shows "No cruise today" with
+// the NO CRUISE YET status instead of the demo cruise. Today counts from 04:00
+// like every cruise day (docs/WATCH_PROTOCOL.md, time model).
+function empty(now) {
+  var d = new Date(now.getTime() - 4 * 3600 * 1000);
+  var iso = d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1) + '-' +
+    (d.getDate() < 10 ? '0' : '') + d.getDate();
+  return {
+    format: 'cruise-watch',
+    v: 1,
+    generated: null,
+    ship: {code: '', name: ''},
+    sailDate: iso,
+    itinerary: [],
+    schedule: {
+      published: false, cats: [], venues: [], notes: [], infos: [],
+      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation', 'info'],
+      events: []
+    }
+  };
+}
+
+// What the watch shows with the empty bundle (index.js sendSlice).
+var EMPTY_STATUS = 'NO CRUISE YET';           // day_status: 15 characters at most
+var EMPTY_LOCATION = 'Download one in the app';  // day_location: 31
+var EMPTY_CLOCK = 'No cruise downloaded in the app';  // My info's clock note: 38
+
+module.exports = {make: make, VARIANTS: 5, empty: empty, EMPTY_STATUS: EMPTY_STATUS,
+                  EMPTY_LOCATION: EMPTY_LOCATION, EMPTY_CLOCK: EMPTY_CLOCK};

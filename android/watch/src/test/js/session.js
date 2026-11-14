@@ -1,14 +1,15 @@
 // The byte-for-byte gate between the Android app and PebbleKit JS
 // (docs/WATCH_PROTOCOL.md, Android companion app). For a scenario, prints
 // {spec, node}: `spec` is a whole watch session (the phone's saved data, a
-// pinned clock, what the watch sends), and `node` is what src/pkjs/index.js
-// does with it in Node, with the real require: every message it sends and
-// the storage it leaves. WatchServerSessionTest runs the same spec through
-// the app's WatchServer in QuickJS and compares the two.
+// pinned clock, what the watch sends, the app's host info), and `node` is what
+// src/pkjs/index.js does with it in Node, with the real require: every message
+// it sends and the storage it leaves. WatchServerSessionTest runs the same spec
+// through the app's WatchServer in QuickJS and compares the two.
 //
 // The fake Pebble here mirrors android/watch/src/main/resources/royalpebble/host.js:
-// sends are acked one at a time after the handler returns, then due timers fire.
-// Made-up data only. Usage: node session.js demo|sailing
+// sends are acked one at a time after the handler returns, then due timers fire,
+// and __host marks the Android app (index.js SIDE), so both sides take the
+// app's paths. Made-up data only. Usage: node session.js empty|sailing
 'use strict';
 var path = require('path');
 var SRC = path.join(__dirname, '../../../../../src/pkjs/');
@@ -86,17 +87,20 @@ function common(steps, now, sailDate, sl) {
   steps.push({message: {msg_type: MSG.REQUEST}});
 }
 
+// What WatchHost tells index.js about the app (host.js __host.info), made up.
+var HOST = {version: '0.1.0-abc1234', commit: 'abc1234', serves: true, wireLog: false};
+
 var SCENARIOS = {
-  // No cruise saved: the demo cruise, then the next demo screen.
-  demo: function() {
+  // No cruise saved in the app: the empty cruise (NO CRUISE YET), and Next
+  // demo does nothing.
+  empty: function() {
     var now = local(2027, 3, 7, 14, 5);
-    var d = demo.make(new Date(now), 0);
-    var sl = slice.buildSlice(d.bundle, d.settings, d.stars, new Date(now), null);
+    var b = demo.empty(new Date(now));
+    var sl = slice.buildSlice(b, {}, {}, new Date(now), null);
     var steps = [{ready: true}];
-    common(steps, now, d.bundle.sailDate, sl);
+    common(steps, now, b.sailDate, sl);
     steps.push({message: {msg_type: MSG.DEMO_NEXT}});
-    steps.push({message: {msg_type: MSG.DEMO_NEXT}});
-    return {now: now, store: {}, steps: steps};
+    return {now: now, store: {}, steps: steps, host: HOST};
   },
   // A saved sailing with stars, settings and a made-up cabin, on the sea day.
   sailing: function() {
@@ -120,7 +124,7 @@ var SCENARIOS = {
     steps.push({advance: 20 * 3600 * 1000});  // the next watch day
     steps.push({message: {msg_type: MSG.REQUEST}});
     return {now: now, store: {bundle: JSON.stringify(b), settings: JSON.stringify(settings), stars: JSON.stringify(stars)},
-            steps: steps};
+            steps: steps, host: HOST};
   }
 };
 
@@ -152,6 +156,7 @@ function runNode(spec) {
     return id;
   };
   global.clearTimeout = function(id) { delete timers[id]; };
+  global.__host = {android: true, info: spec.host ? JSON.parse(JSON.stringify(spec.host)) : null};
   global.Pebble = {
     addEventListener: function(n, f) { handlers[n] = f; },
     sendAppMessage: function(m, ok) { out.push({id: nextId++, msg: m, ok: ok}); },
@@ -205,6 +210,7 @@ function runNode(spec) {
   } finally {
     console.log = realLog;
     global.Date = RealDate;
+    delete global.__host;
   }
   return {sent: sent, store: store};
 }

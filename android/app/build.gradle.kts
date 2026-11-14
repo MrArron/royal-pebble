@@ -26,6 +26,8 @@ android {
         versionCode = (signingEnv["VERSION_CODE"] ?: "1").toInt()
         versionName = signingEnv["VERSION_NAME"] ?: "0.1.0"
         buildConfigField("String", "UPSTREAM_VERSION", "\"${upstreamVersion.replace("\"", "")}\"")
+        // The commit the app was built from, for the test log (CI sets GITHUB_SHA).
+        buildConfigField("String", "COMMIT", "\"${(signingEnv["GITHUB_SHA"] ?: "local").take(7)}\"")
         ndk {
             // Real phones only (arm64). Add "x86_64" here to run on the Android emulator.
             abiFilters += listOf("arm64-v8a")

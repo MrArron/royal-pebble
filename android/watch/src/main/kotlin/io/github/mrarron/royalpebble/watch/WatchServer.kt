@@ -58,6 +58,11 @@ class WatchServer(
     private val onWire: (sent: Boolean, dict: WireDict) -> Unit = { _, _ -> },
     /** The JS's console output, when not null. */
     private val onConsole: ((String) -> Unit)? = null,
+    /**
+     * What index.js logs about the app (host.js __host.info): JSON
+     * {version, commit, serves, wireLog}, or null.
+     */
+    private val hostInfo: String? = null,
 ) {
     private sealed interface Input {
         object Ready : Input
@@ -106,6 +111,7 @@ class WatchServer(
                 if (pinClock) eval("__host.setClock(${clock()})")
                 eval("__host.setConsole(${onConsole != null})")
                 eval("__host.setWatch(${str(watchInfo)})")
+                eval("__host.setInfo(${str(hostInfo)})")
                 eval("__host.load(${str(JsonObject(store.readAll().mapValues { JsonPrimitive(it.value) }).toString())})")
                 runtime.evaluate(script(), "royal-pebble-pkjs.js")
                 val now = clock()

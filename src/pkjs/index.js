@@ -196,11 +196,36 @@ function guard(name, fn) {
   };
 }
 
-// {bundle, settings, stars, isDemo}
+// Which side is running this file: 'app' inside the Royal Pebble Android app
+// (its host marks it, __host.android; docs/WATCH_PROTOCOL.md, Android companion
+// app), 'js' in PebbleKit JS. Serving lines in the usage log start with it
+// ("[app] ", "[js] "), so a log shows who answered the watch.
+var SIDE = typeof __host !== 'undefined' && __host && __host.android ? 'app' : 'js';
+
+// What the Android app tells this file about itself (host.js __host.info):
+// {version (the app's, with its commit in CI builds), commit, serves (App
+// serves the watch), wireLog}. Empty in PebbleKit JS.
+function hostInfo() {
+  return SIDE === 'app' && __host.info && typeof __host.info === 'object' ? __host.info : {};
+}
+
+// A line about something this side served the watch (or sent it).
+function served(kind, detail) {
+  usage.add(kind, '[' + SIDE + '] ' + detail);
+}
+
+// {bundle, settings, stars, isDemo, isEmpty}. With no cruise saved, PebbleKit
+// JS sends the demo cruise; the Android app, whose cruise store starts empty
+// even when the settings page has a cruise, sends an empty one instead (the
+// watch shows NO CRUISE YET), so a new install never looks like real data.
 function currentData() {
   var bundle = load(STORE_BUNDLE, null);
   if (bundle) {
     return {bundle: bundle, settings: load(STORE_SETTINGS, {}), stars: load(STORE_STARS, {}), isDemo: false};
+  }
+  if (SIDE === 'app') {
+    return {bundle: demo.empty(new Date()), settings: load(STORE_SETTINGS, {}), stars: {}, isDemo: false,
+            isEmpty: true};
   }
   if (!s_demo) {
     var saved = load(STORE_DEMO, {});
@@ -224,8 +249,18 @@ function currentData() {
 // app runs this same file in its own engine, whose host marks it
 // (__host.android), and there it always serves.
 function appServes() {
-  return !(typeof __host !== 'undefined' && __host && __host.android) &&
-    load(STORE_SETTINGS, {}).androidServes === true;
+  return SIDE === 'js' && load(STORE_SETTINGS, {}).androidServes === true;
+}
+
+// Which data a line is about: "demo 2", "no cruise" or "cruise HM 2026-12-12".
+function dataText(data) {
+  return data.isDemo ? 'demo ' + s_demoVariant : data.isEmpty ? 'no cruise' :
+    'cruise ' + ((data.bundle.ship && data.bundle.ship.code) || '?') + ' ' + data.bundle.sailDate;
+}
+
+// Real cruise data, whose stars, notices and map notes are kept.
+function isReal(data) {
+  return !data.isDemo && !data.isEmpty;
 }
 
 function sailDateInt(iso) {
@@ -294,6 +329,11 @@ function sendSlice() {
   var sl = slice.buildSlice(data.bundle, data.settings, data.stars, new Date(),
                             testAlertsOn() ? new Date(load(STORE_TEST, 0)) : null);
   built = Date.now() - built;
+  if (data.isEmpty) {
+    sl.day.status = demo.EMPTY_STATUS;
+    sl.day.location = demo.EMPTY_LOCATION;
+    sl.info.clockNote = demo.EMPTY_CLOCK;
+  }
   s_sliceId = (s_sliceId + 1) & 0x7FFF;
 
   var messages = [{
@@ -353,7 +393,7 @@ function sendSlice() {
   });
   messages.push({msg_type: MSG_END, slice_id: s_sliceId});
   // After the slice, so the watch already has the moved stars.
-  var notices = data.isDemo ? [] : load(STORE_NOTICES, []);
+  var notices = isReal(data) ? load(STORE_NOTICES, []) : [];
   if (notices.length) {
     messages.push({msg_type: MSG_NOTICE, notice_count: notices.length, notices: pack.packNotices(notices)});
   }
@@ -362,13 +402,13 @@ function sendSlice() {
   var started = Date.now();
   sendQueue(messages, function(ok, info) {
     s_sending = false;
-    usage.add('slice', (data.isDemo ? 'demo ' + s_demoVariant + ', ' : '') + 'day ' + sl.dayIndex + ', ' +
+    served('slice', dataText(data) + ', day ' + sl.dayIndex + ', ' +
               sl.events.length + ' events, ' + sl.alarms.length + ' alerts, ' + messages.length + ' messages, built in ' +
               built + ' ms, ' + sendText(ok, info));
     if (ok && notices.length) {
       save(STORE_NOTICES, []);
       console.log('Sent ' + notices.length + ' schedule change notices');
-      usage.add('notice', notices.length + ' schedule change notices sent to the watch');
+      served('notice', notices.length + ' schedule change notices sent to the watch');
     }
     console.log('Slice ' + s_sliceId + (ok ? ' sent: ' : ' failed: ') + sl.events.length + ' events, ' + sl.alarms.length + ' alerts, ' +
                 messages.length + ' messages, ' + (Date.now() - started) + ' ms');
@@ -416,10 +456,10 @@ function sendDirPage() {
   var data = currentData();
   var ctx = ctxOf(data);
   if (ref >= directory.REF_FLAG) {
-    flagFromWatch(ref - directory.REF_FLAG, ctx, data.isDemo);
+    flagFromWatch(ref - directory.REF_FLAG, ctx, !isReal(data));
   }
   var page = directory.buildPage(ref, ctx);
-  mapProblem(page, data.isDemo);
+  mapProblem(page, !isReal(data));
   var msg = directory.message(page, pageOpts());
   built = Date.now() - built;
   msg.msg_type = MSG_DIR_PAGE;
@@ -430,7 +470,7 @@ function sendDirPage() {
     var gps = page.gps && page.gps.text ? ', gps "' + (page.gps.header || '') + ' ' + page.gps.text + '" (start: ' +
       directory.startReason(ctx) + ')' :
       page.gps && page.gps.flags ? ', gps flags ' + page.gps.flags : '';
-    usage.add('dir', 'page ' + ref + ' "' + page.title + (page.label ? ' ' + page.label : '') + '": ' +
+    served('dir', 'page ' + ref + ' "' + page.title + (page.label ? ' ' + page.label : '') + '": ' +
               page.rows.length + ' rows' + gps + ', built in ' + built + ' ms, ' + sendText(ok, info));
     console.log('Directory page ' + ref + (ok ? ' sent: ' : ' failed: ') + page.rows.length + ' rows, ' +
                 msg.dir_rows.length + ' bytes');
@@ -456,7 +496,7 @@ function sendVoiceCard() {
     s_voiceConfirm = ok && card.action === voicecard.ACT_CONFIRM && (card.start || card.forget) ?
       {seq: turn.seq, start: card.start || null, forget: !!card.forget} : null;
     var saveStart = ok && card.start && card.start.set;
-    usage.add('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' + card.log + ': ' +
+    served('voice', 'turn ' + turn.seq + ' heard "' + turn.text + '" -> ' + card.log + ': ' +
               ['nothing to do', 'route', 'confirm', card.onboard ? 'set on board' : 'back ashore'][card.action] +
               (card.ref ? ' ' + card.ref + (card.rest ? ' restroom' : '') : '') +
               (card.start ? (card.start.set ? ' setting start ' : ' from ') + card.start.name : '') +
@@ -481,14 +521,14 @@ function sendRoute() {
     ctx.from = s_routeFrom.place;  // "from X to Y": this route starts at X
   }
   var page = req.venue !== undefined ? directory.eventRoutePage(req, ctx) : directory.routePage(req.ref, req.rest, ctx);
-  mapProblem(page, data.isDemo);
+  mapProblem(page, !isReal(data));
   var msg = directory.routeMsg(page, {round: pageOpts().round, h24: req.h24});
   built = Date.now() - built;
   msg.msg_type = MSG_ROUTE_PAGE;
   s_sending = true;
   sendQueue([msg], function(ok, info) {
     s_sending = false;
-    usage.add('route', (req.venue !== undefined ? 'to event at ' + req.venue + ' (start ' + req.start + ')' :
+    served('route', (req.venue !== undefined ? 'to event at ' + req.venue + ' (start ' + req.start + ')' :
                         (req.rest ? 'restroom from place ' : 'to place ') + req.ref) +
               ': "' + page.title + '", ' + (page.header ? page.header + ', ' : '') +
               (page.steps.length ? [page.steps.length + ' steps', [page.big, page.small && page.small.text]
@@ -553,24 +593,24 @@ function starChangesReceived(bytes) {
     return;
   }
   var data = currentData();
-  var times = data.isDemo ? null : load(STORE_STAR_TIMES, {});
+  var times = isReal(data) ? load(STORE_STAR_TIMES, {}) : null;
   var r = slice.applyWatchStarChanges(data.bundle, data.settings, data.stars, times, changes);
-  if (!data.isDemo) {
+  if (isReal(data)) {
     save(STORE_STARS, data.stars);
     save(STORE_STAR_TIMES, times);
   }
   r.applied.forEach(function(c) {
     var what = c.reserved ? (c.on ? 'Marked reserved' : 'Marked not reserved') : (c.on ? 'Starred' : 'Unstarred');
     console.log(what + ' on the watch: ' + c.key);
-    usage.add('star', what.toLowerCase() + ' on the watch: ' + starText(c.key));
+    served('star', what.toLowerCase() + ' on the watch: ' + starText(c.key));
   });
   r.ignored.forEach(function(c) {
     console.log('Older than a change on the phone, ignored: ' + c.key);
-    usage.add('star', 'watch change older than the phone\'s, ignored: ' + starText(c.key));
+    served('star', 'watch change older than the phone\'s, ignored: ' + starText(c.key));
   });
   r.unmatched.forEach(function(c) {
     console.log('No such event, ignored: ' + c.title);
-    usage.add('star', 'watch change for no such event, ignored: ' + c.title);
+    served('star', 'watch change for no such event, ignored: ' + c.title);
   });
   var seq = changes.reduce(function(max, c) { return Math.max(max, c.seq); }, 0);
   // When the watch shows something the phone didn't take, send it a new slice.
@@ -753,7 +793,8 @@ function openSettings() {
   state.shipsStale = !cached || !cached.list || !cached.list.length || Date.now() - cached.at > SHIPS_MAX_AGE_MS;
   var bundle = load(STORE_BUNDLE, null);
   var hdr = logLib.header({bundle: bundle, watch: watchInfo(), phone: phoneText(), label: usage.label(),
-                           count: usage.count(), dropped: usage.pageState('').dropped, now: new Date()});
+                           count: usage.count(), dropped: usage.pageState('').dropped, now: new Date(),
+                           serving: servingText(currentData())});
   state.usage = usage.pageState(hdr);
   var url = config.pageUrl(state);
   var max = PAGE_URL_MAX >> shrink;
@@ -1026,6 +1067,8 @@ Pebble.addEventListener('ready', guard('ready', function() {
             ((w && (w.model || w.platform)) || 'unknown') + (w && w.firmware ? ' firmware ' + w.firmware.major + '.' +
             w.firmware.minor + '.' + w.firmware.patch : '') + ', log ' + usage.count() + ' entries, ' +
             Math.round(usage.chars() / 1024) + ' KB');
+  s_quietSeen = {};
+  usage.add('phone', servingText(currentData()));
   if (appServes()) {
     usage.add('phone', 'the Android app serves the watch: this side stays quiet');
     return;
@@ -1033,22 +1076,46 @@ Pebble.addEventListener('ready', guard('ready', function() {
   sendSlice();
 }));
 
+// Who serves the watch, in which build, with which switches and data: one
+// line at every start, so a shared log says which side answered.
+function servingText(data) {
+  if (SIDE === 'app') {
+    var h = hostInfo();
+    return '[app] Android app ' + (h.version || '?') + (h.commit ? ' (' + h.commit + ')' : '') + ' serves the watch with JS ' +
+      logLib.APP_VERSION + '; app switch App serves the watch: ' + (h.serves === false ? 'off' : 'on') +
+      ', watch message log: ' + (h.wireLog ? 'on' : 'off') + '; data: ' + dataText(data);
+  }
+  var quiet = appServes();
+  return '[js] PebbleKit JS ' + logLib.APP_VERSION + '; settings page switch Android app serves the watch: ' +
+    (quiet ? 'on, so this side stays quiet (if the app\'s App serves the watch is off, nothing answers the watch)' :
+      'off, so this side serves the watch') + '; data: ' + dataText(data);
+}
+
 // Only in the Android app (android/watch WatchServer.storeChanged): its own
 // screens saved cruise data or settings, so the watch gets a fresh slice, as
 // after the settings page closes here. PebbleKit JS never fires it.
 Pebble.addEventListener('storechanged', guard('storechanged', function() {
-  usage.add('sync', 'the Android app saved new data');
+  served('sync', 'the Android app saved new data: ' + dataText(currentData()));
   sendSlice();
 }));
 
+// Message types this side left to the Android app since it started: each is
+// logged once, so the log shows the watch kept talking and who didn't answer.
+var s_quietSeen = {};
+
 Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
+  var p = e.payload;
   if (appServes()) {
+    if (!s_quietSeen[p.msg_type]) {
+      s_quietSeen[p.msg_type] = true;
+      usage.add('phone', '[js] quiet: left the watch\'s ' + logLib.msgTypeName(p.msg_type) +
+                ' to the Android app (logged once until PebbleKit JS restarts)');
+    }
     return;
   }
-  var p = e.payload;
   switch (p.msg_type) {
     case MSG_REQUEST:
-      usage.add('sync', 'watch asked for data');
+      served('sync', 'watch asked for data');
       sendSlice();
       break;
     case MSG_STAR_CHANGES:
@@ -1127,17 +1194,21 @@ Pebble.addEventListener('appmessage', guard('appmessage', function(e) {
         console.log('Watch storage full from cruise minute ' + p.saved_cutoff);
       }
       console.log('Watch saved ' + p.saved_bytes + ' of ' + p.saved_max + ' bytes');
-      // Reported after every slice; logged when it changes.
+      // Reported after every slice; logged when it changes. The size follows
+      // the slice the watch saved (its texts and the events still to come), so
+      // the line names the data this side last sent: demo and real data differ.
       var report = 'storage: schedule uses ' + p.saved_bytes + ' of ' + p.saved_max + ' bytes' +
-        (p.saved_cutoff !== slice.NO_TIME ? ', FULL from cruise minute ' + p.saved_cutoff : '');
+        (p.saved_cutoff !== slice.NO_TIME ? ', FULL from cruise minute ' + p.saved_cutoff : '') +
+        ' (' + dataText(currentData()) + ')';
       if (report !== s_lastSaved) {
         s_lastSaved = report;
-        usage.add('watch', report);
+        served('watch', report);
       }
       break;
     case MSG_DEMO_NEXT:
-      if (!load(STORE_BUNDLE, null)) {
-        usage.add('demo', 'next demo screen (variant ' + ((s_demoVariant + 1) % demo.VARIANTS) + ')');
+      // The Android app has no demo (currentData): the watch only asks when its slice is one.
+      if (!load(STORE_BUNDLE, null) && SIDE === 'js') {
+        served('demo', 'next demo screen (variant ' + ((s_demoVariant + 1) % demo.VARIANTS) + ')');
         s_demoVariant = (s_demoVariant + 1) % demo.VARIANTS;
         save(STORE_DEMO, {variant: s_demoVariant, at: Date.now()});
         s_demo = null;

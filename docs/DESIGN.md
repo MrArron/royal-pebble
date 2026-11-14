@@ -256,7 +256,10 @@ The watch counts the days from the sail date, so it stays right without the
 phone. In the last 3 days it adds `Sync before you leave` / `Works offline
 after a full sync` with the last sync date; the day before it reads
 `Tomorrow`, and from midnight to 04:00 on sail day `Today`. After the cruise:
-`CRUISE ENDED`.
+`CRUISE ENDED`. With no cruise downloaded in the Android app while it serves the
+watch (1.6.22): `No cruise today` over `NO CRUISE YET`, and My info's clock
+note reads `No cruise downloaded in the app` (PebbleKit JS shows the demo
+instead).
 
 ### 4.6 Button hints
 

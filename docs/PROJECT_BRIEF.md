@@ -202,8 +202,19 @@ consent).
   new), Ship GPS pages and routes, voice turns, battery hourly while a wakeup
   runs anyway. Each new feature adds its own log events.
 - **Header:** app and bundle versions, watch firmware, phone platform, ship
-  code, a device label set on the Me tab. The first start of a new version
-  logs `first run of 1.X.Y, was …`.
+  code, a device label set on the Me tab, and who serves the watch (1.6.22).
+  The first start of a new version logs `first run of 1.X.Y, was …`.
+- **Which side (1.6.22):** with the Android app able to serve the watch, every
+  line about serving it starts `[js]` (PebbleKit JS) or `[app]` (the Android
+  app): slices (with their data: `demo N`, `no cruise` or `cruise HM
+  2026-12-12`), notices, directory pages, routes, voice answers, star changes,
+  data requests and the watch's storage report (which names the data too, since
+  its size follows the slice: demo and real data differ by a few dozen bytes).
+  Each start logs who serves, the build and the switch it read: PebbleKit JS
+  the settings page's Android app serves the watch, the app its App serves the
+  watch, version, commit and wire log. A quiet PebbleKit JS logs each kind of
+  watch message it leaves to the app once. The app's own log and export are
+  Settings > Watch > Share test log (`docs/WATCH_PROTOCOL.md`, Test log).
 - **Personal data:** titles and cabin details are included, on condition that
   none of it ever reaches the GitHub repo. Never commit a log, an export or a
   quote from it; exports use the git-ignored name `royal-pebble-log-*.txt`.
@@ -339,7 +350,9 @@ entries (6.4 KB heap).
   Phase 3 serving (1.6.21): the app can serve the watch by running
   `src/pkjs/index.js` in QuickJS behind two switches, off by default
   (`docs/WATCH_PROTOCOL.md`, App serves the watch); byte-for-byte equal to
-  PebbleKit JS in tests, not yet tried on the watch.
+  PebbleKit JS in tests, first tried on the watch 2026-11-14. 1.6.22: which
+  side served each request in the usage log, the app's Share test log, and
+  NO CRUISE YET instead of the demo when the app has no cruise.
 - A quick "remind me in N minutes" timer, lap counter, spending log (Royal's
   onboard credit is a starting balance), currency conversion, Celebrity
   support.

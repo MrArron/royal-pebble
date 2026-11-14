@@ -75,6 +75,14 @@ object WatchLink {
      * the watch ACKed it.
      */
     suspend fun sendNotice(context: Context, noticeCount: Int, notices: ByteArray): Boolean {
+        val r = trySendNotice(context, noticeCount, notices)
+        // Which side sent the watch an alert, for the test log (no alert text).
+        WatchHost.logApp(context, "alert", "[app] $noticeCount notices (${notices.size} bytes) from the app to the watch: " +
+            r.second)
+        return r.first
+    }
+
+    private suspend fun trySendNotice(context: Context, noticeCount: Int, notices: ByteArray): Pair<Boolean, String> {
         val dict: WireDict = linkedMapOf(
             keys.id("msg_type")!! to WireValue.Int32(MSG_NOTICE),
             keys.id("notice_count")!! to WireValue.Int32(noticeCount),
@@ -84,15 +92,15 @@ object WatchLink {
             withTimeoutOrNull(30_000) { inSlice.first { !it } }
             val r = mutex.withLock { send(context, dict, null) }
             when {
-                r == TransmissionResult.Success -> return true
+                r == TransmissionResult.Success -> return true to (if (attempt == 0) "ok" else "ok after opening Royal Pebble")
                 r == TransmissionResult.FailedDifferentAppOpen && attempt == 0 -> {
                     sender(context).startAppOnTheWatch(APP_UUID)
                     // Opening it starts a slice when the app serves the watch; let it begin.
                     delay(3_000)
                 }
-                else -> return false
+                else -> return false to "FAILED: ${r ?: "no answer"}"
             }
         }
-        return false
+        return false to "FAILED: Royal Pebble didn't open"
     }
 }
