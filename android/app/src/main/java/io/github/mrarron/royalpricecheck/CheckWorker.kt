@@ -16,6 +16,11 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val c = applicationContext
         if (!Prefs.hasConfig(c)) return@withContext Result.success()
+        // On board the cruise planner's prices rarely matter and there's often no internet: skip, unless asked.
+        if (AppPhase.current(c) == io.github.mrarron.royalpebble.settings.TripPhase.Phase.ONBOARD && !AppPhase.checksAtSea(c)) {
+            io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(c, "prices", "background check skipped: on board")
+            return@withContext Result.success()
+        }
         if (Prefs.useLatestScript(c)) PythonBridge.updateScript(c) // keeps the old copy on failure
         val previous = Prefs.loadLastResult(c)
         val log = ArrayList<String>()

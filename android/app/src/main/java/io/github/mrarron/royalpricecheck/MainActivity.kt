@@ -53,44 +53,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val dark = isSystemInDarkTheme()
-            io.github.mrarron.royalpricecheck.ui.RoyalTheme(dark) { AppScreen(vm, dark) }
+            io.github.mrarron.royalpricecheck.ui.RoyalTheme(dark) { AppShell(vm, dark) }
         }
     }
 }
 
 @Composable
-private fun AppScreen(vm: MainViewModel, dark: Boolean) {
-    var tab by rememberSaveable { mutableIntStateOf(if (vm.hasConfig) 0 else 3) }
-    val titles = listOf("Summary", "Log", "Account", "Settings", "Cruise")
-
-    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= 33) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-    }
-
-    // The Cruise screen can save the shared Royal login (and config.yaml): pick it up on every tab change.
-    LaunchedEffect(tab) { vm.accountChanged() }
-
-    Scaffold { pad ->
-        Column(Modifier.padding(pad).fillMaxSize()) {
-            TabRow(selectedTabIndex = tab) {
-                titles.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) }) }
-            }
-            when (tab) {
-                0 -> SummaryTab(vm)
-                1 -> LogTab(vm, dark)
-                2 -> AccountTab(vm)
-                4 -> io.github.mrarron.royalpricecheck.cruise.CruiseHost(
-                    androidx.lifecycle.viewmodel.compose.viewModel<io.github.mrarron.royalpricecheck.cruise.CruiseViewModel>(),
-                )
-                else -> SettingsTab(vm)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryTab(vm: MainViewModel) {
+internal fun SummaryTab(vm: MainViewModel) {
     val r = vm.result
     androidx.compose.foundation.text.selection.SelectionContainer {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -101,7 +70,7 @@ private fun SummaryTab(vm: MainViewModel) {
                 }
                 if (vm.running) CircularProgressIndicator(Modifier.padding(4.dp))
             }
-            if (!vm.hasConfig) Text("Enter your account on the Account tab first.")
+            if (!vm.hasConfig) Text("Add your Royal account in Settings first.")
             vm.status?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         if (r == null) {
@@ -170,7 +139,7 @@ private fun DropCard(d: PriceDrop) {
 }
 
 @Composable
-private fun LogTab(vm: MainViewModel, dark: Boolean) {
+internal fun LogTab(vm: MainViewModel, dark: Boolean) {
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(vm.log.size) { if (vm.log.isNotEmpty()) state.scrollToItem(vm.log.size - 1) }
     Column(Modifier.fillMaxSize()) {
@@ -189,7 +158,7 @@ private fun LogTab(vm: MainViewModel, dark: Boolean) {
 }
 
 @Composable
-private fun AccountTab(vm: MainViewModel) {
+internal fun AccountTab(vm: MainViewModel) {
     var user by rememberSaveable { mutableStateOf(vm.accountEmail ?: "") }
     var pass by rememberSaveable { mutableStateOf("") }
     var line by rememberSaveable { mutableStateOf("royal") }
@@ -262,8 +231,9 @@ private fun PasswordPrompt(vm: MainViewModel) {
     }
 }
 
+/** Settings > Price checks: background checks, on board, watch alerts, script updates. */
 @Composable
-private fun SettingsTab(vm: MainViewModel) {
+internal fun PriceChecksPage(vm: MainViewModel) {
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Background checks", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -273,6 +243,13 @@ private fun SettingsTab(vm: MainViewModel) {
         }
         Text("Checks run only with a network connection. Keep them at 6 hours or slower to be gentle with Royal's servers. You are told only about things that are new since the last check.", style = MaterialTheme.typography.bodySmall)
         Text("Background checks save your password encrypted with the Android Keystore. Turning them off deletes it.", style = MaterialTheme.typography.bodySmall)
+        val c = androidx.compose.ui.platform.LocalContext.current
+        var atSea by remember { mutableStateOf(AppPhase.checksAtSea(c)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Switch(atSea, { v -> atSea = v; AppPhase.setChecksAtSea(c, v) })
+            Text("Keep checking while on board")
+        }
+        Text("Off: background checks pause while the app is in On board mode (there's often no internet at sea), and start again after the cruise. Check now still works.", style = MaterialTheme.typography.bodySmall)
         Text("Watch alerts", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Switch(vm.watchAlerts, vm::changeWatchAlerts)
@@ -291,7 +268,5 @@ private fun SettingsTab(vm: MainViewModel) {
         vm.status?.let { Text(it) }
         if (vm.scriptVersion.isNotBlank()) Text("Downloaded script: ${vm.scriptVersion}", style = MaterialTheme.typography.bodySmall)
         Text("Bundled script: ${BuildConfig.UPSTREAM_VERSION}", style = MaterialTheme.typography.bodySmall)
-        Text("App ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall)
-        io.github.mrarron.royalpricecheck.watch.WatchCard()
     }
 }

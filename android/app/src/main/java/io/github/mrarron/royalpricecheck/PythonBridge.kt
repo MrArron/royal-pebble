@@ -28,13 +28,13 @@ object PythonBridge {
     fun run(context: Context, onLine: (String) -> Unit): RunResult {
         val config = Prefs.configFile(context)
         if (!config.exists()) {
-            return RunResult.failure("No configuration yet. Open the Account tab and enter your account.")
+            return RunResult.failure("No configuration yet. Open Settings > Royal account and enter your account.")
         }
         // The password lives in PasswordVault, not in config.yaml; put it into a short-lived copy.
         val injected = ConfigPasswords.inject(config.readText(), PasswordVault.all(context))
         if (injected.missing.isNotEmpty()) {
             return RunResult.failure(
-                "Password needed. Open the Account tab and enter it again " +
+                "Password needed. Open Settings > Royal account and enter it again " +
                     "(it is only kept after a restart while background checks are on).",
             )
         }

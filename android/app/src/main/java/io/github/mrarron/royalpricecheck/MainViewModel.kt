@@ -102,11 +102,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (h > 0) {
             refreshMissing()
             if (!hasConfig || ConfigPasswords.extract(config).indices.isEmpty()) {
-                status = "Save your account on the Account tab first."
+                status = "Add your Royal account in Settings first."
                 return
             }
             if (missingPasswords.isNotEmpty()) {
-                status = "Enter your password on the Account tab first; background checks need it."
+                status = "Enter your password in Settings > Royal account first; background checks need it."
                 return
             }
             PasswordVault.saveEncrypted(ctx) // only while checks are on
@@ -138,7 +138,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (running) return
         refreshMissing()
         if (missingPasswords.isNotEmpty()) {
-            status = "Password needed. Enter it on the Account tab."
+            status = "Password needed. Enter it in Settings > Royal account."
             return
         }
         running = true
