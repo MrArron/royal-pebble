@@ -1,7 +1,9 @@
 # Cruise data bundle — format v1
 
-Produced by the phone companion's Download and by `tools/cruise-sync/cruise_sync.py`
-(the reference implementation). The settings page's paste-in backup accepts the same
+Produced by the phone companion's Download, by `tools/cruise-sync/cruise_sync.py`
+(the reference implementation) and by the Android app's Cruise tab
+(`android/royal/`, a Kotlin port of `royal.js` checked against the same fixtures in
+`test/fixtures/`). The settings page's paste-in backup, and the app's, accept the same
 text. One compact JSON object, ASCII only.
 
 ```json
@@ -226,7 +228,7 @@ text. One compact JSON object, ASCII only.
   embark day). The same goes for an itinerary `depart` before 04:00 or before
   `arrive`.
 - Text has been simplified to ASCII (straight quotes, no ® ™ ℠).
-- Bump `v` for any breaking change and update both producers.
+- Bump `v` for any breaking change and update all three producers.
 
 ## Shared plan (Share my plan) — v1
 

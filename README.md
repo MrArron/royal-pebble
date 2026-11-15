@@ -1,6 +1,7 @@
 # Royal Pebble
 
-Royal Pebble is a Pebble Time 2 watch app for Royal Caribbean cruises. Glance at
+Royal Pebble is a watch app for the Pebble Time 2 and Pebble Round 2 for Royal
+Caribbean cruises. Glance at
 your wrist for the all-aboard countdown, what's next on the ship's schedule and
 how to get there, without pulling out your phone. Everything is loaded before
 you sail, so it works at sea with no internet.
@@ -48,6 +49,13 @@ On the phone, in the Pebble app's settings page for Royal Pebble (works offline)
 - **Me:** cabin details, units, theme, reminders, test alerts, the usage log,
   the map check and **Help** (every button, voice commands, tips).
 
+Optional: the **Royal Pebble Android app** ([`android/`](android/README.md),
+sideloaded APK) checks your booking for price drops, check-in and final
+payment and can send those to the watch; its **Cruise** tab has the same
+screens as the settings page, and behind a switch (Settings > Watch > App
+serves the watch) it can serve the watch itself instead of the Pebble app's
+script. Off by default; the watch works the same without it.
+
 ## Ships with Ship GPS
 
 The Ship GPS needs a map of the ship, measured from Royal's deck plans:
@@ -63,17 +71,22 @@ deck and position), without walking distances, routes or voice place names.
 [`tools/shipmap/`](tools/shipmap/README.md). Pick a Royal Caribbean ship, map
 it, and open a pull request; the README there explains each step.
 
-## Install on a Pebble Time 2
+## Install on a Pebble Time 2 or Pebble Round 2
 
 Royal Pebble isn't in the Pebble app store; you sideload it with the Pebble app
-on an Android phone (the only phone it has been tested with).
+on an Android phone (the only phone it has been tested with). One `.pbw` works
+on both watches. The Round 2 layouts have been tried on the emulator only so
+far.
 
 1. Get `royal-pebble.pbw`: build it from source (below), which writes
    `build/royal-pebble.pbw`.
 2. Copy the `.pbw` to the phone and open it with the Pebble app, which
    installs it on the watch. Or, with the Pebble app's developer connection
-   on, run `pebble install --phone <phone's IP>` from the SDK.
+   on, run `pebble install --phone <phone's IP>` from the SDK. (Don't rebuild
+   it on CloudPebble: that drops the entry the Android app needs.)
 3. Open Royal Pebble's settings in the Pebble app and download your sailing.
+4. Optional: install the Android app's APK, built by this repo's **Android
+   app** GitHub Actions workflow (`docs/BUILD_AND_TEST.md`).
 
 ## Getting your cruise in
 
@@ -101,23 +114,27 @@ connection.
   and on your watch. The sync tool's output file can hold your stateroom and
   booking, so don't share it.
 - The usage log and map notes stay on your phone and leave it only when you
-  copy them. They can include event titles and cabin details; treat a copy as
+  copy them (or, in the Android app, share or save its log file). They can include event titles and cabin details; treat a copy as
   private. The usage log can be turned off on the Me tab.
 
 ## Build from source
 
-Pebble SDK 4.x (`pebble build`, platform `emery`), Node for the phone tests and
-Python for the tools. Commands, emulator tips and working rules are in
-[`CLAUDE.md`](CLAUDE.md).
+Pebble SDK 4.x (`pebble build`, platforms `emery` and `gabbro`), Node for the
+phone tests and Python for the tools; Gradle and Java 21 for the Android app.
+Commands, emulator tips and working rules are in [`CLAUDE.md`](CLAUDE.md); how
+builds are made and tested is in
+[`docs/BUILD_AND_TEST.md`](docs/BUILD_AND_TEST.md).
 
 - `src/c/`: the watch app (C). `src/pkjs/`: the phone companion (PebbleKit JS),
   including the settings page and generated map and voice data.
 - `tools/cruise-sync/`: Windows sync tool, the reference for every Royal
   request. `tools/shipmap/`: ship map data. `tools/voice/`: voice lexicon.
   `tools/mockups/`: design mockup scripts. `tools/watch_size.py`: watch size
-  check.
+  check for both watches. `tools/screens.sh`: emulator screenshot walk.
+- `android/`: the optional Android app (`app/`, `royal/`, `watch/`).
 - Tests: `node test/pkjs/<name>.test.js` for each file in `test/pkjs/`;
-  `python tools/cruise-sync/test_cruise_sync.py`.
+  `python tools/cruise-sync/test_cruise_sync.py`; the Android app's
+  `./gradlew :royal:test :watch:test testDebugUnitTest` (in CI).
 
 ## Docs
 
@@ -125,17 +142,26 @@ Python for the tools. Commands, emulator tips and working rules are in
 |---|---|
 | [`docs/PROJECT_BRIEF.md`](docs/PROJECT_BRIEF.md) | Purpose, constraints, what's built, decisions, limits, later ideas |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Every watch screen and settings-page tab as built, colors, mockups |
-| [`docs/PLAN.md`](docs/PLAN.md) | The work left before the sailing: Phase 5 tuning, Phase 6, the freeze |
+| [`docs/PLAN.md`](docs/PLAN.md) | The work left before the sailing: size budget, Round 2, Android app, Phase 6, the freeze |
 | [`docs/DATA_FORMAT.md`](docs/DATA_FORMAT.md) | The cruise data bundle and the shared plan format |
-| [`docs/WATCH_PROTOCOL.md`](docs/WATCH_PROTOCOL.md) | Phone ↔ watch messages, storage and the time model |
+| [`docs/WATCH_PROTOCOL.md`](docs/WATCH_PROTOCOL.md) | Phone ↔ watch messages, storage and the time model; the Android app serving the watch |
+| [`docs/BUILD_AND_TEST.md`](docs/BUILD_AND_TEST.md) | Architecture on one page; building the pbw and apk; tests; handing a build over |
 | [`docs/ROYAL_LOGIN_DATA.md`](docs/ROYAL_LOGIN_DATA.md) | What a Royal login can see |
+| [`docs/PRICE_SCRIPT_UPDATES.md`](docs/PRICE_SCRIPT_UPDATES.md) | How the Android app's copy of the price script is kept verified |
+| [`docs/QUICKJS_PHASE0.md`](docs/QUICKJS_PHASE0.md) | Why the Android app can run the phone script in QuickJS |
+| [`android/README.md`](android/README.md) | The Android app |
 
 ## Credits and attributions
 
 - **[jdeath/CheckRoyalCaribbeanPrice](https://github.com/jdeath/CheckRoyalCaribbeanPrice/tree/main)**
   (MIT License, Copyright (c) 2025 jdeath): the knowledge of Royal Caribbean's web
   endpoints, the public web-app `AppKey` and the login client used by the sync tool
-  and the phone companion all come from this project. Thank you.
+  and the phone companion all come from this project, and the Android app runs its
+  `CheckRoyalCaribbeanPrice.py` unchanged for the price and booking checks. Thank
+  you.
+- **Android app libraries:** [PebbleKit Android 2](https://github.com/pebble-dev/PebbleKitAndroid2)
+  (the link to the watch), Cash App's [Zipline](https://github.com/cashapp/zipline)
+  QuickJS (runs the phone script in the app) and Chaquopy (runs the Python script).
 - **Howard Hinnant's date algorithms**
   ([`days_from_civil` / `civil_from_days`](https://howardhinnant.github.io/date_algorithms.html),
   public domain): used on both the phone and the watch to count days without time
@@ -147,8 +173,8 @@ Python for the tools. Commands, emulator tips and working rules are in
   as a local `data:` URL so it works offline. No Clay code is included.
 - **Built with help from Claude**, Anthropic's AI model, through Claude Code. Claude
   aided in designing and writing the watch app, phone companion, settings page, sync
-  tool, venue table, tests and documentation, working with the project's owner who
-  tested every step on a real Pebble Time 2.
+  tool, venue table, Android app, tests and documentation, working with the
+  project's owner who tested every step on a real Pebble Time 2.
 
 ## License
 

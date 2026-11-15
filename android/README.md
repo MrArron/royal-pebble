@@ -8,8 +8,18 @@ An optional add-on: it runs jdeath's
   balance due;
 - price drops: paid vs current, saving, and a "rebook" flag.
 
+It also holds Royal Pebble's cruise settings natively and, behind a switch, can serve the watch
+in place of the Pebble app's PebbleKit JS (below).
+
 Tabs: Summary (Run now, results), Log (live coloured output), Account (quick form that writes an
-editable `config.yaml`), Settings (background checks off / 6 / 12 / 24 h, script updates).
+editable `config.yaml`), Settings (background checks off / 6 / 12 / 24 h, Watch alerts, script
+updates, and the **Watch** card: App serves the watch, the watch message log, Share log file,
+Save to Downloads, Test alerts, Clear), Cruise (the settings page's screens: Cruise with Download
+and Download with login, Days, Filters, Events, Me, Share; `DESIGN.md` §12, Android app). The app
+wears the settings page's palette (`ui/RoyalTheme.kt`).
+
+Version: `0.1.0-<commit>` from CI (the **Android app** workflow; run it by hand on `main` after a
+merge to get an APK, `docs/BUILD_AND_TEST.md`).
 
 ## Your password
 
@@ -72,7 +82,10 @@ Plain Kotlin, no Android, so `./gradlew :royal:test` runs offline on any JVM.
   (`slice.reconcileStars`) is a hook for the JS engine; until it is wired in, stars stay put.
 - Tests read the shared fixtures in `test/fixtures/` (the same expected schedule and booking as
   `test/pkjs/royal.test.js` and `test_cruise_sync.py`) and compare output as JSON text, so the
-  Kotlin bundle matches `JSON.stringify` byte for byte. Nothing sends slices to the watch yet.
+  Kotlin bundle matches `JSON.stringify` byte for byte. Slices for the watch are built from this
+  store by the JS in `watch/` (below), not by Kotlin. The star reconciler is still `KEEP`: after a
+  re-download in the app, stars stay on their old keys instead of following a moved or cancelled
+  event, and no schedule-change notice is made, as PebbleKit JS does (`slice.reconcileStars`).
 
 ## Serving the watch (`watch/` and `app/.../watch/`)
 

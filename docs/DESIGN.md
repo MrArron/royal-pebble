@@ -1,7 +1,7 @@
 # Royal Pebble — Design
 
-How the watch app and the phone settings page look and behave, as built in
-1.6.6. One section per screen or feature. Designs that are approved but not
+How the watch app, the phone settings page and the Android app's Cruise
+screens look and behave, as built in 1.6.24. One section per screen or feature. Designs that are approved but not
 built are only in §13. The data behind the screens is in `DATA_FORMAT.md`
 (the bundle) and `WATCH_PROTOCOL.md` (phone ↔ watch bytes); scope and
 decisions are in `PROJECT_BRIEF.md`.
@@ -796,7 +796,14 @@ page itself is light only), bottom navigation for the six screens (Cruise, Days,
 Filters, Events, Me, Share), the screen name with a **Save** pill at the top
 right (Me holds its edits until Save; the other screens save as you go, so the
 pill reads `Saved`), `From booking` and `Edited` chips, and a watch-colours
-preview card under Me > Theme.
+preview card under Me > Theme. Every save pushes a fresh slice to the watch
+while the app serves it (1.6.23). The app's Settings tab ends with the
+**Watch** card: **App serves the watch** (with the server's status), **Log
+every message to and from the watch**, **Share log file**, **Save to
+Downloads**, **Test alerts** (as Me > Test alerts, §8.6) and **Clear** (the
+app's lines and the message log, not the usage log); the export is described
+in `WATCH_PROTOCOL.md`, Test log. The price checker's own tabs (Summary, Log,
+Account, Settings) are in `android/README.md`.
 
 ### 12.1 Shared patterns
 
