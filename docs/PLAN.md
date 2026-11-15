@@ -121,7 +121,10 @@ the Ask card and its messages, and the On board? labels by the buttons.
 G6a done in 1.6.6: the Time 2's pill, scroll bar and all-aboard bar (+280 B
 on the Time 2, 4,432 B under budget). G7 done in 1.6.7: the phone words
 the voice card and pages for each watch (no watch code). Next: G8, the soak
-on the Round 2 once it arrives.
+on the Round 2 once it arrives. Rechecked on 1.6.24 (2026-11-15, gabbro
+emulator): every main screen, voice, the alert test and the four booking
+notices fit the circle; the Android app now retries the watch-type lookup so
+the Round 2 always gets its layouts. Round 2 62,008 B (1,480 B under budget).
 
 ### 1.6 hardware-test fixes (from the Time 2 test of 1.6.8)
 

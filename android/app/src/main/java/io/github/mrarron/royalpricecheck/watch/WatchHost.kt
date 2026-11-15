@@ -10,9 +10,11 @@ import io.github.mrarron.royalpebble.watch.WatchServer
 import io.github.mrarron.royalpebble.watch.WireDict
 import io.rebble.pebblekit2.client.DefaultPebbleInfoRetriever
 import io.rebble.pebblekit2.common.model.WatchIdentifier
+import io.rebble.pebblekit2.model.ConnectedWatch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -39,7 +41,7 @@ object WatchHost {
         Thread(null, r, "royal-pebble-js", 4L * 1024 * 1024).apply { isDaemon = true }
     }
     private val scope = CoroutineScope(SupervisorJob() + thread.asCoroutineDispatcher())
-    private var server: WatchServer? = null
+    @Volatile private var server: WatchServer? = null
     private var serving: WatchIdentifier? = null
     private var since: Long = 0
     private var messages = 0
@@ -179,6 +181,25 @@ object WatchHost {
         }
     }
 
+    // The last Pebble.getActiveWatchInfo() JSON per watch, while the app runs.
+    private val knownWatches = java.util.concurrent.ConcurrentHashMap<WatchIdentifier, String>()
+
+    // Waits (ms) before each try at the watch's type: now, then over about half a minute.
+    private val WATCH_INFO_RETRIES = longArrayOf(0, 2_000, 5_000, 10_000, 15_000)
+
+    // The shape PebbleKit JS's getActiveWatchInfo() has: platform ("emery",
+    // "gabbro"), model, firmware.
+    private fun watchInfoJson(info: ConnectedWatch): String = JsonObject(mapOf(
+        "platform" to JsonPrimitive(info.platform.lowercase()),
+        "model" to JsonPrimitive(info.name),
+        "firmware" to JsonObject(mapOf(
+            "major" to JsonPrimitive(info.firmwareVersionMajor),
+            "minor" to JsonPrimitive(info.firmwareVersionMinor),
+            "patch" to JsonPrimitive(info.firmwareVersionPatch),
+            "suffix" to JsonPrimitive(info.firmwareVersionTag),
+        )),
+    )).toString()
+
     private var appContext: Context? = null
 
     /** The watch the server last served ("Pebble Time 2, platform emery, firmware 4.9.0"), for the log header. */
@@ -203,33 +224,43 @@ object WatchHost {
         )
         logApp(app, "server", "serving the watch: app ${buildText()}, Royal Pebble JS $jsVersion, watch message log " +
             (if (wire) "on" else "off") + ", cruise in the app: " + cruiseText(app))
-        s.start(null) { ms -> -TimeZone.getDefault().getOffset(ms) / 60000 }
+        // The watch's type from an earlier start, so the first pages are laid
+        // out for it before this start's lookup answers.
+        s.start(knownWatches[watch]) { ms -> -TimeZone.getDefault().getOffset(ms) / 60000 }
         server = s
         serving = watch
         since = System.currentTimeMillis()
         messages = 0
-        // What Pebble.getActiveWatchInfo() gives PebbleKit JS (the Round 2 gets its own layouts).
+        // What Pebble.getActiveWatchInfo() gives PebbleKit JS: the Round 2 gets
+        // its own layouts (textfit.platformOf), so a lookup that fails or is slow
+        // must not leave it with the Time 2's. Tried again a few times while this
+        // server runs; the last answer is kept for the next start.
         scope.launch {
-            val info = runCatching {
-                withTimeoutOrNull(3_000) { DefaultPebbleInfoRetriever(app).getConnectedWatches().first() }
-                    ?.firstOrNull { it.id == watch }
-            }.getOrNull()
-            if (info != null) {
-                lastWatch = "${info.name}, platform ${info.platform.lowercase()}, firmware " +
-                    "${info.firmwareVersionMajor}.${info.firmwareVersionMinor}.${info.firmwareVersionPatch}" +
-                    (info.firmwareVersionTag?.takeIf { it.isNotBlank() }?.let { "-$it" } ?: "")
-                logApp(app, "watch", "connected watch: $lastWatch")
-                s.watchInfo(JsonObject(mapOf(
-                    "platform" to JsonPrimitive(info.platform.lowercase()),
-                    "model" to JsonPrimitive(info.name),
-                    "firmware" to JsonObject(mapOf(
-                        "major" to JsonPrimitive(info.firmwareVersionMajor),
-                        "minor" to JsonPrimitive(info.firmwareVersionMinor),
-                        "patch" to JsonPrimitive(info.firmwareVersionPatch),
-                        "suffix" to JsonPrimitive(info.firmwareVersionTag),
-                    )),
-                )).toString())
+            var info: ConnectedWatch? = null
+            for ((n, wait) in WATCH_INFO_RETRIES.withIndex()) {
+                delay(wait)
+                if (server !== s) return@launch
+                info = runCatching {
+                    withTimeoutOrNull(3_000) { DefaultPebbleInfoRetriever(app).getConnectedWatches().first() }
+                        ?.firstOrNull { it.id == watch }
+                }.getOrNull()
+                if (info != null) break
+                if (n == WATCH_INFO_RETRIES.lastIndex) {
+                    logApp(app, "server", "watch type unknown after ${n + 1} tries" +
+                        (if (knownWatches[watch] != null) ": kept the last one known" else ": Time 2 layouts"))
+                }
             }
+            if (info == null) return@launch
+            lastWatch = "${info.name}, platform ${info.platform.lowercase()}, firmware " +
+                "${info.firmwareVersionMajor}.${info.firmwareVersionMinor}.${info.firmwareVersionPatch}" +
+                (info.firmwareVersionTag?.takeIf { it.isNotBlank() }?.let { "-$it" } ?: "")
+            val json = watchInfoJson(info)
+            if (json != knownWatches[watch]) {
+                logApp(app, "watch", "connected watch: $lastWatch" +
+                    if (info.platform.equals("gabbro", ignoreCase = true)) " (Pebble Round 2 layouts)" else "")
+            }
+            knownWatches[watch] = json
+            s.watchInfo(json)
         }
         return s
     }

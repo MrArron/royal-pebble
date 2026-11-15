@@ -21,7 +21,7 @@ var PLATFORMS = {
 // `qemu_platform_gabbro`). Anything else (the phone can't tell, or an emulator
 // without info) is the Time 2.
 function platformOf(info) {
-  var p = info && info.platform;
+  var p = String(info && info.platform || '').toLowerCase();
   if (p === 'gabbro' || p === 'chalk') {
     return 'gabbro';
   }
