@@ -58,7 +58,8 @@ class WatchServerSessionTest {
             keys = keys, store = store, sink = { sent += it; true }, clock = { now }, pinClock = true,
             hostInfo = spec["host"]?.toString(),
         )
-        server.start(null) { ms -> -TimeZone.getDefault().getOffset(ms) / 60000 }
+        // What WatchHost passes from PebbleKit Android (null: the watch type isn't known).
+        server.start(spec["watch"]?.toString()) { ms -> -TimeZone.getDefault().getOffset(ms) / 60000 }
         for (step in spec["steps"]!!.jsonArray) {
             val s = step.jsonObject
             when {
@@ -108,4 +109,7 @@ class WatchServerSessionTest {
 
     @Test
     fun savedSailingSessionIsTheSameAsInNode() = check("sailing")
+
+    @Test
+    fun roundWatchSessionIsTheSameAsInNode() = check("round")
 }

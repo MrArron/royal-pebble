@@ -125,6 +125,15 @@ var SCENARIOS = {
     steps.push({message: {msg_type: MSG.REQUEST}});
     return {now: now, store: {bundle: JSON.stringify(b), settings: JSON.stringify(settings), stars: JSON.stringify(stars)},
             steps: steps, host: HOST};
+  },
+  // The same sailing on a Pebble Round 2: the app passes PebbleKit Android's
+  // watch info (WatchHost.watchInfoJson), so the pages, routes and voice cards
+  // are the round ones (textfit.platformOf, pagelines.js).
+  round: function() {
+    var spec = SCENARIOS.sailing();
+    spec.watch = {platform: 'gabbro', model: 'Pebble Round 2',
+                  firmware: {major: 4, minor: 9, patch: 0, suffix: ''}};
+    return spec;
   }
 };
 
