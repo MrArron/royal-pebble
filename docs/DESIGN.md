@@ -789,14 +789,29 @@ Events, Me; **Save** is a pill at the top right of every screen. The page
 can't talk to the phone script while open; everything returns on close
 (`pebblejs://close#`).
 
-**Android app.** The native Cruise screens (`android/`) wear the same look:
-the palette above as a fixed Material 3 scheme (`ui/RoyalTheme.kt`, no dynamic
-colour), a dark scheme in the same teal for a phone set to dark (the settings
-page itself is light only), bottom navigation for the six screens (Cruise, Days,
-Filters, Events, Me, Share), the screen name with a **Save** pill at the top
-right (Me holds its edits until Save; the other screens save as you go, so the
-pill reads `Saved`), `From booking` and `Edited` chips, and a watch-colours
-preview card under Me > Theme.
+**Android app.** The native screens (`android/`) wear the same look: the
+palette above as a fixed Material 3 scheme (`ui/RoyalTheme.kt`, no dynamic
+colour), and a dark scheme in the same teal for a phone set to dark (the
+settings page itself is light only). Since 1.6.25 there is one bottom bar whose
+tabs follow the trip phase (`AppShell.kt`, `TripPhase`; layout picked from the
+options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
+
+- Planning: **Trip** (Auto/Planning/On board chips, countdown, price glance,
+  download, Ready to sail, backup paste), **Prices** (Summary and Full report,
+  selectable, Copy and Share), **Plan** (segmented Events, Days, Filters, Share),
+  **Settings**.
+- On board: **Today** (the same chips, all-aboard countdown, next starred
+  events, to reserve, watch status), **Events** (the same four segments),
+  **Cabin** (the old Me screen), **Settings**.
+- Auto = On board from the downloaded sailing's first itinerary day through
+  its last, else Planning; the demo cruise is always Planning.
+- Settings is a list of pages with a back arrow: Royal account (one login for
+  price checks and downloads), Me and my stateroom (Planning only), Watch and
+  logs, Price checks, About, and Prices when On board.
+- The top bar shows the screen's name; Cabin (and Me) hold edits until the
+  **Save** button in the top bar, the other screens save as you go.
+  `From booking` and `Edited` chips and the watch-colours preview card under
+  Theme are unchanged.
 
 ### 12.1 Shared patterns
 

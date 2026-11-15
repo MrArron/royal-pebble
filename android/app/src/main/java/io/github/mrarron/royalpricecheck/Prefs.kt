@@ -41,7 +41,7 @@ object Prefs {
     fun simpleConfig(username: String, password: String, cruiseLine: String): String {
         fun q(s: String) = "'" + s.replace("'", "''") + "'"   // YAML single-quoted scalar
         return buildString {
-            appendLine("# Created by Royal Pebble for Android. Your password is kept out of this file. Full options:")
+            appendLine(RoyalAccount.SIMPLE_HEADER + " Your password is kept out of this file. Full options:")
             appendLine("# https://github.com/jdeath/CheckRoyalCaribbeanPrice/blob/main/docs/config.md")
             appendLine("accountInfo:")
             appendLine("  - username: ${q(username.trim())}")

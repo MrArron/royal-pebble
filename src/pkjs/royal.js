@@ -952,13 +952,15 @@ function downloadWithLogin(ship, sailDate, email, password, callback) {
   email = password = null;
 }
 
-// 'booking found: 3 purchases (1 timed), 2 port days', for the usage log:
-// counts only, never the stateroom or titles.
+// 'booking found: 3 purchases (1 timed), 2 port stops', for the usage log:
+// counts only, never the stateroom or titles. A port stop is a day with a
+// gangway time; Royal also lists sea days with only the ship's position.
 function mineSummary(mine) {
   var timed = mine.orders.filter(function(o) { return o.time; }).length;
   var others = mine.otherBookings;
   return 'booking found: ' + mine.orders.length + ' purchases (' + timed + ' timed), ' +
-    (mine.ports ? mine.ports.length + ' port days' : 'port details skipped') +
+    (mine.ports ? mine.ports.filter(function(p) { return p.gangwayDown || p.gangwayUp; }).length + ' port stops' :
+     'port details skipped') +
     (mine.ordersError ? ', purchases skipped' : '') +
     (others ? ', ' + others + ' linked booking' + (others > 1 ? 's' : '') + ' on this sailing set aside' +
               (mine.bookingUnsure ? ' (not sure which is yours)' : '') : '');

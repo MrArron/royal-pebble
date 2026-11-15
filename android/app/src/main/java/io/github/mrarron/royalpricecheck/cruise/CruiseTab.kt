@@ -31,14 +31,19 @@ import io.github.mrarron.royalpebble.settings.CruiseData
 import io.github.mrarron.royalpebble.settings.Readiness
 import kotlinx.serialization.json.JsonPrimitive
 
-/** Settings > Cruise (docs/DESIGN.md §12.2): download, download with login, ready to sail, backup paste. */
+/**
+ * The Trip screen's cruise part (docs/DESIGN.md §12.2): download, download with login,
+ * ready to sail, backup paste. [header] goes first (the Trip screen's countdown and
+ * price cards); [onCabin] and [onFilters] open those screens from Ready to sail.
+ */
 @Composable
-fun CruiseTab(vm: CruiseViewModel, goTo: (Int) -> Unit) {
+fun CruiseTab(vm: CruiseViewModel, onCabin: () -> Unit, onFilters: () -> Unit, header: @Composable () -> Unit = {}) {
     LaunchedEffect(Unit) { vm.loadShips() }
     val sailing = vm.read { store.sailing() }
     val status = vm.read { store.status() }
     val demo = vm.read { isDemo }
     Page {
+        header()
         if (demo) {
             Section("Demo mode") {
                 Text("You're looking at a made-up cruise, so every screen has something to try. Download your sailing below to replace it. Settings you save now are kept.")
@@ -59,7 +64,7 @@ fun CruiseTab(vm: CruiseViewModel, goTo: (Int) -> Unit) {
             }
         }
         DownloadCard(vm)
-        if (sailing != null) ReadyCard(vm, goTo)
+        if (sailing != null) ReadyCard(vm, onCabin, onFilters)
         BackupCard(vm)
     }
 }
@@ -72,11 +77,8 @@ private fun DownloadCard(vm: CruiseViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var keepLogin by rememberSaveable { mutableStateOf(false) }
-    val saved = remember(vm.version) { vm.savedLogin() }
-    LaunchedEffect(saved) {
-        // Offer the login kept for this session or saved on the phone.
-        if (saved != null && email.isEmpty()) { email = saved.first; password = saved.second; keepLogin = vm.hasSavedLogin() }
-    }
+    // The one Royal login, shared with the Account tab (RoyalAccount).
+    val account = remember(vm.version) { vm.account() }
 
     Section("Download your sailing") {
         vm.shipsError?.let { ErrorText(it) }
@@ -109,8 +111,18 @@ private fun DownloadCard(vm: CruiseViewModel) {
         vm.error?.let { ErrorText(it) }
         Note("Sailings list the schedule from about two weeks out. This needs the internet once; the watch works offline afterwards.")
 
+        if (account != null) {
+            Text("Royal account: ${io.github.mrarron.royalpricecheck.RoyalAccount.masked(account.email)} (set in Settings > Royal account)")
+            Button(onClick = { vm.download(account.email, account.password, vm.accountRemembered()) }, enabled = vm.canDownload) {
+                Text("Download with my Royal login")
+            }
+        }
         OutlinedButton(onClick = { loginOpen = !loginOpen }) {
-            Text(if (loginOpen) "Hide advanced download" else "Advanced: download with your Royal login")
+            Text(when {
+                loginOpen -> "Hide the login form"
+                account != null -> "Use a different login"
+                else -> "Advanced: download with your Royal login"
+            })
         }
         if (loginOpen) {
             OutlinedTextField(email, { email = it }, label = { Text("Royal Caribbean email") }, singleLine = true,
@@ -123,11 +135,11 @@ private fun DownloadCard(vm: CruiseViewModel) {
                 Text("Remember on this phone (encrypted with the Android Keystore)", Modifier.weight(1f))
             }
             Button(
-                onClick = { vm.download(email, password, keepLogin) },
+                onClick = { vm.download(email, password, keepLogin); password = "" },
                 enabled = vm.canDownload && email.isNotBlank() && password.isNotEmpty(),
             ) { Text("Download with login") }
-            if (vm.hasSavedLogin()) TextButton({ vm.forgetLogin(); password = ""; keepLogin = false }) { Text("Forget the saved login") }
-            Note("Your email and password go from this app to Royal Caribbean only, to sign in for this one download. " +
+            Note("Once Royal accepts it, this login becomes the app's Royal account: the price check uses it too.")
+            Note("Your email and password go from this app to Royal Caribbean only, to sign in. " +
                 "They are never put in the usage log or sent anywhere else. Royal sends back your booking details " +
                 "(stateroom, deck, muster station, terminal time, booked excursions and purchases); those are saved on " +
                 "this phone like the rest of your cruise data. The password stays in memory until you close the app, " +
@@ -138,7 +150,7 @@ private fun DownloadCard(vm: CruiseViewModel) {
 }
 
 @Composable
-private fun ReadyCard(vm: CruiseViewModel, goTo: (Int) -> Unit) {
+private fun ReadyCard(vm: CruiseViewModel, onCabin: () -> Unit, onFilters: () -> Unit) {
     val checks = vm.read {
         Readiness.checks(bundle(), settings(), stars(), me()["stateroom"] ?: booking()?.stateroom)
     }
@@ -152,8 +164,8 @@ private fun ReadyCard(vm: CruiseViewModel, goTo: (Int) -> Unit) {
                 Note(c.text)
             }
         }
-        if (checks.any { it.title.startsWith("Stateroom") && !it.ok }) TextButton({ goTo(4) }) { Text("Set it on the Me screen") }
-        if (checks.any { it.title.startsWith("Too many") }) TextButton({ goTo(2) }) { Text("Hide categories") }
+        if (checks.any { it.title.startsWith("Stateroom") && !it.ok }) TextButton(onCabin) { Text("Set it on the Cabin screen") }
+        if (checks.any { it.title.startsWith("Too many") }) TextButton(onFilters) { Text("Hide categories") }
     }
 }
 
