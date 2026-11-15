@@ -174,7 +174,7 @@ every reply (`REQUEST`, `DIR_REQUEST` → `DIR_PAGE`, `ROUTE_REQUEST` →
 `LOG`, `DEMO_NEXT`). It doesn't port that code: it runs `src/pkjs/index.js`
 itself in an embedded QuickJS (Zipline), so the two can't drift.
 
-- **Two switches, both off by default.** The app's Settings > Watch > **App
+- **Two switches, both off by default.** The app's Settings > Watch and logs > **App
   serves the watch**, and on the settings page Me > Help > **Android app
   serves the watch** (`settings.androidServes`), which makes PebbleKit JS send
   and answer nothing (`index.js` `appServes()`). Both answer every message
@@ -236,10 +236,10 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
   not), two `SAVED` reports, a `LOG` and, an hour later, a `REQUEST`; the
   sailing also asks the route to the cabin, then a settings change saved by
   the app's screens, then the next watch day.
-- **Wire log.** Settings > Watch can log every message to and from the
+- **Wire log.** Settings > Watch and logs can log every message to and from the
   watch (`files/watch-wire.log`, the format of `AppMessageCodec.describe`,
   shared from the app). It holds cruise text: never commit one.
-- **Test log (1.6.22; a file from 1.6.23).** Settings > Watch > **Share log
+- **Test log (1.6.22; a file from 1.6.23).** Settings > Watch and logs > **Share log
   file** (the share sheet, a `royal-pebble-log-YYYYMMDD-HHMMSS.txt` from the
   app's cache through a FileProvider) or **Save to Downloads** (MediaStore on
   Android 10+) exports one text (`TestLog`), no clipboard and no size limit:

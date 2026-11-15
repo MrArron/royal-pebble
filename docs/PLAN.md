@@ -1,6 +1,6 @@
 # Royal Pebble — Plan to the sailing
 
-The one active plan, as of 2026-10-02 (app 1.6.3). What is built is in
+The one active plan, as of 2026-11-15 (app 1.6.25). What is built is in
 `PROJECT_BRIEF.md`; screens are in `DESIGN.md`. Update this file as work lands
 and delete what's done once it's in the brief.
 
@@ -22,23 +22,30 @@ the freeze.
 
 If P4 slips past 3 weeks out, drop it: P1 still covers item 17 without the watch.
 
+**Status, 2026-11-15:** the weeks above have passed. The sailing is about
+four weeks out, so the freeze starts in about two. None of Phase 6 (P1-P4,
+gate G1) is built: the time since 1.6.7 went to the 1.6 hardware-test fixes
+(1.6.9-1.6.18) and the Android app (1.6.19-1.6.25, §3b). Which Phase 6 items
+still go in before the freeze is open question 7.
+
 ## 2. Watch size budget
 
-`python3 tools/watch_size.py` after `pebble build` (fails over the 62 KB
-budget; put its first lines in every watch PR). Last measured on the Sep 29
-build (1.5.5 C code; no watch C has changed since, 1.5.6-1.5.13 were
-phone-only):
+`python3 tools/watch_size.py` after `pebble build` (checks both platforms,
+fails over the 62 KB budget; put its first lines for both in every watch PR).
+Last measured on 1.6.24 (2026-11-15):
 
-| | Bytes |
-|---|---|
-| Static (`.text` 60,921 + `.data` 172 + `.bss` 712) | **61,984** |
-| Room to the 62 KB budget (63,488) | **1,504** |
-| Room to the hard limit (65,535) | 3,551 |
-| Heap at launch | 69,088 |
+| | Time 2 (emery) | Round 2 (gabbro) |
+|---|---|---|
+| Static | 59,392 | **62,008** |
+| Room to the 62 KB budget (63,488) | 4,096 | **1,480** |
+| Room to the hard limit (65,535) | 6,143 | 3,527 |
+| Heap at launch | not re-measured | 69,064 |
 
-- **Rule until the sailing:** Phase 6 watch code may use at most 600 B, so
-  about 900 B stays for Phase 5 tuning and freeze fixes. Prefer phone and
-  settings-page work wherever it serves the owner as well.
+- **The Round 2 binary sets the limit:** shared watch code costs more there
+  (round helpers), so judge every watch change by its gabbro size.
+- **Rule until the sailing:** Phase 6 watch code may use at most 600 B (on
+  the Round 2), so about 900 B stays for tuning and freeze fixes. Prefer
+  phone and settings-page work wherever it serves the owner as well.
 - Re-measure after a fresh `pebble clean && pebble build` before any watch PR.
 - Size anchor: the 1.4.8 My info dining row (one row, one message key, one
   stored string) cost about 200 B. LTO inlines most screen code, so
@@ -129,10 +136,29 @@ the Round 2 always gets its layouts. Round 2 62,008 B (1,480 B under budget).
 ### 1.6 hardware-test fixes (from the Time 2 test of 1.6.8)
 
 All seven (A-H, owner-approved 2026-10-04) are built in 1.6.9-1.6.15 (#97-#100
-and the stacked PRs); DESIGN.md describes them as built. Left: the owner's Time
-2 retest of 1.6.15, then G0c when the Round 2 arrives. C (Hold Down for on
+and the stacked PRs), with more fixes in 1.6.16-1.6.18; DESIGN.md describes
+them as built. The build to test now is 1.6.25 (§3b), then G0c when the Round
+2 arrives. C (Hold Down for on
 board) and B (orange stateroom card) change the Round 2 too and are in its
 checklist.
+
+## 3b. Android app (1.6.19-1.6.25)
+
+Built (brief, What's built, Android app; `android/README.md`): price and
+booking checks with Watch alerts, the native Cruise screens, and the app
+serving the watch behind two switches, with `[js]`/`[app]` logging, instant
+push after the app's saves, the log file export, Test alerts and the Round 2
+watch-type retry; 1.6.25 adds the trip-phase layout, star reconciling on a
+re-download, one Royal login and copyable reports.
+
+Left:
+
+- **The owner's 1.6.25 test** on the Pebble Time 2 with the test checklist
+  (project files, `builds/TEST-CHECKLIST-1.6.25.md`): the 1.6.24 items plus
+  one login, copyable reports, port stops, stars on a re-download and the
+  trip-phase layout.
+- **A real Round 2 served by the app** (checklist R2b) once it arrives.
+- **Who serves each watch on the sailing** (open question 8).
 
 ## 4. Phase 6: Planning
 
@@ -300,6 +326,9 @@ Bug fixes only; no new features.
   (Test alerts), the morning sync, My info, directory, routes, voice in
   airplane mode, the usage log export and Map check.
 - Turn on the usage log and set the device label on both phones.
+- Set who serves each watch (open question 8) and the matching switches on
+  each phone; after the full test, export both logs (settings page usage log,
+  and the app's log file when it serves).
 
 ## 6. After the sailing
 
@@ -327,3 +356,8 @@ Bug fixes only; no new features.
 6. **Debark night:** the old starter lists (bags out, settle account,
    passports, safe) aren't planned; personal entries cover them. Want a
    one-tap "Add debark-night entries" on the settings page (phone only)?
+7. **Phase 6 before the freeze** (2026-11-15): with about two weeks left
+   before the freeze, which of P1 (Bring view), P2-P3 (dining) and P4 (the
+   tomorrow alert, the only watch PR) still go in, if any?
+8. **Who serves the watch on the sailing:** PebbleKit JS (the default) or the
+   Android app, on each phone? The app needs the star reconciler (§3b) first.

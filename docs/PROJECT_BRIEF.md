@@ -1,11 +1,12 @@
 # Royal Pebble — Project brief
 
-A Pebble Time 2 watch app for Royal Caribbean cruises. Its job is **quick
+A watch app for the Pebble Time 2 and Pebble Round 2 for Royal Caribbean
+cruises. Its job is **quick
 glances at what's next** without pulling out a phone, and making sure the
 wearer never misses all-aboard. All data is loaded before sailing; **at sea the
 app works with no internet at all**.
 
-This brief is the "what and why": purpose, constraints, what is built (1.6.7),
+This brief is the "what and why": purpose, constraints, what is built (1.6.25),
 the decisions still in force and what's left for later. How things look is in
 `DESIGN.md`; the work still to do before the sailing is in `PLAN.md`. When
 something here conflicts with a request in a session, ask before changing
@@ -13,17 +14,18 @@ direction.
 
 ## Status and audience
 
-- Private, single-user app, sideloaded to the owner's Android phone and Pebble
-  Time 2 (the owner and a travel companion use it; each phone keeps its own data). No
-  app store release planned: skip store listings, first-run tutorials and other
-  watches, but keep the code generic (any ship and sail date, nothing
-  hardcoded).
+- Private app, sideloaded to the owner's Android phone and Pebble Time 2, and
+  to a travel companion's Pebble Round 2 (each phone keeps its own data; the
+  Round 2 is tested on the emulator until it arrives). No app store release
+  planned: skip store listings, first-run tutorials and other watches, but keep
+  the code generic (any ship and sail date, nothing hardcoded).
 - Royal Caribbean only. Celebrity uses similar endpoints but is untested.
 - First real use: the owner's upcoming sailing on Harmony of the Seas (ship
   code HM). It is also the app's test cruise: the usage log and map notes
   collected on board drive the next round of fixes.
 - Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
-  (`CLAUDE.md`). Current: **1.6.7**, Round 2 phase (`PLAN.md` §3a).
+  (`CLAUDE.md`). Current: **1.6.25**, phase 6 (`PLAN.md`). The Android app is
+  versioned on its own (`0.1.0-<commit>`, `BUILD_AND_TEST.md`).
 
 ## Constraints
 
@@ -39,8 +41,11 @@ direction.
   and the firmware's copy is 16-bit too, so it's a hard cap. The rest of the
   128 KB is heap. Budget 62 KB (`python3 tools/watch_size.py`); status in
   `PLAN.md`.
-- **Pebble Time 2 only** (SDK platform `emery`, 200×228, 64 colors). Watch C
-  must avoid `strtol()` and `strlen()` (both faulted on the real watch).
+- **Two watches:** Pebble Time 2 (SDK platform `emery`, 200×228, 64 colors)
+  and Pebble Round 2 (`gabbro`, 260×260 round, 64 colors), one .pbw. The
+  Round 2 binary is the larger one (1,480 B under the budget in 1.6.24).
+  Watch C must avoid `strtol()` and `strlen()` (both faulted on the real
+  watch).
 - **Be gentle with Royal's servers.** Unofficial endpoints: a sync or two, no
   polling.
 
@@ -56,9 +61,16 @@ direction.
   map and route planner, the voice matcher and every string the watch shows.
 - **Settings page** (HTML built by the companion, shown by the Pebble app),
   offline. It returns its result through `pebblejs://close#`.
+- **Android app** (`android/`, optional, sideloaded; `android/README.md`):
+  price and booking checks with jdeath's script and their Watch alerts
+  (booking notices), native Cruise screens on a Kotlin port of the Royal
+  client and store, and, behind two switches that are off by default, serving
+  the watch itself by running `src/pkjs/index.js` in QuickJS
+  (`WATCH_PROTOCOL.md`, App serves the watch). It keeps its own cruise,
+  separate from PebbleKit JS's. One-page overview: `BUILD_AND_TEST.md`.
 - **Windows sync tool** (`tools/cruise-sync/`, Python): the reference
   implementation of every Royal request and the backup data path. Its output
-  is pasted into the settings page.
+  is pasted into the settings page (or the app's Trip screen).
 - **Build tools** (PC only): `tools/shipmap/` (ship map data), `tools/voice/`
   (voice lexicon), `tools/mockups/` (design mockups), `tools/watch_size.py`.
 
@@ -98,7 +110,7 @@ Known facts:
 - Plain HTTP clients work for the public endpoints and for the sign-in from
   the phone; if Royal starts refusing, the sync tool impersonates a browser.
 
-## What's built (1.6.7)
+## What's built (1.6.25)
 
 Numbers are the brief's item numbers, used in code comments and PRs. Screens
 and wording: `DESIGN.md`.
@@ -177,8 +189,43 @@ on the Me tab, (39) sync tool: every new field, `--dump-products`.
 or a Route screen asks by voice; routes to places, closest restroom / bar /
 coffee, `I'm at` as a route start, on board / ashore, departure, tomorrow,
 muster station, my cabin; a Voice commands card and a Try a voice phrase box in
-Help. Item 30 (a native Android companion) wasn't needed. Left: tuning on the
-watch (`PLAN.md`).
+Help. Left: tuning on the watch (`PLAN.md`). Item 30 (a native Android
+companion) was judged not needed for voice in 2026-09; the Android app below
+was built later for other reasons.
+
+**Round 2 phase (1.6.0-1.6.7)** and the **1.6 hardware-test fixes
+(1.6.9-1.6.18)**: see "Watches" above and `PLAN.md` §3a.
+
+**Android app (1.6.19-1.6.25; `android/README.md`)**
+
+- Price and booking checker running jdeath's script (Chaquopy), with
+  background checks, a Keystore-encrypted password only while those are on,
+  and verified script updates (`docs/PRICE_SCRIPT_UPDATES.md`).
+- Phase 0 link test (1.6.19): an Android app can share the watch with
+  PebbleKit JS through PebbleKit Android 2 (`android/linktest/`,
+  `WATCH_PROTOCOL.md`).
+- Booking notices on the watch (1.6.20) and the app's **Watch alerts** that
+  send them: price drop, check-in open / checked in, final payment due.
+- Kotlin Royal client and `CruiseStore` (port of `royal.js`, same fixtures),
+  native Cruise screens (Cruise, Days, Filters, Events, Me, Share; laid out
+  by trip phase in 1.6.25), restyled
+  in the settings page's palette.
+- **App serves the watch** (1.6.21): the app runs `src/pkjs/index.js` in
+  QuickJS and does all PebbleKit JS does, byte for byte (the serving gate in
+  CI); off by default, with the settings page's **Android app serves the
+  watch** to make PebbleKit JS quiet.
+- 1.6.22: `[js]` / `[app]` on every serving line of the usage log, and `NO
+  CRUISE YET` instead of the demo when the app has no cruise. 1.6.23: the
+  app's saves reach the watch at once (`storeChanged`), Settings > Watch and logs >
+  Share log file / Save to Downloads and Test alerts. 1.6.24: the app
+  retries the watch-type lookup, so a Round 2 always gets its layouts.
+- 1.6.25: one bottom bar that follows the trip (Planning: Trip, Prices, Plan,
+  Settings; On board: Today, Events, Cabin, Settings; Auto from the sailing's
+  dates; `DESIGN.md` §12), background price checks paused on board unless
+  turned back on, stars follow moved or cancelled events on a re-download
+  (`JsStarReconciler`, issue 129), one Royal login for price checks and
+  downloads, selectable reports with Copy and Share, and port stops counted
+  from gangway times.
 
 **Planned: Phase 6** (`PLAN.md`): (17) "Before you go", starred events with
 requirements gathered ahead of time; (18) a dining hint (`Last dinner
@@ -214,7 +261,7 @@ consent).
   the settings page's Android app serves the watch, the app its App serves the
   watch, version, commit and wire log. A quiet PebbleKit JS logs each kind of
   watch message it leaves to the app once. The app's own log and export are
-  Settings > Watch > Share log file / Save to Downloads (a file, not the
+  Settings > Watch and logs > Share log file / Save to Downloads (a file, not the
   clipboard; `docs/WATCH_PROTOCOL.md`, Test log).
 - **Personal data:** titles and cabin details are included, on condition that
   none of it ever reaches the GitHub repo. Never commit a log, an export or a
@@ -267,8 +314,8 @@ day).
 
 | What | Value | Source |
 |---|---|---|
-| Watch static (1.5.5 C code, the last watch change) | 61,984 B of 65,535; 1,504 B under the 62 KB budget | `tools/watch_size.py`, Sep 29 build |
-| Heap at launch | 69,088 B | same |
+| Watch static, Time 2, 1.5.5 (before the Round 2 phase) | 61,984 B of 65,535; 1,504 B under the 62 KB budget | `tools/watch_size.py`, Sep 29 build |
+| Heap at launch, Time 2, 1.5.5 | 69,088 B | same |
 | Pebble Round 2 (gabbro) static, 1.6.0 | 62,176 B; 1,312 B under the budget; heap at launch 68,896 B (same 128 KB app RAM as the Time 2) | `tools/watch_size.py`, 2026-10-02 |
 | Pebble Round 2 (gabbro) static, 1.6.1 (round Home, G3) | 62,920 B; 568 B under the budget; heap at launch 68,152 B. The Time 2 binary is unchanged (61,984 B) | `tools/watch_size.py`, 2026-10-02 |
 | Pebble Round 2 (gabbro) static, 1.6.2 (alerts, G4) | 63,472 B; 16 B under the budget. The Time 2 is 61,904 B (80 B smaller than 1.6.1) | `tools/watch_size.py`, 2026-10-02 |
@@ -333,7 +380,14 @@ entries (6.4 KB heap).
 - **Voice on the current setup** (PebbleKit JS and the Pebble app's on-phone
   dictation) on Android; the airplane-mode test passed 12/12 on 2026-09-28,
   and 1.5.4 passed a full watch test the same day, dictation in airplane mode
-  included. Item 30 (native Android companion) is not needed.
+  included. (That made item 30, a native companion for voice, unnecessary;
+  the Android app built from 2026-11 doesn't change how voice works.)
+- **The Android app is optional and serves the watch only when switched on**
+  (both switches, off by default); PebbleKit JS stays the default, and the
+  watch works the same either way (2026-11).
+- **The Android app reuses `src/pkjs/index.js`** in QuickJS rather than
+  porting the watch-serving code, so the two can't drift; the serving gate
+  compares them byte for byte (2026-11-13, `QUICKJS_PHASE0.md`).
 - **Hold Select on Home always asks by voice** (2026-09-28); since 1.6.12
   (owner, 2026-10-04) Hold Down opens the `On board?` screen, phone or not.
 - **Casino is a category,** shown by default (2026-09-27).
@@ -344,19 +398,9 @@ entries (6.4 KB heap).
 
 - Back-to-the-ship distance and direction (phone GPS pin dropped going
   ashore), with a "Leave now" alert at all-aboard minus the walk back.
-- Native Android companion app (only if PebbleKit JS runs out; nothing needs
-  it now). Phase 0 link test: `android/linktest/`, findings in
-  `docs/WATCH_PROTOCOL.md` (Android companion app). Phase 2's watch side is
-  built (1.6.20): price drop, check-in and final payment notices
-  (`docs/WATCH_PROTOCOL.md` Booking notices); the app that sends them isn't.
-  Phase 3 serving (1.6.21): the app can serve the watch by running
-  `src/pkjs/index.js` in QuickJS behind two switches, off by default
-  (`docs/WATCH_PROTOCOL.md`, App serves the watch); byte-for-byte equal to
-  PebbleKit JS in tests, first tried on the watch 2026-11-14. 1.6.22: which
-  side served each request in the usage log, the app's Share test log, and
-  NO CRUISE YET instead of the demo when the app has no cruise. 1.6.23: the
-  app's saves (downloads, settings, stars) reach the watch at once, and the
-  test log exports as a file with a 4 M-character usage log.
+- The Android app as the only phone side (replacing PebbleKit JS, not just
+  added to it): built as far as serving the watch behind a switch (What's
+  built, Android app); making it the default is the owner's call.
 - A quick "remind me in N minutes" timer, lap counter, spending log (Royal's
   onboard credit is a starting balance), currency conversion, Celebrity
   support.
@@ -418,6 +462,17 @@ Git history has the detail; one line per stretch:
 - **Phase 5, 1.5.0-1.5.13** (2026-09-28 to 10-01): making room on the watch,
   voice, Harmony refit names (1.5.11), re-sync by product id (1.5.12), Help >
   Voice commands (1.5.13).
+- **Round 2 phase, 1.6.0-1.6.7** (2026-10-02 to 10-03): the Pebble Round 2
+  from the same .pbw, round layouts, the generic phone page, the Time 2's
+  matching style, per-watch text.
+- **1.6 hardware-test fixes, 1.6.8-1.6.18** (2026-10-04 to 11-07): fixes from
+  the Time 2 test of 1.6.8, booked shows, gangway times, Advanced download
+  and Me tab fixes.
+- **Android app, 1.6.19-1.6.25** (2026-11-13 to 11-15): link test, booking
+  notices, the price checker's Watch alerts, Kotlin Royal client and store,
+  native Cruise screens, the app serving the watch, logging, instant push,
+  log file export, Round 2 watch-type retry, the trip-phase layout and
+  star reconciling (1.6.25).
 
 ## Testing
 
