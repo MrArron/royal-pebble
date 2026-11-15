@@ -85,6 +85,10 @@ fun WatchCard() {
             }
             exported?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             OutlinedButton(onClick = {
+                WatchHost.testAlerts(c)
+                exported = "Test alerts: a reminder in 2 minutes, all-aboard in 3, to-reserve in 4 (Royal Pebble must be open on the watch now)"
+            }) { Text("Test alerts") }
+            OutlinedButton(onClick = {
                 WatchHost.clearWireLog(c)
                 WatchHost.clearAppLog(c)
                 exported = "Cleared the app lines and watch messages (the usage log is cleared on the Me tab)"

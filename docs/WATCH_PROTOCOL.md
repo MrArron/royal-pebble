@@ -254,7 +254,9 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
   entries, which the watch sends as `LOG`; its header gives the entry and
   dropped counts), and the wire log when it's on. The app passes
   `logCapChars` (4 M characters, `TestLog.LOG_CAP_CHARS`) in `__host.info`,
-  so its usage log keeps five times PebbleKit JS's 768 K. The settings page's
+  so its usage log keeps five times PebbleKit JS's 768 K. **Test alerts**
+  on the same card saves the time in `testAlerts` (as the settings page's Me
+  > Test alerts) and pushes a slice: four test alerts 2 to 4 minutes later. The settings page's
   switch lives in PebbleKit JS and shows only in that side's log. Same line style as the usage log. Clear empties the app's lines and the
   wire log, not the usage log.
 

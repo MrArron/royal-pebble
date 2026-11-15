@@ -131,6 +131,19 @@ object WatchHost {
         }
     }
 
+    /**
+     * Settings > Watch > Test alerts: four test alerts 2 to 4 minutes from now
+     * (slice.js testAlarms, as the settings page's Me > Test alerts), kept for
+     * an hour. Saves the time in the store's `testAlerts` key and pushes a slice.
+     */
+    fun testAlerts(c: Context) {
+        val app = c.applicationContext as android.app.Application
+        io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(app)
+            .write("testAlerts", JsonPrimitive(System.currentTimeMillis()))
+        logApp(app, "alert", "test alerts turned on: reminder in 2 min, all-aboard in 3, two to-reserve in 4")
+        storeChanged(app, "test alerts")
+    }
+
     /** Royal Pebble closed on the watch. */
     @Synchronized
     fun closed() = stop()
