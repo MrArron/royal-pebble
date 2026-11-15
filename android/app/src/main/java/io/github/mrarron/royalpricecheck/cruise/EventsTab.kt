@@ -132,8 +132,8 @@ fun EventsTab(vm: CruiseViewModel) {
         itemsIndexed(shown) { i, e ->
             if (showDays && (i == 0 || shown[i - 1].date != e.date)) Text(dayText(e.date), style = MaterialTheme.typography.labelLarge)
             EventRow(e, starred(e), reserved(e), CruiseData.hiddenByFilters(e, settings) && !starred(e),
-                onStar = { vm.edit { setStar(e.key, it) } },
-                onReserved = { vm.edit { setStar(CruiseStore.RESERVED_PREFIX + e.key, it) } })
+                onStar = { vm.edit(if (it) "star added" else "star removed") { setStar(e.key, it) } },
+                onReserved = { vm.edit(if (it) "reserved mark added" else "reserved mark removed") { setStar(CruiseStore.RESERVED_PREFIX + e.key, it) } })
         }
         if (paidToday.isNotEmpty()) {
             item { Text("Booked activities and excursions", style = MaterialTheme.typography.titleMedium) }
@@ -146,8 +146,8 @@ fun EventsTab(vm: CruiseViewModel) {
                             Text(e.title, style = MaterialTheme.typography.titleSmall)
                             Text(detail(e) + (e.price?.let { " · from \$$it" } ?: ""))
                         }
-                        if (picked) Button({ vm.edit { pick(e.key, false) } }) { Text("✓ Picked") }
-                        else OutlinedButton({ vm.edit { pick(e.key, true) } }) { Text("Pick") }
+                        if (picked) Button({ vm.edit("pick removed") { pick(e.key, false) } }) { Text("✓ Picked") }
+                        else OutlinedButton({ vm.edit("pick added") { pick(e.key, true) } }) { Text("Pick") }
                     }
                 }
             }
@@ -201,7 +201,7 @@ private fun PersonalCard(vm: CruiseViewModel, date: String, entries: List<Settin
                         Text(listOfNotNull(p.time?.let { shortClock(it) }, p.venue.takeIf { it.isNotBlank() },
                             p.minutes.takeIf { it > 0 }?.let { "$it min" }).joinToString(" · "))
                     }
-                    TextButton({ vm.edit { removePersonal(p.id) } }) { Text("Remove") }
+                    TextButton({ vm.edit("personal event removed") { removePersonal(p.id) } }) { Text("Remove") }
                 }
             }
             if (entries.isEmpty()) Note("Your own reminders (dinner, spa) get alerts like starred events.")
@@ -217,7 +217,7 @@ private fun PersonalCard(vm: CruiseViewModel, date: String, entries: List<Settin
                 }
                 Button(onClick = {
                     var added = false
-                    vm.edit { added = addPersonal(SettingsRules.Personal(title.trim(), place.trim(), date, time.takeIf { isHhmm(it) }, minutes.toIntOrNull() ?: 0)) }
+                    vm.edit("personal event added") { added = addPersonal(SettingsRules.Personal(title.trim(), place.trim(), date, time.takeIf { isHhmm(it) }, minutes.toIntOrNull() ?: 0)) }
                     if (added) { title = ""; place = ""; time = ""; minutes = ""; open = false }
                 }, enabled = title.isNotBlank() && (time.isEmpty() || isHhmm(time)) && date.isNotEmpty()) { Text("Add") }
             }

@@ -214,7 +214,8 @@ consent).
   the settings page's Android app serves the watch, the app its App serves the
   watch, version, commit and wire log. A quiet PebbleKit JS logs each kind of
   watch message it leaves to the app once. The app's own log and export are
-  Settings > Watch > Share test log (`docs/WATCH_PROTOCOL.md`, Test log).
+  Settings > Watch > Share log file / Save to Downloads (a file, not the
+  clipboard; `docs/WATCH_PROTOCOL.md`, Test log).
 - **Personal data:** titles and cabin details are included, on condition that
   none of it ever reaches the GitHub repo. Never commit a log, an export or a
   quote from it; exports use the git-ignored name `royal-pebble-log-*.txt`.
@@ -352,7 +353,9 @@ entries (6.4 KB heap).
   (`docs/WATCH_PROTOCOL.md`, App serves the watch); byte-for-byte equal to
   PebbleKit JS in tests, first tried on the watch 2026-11-14. 1.6.22: which
   side served each request in the usage log, the app's Share test log, and
-  NO CRUISE YET instead of the demo when the app has no cruise.
+  NO CRUISE YET instead of the demo when the app has no cruise. 1.6.23: the
+  app's saves (downloads, settings, stars) reach the watch at once, and the
+  test log exports as a file with a 4 M-character usage log.
 - A quick "remind me in N minutes" timer, lap counter, spending log (Royal's
   onboard credit is a starting balance), currency conversion, Celebrity
   support.

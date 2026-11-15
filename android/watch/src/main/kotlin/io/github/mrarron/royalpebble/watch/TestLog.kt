@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -22,6 +23,16 @@ import java.util.TimeZone
  * and booking details: never commit one.
  */
 object TestLog {
+    /**
+     * The usage log's cap in the app (log.js opts.capChars): the app's store is
+     * its own files, so it keeps far more than PebbleKit JS's 768 K characters.
+     */
+    const val LOG_CAP_CHARS = 4 * 1024 * 1024
+
+    /** "royal-pebble-log-20260926-140312.txt" in [zone]: the exported file's name (git-ignored pattern). */
+    fun fileName(ms: Long, zone: TimeZone = TimeZone.getDefault()): String =
+        "royal-pebble-log-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).apply { timeZone = zone }.format(Date(ms)) + ".txt"
+
     /** One usage log entry, [ms, day, minute, kind, detail], as log.js renderEntry draws it. */
     fun renderEntry(e: JsonArray, zone: TimeZone = TimeZone.getDefault()): String {
         val ms = (e[0] as JsonPrimitive).longOrNull ?: 0L
@@ -63,7 +74,11 @@ object TestLog {
         if (Math.abs(off) % 60 != 0) out.append(":%02d".format(Locale.ROOT, Math.abs(off) % 60))
         out.append("\n\n== App lines (").append(appLines.size).append(")\n")
         appLines.forEach { out.append(it).append('\n') }
-        out.append("\n== Usage log in the app (").append(usage.size).append(" entries; PebbleKit JS keeps its own)\n")
+        val dropped = runCatching {
+            Json.parseToJsonElement(usageJson!!).jsonObject["dropped"]?.jsonPrimitive?.intOrNull
+        }.getOrNull() ?: 0
+        out.append("\n== Usage log in the app (").append(usage.size).append(" entries, ").append(dropped)
+            .append(" oldest dropped when full; the watch's own entries included; PebbleKit JS keeps its own)\n")
         usage.forEach { out.append(it).append('\n') }
         if (wire != null) {
             out.append("\n== Watch messages (> to the watch, < from it; ms since 1970)\n").append(wire)
@@ -73,11 +88,13 @@ object TestLog {
     }
 
     /** What index.js gets as __host.info (host.js), JSON text. */
-    fun hostInfo(version: String, commit: String, serves: Boolean, wireLog: Boolean): String =
+    fun hostInfo(version: String, commit: String, serves: Boolean, wireLog: Boolean,
+                 logCapChars: Int = LOG_CAP_CHARS): String =
         JsonObject(mapOf(
             "version" to JsonPrimitive(version),
             "commit" to JsonPrimitive(commit),
             "serves" to JsonPrimitive(serves),
             "wireLog" to JsonPrimitive(wireLog),
+            "logCapChars" to JsonPrimitive(logCapChars),
         )).toString()
 }
