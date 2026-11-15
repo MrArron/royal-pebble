@@ -8,6 +8,10 @@ An optional add-on: it runs jdeath's
   balance due;
 - price drops: paid vs current, saving, and a "rebook" flag.
 
+It also holds Royal Pebble's cruise settings natively and, behind a switch, can serve the watch
+in place of the Pebble app's PebbleKit JS (below). The app wears the settings page's palette
+(`ui/RoyalTheme.kt`).
+
 ## Layout
 
 One bottom bar whose tabs follow the trip (`AppShell.kt`, `TripPhase`):
@@ -32,6 +36,9 @@ A login typed on the Trip screen becomes the Royal account once Royal accepts it
 simple `config.yaml` (password as a placeholder) unless you wrote your own `config.yaml`, which is
 left alone. "Remember on this phone" saves it encrypted with the Android Keystore; after a restart the
 remembered login also fills the price check's password, so it isn't asked for again.
+
+Version: `0.1.0-<commit>` from CI (the **Android app** workflow; run it by hand on `main` after a
+merge to get an APK, `docs/BUILD_AND_TEST.md`).
 
 ## Your password
 
@@ -95,7 +102,8 @@ Plain Kotlin, no Android, so `./gradlew :royal:test` runs offline on any JVM.
   `pruneStarTimes` and `buildNotices` in QuickJS (issue 129). The test log gets a `stars` line with counts.
 - Tests read the shared fixtures in `test/fixtures/` (the same expected schedule and booking as
   `test/pkjs/royal.test.js` and `test_cruise_sync.py`) and compare output as JSON text, so the
-  Kotlin bundle matches `JSON.stringify` byte for byte. Nothing sends slices to the watch yet.
+  Kotlin bundle matches `JSON.stringify` byte for byte. Slices for the watch are built from this
+  store by the JS in `watch/` (below), not by Kotlin.
 
 ## Serving the watch (`watch/` and `app/.../watch/`)
 

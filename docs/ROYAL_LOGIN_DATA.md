@@ -10,7 +10,8 @@ after online check-in, when more fields fill in.
 Everything here reaches the app through `cruise_sync.py --login` and the
 paste-in backup, or through the settings page's Advanced download, where the
 phone companion signs in once and makes the same calls (`royal.fetchMine`, from
-1.4.7; `docs/DATA_FORMAT.md`, `mine`). What the sync tool already
+1.4.7; `docs/DATA_FORMAT.md`, `mine`), and through the Android app's Cruise >
+Download with login (`android/royal/` `RoyalClient`, the same calls). What the sync tool already
 copies into the bundle is marked **In the bundle**; the rest is not used.
 
 All endpoints are on `aws-prd.api.rccl.com` with headers `AppKey`,

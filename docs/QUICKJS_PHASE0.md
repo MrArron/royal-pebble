@@ -1,6 +1,7 @@
 # Phase 0: QuickJS vs Node for watch packing
 
-Part of the Android companion plan (HANDOFF.md, Phase 0, last bullet): run the phone
+Part of the Android companion plan (a handoff outside the repo, `HANDOFF.md`, Phase 0, last
+bullet; what was built from it is in `android/README.md`): run the phone
 side's packing code in an embedded QuickJS and compare its output bytes with Node.
 Harness: `tools/quickjs-probe/` (`node probe.js --ng`).
 

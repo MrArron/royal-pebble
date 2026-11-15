@@ -1,8 +1,10 @@
 # CLAUDE.md
 
-Cruise Watch: a private Pebble Time 2 watch app (C + PebbleKit JS) for Royal
-Caribbean cruises that works fully offline at sea, plus a Windows Python tool for
-backup data sync.
+Cruise Watch: a private watch app for the Pebble Time 2 and Pebble Round 2 (C +
+PebbleKit JS) for Royal Caribbean cruises that works fully offline at sea, an
+optional native Android app (price and booking checks, the cruise settings
+screens, and, behind a switch, serving the watch itself), and a Windows Python
+tool for backup data sync.
 
 Read before making changes:
 - `docs/PROJECT_BRIEF.md` — purpose, constraints, what's built, decisions in
@@ -12,10 +14,15 @@ Read before making changes:
 - `docs/PLAN.md` — the active plan: watch size budget, Phase 5 tuning, Phase 6,
   the freeze, open questions
 - `docs/DATA_FORMAT.md` — the cruise data bundle (v1) and the shared plan
-- `docs/ROYAL_LOGIN_DATA.md` — what a Royal login can see (sync tool only) and
+- `docs/ROYAL_LOGIN_DATA.md` — what a Royal login can see (sync tool, Advanced download, the Android app's Download with login) and
   ideas for using it
 - `docs/WATCH_PROTOCOL.md` — phone ↔ watch messages and the time model (cruise
-  minutes, 04:00 day boundary)
+  minutes, 04:00 day boundary); the Android app's link and how it serves the
+  watch
+- `docs/BUILD_AND_TEST.md` — the current architecture in one page, and how a
+  build gets made, tested and handed to the owner (pbw, apk, checklists)
+- `android/README.md` — the Android app: modules, password handling, watch
+  alerts, serving the watch, its tests
 
 ## Repository layout
 
@@ -28,19 +35,30 @@ Read before making changes:
   verified (daily workflow, local checklist). See `docs/PRICE_SCRIPT_UPDATES.md`.
 - `tools/voice/` — builds the voice lexicon (`src/pkjs/data/voice-HM.js`,
   generated) from `venue-mishearings-HM.json` and `venues.js`. See its README.
-- `docs/` — brief, design, plan, data format, protocol; mockups in
-  `docs/mockups/`.
+- `tools/quickjs-probe/` — the Phase 0 check that `src/pkjs` packs the same
+  bytes in QuickJS as in Node (`docs/QUICKJS_PHASE0.md`).
+- `tools/mockups/` — design mockup scripts. `tools/screens.sh` — screenshot
+  walk on both emulators. `tools/watch_size.py` — watch size check.
+- `docs/` — brief, design, plan, data format, protocol, build and test;
+  mockups in `docs/mockups/`.
 - Watch app: `package.json` + `wscript` at the root, `src/c/` watch code,
   `src/pkjs/` phone companion and the settings page. Targets the Pebble
-  Time 2 only (SDK platform `emery`, 200x228, 64 colors).
+  Time 2 (SDK platform `emery`, 200x228, 64 colors) and the Pebble Round 2
+  (`gabbro`, 260x260 round, 64 colors) from one .pbw; round-only code sits
+  behind `PBL_ROUND`, per-platform numbers in `src/c/layout.h`.
+- `android/` — the Android app (Gradle): `app/` (Android UI, PebbleKit
+  Android 2 service, `WatchHost`/`WatchLink`), `royal/` (plain Kotlin Royal
+  client and cruise store), `watch/` (plain Kotlin: runs `src/pkjs/index.js`
+  in QuickJS to serve the watch), `tests/` (Python bridge tests),
+  `linktest/` (Phase 0 link test app). See `android/README.md`.
 
 ## Working rules
 
 - **Name.** The user-facing name is **Royal Pebble**, short enough for the watch's
   app list (watch app, settings page, READMEs, sync tool messages). "Cruise Watch"
   is the old working name; keep it only in internal identifiers (`"format":
-  "cruise-watch"`, file names, code). Say "Pebble Time 2", not SDK codenames, in
-  user-facing text.
+  "cruise-watch"`, file names, code). Say "Pebble Time 2" and "Pebble Round 2",
+  not SDK codenames, in user-facing text.
 - **Offline first.** Nothing the app needs at sea may depend on the internet,
   including the settings page (build it locally, never load it from a URL).
 - **Scope.** What's built is in the brief, what's next in `docs/PLAN.md`. Don't
@@ -59,8 +77,11 @@ Read before making changes:
   source) disagrees with the ship map data, add an entry to
   `tools/shipmap/conflicts-HM.json` instead of silently changing the data; it's
   settled in person on board.
-- **Data format changes** must update `docs/DATA_FORMAT.md` and both producers
-  (phone companion and `cruise_sync.py`) together; bump `v` if breaking.
+- **Data format changes** must update `docs/DATA_FORMAT.md` and every producer
+  together: the phone companion (`src/pkjs/royal.js`), `cruise_sync.py` and the
+  Android app's Kotlin port (`android/royal/`, `RoyalParse`/`RoyalClient`); the
+  shared fixtures in `test/fixtures/` keep all three byte-equal. Bump `v` if
+  breaking.
 - **Verify Pebble details** (platform names, API limits, build commands) against
   the current Pebble SDK docs rather than memory. The Pebble Time 2 is new hardware.
 
@@ -79,7 +100,23 @@ Read before making changes:
   Bash). In the script, `cd` to the repo under `/mnt/c/...`, then `pebble build`,
   `pebble install --emulator emery`,
   `pebble screenshot --no-open --emulator emery <file.png>`,
-  `pebble emu-button click <up|down|select|back> --emulator emery`.
+  `pebble emu-button click <up|down|select|back> --emulator emery`. Use
+  `--emulator gabbro` for the Pebble Round 2 (one emulator at a time);
+  `bash tools/screens.sh <out-dir> [emery] [gabbro]` walks the main screens.
+  The .pbw and the emulators exist only on the owner's PC (WSL): a cloud
+  session can't build or install the watch app, so it hands that step to a
+  session on the PC.
+- Android app (`android/`): `./gradlew :royal:test :watch:test
+  testDebugUnitTest` (Java 21) and `python -m pytest tests`. A cloud container
+  can't reach Google's Maven, so `:app` builds only in CI; `:royal` and
+  `:watch` tests run locally (for `:watch`, from a scratch Gradle project that
+  includes `android/watch`, since the root build needs AGP). The APK comes
+  from the **Android app** workflow (`.github/workflows/android.yml`): it runs
+  on pull requests that touch `android/**`, `src/pkjs/**`, `test/fixtures/**`
+  or `package.json`, but a merge to `main` has not started it on its own, so
+  run it by hand (Actions > Android app > Run workflow on `main`) to get the
+  `royal-pebble-android-0.1.0-<commit>.apk` artifact. An `android-v*` tag
+  attaches the APK to a release. Details: `docs/BUILD_AND_TEST.md`.
 - Phone companion unit tests (Node, in WSL): `node test/pkjs/slice.test.js`
   (every `test/pkjs/*.test.js`, including `shipmap-data.test.js` for the map data). Keep
   tests out of `src/pkjs/`; the build bundles everything there.
@@ -125,8 +162,9 @@ Read before making changes:
   in code (`String.fromCharCode`) or check the file for control characters after.
 - Watch size: code + data + static buffers must stay under 65,535 bytes (the SDK
   stores it in a 16-bit field; the watch has 128 KB, the rest is heap). After
-  `pebble build`, run `python3 tools/watch_size.py` (fails over a 62 KB budget)
-  and put its first lines in the PR description. Big buffers go on the heap,
+  `pebble build`, run `python3 tools/watch_size.py` (checks both platforms,
+  fails over a 62 KB budget) and put its first lines for both in the PR
+  description. The Round 2 binary is the tight one (1,480 B left in 1.6.24). Big buffers go on the heap,
   allocated while their screen is open. Budget status: `docs/PLAN.md`; what
   was done and what isn't worth it: the brief, Measurements and limits. The build
   uses link-time optimisation (`wscript`); keep its `-Wl,-u,__pbl_app_info`,
@@ -149,8 +187,13 @@ Small, focused PRs. In the description say what changed, how it was tested (and 
 what: emulator, watch, live data), and anything left unverified.
 
 **App version `1.X.Y`:** X is the v1.1 phase in progress (Phase 3 = `1.3.0`), Y
-counts PRs within it. Every PR that changes the app (watch or phone code) bumps Y;
-a new phase sets X and resets Y to 0; docs-only PRs leave it alone. Change
+counts PRs within it. Every PR that changes the watch app or the JS the watch is
+served by (`src/c/`, `src/pkjs/`, or Android app code that changes what the
+watch gets) bumps Y; a new phase sets X and resets Y to 0; docs-only PRs leave it
+alone, and so have Android-app-only PRs (the native screens, #123, and the
+restyle, #124, both stayed 1.6.21). The
+Android app's own version is `0.1.0-<commit>` from CI (`android-v*` tags give a
+plain one); its test log header shows it and the bundled JS version. Change
 `package.json` `version` and `APP_VERSION` in `src/pkjs/log.js` together (a test
 checks). The usage log records "version  first run of ..." when a new version
 first starts, so a shared log shows where the build under test begins. The watch
