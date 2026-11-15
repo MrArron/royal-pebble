@@ -105,7 +105,7 @@ fun ShareTab(vm: CruiseViewModel) {
 
 private fun applyImport(vm: CruiseViewModel, items: List<SharePlan.Item>, take: Map<Int, Boolean>): String {
     var done: CruiseSession.Applied? = null
-    vm.edit { done = applyPlan(items, take) }
+    vm.edit("shared plan applied") { done = applyPlan(items, take) }
     val a = done ?: return "Nothing changed."
     return "Imported: ${a.stars} stars added, ${a.unstarred} unstarred, ${a.personal} entries, ${a.days} day settings, ${a.cabin} cabin details."
 }

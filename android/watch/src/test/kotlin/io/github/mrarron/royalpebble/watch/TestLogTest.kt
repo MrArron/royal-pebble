@@ -43,9 +43,16 @@ class TestLogTest {
         val t = TestLog.text(listOf("Royal Pebble Android app test log", "App 0.1.0"),
             listOf(TestLog.appLine(1790000000000, "switch", "App serves the watch: off -> on", ny)), usage, null, ny)
         assertTrue(t, t.contains("\n== App lines (1)\n2026-09-21 10:13:20  app  switch  App serves the watch: off -> on\n"))
-        assertTrue(t, t.contains("== Usage log in the app (1 entries; PebbleKit JS keeps its own)\n" +
+        assertTrue(t, t.contains("== Usage log in the app (1 entries, 0 oldest dropped when full; the watch's own entries included; " +
+            "PebbleKit JS keeps its own)\n" +
             "2026-09-21 10:13:20  -- --:--  phone  [app] Android app 0.1.0 serves the watch\n"))
         assertTrue(t, !t.contains("== Watch messages"))
         assertEquals(emptyList<String>(), TestLog.usageLines("not json"))
+    }
+
+    @Test
+    fun fileNameAndHostInfo() {
+        assertEquals("royal-pebble-log-20260921-101320.txt", TestLog.fileName(1790000000000, ny))
+        assertTrue(TestLog.hostInfo("0.1.0", "abc1234", true, false).contains("\"logCapChars\":${TestLog.LOG_CAP_CHARS}"))
     }
 }

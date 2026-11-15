@@ -399,6 +399,22 @@ test('voice routes are named in the log, not by place page number', function() {
   assert.strictEqual(line(12), 'Route to place page 12: 2 s');
 });
 
+test('a host cap (the Android app) keeps more than CAP_CHARS', function() {
+  var l = log.makeLog(memStorage(), {
+    now: function() { return new Date(2027, 2, 7, 14, 3, 12).getTime(); },
+    defer: function() {},
+    capChars: function() { return 2 * log.CAP_CHARS; }
+  });
+  var detail = new Array(300).join('x');
+  for (var n = 0; n < 4000; n++) {
+    l.add('pad', n + ' ' + detail);
+  }
+  var p = l.pageState('');
+  assert.ok(p.chars > log.CAP_CHARS, p.chars);
+  assert.ok(p.chars <= 2 * log.CAP_CHARS, p.chars);
+  assert.strictEqual(p.dropped, 0);
+});
+
 var failed = 0;
 tests.forEach(function(t) {
   try {

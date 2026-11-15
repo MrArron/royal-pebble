@@ -122,8 +122,28 @@ object WatchHost {
      * Does nothing when the app isn't serving the watch.
      */
     @Synchronized
-    fun storeChanged() {
-        server?.storeChanged()
+    fun storeChanged(c: Context, why: String) {
+        val s = server
+        if (s != null && s.startError == null) {
+            logApp(c, "push", "$why: sent the watch a fresh slice now")
+            s.storeChanged()
+        } else {
+            logApp(c, "push", "$why: not serving the watch right now, so it gets this when Royal Pebble next opens" +
+                (if (!WatchPrefs.serves(c)) " (App serves the watch is off)" else ""))
+        }
+    }
+
+    /**
+     * Settings > Watch > Test alerts: four test alerts 2 to 4 minutes from now
+     * (slice.js testAlarms, as the settings page's Me > Test alerts), kept for
+     * an hour. Saves the time in the store's `testAlerts` key and pushes a slice.
+     */
+    fun testAlerts(c: Context) {
+        val app = c.applicationContext as android.app.Application
+        io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(app)
+            .write("testAlerts", JsonPrimitive(System.currentTimeMillis()))
+        logApp(app, "alert", "test alerts turned on: reminder in 2 min, all-aboard in 3, two to-reserve in 4")
+        storeChanged(app, "test alerts")
     }
 
     /** Royal Pebble closed on the watch. */
@@ -182,6 +202,9 @@ object WatchHost {
 
     private var appContext: Context? = null
 
+    /** The watch the server last served ("Pebble Time 2, platform emery, firmware 4.9.0"), for the log header. */
+    @Volatile private var lastWatch: String? = null
+
     private fun start(c: Context, watch: WatchIdentifier): WatchServer {
         val app = c.applicationContext
         appContext = app
@@ -196,7 +219,8 @@ object WatchHost {
             store = StoreDir(storeDir(app)),
             sink = { dict -> WatchLink.sendFromServer(app, dict, watch) },
             onWire = { sent, dict -> if (wire) logWire(app, sent, dict) },
-            hostInfo = TestLog.hostInfo(BuildConfig.VERSION_NAME, BuildConfig.COMMIT, serves = true, wireLog = wire),
+            hostInfo = TestLog.hostInfo(BuildConfig.VERSION_NAME, BuildConfig.COMMIT, serves = true, wireLog = wire,
+                logCapChars = TestLog.LOG_CAP_CHARS),
         )
         logApp(app, "server", "serving the watch: app ${buildText()}, Royal Pebble JS $jsVersion, watch message log " +
             (if (wire) "on" else "off") + ", cruise in the app: " + cruiseText(app))
@@ -227,9 +251,12 @@ object WatchHost {
                 }
             }
             if (info == null) return@launch
+            lastWatch = "${info.name}, platform ${info.platform.lowercase()}, firmware " +
+                "${info.firmwareVersionMajor}.${info.firmwareVersionMinor}.${info.firmwareVersionPatch}" +
+                (info.firmwareVersionTag?.takeIf { it.isNotBlank() }?.let { "-$it" } ?: "")
             val json = watchInfoJson(info)
             if (json != knownWatches[watch]) {
-                logApp(app, "server", "watch: ${info.platform.lowercase()}" +
+                logApp(app, "watch", "connected watch: $lastWatch" +
                     if (info.platform.equals("gabbro", ignoreCase = true)) " (Pebble Round 2 layouts)" else "")
             }
             knownWatches[watch] = json
@@ -275,10 +302,52 @@ object WatchHost {
                 "${if (wire) "on" else "off"}. The settings page's Android app serves the watch is in PebbleKit JS's log.",
             "Now: ${status(c)}",
             "Cruise in the app: ${cruiseText(c)}",
+            "Watch last served: ${lastWatch ?: "none since the app started"}",
+            "Exported: ${TestLog.stamp(System.currentTimeMillis())}",
         )
         val appLines = appLogFile(c).takeIf { it.exists() }?.readLines()?.filter { it.isNotBlank() } ?: emptyList()
         val usage = File(storeDir(c), "usageLog.json").takeIf { it.exists() }?.readText()
         return TestLog.text(header, appLines, usage, if (wire) wireLogText(c) else null)
+    }
+
+    /**
+     * Writes the test log to a file in the app's cache (logs/, older exports
+     * removed) for the share sheet, and returns it. No size limit: the app's
+     * own storage.
+     */
+    fun testLogFile(c: Context): File {
+        val dir = File(c.cacheDir, "logs").apply { mkdirs() }
+        dir.listFiles()?.forEach { it.delete() }
+        val f = File(dir, TestLog.fileName(System.currentTimeMillis()))
+        f.writeText(testLogText(c))
+        logApp(c, "export", "test log written: ${f.name}, ${f.length()} bytes")
+        return f
+    }
+
+    /**
+     * Saves the test log in the phone's Downloads folder and returns where
+     * (Android 10 and later; older phones get the app's own Downloads folder).
+     */
+    fun saveTestLogToDownloads(c: Context): String {
+        val name = TestLog.fileName(System.currentTimeMillis())
+        val bytes = testLogText(c).toByteArray(Charsets.UTF_8)
+        val where = if (android.os.Build.VERSION.SDK_INT >= 29) {
+            val values = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Downloads.DISPLAY_NAME, name)
+                put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
+            }
+            val r = c.contentResolver
+            val uri = r.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: error("Android didn't make the file")
+            r.openOutputStream(uri)!!.use { it.write(bytes) }
+            "Downloads/$name"
+        } else {
+            val dir = c.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: c.filesDir
+            File(dir, name).writeBytes(bytes)
+            File(dir, name).path
+        }
+        logApp(c, "export", "test log saved: $where, ${bytes.size} bytes")
+        return where
     }
 
     fun clearAppLog(c: Context) {

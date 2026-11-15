@@ -21,7 +21,7 @@ fun FiltersTab(vm: CruiseViewModel) {
     val hidden = CruiseData.hiddenCats(settings)
     val ages = CruiseData.ageFilters(settings)
     val featured = CruiseData.showFeatured(settings)
-    fun save(h: List<String> = hidden, a: List<String> = ages, f: Boolean = featured) = vm.edit { saveFilters(h, a, f) }
+    fun save(h: List<String> = hidden, a: List<String> = ages, f: Boolean = featured) = vm.edit("filters saved") { saveFilters(h, a, f) }
 
     Page {
         Note("Changes save as you make them. Hidden events still show in search, marked Hidden on watch. Starred and booked events always reach the watch.")

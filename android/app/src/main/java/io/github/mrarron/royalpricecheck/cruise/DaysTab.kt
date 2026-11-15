@@ -53,7 +53,7 @@ private fun mmText(m: Int?): String = if (m == null) "none" else CruiseData.cloc
 
 @Composable
 private fun DayCard(vm: CruiseViewModel, d: ItineraryDay, v: SettingsRules.DayView, expanded: Boolean, onToggle: () -> Unit) {
-    fun set(field: String, value: JsonElement?) = vm.edit {
+    fun set(field: String, value: JsonElement?) = vm.edit("day edited: $field") {
         val cur = (settings()["days"] as? JsonObject)?.get(d.date) as? JsonObject
         saveDay(d.date, SettingsRules.setDayField(cur, d, field, value))
     }
@@ -102,7 +102,7 @@ private fun DayCard(vm: CruiseViewModel, d: ItineraryDay, v: SettingsRules.DayVi
             }
 
             ItineraryEdit(d, v, onEdit = { edit -> set("edit", edit) })
-            if (v.edited) TextButton({ vm.edit { saveDay(d.date, null) } }) { Text("Reset this day") }
+            if (v.edited) TextButton({ vm.edit("day reset") { saveDay(d.date, null) } }) { Text("Reset this day") }
         }
     }
 }

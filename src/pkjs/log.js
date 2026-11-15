@@ -24,6 +24,8 @@ var STORE_NOTES = 'mapNotes';   // [{ms, ...note}]
 
 // Log text kept (rendered line lengths), oldest entries dropped first. The phone
 // script's storage holds about 5 M characters for everything (probe, 2026-09-26).
+// The Android app keeps its store in its own files, so it passes a bigger cap
+// (opts.capChars; android TestLog.LOG_CAP_CHARS).
 var CAP_CHARS = 768 * 1024;
 // Largest part the settings page copies at once: the Pebble app's WebView copied
 // 512 KB and failed at 1 MB (probe, 2026-09-26).
@@ -60,7 +62,8 @@ function renderEntry(e) {
 // `storage` is localStorage (or a test stand-in). `opts.sailDate()` returns the
 // saved cruise's sail date (ISO) or null; `opts.now()` the time in ms;
 // `opts.defer(fn)` runs a save later (setTimeout), so a burst of entries is
-// saved once.
+// saved once. `opts.capChars()`, when given and it returns a number, replaces
+// CAP_CHARS (the Android app's bigger cap).
 function makeLog(storage, opts) {
   opts = opts || {};
   var nowMs = opts.now || function() { return Date.now(); };
@@ -68,6 +71,10 @@ function makeLog(storage, opts) {
   var defer = opts.defer || function(fn) { setTimeout(fn, 0); };
   var s = null;
   var saveQueued = false;
+  function cap() {
+    var c = opts.capChars && opts.capChars();
+    return typeof c === 'number' && c > 0 ? c : CAP_CHARS;
+  }
 
   function read(key, fallback) {
     try {
@@ -152,7 +159,7 @@ function makeLog(storage, opts) {
     }
     st.entries.splice(i, 0, e);
     st.chars += renderEntry(e).length + 1;
-    trim(CAP_CHARS);
+    trim(cap());
     queueSave();
   }
 
