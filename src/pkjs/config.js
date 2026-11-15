@@ -524,6 +524,9 @@ var BODY = [
   '<div class="dhead">AGES</div><div class="cats" id="ageList"></div>',
   '<p class="help">Events you star always show. The age switches never hide an event with no age listed. ',
   'Casino games are in the Casino category below.</p>',
+  '<div class="dhead">COST</div><div class="cats" id="feeList"></div>',
+  '<p class="help">Free activities Royal marks Fee applies, such as some fitness classes. Paid classes and ',
+  'shore excursions already show only once you pick a session. Events you star always show.</p>',
   '<div class="dhead">CATEGORIES</div><div id="catList"></div>',
   '<p class="help">Hidden categories stay off the watch\'s lists. Events you star always show. Casino has ',
   'Casino Royale and casino games (slots, blackjack, poker, roulette, craps, tournaments); bingo and raffles ',
@@ -1621,12 +1624,15 @@ function pageMain(S, V, CL, SH) {
   var categories = S.categories || [];
   var hidden = (S.hiddenCats || ['Shop']).slice();
   var openCat = null;
-  // Ages (docs/DESIGN.md §12.4): switches, not categories. Each row's
-  // bit is its place here, as slice.js ageMask gives them.
+  // Ages and Cost (docs/DESIGN.md §12.4): switches, not categories. Each row's
+  // bit is its place here, as slice.js ageMask (and FEE_BIT) gives them; the
+  // fee row (the last) is drawn under COST.
   var ageOn = (S.ageFilters || []).slice();
   var AGE_ROWS = [['adult', 'Hide Adult only events', '18+ and 21+'],
     ['young', 'Hide Teen and Kid only events', '17 and under'],
-    ['family', 'Hide Family events', 'Family and all-ages events']];
+    ['family', 'Hide Family events', 'Family and all-ages events'],
+    ['fee', 'Hide events with a fee', 'Royal lists them with Fee applies']];
+  var FEE_ROW = 3;
 
   function ageHideMask() {
     var mask = 0;
@@ -1639,17 +1645,19 @@ function pageMain(S, V, CL, SH) {
   }
 
   function renderAges() {
-    $('ageList').innerHTML = AGE_ROWS.map(function(a, i) {
+    var rows = AGE_ROWS.map(function(a, i) {
       var n = allEvents.filter(function(e) { return e.ages & (1 << i); }).length;
       var on = ageOn.indexOf(a[0]) !== -1;
       return '<div class="cat"><div class="switch-row"><span class="t"><b>' + a[1] + '</b><span class="muted">' +
         a[2] + (allEvents.length ? ' &middot; ' + n + (n === 1 ? ' event' : ' events') : '') + '</span></span>' +
         '<button class="switch" role="switch" data-age="' + a[0] + '" aria-checked="' + on + '" aria-label="' +
         a[1] + '"></button></div></div>';
-    }).join('');
+    });
+    $('ageList').innerHTML = rows.slice(0, FEE_ROW).join('');
+    $('feeList').innerHTML = rows[FEE_ROW];
   }
 
-  $('ageList').addEventListener('click', function(ev) {
+  function onAgeClick(ev) {
     var btn = ev.target.closest('[data-age]');
     if (!btn) {
       return;
@@ -1661,7 +1669,9 @@ function pageMain(S, V, CL, SH) {
       ageOn = ageOn.filter(function(a) { return a !== name; });
     }
     renderAges();
-  });
+  }
+  $('ageList').addEventListener('click', onAgeClick);
+  $('feeList').addEventListener('click', onAgeClick);
 
   $('featured').setAttribute('aria-checked', String(S.showFeatured !== false));
   $('featured').addEventListener('click', function() {
@@ -1860,11 +1870,15 @@ function pageMain(S, V, CL, SH) {
   // An event that login data also has (a shore excursion session, slice.js
   // inOrders, or a booked show or class, bookedAt): it shows once, under
   // FROM YOUR BOOKING.
+  // slice.js titleKey: case, punctuation and the ® mark don't count.
+  function titleKey(t) {
+    return String(t || '').toLowerCase().replace(/[\u00ae\u2122\u00a9]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
   function inOrders(e) {
-    var t = (e.title || '').trim().toLowerCase();
+    var t = titleKey(e.title);
     return (S.orders || []).some(function(o) {
-      return !!o.excursion === !!e.excursion && o.date === e.date && o.time === e.time &&
-        (o.title || '').trim().toLowerCase() === t;
+      return !!o.excursion === !!e.excursion && o.date === e.date && o.time === e.time && titleKey(o.title) === t;
     });
   }
 
@@ -1907,6 +1921,12 @@ function pageMain(S, V, CL, SH) {
       var tableName = e.venue && V.lookup(schedTable, e.venue,
         Object.prototype.hasOwnProperty.call(schedV.codes, e.venue) ? schedV.codes[e.venue] : null);
       e.ages = e.excursion ? 0 : ageMask(ageRange[0], ageRange[1], e.title, tableName || e.venue);  // Filters > Ages
+      if (!e.paid && Array.isArray(inf) && Array.isArray(inf[2]) && inf[2].some(function(i) {
+        return Array.isArray(noteRows[i]) && noteRows[i][0] === 'fee';
+      })) {
+        e.ages |= 1 << FEE_ROW;  // Filters > Cost (slice.js FEE_BIT)
+        e.fee = true;
+      }
       e.cat = eventCat(e.title, e.venue, e.cat);  // Casino (slice.js)
       e.key = starKey(e.title, e.date, e.time, e.venue);
       e.search = (e.title + ' ' + e.venue).toLowerCase();

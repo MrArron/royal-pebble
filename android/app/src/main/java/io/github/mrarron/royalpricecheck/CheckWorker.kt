@@ -29,11 +29,24 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         WatchAlertBridge.afterCheck(c, result)?.let { log.add(it) }
         Prefs.saveLast(c, result, log)
         Notifier.notifyChanges(c, previous, result, background = true)
+        // The same check also refreshes the schedule when it's due (ScheduleRefresh: its own switch and limits).
+        runCatching { io.github.mrarron.royalpricecheck.cruise.ScheduleRefresh.runIfDue(c) }.onFailure {
+            io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(c, "schedule", "background refresh failed unexpectedly (${it::class.java.simpleName})")
+        }
         Result.success()
     }
 
     companion object {
         private const val NAME = "periodic-price-check"
+
+        /** Settings > Price checks > Run a background check now: the same work, once, for testing. */
+        fun runOnce(c: Context) {
+            val req = androidx.work.OneTimeWorkRequestBuilder<CheckWorker>()
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build()
+            WorkManager.getInstance(c).enqueueUniqueWork("one-price-check", androidx.work.ExistingWorkPolicy.KEEP, req)
+            io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(c, "prices", "background check asked for now (Run a background check now)")
+        }
 
         fun schedule(c: Context, hours: Int) {
             val wm = WorkManager.getInstance(c)

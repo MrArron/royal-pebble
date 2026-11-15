@@ -252,7 +252,13 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
   app sent and whether the watch took them), the usage log `index.js` keeps
   in the app's store (PebbleKit JS's is separate; it holds the watch's own
   entries, which the watch sends as `LOG`; its header gives the entry and
-  dropped counts), and the wire log when it's on. The app passes
+  dropped counts), and the wire log when it's on. Since 1.6.26 the app's
+  lines also have `schedule` (the background schedule refresh: done with the
+  download summary, skipped with the reason, or FAILED), and after any app
+  download `stars` and `booked` (`N timed bookings, M matched schedule events
+  (starred, booked), K shown as bookings`, plus the titles of shows and
+  classes not in the schedule); `index.js useBundle` writes the same
+  `booked` line to the usage log after a login download. The app passes
   `logCapChars` (4 M characters, `TestLog.LOG_CAP_CHARS`) in `__host.info`,
   so its usage log keeps five times PebbleKit JS's 768 K. **Test alerts**
   on the same card saves the time in `testAlerts` (as the settings page's Me

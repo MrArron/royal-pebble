@@ -1,6 +1,6 @@
 # Royal Pebble — Plan to the sailing
 
-The one active plan, as of 2026-11-15 (app 1.6.25). What is built is in
+The one active plan, as of 2026-11-15 (app 1.6.26). What is built is in
 `PROJECT_BRIEF.md`; screens are in `DESIGN.md`. Update this file as work lands
 and delete what's done once it's in the brief.
 
@@ -142,14 +142,15 @@ them as built. The build to test now is 1.6.25 (§3b), then G0c when the Round
 board) and B (orange stateroom card) change the Round 2 too and are in its
 checklist.
 
-## 3b. Android app (1.6.19-1.6.25)
+## 3b. Android app (1.6.19-1.6.26)
 
 Built (brief, What's built, Android app; `android/README.md`): price and
 booking checks with Watch alerts, the native Cruise screens, and the app
 serving the watch behind two switches, with `[js]`/`[app]` logging, instant
 push after the app's saves, the log file export, Test alerts and the Round 2
 watch-type retry; 1.6.25 adds the trip-phase layout, star reconciling on a
-re-download, one Royal login and copyable reports.
+re-download, one Royal login and copyable reports; 1.6.26 the fee filter,
+the background schedule refresh and looser booking matches.
 
 Left:
 
@@ -157,6 +158,9 @@ Left:
   (project files, `builds/TEST-CHECKLIST-1.6.25.md`): the 1.6.24 items plus
   one login, copyable reports, port stops, stars on a re-download and the
   trip-phase layout.
+- **The owner's 1.6.26 test** (`builds/TEST-CHECKLIST-1.6.26.md`): Hide
+  events with a fee, the background schedule refresh and its log lines,
+  booked shows starred from a login download.
 - **A real Round 2 served by the app** (checklist R2b) once it arrives.
 - **Who serves each watch on the sailing** (open question 8).
 

@@ -37,7 +37,7 @@ test('shared fixture gives the expected schedule, in pages too', function() {
 
 test('summary line', function() {
   assert.strictEqual(royal.scheduleSummary(EXPECTED),
-    '51 events (9 shore excursion sessions): 18 with age limits, 23 arrive early, 25 with notes');
+    '51 events (9 shore excursion sessions): 18 with age limits, 23 arrive early, 26 with notes');
 });
 
 test('age restriction wordings', function() {
@@ -97,7 +97,7 @@ test('arrive early: a shore excursion meets before its start', function() {
   assert.strictEqual(royal.earlyOf(p, {offeringTime: '0000', meetingTime: '2345'}), null);
 });
 
-test('notes: boilerplate, long and repeated text left out; waiver added once', function() {
+test('notes: boilerplate, long and repeated text left out; waiver and fee added once', function() {
   var long = new Array(122).join('x');
   var notes = royal.notesOf(product({
     productShortDescription: 'Trivia',
@@ -112,10 +112,16 @@ test('notes: boilerplate, long and repeated text left out; waiver added once', f
                   {advisementID: 'kbyg/seapass', advisementTitle: 'Please bring your SeaPass®'}],
     isWaiverRequired: true
   }), 'Trivia');
+  // A free-type event keeps Royal's fee advisement once, as the `fee` note.
   assert.deepStrictEqual(notes, [
     ['age/13guardian', 'Children 12 years old and under must be supervised'],
+    ['fee', 'Fee applies'],
     ['kbyg/seapass', 'Please bring your SeaPass'],
     ['waiver', 'Signed waiver required']]);
+  // A paid event is already `paid`: no fee note.
+  assert.deepStrictEqual(royal.notesOf(product({
+    advisements: [{advisementID: 'kbyg/general/FEE', advisementTitle: 'This activity has a fee'}]
+  }), 'Trivia', 1), []);
   assert.deepStrictEqual(royal.notesOf(product({
     advisements: [{advisementID: 'kbyg/flowrdr/WARNDISCLAIM', advisementTitle: 'Signed warning disclaimer required'}],
     isWaiverRequired: true

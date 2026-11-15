@@ -17,7 +17,6 @@ import io.github.mrarron.royalpebble.settings.Readiness
 import io.github.mrarron.royalpebble.store.CruiseStore
 import io.github.mrarron.royalpebble.store.StarReconciler
 import io.github.mrarron.royalpebble.watch.JsStarReconciler
-import io.github.mrarron.royalpebble.watch.starChangeCounts
 import io.github.mrarron.royalpricecheck.watch.ZiplineRuntime
 import io.github.mrarron.royalpricecheck.RoyalAccount
 import io.github.mrarron.royalpricecheck.watch.WatchHost
@@ -181,19 +180,9 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
                 is DownloadOutcome.Failed -> error = outcome.error
             }
             busy = false
-            if (outcome is DownloadOutcome.Done) logStars(outcome)
+            if (outcome is DownloadOutcome.Done) ScheduleRefresh.afterDownload(getApplication(), store, outcome)
             if (outcome is DownloadOutcome.Done) saved("cruise downloaded (${ship.code} $date)") else changed()
         }
-    }
-
-    /** The test log's line for what a re-download did to stars (counts only), as useBundle's 'resync' entries. */
-    private fun logStars(outcome: DownloadOutcome.Done) {
-        val app = getApplication<Application>()
-        CruiseHome.reconciler.lastError?.let { WatchHost.logApp(app, "stars", "reconcile failed, stars kept: $it"); return }
-        if (!outcome.saved.sameSailing) return
-        val list = ((store.read(CruiseStore.STAR_CHANGES) as? kotlinx.serialization.json.JsonObject)?.get("list")
-            as? kotlinx.serialization.json.JsonArray).orEmpty()
-        WatchHost.logApp(app, "stars", "re-download: " + starChangeCounts(list) + ", ${store.stars().count { it.value && !it.key.startsWith(CruiseStore.RESERVED_PREFIX) }} starred now")
     }
 
     // ------------------------------------------------------------ the shared Royal login (see RoyalAccount)

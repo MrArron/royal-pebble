@@ -6,7 +6,7 @@ glances at what's next** without pulling out a phone, and making sure the
 wearer never misses all-aboard. All data is loaded before sailing; **at sea the
 app works with no internet at all**.
 
-This brief is the "what and why": purpose, constraints, what is built (1.6.25),
+This brief is the "what and why": purpose, constraints, what is built (1.6.26),
 the decisions still in force and what's left for later. How things look is in
 `DESIGN.md`; the work still to do before the sailing is in `PLAN.md`. When
 something here conflicts with a request in a session, ask before changing
@@ -24,7 +24,7 @@ direction.
   code HM). It is also the app's test cruise: the usage log and map notes
   collected on board drive the next round of fixes.
 - Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
-  (`CLAUDE.md`). Current: **1.6.25**, phase 6 (`PLAN.md`). The Android app is
+  (`CLAUDE.md`). Current: **1.6.26**, phase 6 (`PLAN.md`). The Android app is
   versioned on its own (`0.1.0-<commit>`, `BUILD_AND_TEST.md`).
 
 ## Constraints
@@ -110,7 +110,7 @@ Known facts:
 - Plain HTTP clients work for the public endpoints and for the sign-in from
   the phone; if Royal starts refusing, the sync tool impersonates a browser.
 
-## What's built (1.6.25)
+## What's built (1.6.26)
 
 Numbers are the brief's item numbers, used in code comments and PRs. Screens
 and wording: `DESIGN.md`.
@@ -196,7 +196,7 @@ was built later for other reasons.
 **Round 2 phase (1.6.0-1.6.7)** and the **1.6 hardware-test fixes
 (1.6.9-1.6.18)**: see "Watches" above and `PLAN.md` §3a.
 
-**Android app (1.6.19-1.6.25; `android/README.md`)**
+**Android app (1.6.19-1.6.26; `android/README.md`)**
 
 - Price and booking checker running jdeath's script (Chaquopy), with
   background checks, a Keystore-encrypted password only while those are on,
@@ -226,6 +226,12 @@ was built later for other reasons.
   (`JsStarReconciler`, issue 129), one Royal login for price checks and
   downloads, selectable reports with Copy and Share, and port stops counted
   from gangway times.
+- 1.6.26: Filters > Cost > Hide events with a fee (free-type events Royal
+  marks "Fee applies", the bundle's new `fee` note, kept by all three
+  downloaders), the background price check also refreshes the schedule with
+  the login (Also refresh the schedule, `ScheduleRefresh`), bookings match
+  schedule events ignoring case and punctuation, and `schedule` and `booked`
+  log lines.
 
 **Planned: Phase 6** (`PLAN.md`): (17) "Before you go", starred events with
 requirements gathered ahead of time; (18) a dining hint (`Last dinner

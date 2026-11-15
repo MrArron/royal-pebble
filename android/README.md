@@ -28,6 +28,12 @@ One bottom bar whose tabs follow the trip (`AppShell.kt`, `TripPhase`):
   logs, Price checks, About; on board also Prices.
 - Background price checks pause while On board (log line `prices  background check skipped: on board`)
   unless Settings > Price checks > **Keep checking while on board** is on.
+- **Also refresh the schedule** (Settings > Price checks, on; 1.6.26, `cruise/ScheduleRefresh.kt`, rules in
+  `royal/.../settings/RefreshRules.kt`): after each background price check, Download with login for the saved
+  sailing with the remembered Royal Caribbean login, then star reconciling and a push to the watch (when the app
+  serves it). From 14 days before sailing to the last day, at most every 6 hours, paused on board with the price
+  checks. Log lines `schedule  background refresh done in N ms: ...` or `... skipped: <reason>`, then `stars` and
+  `booked`. **Run a background check now** runs the worker once (WorkManager), for testing.
 
 ## One Royal login
 

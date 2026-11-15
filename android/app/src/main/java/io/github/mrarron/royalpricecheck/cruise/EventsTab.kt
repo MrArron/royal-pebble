@@ -59,6 +59,7 @@ private fun detail(e: Event): String = listOfNotNull(
     e.venue.takeIf { it.isNotBlank() },
     e.minutes.takeIf { it > 0 }?.let { if (it >= 60) "${it / 60} h" + (if (it % 60 != 0) " ${it % 60}" else "") else "$it min" },
     e.ageMin?.takeIf { it > 0 }?.let { "Ages $it+" },
+    "Fee applies".takeIf { e.fee && !e.paid },
 ).joinToString(" · ")
 
 /** Settings > Events (docs/DESIGN.md §12.5): stars, reserved marks, booked sessions, personal entries. */

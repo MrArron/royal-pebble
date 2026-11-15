@@ -33,7 +33,7 @@ class RoyalParseTest {
 
     @Test
     fun summaryLine() {
-        assertEquals("51 events (9 shore excursion sessions): 18 with age limits, 23 arrive early, 25 with notes",
+        assertEquals("51 events (9 shore excursion sessions): 18 with age limits, 23 arrive early, 26 with notes",
             RoyalParse.scheduleSummary(expected))
     }
 
