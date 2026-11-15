@@ -276,6 +276,7 @@ day).
 | Pebble Round 2 (gabbro) static, 1.6.4 (lists and scroll arc, G5) | 61,120 B (+904 B); 2,368 B under the budget. The Time 2's code is byte-identical (58,776 B) | `tools/watch_size.py`, 2026-10-03 |
 | Pebble Round 2 (gabbro) static, 1.6.5 (My info, Ask, On board?, G6) | 61,856 B (+736 B); 1,632 B under the budget. The Time 2's code is byte-identical (58,776 B) | `tools/watch_size.py`, 2026-10-03 |
 | Both watches, 1.6.6 (Time 2 matching style, G6a) | Time 2 59,056 B (+280 B; 4,432 B under the budget); Round 2 61,592 B (264 B smaller; 1,896 B under). The scroll bar, pill and stateroom card are shared helpers; the content-triangle code is gone | `tools/watch_size.py`, 2026-10-03 |
+| Both watches, 1.6.24 (Round 2 recheck) | Time 2 59,392 B (4,096 B under the budget); Round 2 62,008 B (1,480 B under); heap at launch on the Round 2 69,064 B, peak use 48,488 B in the emulator pass | `tools/watch_size.py`, gabbro emulator log, 2026-11-15 |
 | Free heap on the watch, Home open | about 30.7 KB (1.5.4, 115-event day) | usage log, 2026-09-28 |
 | Free heap at dictation start | 24-25 KB from Home and from a Route screen; dictation takes no app heap | usage log |
 | Events per watch day | 160 | `MAX_EVENTS` |
