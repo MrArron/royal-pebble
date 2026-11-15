@@ -68,6 +68,9 @@ private fun AppScreen(vm: MainViewModel, dark: Boolean) {
         if (Build.VERSION.SDK_INT >= 33) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
+    // The Cruise screen can save the shared Royal login (and config.yaml): pick it up on every tab change.
+    LaunchedEffect(tab) { vm.accountChanged() }
+
     Scaffold { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
@@ -89,6 +92,7 @@ private fun AppScreen(vm: MainViewModel, dark: Boolean) {
 @Composable
 private fun SummaryTab(vm: MainViewModel) {
     val r = vm.result
+    androidx.compose.foundation.text.selection.SelectionContainer {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -111,6 +115,7 @@ private fun SummaryTab(vm: MainViewModel) {
                 color = if (r.ok) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
             )
             if (r.script.isNotBlank()) Text("Script: ${r.script}", style = MaterialTheme.typography.bodySmall)
+            ReportButtons("price check report", "royal-pebble-price-report.txt") { ReportShare.summaryText(r) }
         }
         if (r.alerts.isNotEmpty()) {
             item { Text("Rebook to save", style = MaterialTheme.typography.titleMedium) }
@@ -140,6 +145,7 @@ private fun SummaryTab(vm: MainViewModel) {
             items(others) { DropCard(it) }
         }
     }
+    }
 }
 
 @Composable
@@ -167,21 +173,40 @@ private fun DropCard(d: PriceDrop) {
 private fun LogTab(vm: MainViewModel, dark: Boolean) {
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(vm.log.size) { if (vm.log.isNotEmpty()) state.scrollToItem(vm.log.size - 1) }
-    LazyColumn(Modifier.fillMaxSize().padding(8.dp), state = state) {
-        if (vm.log.isEmpty()) item { Text("The script's output appears here while a check runs.") }
-        items(vm.log) { Text(ansiToAnnotated(it, dark), fontFamily = FontFamily.Monospace, fontSize = 11.sp) }
+    Column(Modifier.fillMaxSize()) {
+        if (vm.log.isNotEmpty() && !vm.running) {
+            Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp)) {
+                ReportButtons("price check output", "royal-pebble-price-output.txt") { ReportShare.logText(vm.log.toList()) }
+            }
+        }
+        androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f)) {
+            LazyColumn(Modifier.fillMaxSize().padding(8.dp), state = state) {
+                if (vm.log.isEmpty()) item { Text("The script's output appears here while a check runs.") }
+                items(vm.log) { Text(ansiToAnnotated(it, dark), fontFamily = FontFamily.Monospace, fontSize = 11.sp) }
+            }
+        }
     }
 }
 
 @Composable
 private fun AccountTab(vm: MainViewModel) {
-    var user by rememberSaveable { mutableStateOf("") }
+    var user by rememberSaveable { mutableStateOf(vm.accountEmail ?: "") }
     var pass by rememberSaveable { mutableStateOf("") }
     var line by rememberSaveable { mutableStateOf("royal") }
+    var keepLogin by rememberSaveable { mutableStateOf(vm.accountRemembered) }
     var yaml by remember(vm.config) { mutableStateOf(vm.config) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Quick setup", style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(user, { user = it }, label = { Text("Royal Caribbean username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Text("Royal account", style = MaterialTheme.typography.titleMedium)
+        val email = vm.accountEmail
+        Text(
+            when {
+                email == null -> "Not set. One login for the price check and for Cruise > Download with your Royal login."
+                vm.accountReady -> "Signed in as ${RoyalAccount.masked(email)}" + (if (vm.accountRemembered) ", remembered on this phone." else ", until you close the app.") +
+                    " Used by the price check and by Cruise downloads."
+                else -> "${RoyalAccount.masked(email)}: enter the password again (the app was closed and it wasn't remembered)."
+            },
+        )
+        OutlinedTextField(user, { user = it }, label = { Text("Royal Caribbean email or username") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(
             pass, { pass = it }, label = { Text("Password") }, singleLine = true,
             visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
@@ -190,16 +215,24 @@ private fun AccountTab(vm: MainViewModel) {
             FilterChip(line == "royal", { line = "royal" }, label = { Text("Royal Caribbean") })
             FilterChip(line == "celebrity", { line = "celebrity" }, label = { Text("Celebrity") })
         }
-        Button(onClick = { vm.saveSimple(user, pass, line); pass = "" }, enabled = user.isNotBlank() && pass.isNotEmpty()) {
-            Text("Save account")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.Checkbox(keepLogin, { keepLogin = it })
+            Text("Remember on this phone (encrypted with the Android Keystore)", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { vm.saveAccount(user, pass, line, keepLogin); pass = "" }, enabled = user.isNotBlank() && pass.isNotEmpty()) {
+                Text("Save account")
+            }
+            if (email != null) OutlinedButton(onClick = { vm.forgetAccount(); pass = ""; keepLogin = false }) { Text("Forget login") }
         }
         Text(
-            "Your password is never written to config.yaml. It stays in memory until you close the app. " +
-                "Only while background checks are on, it is also saved encrypted with the Android Keystore; " +
-                "turning them off deletes it.",
+            "Your password is never written to config.yaml. It stays in memory until you close the app, and is saved " +
+                "encrypted with the Android Keystore only if you tick Remember (or while background checks are on, " +
+                "for the price check). Cruise downloads with your login work for Royal Caribbean accounts only.",
             style = MaterialTheme.typography.bodySmall,
         )
-        if (vm.missingPasswords.isNotEmpty()) PasswordPrompt(vm)
+        // The app's own config.yaml is the account above; its password is typed there.
+        if (vm.missingPasswords.isNotEmpty() && RoyalAccount.parseSimple(vm.config) == null) PasswordPrompt(vm)
         Text("Advanced: config.yaml", style = MaterialTheme.typography.titleMedium)
         Text("Stored only in this app's private storage. The full options are in the price checker's docs.", style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(yaml, { yaml = it }, modifier = Modifier.fillMaxWidth(), minLines = 8, textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp))

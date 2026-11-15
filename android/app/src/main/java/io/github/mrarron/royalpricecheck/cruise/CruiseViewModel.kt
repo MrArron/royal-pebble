@@ -15,7 +15,11 @@ import io.github.mrarron.royalpebble.settings.DownloadOutcome
 import io.github.mrarron.royalpebble.settings.DownloadService
 import io.github.mrarron.royalpebble.settings.Readiness
 import io.github.mrarron.royalpebble.store.CruiseStore
-import io.github.mrarron.royalpricecheck.PasswordVault
+import io.github.mrarron.royalpebble.store.StarReconciler
+import io.github.mrarron.royalpebble.watch.JsStarReconciler
+import io.github.mrarron.royalpebble.watch.starChangeCounts
+import io.github.mrarron.royalpricecheck.watch.ZiplineRuntime
+import io.github.mrarron.royalpricecheck.RoyalAccount
 import io.github.mrarron.royalpricecheck.watch.WatchHost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,8 +30,23 @@ import java.io.File
 object CruiseHome {
     @Volatile private var store: CruiseStore? = null
 
+    /**
+     * Stars follow events Royal moved or cancelled on a re-download (issue 129):
+     * slice.js in its own QuickJS, on a thread with a 4 MB stack like the watch
+     * server's (QuickJS's stack limit is 1 MB; a pool thread's own stack can be smaller).
+     */
+    val reconciler = JsStarReconciler({ ZiplineRuntime() })
+
+    private val bigStack = StarReconciler { old, new, stars, settings, nowMs, times ->
+        var out: StarReconciler.Reconciled? = null
+        val t = Thread(null, { out = reconciler.reconcile(old, new, stars, settings, nowMs, times) }, "royal-pebble-stars", 4L * 1024 * 1024)
+        t.start()
+        t.join()
+        out ?: StarReconciler.KEEP.reconcile(old, new, stars, settings, nowMs, times)
+    }
+
     fun store(app: Application): CruiseStore =
-        store ?: synchronized(this) { store ?: CruiseStore(File(app.filesDir, "cruise")).also { store = it } }
+        store ?: synchronized(this) { store ?: CruiseStore(File(app.filesDir, "cruise"), bigStack).also { store = it } }
 }
 
 /**
@@ -146,7 +165,14 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
                 is DownloadOutcome.Done -> {
                     // Done means Royal accepted the sign-in; the login is kept for this session, and saved only when asked.
                     if (login != null) {
-                        PasswordVault.rememberPebbleLogin(getApplication(), login.email, login.password, remember)
+                        val app = getApplication<Application>()
+                        val now = RoyalAccount.current(app)
+                        // One Royal login for the whole app: a new one becomes the Account tab's too.
+                        if (now == null || now.email != login.email || now.password != login.password ||
+                            RoyalAccount.remembered(app) != remember) {
+                            RoyalAccount.save(app, login.email, login.password, "royal", remember)
+                            WatchHost.logApp(app, "account", "Royal login saved from Cruise (remembered: $remember)")
+                        }
                     }
                     message = (if (outcome.withLogin) "Downloaded with your login. " else "Downloaded. ") + outcome.summary +
                         (outcome.bookingSummary?.let { ". " + it.replaceFirstChar { c -> c.uppercase() } } ?: "")
@@ -155,13 +181,24 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
                 is DownloadOutcome.Failed -> error = outcome.error
             }
             busy = false
+            if (outcome is DownloadOutcome.Done) logStars(outcome)
             if (outcome is DownloadOutcome.Done) saved("cruise downloaded (${ship.code} $date)") else changed()
         }
     }
 
-    // ------------------------------------------------------------ the saved login (see PasswordVault)
+    /** The test log's line for what a re-download did to stars (counts only), as useBundle's 'resync' entries. */
+    private fun logStars(outcome: DownloadOutcome.Done) {
+        val app = getApplication<Application>()
+        CruiseHome.reconciler.lastError?.let { WatchHost.logApp(app, "stars", "reconcile failed, stars kept: $it"); return }
+        if (!outcome.saved.sameSailing) return
+        val list = ((store.read(CruiseStore.STAR_CHANGES) as? kotlinx.serialization.json.JsonObject)?.get("list")
+            as? kotlinx.serialization.json.JsonArray).orEmpty()
+        WatchHost.logApp(app, "stars", "re-download: " + starChangeCounts(list) + ", ${store.stars().count { it.value && !it.key.startsWith(CruiseStore.RESERVED_PREFIX) }} starred now")
+    }
 
-    fun savedLogin(): Pair<String, String>? = PasswordVault.pebbleLogin(getApplication())
-    fun hasSavedLogin(): Boolean = PasswordVault.hasPebbleLogin(getApplication())
-    fun forgetLogin() { PasswordVault.forgetPebbleLogin(getApplication()); changed() }
+    // ------------------------------------------------------------ the shared Royal login (see RoyalAccount)
+
+    /** The shared Royal login (RoyalAccount), when it is a Royal Caribbean one with its password known. */
+    fun account(): RoyalAccount.Account? = RoyalAccount.current(getApplication())?.takeIf { it.cruiseLine == "royal" }
+    fun accountRemembered(): Boolean = RoyalAccount.remembered(getApplication())
 }

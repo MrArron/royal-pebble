@@ -512,14 +512,17 @@ object RoyalParse {
         }
     }
 
-    /** 'booking found: 3 purchases (1 timed), 2 port days', for a log: counts only. */
+    /**
+     * 'booking found: 3 purchases (1 timed), 2 port stops', for a log: counts only. A port
+     * stop is a day with a gangway time; Royal also lists sea days with only the ship's position.
+     */
     fun mineSummary(mine: JsonElement): String {
         val orders = mine["orders"].arrOrEmpty()
         val timed = orders.count { it["time"].truthy() }
         val others = mine["otherBookings"].number()?.toLong() ?: 0
         val ports = mine["ports"] as? JsonArray
         return "booking found: ${orders.size} purchases ($timed timed), " +
-            (if (ports != null) "${ports.size} port days" else "port details skipped") +
+            (if (ports != null) "${ports.count { p -> p["gangwayDown"].truthy() || p["gangwayUp"].truthy() }} port stops" else "port details skipped") +
             (if (mine["ordersError"].truthy()) ", purchases skipped" else "") +
             (if (others > 0) ", $others linked booking${if (others > 1) "s" else ""} on this sailing set aside" +
                 (if (mine["bookingUnsure"].truthy()) " (not sure which is yours)" else "") else "")

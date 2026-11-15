@@ -25,6 +25,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var followUpstream by mutableStateOf(false); private set
     var scriptVersion by mutableStateOf(""); private set
     var missingPasswords by mutableStateOf<List<Int>>(emptyList()); private set
+    /** The shared Royal login's email (masked on screen), known even before its password is. */
+    var accountEmail by mutableStateOf<String?>(null); private set
+    var accountRemembered by mutableStateOf(false); private set
+    var accountReady by mutableStateOf(false); private set
     val log = mutableStateListOf<String>()
 
     init {
@@ -46,8 +50,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         log.addAll(Prefs.loadLastLog(ctx))
     }
 
-    fun saveSimple(username: String, password: String, cruiseLine: String) {
-        saveConfig(Prefs.simpleConfig(username, password, cruiseLine))
+    /** Account tab: the one Royal login, for the price check and the Cruise screen's download with login. */
+    fun saveAccount(username: String, password: String, cruiseLine: String, remember: Boolean) {
+        val wroteConfig = RoyalAccount.save(ctx, username, password, cruiseLine, remember)
+        if (wroteConfig) {
+            config = Prefs.readConfig(ctx)
+            hasConfig = true
+        }
+        refreshMissing()
+        status = if (wroteConfig) "Saved. The price check and Cruise downloads both use this login. Your password is not stored in config.yaml."
+        else "Saved for Cruise downloads. Your own config.yaml was left as it is."
+    }
+
+    fun forgetAccount() {
+        RoyalAccount.forget(ctx)
+        refreshMissing()
+        status = "Login forgotten on this phone."
     }
 
     fun saveConfig(yaml: String) {
@@ -58,7 +76,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun refreshMissing() {
+        RoyalAccount.fillPriceChecker(ctx)
         missingPasswords = ConfigPasswords.inject(config, PasswordVault.all(ctx)).missing
+        accountEmail = RoyalAccount.knownEmail(ctx)
+        accountRemembered = RoyalAccount.remembered(ctx)
+        accountReady = RoyalAccount.current(ctx) != null
+    }
+
+    /** Another screen (Cruise) changed the shared login: pick up the config.yaml it may have written. */
+    fun accountChanged() {
+        hasConfig = Prefs.hasConfig(ctx)
+        config = Prefs.readConfig(ctx)
+        refreshMissing()
     }
 
     /** Passwords typed again after a restart (index -> password). */

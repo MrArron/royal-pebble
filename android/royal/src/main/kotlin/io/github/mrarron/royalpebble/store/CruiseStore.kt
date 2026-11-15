@@ -328,9 +328,8 @@ data class SaveResult(val sameSailing: Boolean, val keptMine: Boolean, val starC
 /**
  * What a re-download does to stars of events Royal moved or cancelled
  * (slice.js reconcileStars + pruneStarTimes + buildNotices). That logic stays
- * in the JS and runs through the embedded JS engine once Phase 3 wires it in;
- * until then [KEEP] leaves stars as they are, which is what the JS does for a
- * new sailing.
+ * in the JS: the app passes android/watch's JsStarReconciler, which runs it in
+ * QuickJS. [KEEP] leaves stars as they are (tests, and the fallback when the JS fails).
  */
 fun interface StarReconciler {
     fun reconcile(old: JsonObject?, new: JsonObject, stars: Map<String, Boolean>, settings: JsonObject, nowMs: Long,

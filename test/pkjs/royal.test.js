@@ -264,7 +264,7 @@ test('login data: public meeting times save the catalog call; parts fail softly'
   r = mineOf(null, {fail: ['/calendar/v1/HM/orderHistory']});
   assert.ok(r.mine.ordersError);
   assert.deepStrictEqual(r.mine.orders, []);
-  assert.strictEqual(royal.mineSummary(r.mine), 'booking found: 0 purchases (0 timed), 2 port days, purchases skipped');
+  assert.strictEqual(royal.mineSummary(r.mine), 'booking found: 0 purchases (0 timed), 2 port stops, purchases skipped');
 });
 
 test('login data: no booking for the sailing is an error that lists the account\'s sailings', function() {
@@ -306,7 +306,7 @@ test('login data: a linked booking on the same sailing is set aside for your own
   assert.ok(/(^|&)reservationId=R1(&|$)/.test(history.query), history.query);
   assert.strictEqual(r.calls.length, 8);  // the fixture's 7 and the profile
   assert.strictEqual(royal.mineSummary(r.mine),
-    'booking found: 2 purchases (1 timed), 2 port days, 1 linked booking on this sailing set aside');
+    'booking found: 2 purchases (1 timed), 2 port stops, 1 linked booking on this sailing set aside');
   // The Crown & Anchor number wins over the name.
   var linked = withLinked({personalInformation: {firstName: 'Alex', lastName: 'Sample'},
                            loyaltyInformation: {crownAndAnchorId: '555'}});
@@ -359,6 +359,15 @@ test('sign-in: the password is sent once, encoded; refusals read plainly', funct
   });
 });
 
+test('the booking summary counts port stops, not sea days with a position', function() {
+  var mine = {orders: [], ports: [
+    {day: 1, code: 'PCV', gangwayUp: '15:30'},
+    {day: 2, code: 'CRU', lat: 25.1, lon: -78.2},
+    {day: 3, code: 'CCY', gangwayDown: '07:00', gangwayUp: '16:30', lat: 25.8, lon: -77.9},
+    {day: 4, code: 'CRU', lat: 22.1, lon: -70.2}]};
+  assert.strictEqual(royal.mineSummary(mine), 'booking found: 0 purchases (0 timed), 2 port stops');
+});
+
 test('download with login: signs in first, then the sailing, then mine', function() {
   var calls = fakeRoyal();
   var got = null;
@@ -373,7 +382,7 @@ test('download with login: signs in first, then the sailing, then mine', functio
   assert.strictEqual(calls.filter(function(c) { return /catalog/.test(c.path); }).length, 0);
   assert.strictEqual(got.bundle.mine.orders[0].meet, '08:45');
   assert.strictEqual(got.bundle.mine.stateroom, EXPECTED_MINE.stateroom);
-  assert.strictEqual(royal.mineSummary(got.bundle.mine), 'booking found: 2 purchases (1 timed), 2 port days');
+  assert.strictEqual(royal.mineSummary(got.bundle.mine), 'booking found: 2 purchases (1 timed), 2 port stops');
 
   // A refused sign-in downloads nothing.
   calls = fakeRoyal({login: {status: 401, body: {}}});

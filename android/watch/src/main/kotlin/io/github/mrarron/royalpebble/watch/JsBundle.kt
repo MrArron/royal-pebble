@@ -33,8 +33,12 @@ object JsBundle {
     fun hostScript(): String =
         JsBundle::class.java.classLoader.getResourceAsStream("royalpebble/host.js")!!.use { it.readBytes().toString(Charsets.UTF_8) }
 
-    /** The bundled phone companion: defines the modules and loads [ENTRY]. */
-    fun build(sources: Sources, entry: String = ENTRY): String {
+    /**
+     * The bundled phone companion: defines the modules and loads [ENTRY]. With
+     * [exportAs], the entry module's exports also become that global (used to
+     * call one module, such as slice.js, from Kotlin).
+     */
+    fun build(sources: Sources, entry: String = ENTRY, exportAs: String? = null): String {
         val mods = LinkedHashMap<String, Pair<String, Map<String, String>>>()  // id -> (source, require name -> id)
         fun add(id: String): String {
             if (id in mods) return id
@@ -61,6 +65,9 @@ object JsBundle {
         }
         out.append("function load(id){if(cache[id]){return cache[id].exports;}var d=defs[id];var m={exports:{}};cache[id]=m;")
         out.append("d.fn(m,m.exports,function(n){return load(d.deps[n]);});return m.exports;}\n")
+        if (exportAs != null) {
+            out.append("(typeof globalThis!=='undefined'?globalThis:this)[").append(str(exportAs)).append("]=")
+        }
         out.append("load(").append(str(root)).append(");})();\n")
         return out.toString()
     }

@@ -53,7 +53,7 @@ class RoyalClientTest {
             assertEquals(RoyalClient.USER_AGENT, it.headers["User-Agent"])
         }
         assertEquals("brand=R&includeCheckin=true", fake.calls[0].query)
-        assertEquals("booking found: 2 purchases (1 timed), 2 port days", RoyalParse.mineSummary(mine))
+        assertEquals("booking found: 2 purchases (1 timed), 2 port stops", RoyalParse.mineSummary(mine))
         assertEquals(emptyList<Long>(), sleeps)
     }
 
@@ -68,7 +68,7 @@ class RoyalClientTest {
         assertNull(first["meet"])
         mine = client(FakeRoyal(fail = setOf("/calendar/v1/HM/orderHistory"))).fetchMine(auth, "HM", "20270306", null)
         assertEquals(JsonArray(emptyList()), mine["orders"])
-        assertEquals("booking found: 0 purchases (0 timed), 2 port days, purchases skipped", RoyalParse.mineSummary(mine))
+        assertEquals("booking found: 0 purchases (0 timed), 2 port stops, purchases skipped", RoyalParse.mineSummary(mine))
     }
 
     @Test
@@ -127,7 +127,7 @@ class RoyalClientTest {
         val history = fake.calls.first { it.path == "/calendar/v1/HM/orderHistory" }
         assertTrue(history.query, Regex("(^|&)reservationId=R1(&|$)").containsMatchIn(history.query))
         assertEquals(8, fake.calls.size)
-        assertEquals("booking found: 2 purchases (1 timed), 2 port days, 1 linked booking on this sailing set aside",
+        assertEquals("booking found: 2 purchases (1 timed), 2 port stops, 1 linked booking on this sailing set aside",
             RoyalParse.mineSummary(mine))
         // The Crown & Anchor number wins over the name.
         @Suppress("UNCHECKED_CAST")
@@ -270,6 +270,16 @@ class RoyalClientTest {
         assertEquals(listOf("HM", "WN"), c.fetchShips().map { it.code })
         assertEquals(listOf("2026-12-12", "2027-03-06"), c.fetchSailDates("HM", "2026-01-01"))
         assertEquals(listOf("/v2/ships", "/v3/ships/HM/voyages"), fake.calls.map { it.path })
+    }
+
+    @Test
+    fun mineSummaryCountsPortStopsNotSeaDays() {
+        val mine = Json.parseToJsonElement("""{"orders":[],"ports":[
+            {"day":1,"code":"PCV","gangwayUp":"15:30"},
+            {"day":2,"code":"CRU","lat":25.1,"lon":-78.2},
+            {"day":3,"code":"CCY","gangwayDown":"07:00","gangwayUp":"16:30","lat":25.8,"lon":-77.9},
+            {"day":4,"code":"CRU","lat":22.1,"lon":-70.2}]}""")
+        assertEquals("booking found: 0 purchases (0 timed), 2 port stops", RoyalParse.mineSummary(mine))
     }
 }
 

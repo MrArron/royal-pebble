@@ -435,7 +435,7 @@ test('download with login: saves mine; the login never reaches storage, the log 
   assert.ok(/access_token$/.test(paths[0]), paths.join(' '));
   assert.ok(has(lines, /^settings  page closed: download-login, result 0 KB$/), lines.join('\n'));
   assert.ok(has(lines, /^download  asked for HM 2027-03-06 with login$/));
-  assert.ok(has(lines, /^download  login download: ok, booking found: 2 purchases \(1 timed\), 2 port days$/),
+  assert.ok(has(lines, /^download  login download: ok, booking found: 2 purchases \(1 timed\), 2 port stops$/),
             lines.join('\n'));
   assert.ok(has(lines, /^bundle  downloaded with login: ship HM, new sailing/));
   var bundle = JSON.parse(c.store.bundle);

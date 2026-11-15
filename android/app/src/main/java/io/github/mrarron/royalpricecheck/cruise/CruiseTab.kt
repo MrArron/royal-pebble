@@ -72,11 +72,8 @@ private fun DownloadCard(vm: CruiseViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var keepLogin by rememberSaveable { mutableStateOf(false) }
-    val saved = remember(vm.version) { vm.savedLogin() }
-    LaunchedEffect(saved) {
-        // Offer the login kept for this session or saved on the phone.
-        if (saved != null && email.isEmpty()) { email = saved.first; password = saved.second; keepLogin = vm.hasSavedLogin() }
-    }
+    // The one Royal login, shared with the Account tab (RoyalAccount).
+    val account = remember(vm.version) { vm.account() }
 
     Section("Download your sailing") {
         vm.shipsError?.let { ErrorText(it) }
@@ -109,8 +106,18 @@ private fun DownloadCard(vm: CruiseViewModel) {
         vm.error?.let { ErrorText(it) }
         Note("Sailings list the schedule from about two weeks out. This needs the internet once; the watch works offline afterwards.")
 
+        if (account != null) {
+            Text("Royal account: ${io.github.mrarron.royalpricecheck.RoyalAccount.masked(account.email)} (set on the Account tab)")
+            Button(onClick = { vm.download(account.email, account.password, vm.accountRemembered()) }, enabled = vm.canDownload) {
+                Text("Download with my Royal login")
+            }
+        }
         OutlinedButton(onClick = { loginOpen = !loginOpen }) {
-            Text(if (loginOpen) "Hide advanced download" else "Advanced: download with your Royal login")
+            Text(when {
+                loginOpen -> "Hide the login form"
+                account != null -> "Use a different login"
+                else -> "Advanced: download with your Royal login"
+            })
         }
         if (loginOpen) {
             OutlinedTextField(email, { email = it }, label = { Text("Royal Caribbean email") }, singleLine = true,
@@ -123,11 +130,11 @@ private fun DownloadCard(vm: CruiseViewModel) {
                 Text("Remember on this phone (encrypted with the Android Keystore)", Modifier.weight(1f))
             }
             Button(
-                onClick = { vm.download(email, password, keepLogin) },
+                onClick = { vm.download(email, password, keepLogin); password = "" },
                 enabled = vm.canDownload && email.isNotBlank() && password.isNotEmpty(),
             ) { Text("Download with login") }
-            if (vm.hasSavedLogin()) TextButton({ vm.forgetLogin(); password = ""; keepLogin = false }) { Text("Forget the saved login") }
-            Note("Your email and password go from this app to Royal Caribbean only, to sign in for this one download. " +
+            Note("Once Royal accepts it, this login becomes the app's Royal account: the price check uses it too.")
+            Note("Your email and password go from this app to Royal Caribbean only, to sign in. " +
                 "They are never put in the usage log or sent anywhere else. Royal sends back your booking details " +
                 "(stateroom, deck, muster station, terminal time, booked excursions and purchases); those are saved on " +
                 "this phone like the rest of your cruise data. The password stays in memory until you close the app, " +

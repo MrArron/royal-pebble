@@ -8,8 +8,17 @@ An optional add-on: it runs jdeath's
   balance due;
 - price drops: paid vs current, saving, and a "rebook" flag.
 
-Tabs: Summary (Run now, results), Log (live coloured output), Account (quick form that writes an
-editable `config.yaml`), Settings (background checks off / 6 / 12 / 24 h, script updates).
+Tabs: Summary (Run now, results, Copy/Share report), Log (live coloured output, selectable, Copy/Share),
+Account (the one Royal login, plus an editable `config.yaml`), Settings (background checks off / 6 / 12 /
+24 h, script updates), Cruise.
+
+## One Royal login
+
+The Account tab's login is also the Cruise screen's "Download with my Royal login" (`RoyalAccount.kt`).
+A login typed on the Cruise screen becomes the Account tab's once Royal accepts it. Saving writes the
+simple `config.yaml` (password as a placeholder) unless you wrote your own `config.yaml`, which is
+left alone. "Remember on this phone" saves it encrypted with the Android Keystore; after a restart the
+remembered login also fills the price check's password, so it isn't asked for again.
 
 ## Your password
 
@@ -68,8 +77,9 @@ Plain Kotlin, no Android, so `./gradlew :royal:test` runs offline on any JVM.
   on GETs, never for 4xx or the sign-in. Error texts are the JS's fixed wording.
 - `CruiseStore`: the sailing (bundle, with the booking's `mine`), stars and reserved marks,
   reservations and settings, one file per key under `src/pkjs/index.js`'s localStorage names,
-  so the reused JS packer can read it as it is. Moving stars on a re-download
-  (`slice.reconcileStars`) is a hook for the JS engine; until it is wired in, stars stay put.
+  so the reused JS packer can read it as it is. On a re-download, stars follow events Royal
+  moved or cancelled: the app passes `watch/`'s `JsStarReconciler`, which runs `slice.reconcileStars`,
+  `pruneStarTimes` and `buildNotices` in QuickJS (issue 129). The test log gets a `stars` line with counts.
 - Tests read the shared fixtures in `test/fixtures/` (the same expected schedule and booking as
   `test/pkjs/royal.test.js` and `test_cruise_sync.py`) and compare output as JSON text, so the
   Kotlin bundle matches `JSON.stringify` byte for byte. Nothing sends slices to the watch yet.
