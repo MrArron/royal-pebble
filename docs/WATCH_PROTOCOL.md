@@ -202,10 +202,13 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
 - **Storage.** `localStorage` is the cruise store's folder
   (`files/cruise`, one `<key>.json` per key, `CruiseStore`'s layout), so the
   app's downloads and settings screens and the JS share one copy. Keys the
-  app's screens changed are read again before each input; after a save the
-  app calls `WatchHost.storeChanged()`, which fires `storechanged` in
-  `index.js` (only the app does): a fresh slice, as after the settings page
-  closes. The JS settings page isn't used by the app, so PebbleKit JS's own
+  app's screens changed are read again before each input; after a save (a
+  download or pasted cruise, any settings screen's save, a star, reserved
+  mark, pick or personal event, 1.6.23) the app calls
+  `WatchHost.storeChanged(why)`, which logs an app `push` line and, while
+  serving, fires `storechanged` in `index.js` (only the app does): a fresh
+  slice right away, as after the settings page closes. Not serving, the
+  watch gets it when Royal Pebble next opens. The JS settings page isn't used by the app, so PebbleKit JS's own
   storage and the app's are separate cruises. With no cruise downloaded in
   the app it sends no demo: an empty cruise sailing today, which the watch
   shows as No cruise today / `NO CRUISE YET` (My info's clock note: No
@@ -236,15 +239,23 @@ itself in an embedded QuickJS (Zipline), so the two can't drift.
 - **Wire log.** Settings > Watch can log every message to and from the
   watch (`files/watch-wire.log`, the format of `AppMessageCodec.describe`,
   shared from the app). It holds cruise text: never commit one.
-- **Test log (1.6.22).** Settings > Watch > **Share test log** shares one
-  text (`TestLog`): a header (app version and commit, the bundled Royal
+- **Test log (1.6.22; a file from 1.6.23).** Settings > Watch > **Share log
+  file** (the share sheet, a `royal-pebble-log-YYYYMMDD-HHMMSS.txt` from the
+  app's cache through a FileProvider) or **Save to Downloads** (MediaStore on
+  Android 10+) exports one text (`TestLog`), no clipboard and no size limit:
+  a header (app version and commit, the bundled Royal
   Pebble JS version, phone, both app switches, the server's status, the
-  app's saved cruise as ship and date), the app's own lines
+  app's saved cruise as ship and date, the watch last served with platform
+  and firmware, the export time), the app's own lines
   (`files/watch-app.log`: switch changes, server start and stop with message
   and error counts, Royal Pebble opened while the switch is off, alerts the
   app sent and whether the watch took them), the usage log `index.js` keeps
-  in the app's store (PebbleKit JS's is separate), and the wire log when it's
-  on. Same line style as the usage log. Clear empties the app's lines and the
+  in the app's store (PebbleKit JS's is separate; it holds the watch's own
+  entries, which the watch sends as `LOG`; its header gives the entry and
+  dropped counts), and the wire log when it's on. The app passes
+  `logCapChars` (4 M characters, `TestLog.LOG_CAP_CHARS`) in `__host.info`,
+  so its usage log keeps five times PebbleKit JS's 768 K. The settings page's
+  switch lives in PebbleKit JS and shows only in that side's log. Same line style as the usage log. Clear empties the app's lines and the
   wire log, not the usage log.
 
 ## Packed events

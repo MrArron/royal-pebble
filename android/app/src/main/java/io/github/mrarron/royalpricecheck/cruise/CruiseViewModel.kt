@@ -16,6 +16,7 @@ import io.github.mrarron.royalpebble.settings.DownloadService
 import io.github.mrarron.royalpebble.settings.Readiness
 import io.github.mrarron.royalpebble.store.CruiseStore
 import io.github.mrarron.royalpricecheck.PasswordVault
+import io.github.mrarron.royalpricecheck.watch.WatchHost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -45,15 +46,21 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
 
     fun changed() { version++ }
 
+    /** Saved data changed: redraw, and while the app serves the watch, send it a fresh slice now. */
+    private fun saved(why: String) {
+        changed()
+        WatchHost.storeChanged(getApplication(), why)
+    }
+
     inline fun <T> read(block: CruiseSession.() -> T): T {
         @Suppress("UNUSED_VARIABLE") val v = version
         return session.block()
     }
 
-    /** Save through the session and redraw. */
-    fun edit(block: CruiseSession.() -> Unit) {
+    /** Save through the session, redraw and tell the watch ([why] names the change for the test log). */
+    fun edit(why: String = "settings saved", block: CruiseSession.() -> Unit) {
         session.block()
-        changed()
+        saved(why)
     }
 
     // ------------------------------------------------------------ the Cruise screen: ships, sailings, downloads
@@ -74,7 +81,7 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
         val (bundle, problem) = Readiness.parse(text)
         if (bundle == null) return problem
         store.saveDownload(bundle, service.stamp())
-        changed()
+        saved("cruise pasted")
         return null
     }
 
@@ -148,7 +155,7 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
                 is DownloadOutcome.Failed -> error = outcome.error
             }
             busy = false
-            changed()
+            if (outcome is DownloadOutcome.Done) saved("cruise downloaded (${ship.code} $date)") else changed()
         }
     }
 

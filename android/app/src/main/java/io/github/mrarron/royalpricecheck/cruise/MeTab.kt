@@ -52,7 +52,7 @@ fun MeTab(vm: CruiseViewModel) {
     // The Save pill at the top right of the screen holds this screen's save.
     val control = LocalSave.current
     val doSave = {
-        vm.edit {
+        vm.edit("Me settings saved") {
             saveMe(mapOf("stateroom" to stateroom, "deck" to deck, "stairs" to stairs, "muster" to muster, "dining" to dining))
             saveBasics(theme, lead, reserveAt, units, hints)
         }

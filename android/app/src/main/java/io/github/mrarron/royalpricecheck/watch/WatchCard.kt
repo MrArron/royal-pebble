@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.delay
 
 /** Settings > Watch: "App serves the watch", the test log and the watch message log. */
@@ -29,6 +30,7 @@ fun WatchCard() {
     var serves by remember { mutableStateOf(WatchPrefs.serves(c)) }
     var wire by remember { mutableStateOf(WatchPrefs.wireLog(c)) }
     var status by remember { mutableStateOf(WatchHost.status(c)) }
+    var exported by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(serves) {
         while (true) {
             status = WatchHost.status(c)
@@ -65,16 +67,30 @@ fun WatchCard() {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = {
-                    val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                        .putExtra(Intent.EXTRA_TEXT, WatchHost.testLogText(c))
-                    c.startActivity(Intent.createChooser(send, "Share the test log"))
-                }) { Text("Share test log") }
+                    exported = runCatching {
+                        val f = WatchHost.testLogFile(c)
+                        val uri = FileProvider.getUriForFile(c, c.packageName + ".logs", f)
+                        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                            .putExtra(Intent.EXTRA_STREAM, uri)
+                            .putExtra(Intent.EXTRA_SUBJECT, f.name)
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        c.startActivity(Intent.createChooser(send, "Share the test log file"))
+                        "Shared ${f.name} (${f.length() / 1024} KB)"
+                    }.getOrElse { "Couldn't share the log: ${it.message}" }
+                }) { Text("Share log file") }
                 OutlinedButton(onClick = {
-                    WatchHost.clearWireLog(c)
-                    WatchHost.clearAppLog(c)
-                }) { Text("Clear") }
+                    exported = runCatching { "Saved to " + WatchHost.saveTestLogToDownloads(c) }
+                        .getOrElse { "Couldn't save the log: ${it.message}" }
+                }) { Text("Save to Downloads") }
             }
-            Text("The test log says which build and switches served the watch, then the app's usage log" +
+            exported?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            OutlinedButton(onClick = {
+                WatchHost.clearWireLog(c)
+                WatchHost.clearAppLog(c)
+                exported = "Cleared the app lines and watch messages (the usage log is cleared on the Me tab)"
+            }) { Text("Clear") }
+            Text("The test log file says which build and switches served the watch, then the app's lines, " +
+                "the usage log (the watch's own entries included)" +
                 (if (wire) " and every watch message" else "") + ". It holds your cruise's titles and cabin " +
                 "details. Keep it private.",
                 style = MaterialTheme.typography.bodySmall)

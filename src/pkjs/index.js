@@ -144,7 +144,10 @@ var usage = logLib.makeLog(localStorage, {
       s_sailDate = b ? b.sailDate : null;
     }
     return s_sailDate;
-  }
+  },
+  // The Android app keeps more log (its own storage; hostInfo is read late,
+  // since SIDE is set further down).
+  capChars: function() { return hostInfo().logCapChars; }
 });
 
 // "Title, 2027-03-07 20:00, Venue" from a star key (slice.starKey); reserved
@@ -204,7 +207,8 @@ var SIDE = typeof __host !== 'undefined' && __host && __host.android ? 'app' : '
 
 // What the Android app tells this file about itself (host.js __host.info):
 // {version (the app's, with its commit in CI builds), commit, serves (App
-// serves the watch), wireLog}. Empty in PebbleKit JS.
+// serves the watch), wireLog, logCapChars (the usage log's cap)}. Empty in
+// PebbleKit JS.
 function hostInfo() {
   return SIDE === 'app' && __host.info && typeof __host.info === 'object' ? __host.info : {};
 }
@@ -1095,6 +1099,7 @@ function servingText(data) {
 // screens saved cruise data or settings, so the watch gets a fresh slice, as
 // after the settings page closes here. PebbleKit JS never fires it.
 Pebble.addEventListener('storechanged', guard('storechanged', function() {
+  s_sailDate = undefined;  // a new cruise may have been saved: log days follow it
   served('sync', 'the Android app saved new data: ' + dataText(currentData()));
   sendSlice();
 }));
