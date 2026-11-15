@@ -217,7 +217,7 @@ object WatchHost {
             if (info != null) {
                 lastWatch = "${info.name}, platform ${info.platform.lowercase()}, firmware " +
                     "${info.firmwareVersionMajor}.${info.firmwareVersionMinor}.${info.firmwareVersionPatch}" +
-                    (info.firmwareVersionTag.takeIf { it.isNotBlank() }?.let { "-$it" } ?: "")
+                    (info.firmwareVersionTag?.takeIf { it.isNotBlank() }?.let { "-$it" } ?: "")
                 logApp(app, "watch", "connected watch: $lastWatch")
                 s.watchInfo(JsonObject(mapOf(
                     "platform" to JsonPrimitive(info.platform.lowercase()),
