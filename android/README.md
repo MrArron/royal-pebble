@@ -8,14 +8,27 @@ An optional add-on: it runs jdeath's
   balance due;
 - price drops: paid vs current, saving, and a "rebook" flag.
 
-Tabs: Summary (Run now, results, Copy/Share report), Log (live coloured output, selectable, Copy/Share),
-Account (the one Royal login, plus an editable `config.yaml`), Settings (background checks off / 6 / 12 /
-24 h, script updates), Cruise.
+## Layout
+
+One bottom bar whose tabs follow the trip (`AppShell.kt`, `TripPhase`):
+
+- **Planning**: Trip (countdown, price glance, download, Ready to sail, backup paste), Prices
+  (Summary and Full report, both selectable with Copy and Share), Plan (Events, Days, Filters, Share),
+  Settings.
+- **On board**: Today (all aboard, next starred events, to reserve, watch status), Events (the same
+  Events, Days, Filters, Share), Cabin (stateroom, muster, dining, theme, reminders), Settings.
+- **Auto** (default) is On board from the downloaded sailing's first itinerary day through its last,
+  Planning otherwise (and always Planning with the demo cruise). Chips on Trip and Today pick Auto,
+  Planning or On board. Every change of the phase shown writes a `phase` line to the test log.
+- **Settings** is a list of pages: Royal account (plus `config.yaml`), Me and my stateroom, Watch and
+  logs, Price checks, About; on board also Prices.
+- Background price checks pause while On board (log line `prices  background check skipped: on board`)
+  unless Settings > Price checks > **Keep checking while on board** is on.
 
 ## One Royal login
 
-The Account tab's login is also the Cruise screen's "Download with my Royal login" (`RoyalAccount.kt`).
-A login typed on the Cruise screen becomes the Account tab's once Royal accepts it. Saving writes the
+The Royal account page's login is also the Trip screen's "Download with my Royal login" (`RoyalAccount.kt`).
+A login typed on the Trip screen becomes the Royal account once Royal accepts it. Saving writes the
 simple `config.yaml` (password as a placeholder) unless you wrote your own `config.yaml`, which is
 left alone. "Remember on this phone" saves it encrypted with the Android Keystore; after a restart the
 remembered login also fills the price check's password, so it isn't asked for again.
@@ -38,7 +51,7 @@ the previous check (new rebook alerts, a changed check-in label, a failed check)
 
 ## Watch alerts
 
-Settings, "Watch alerts" (off by default): after a check (background or Run now) the app sends what
+Settings > Price checks, "Watch alerts" (off by default): after a check (background or Run now) the app sends what
 is new to the Pebble as one NOTICE message (`docs/WATCH_PROTOCOL.md`, Booking notices):
 
 - a price drop flagged rebook or consider-booking (again only if the price falls further);
@@ -86,7 +99,7 @@ Plain Kotlin, no Android, so `./gradlew :royal:test` runs offline on any JVM.
 
 ## Serving the watch (`watch/` and `app/.../watch/`)
 
-Optional and off by default: Settings > Watch > **App serves the watch** (and, on Royal
+Optional and off by default: Settings > Watch and logs > **App serves the watch** (and, on Royal
 Pebble's settings page, Me > Help > **Android app serves the watch**, so PebbleKit JS stays
 quiet). The app then sends the watch its slices and answers every request by running
 `src/pkjs/index.js` itself in QuickJS (Zipline), with its localStorage in the cruise store's
@@ -97,4 +110,4 @@ folder. Details: `docs/WATCH_PROTOCOL.md`, App serves the watch.
   in Node (needs `node`) and checks every message is the same, byte for byte.
 - `app/.../watch/`: the PebbleKit Android 2 listener service, `WatchLink` (the only sender, also
   `sendNotice` for background checks), `WatchHost` (`storeChanged()` after the app saves) and the
-  Settings > Watch card.
+  Settings > Watch and logs page.
