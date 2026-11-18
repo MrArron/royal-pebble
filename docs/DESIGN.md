@@ -457,7 +457,8 @@ Lists and Home don't show ages or tags; details is one press away.
   time with no end.
 - A picked excursion that's also in the login data shows once, as booked.
 - **Booked shows and classes** (a non-excursion order whose title, date and
-  time match a schedule event, e.g. a theater reservation): that event, at its
+  time match a schedule event; since 1.6.26 titles match ignoring case,
+  punctuation, spacing and ® ™ ©, `slice.js titleKey`, e.g. a theater reservation): that event, at its
   venue with deck lines, routes and "From", starred and booked (locked star,
   `✓ Booked`, never "to reserve"), never filtered out. The order isn't sent
   separately. On the settings page it's under FROM YOUR BOOKING with its venue
@@ -819,6 +820,16 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   and **Clear** (the app's lines and the message log, not the usage log); the
   export is described in `WATCH_PROTOCOL.md`, Test log. The price checker's
   pages are in `android/README.md`.
+- Settings > Price checks (1.6.26) adds **Also refresh the schedule** (on)
+  under Keep checking while on board, and **Run a background check now**
+  (the background check once, for testing). With the switch on, each
+  background check also runs Download with login for the saved sailing
+  with the remembered Royal Caribbean login (`ScheduleRefresh`), so moved or
+  cancelled events, their stars and new bookings reach the watch. It pauses
+  on board with the price checks, runs from 14 days before sailing to the
+  last cruise day, at most once every 6 hours (`RefreshRules`), and writes a
+  `schedule` log line for every run or skip, then the `stars` and `booked`
+  lines a Cruise download writes.
 
 ### 12.1 Shared patterns
 
@@ -925,6 +936,14 @@ period is 60 minutes today. Make it longer if you like.`
   subcategory, or titles about casino games (slots, blackjack, poker,
   roulette, craps, hold'em, baccarat), never bingo or raffles. Hiding it
   leaves Casino Royale in the directory and routes.
+- **COST** (1.6.26), one switch, off: **Hide events with a fee** (`Royal
+  lists them with Fee applies`): free-type activities whose Royal advisement
+  says "Fee applies" or "This activity has a fee" (the bundle's `fee` note,
+  `DATA_FORMAT.md`), e.g. Pure-Form Pilates. Paid classes and shore
+  excursions aren't affected: they already show only once picked. Stored in
+  `ageFilters` as `fee` (bit 8 beside the age bits). Event rows on the
+  Android app add `Fee applies` to the details line; the settings page shows
+  it among the notes.
 - Hidden events still appear in search, marked `Hidden on watch`. Starred and
   booked events always reach the watch.
 

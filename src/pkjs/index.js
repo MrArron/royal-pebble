@@ -856,6 +856,12 @@ function useBundle(bundle, how) {
             ', ' + bundle.itinerary.length + ' days, ' + bundle.schedule.events.length + ' events, ' +
             Math.round(text.length / 1024) + ' KB, ' + r.changes.length + ' starred events moved or cancelled' +
             (keptMine ? ', login data kept' : ''));
+  if (bundle.mine) {
+    var bk = slice.bookedSummary(bundle, settings);
+    usage.add('booked', bk.orders + ' timed bookings, ' + bk.matched + ' matched schedule events (starred, booked), ' +
+              bk.own + ' shown as bookings' + (bk.unmatched.length ? '; shows and classes not in the schedule: ' +
+              bk.unmatched.join(', ') : ''));
+  }
 }
 
 function settingsClosed(text) {

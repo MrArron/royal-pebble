@@ -111,9 +111,12 @@ text. One compact JSON object, ASCII only.
       restriction id (`kbyg/general/seapass`), `short` for a product's short
       description when it says more than the title, and `waiver` for Royal's
       `isWaiverRequired` when no other note of the event mentions a waiver or
-      disclaimer. `text` is simplified like other text. Left out: "Images are
-      illustrative only", "This activity has a fee" and "Fee applies" (already
-      `paid`), age limits (they go in `age`), any text over 120 characters and
+      disclaimer, and `fee` for Royal's "This activity has a fee" or "Fee
+      applies" on an event that isn't `paid` (always the text `Fee applies`;
+      Filters > Cost hides these; 1.6.26, without a version bump: older
+      bundles simply have none). `text` is simplified like other text. Left
+      out: "Images are illustrative only", the fee advisement on a `paid` event
+      (already `paid`), age limits (they go in `age`), any text over 120 characters and
       text an event already has. A short description says more than the title
       when, lowercased and without punctuation (and a plural `s`), it has a
       parenthesis or a word the title lacks, not counting label and filler

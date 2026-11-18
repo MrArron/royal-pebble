@@ -78,8 +78,12 @@ EXCURSION_CAT = ["Shore excursions", ""]
 # push busy days past the watch's 160 events.
 SKIP_TITLES = re.compile(r"nextcruise", re.I)
 # Event details (docs/DATA_FORMAT.md, Event details).
-# Notes left out: boilerplate, the fee (already `paid`) and long legal text.
-NOTE_SKIP = re.compile(r"(images are illustrative|this activity has a fee|fee applies)", re.I)
+# Notes left out: boilerplate and long legal text.
+# Royal's fee advisement: left out of paid events (already `paid`), the `fee`
+# note on free-type ones (Filters > Hide events with a fee).
+NOTE_SKIP = re.compile(r"images are illustrative", re.I)
+NOTE_FEE = re.compile(r"(this activity has a fee|fee applies)", re.I)
+FEE_NOTE = ("fee", "Fee applies")
 NOTE_MAX = 120
 EARLY_MAX = 120   # arrive-early minutes from lead time or advisement text
 MEET_MAX = 240    # a shore excursion's meeting time before its start
@@ -288,7 +292,7 @@ def says_more(short: str, title: str) -> bool:
     return bool(_words(short) - _words(title) - SHORT_FILLER) or ("(" in short and "(" not in title)
 
 
-def notes_of(p: dict, title: str) -> list:
+def notes_of(p: dict, title: str, paid: int = 0) -> list:
     """[id, text] notes for a product: a short description that says more than
     the title, restrictions that aren't age limits, advisements and the waiver
     flag. Boilerplate, long text and repeated text are left out."""
@@ -296,6 +300,10 @@ def notes_of(p: dict, title: str) -> list:
 
     def add(id_, text):
         text = clean(text)
+        if NOTE_FEE.match(text):
+            if paid:
+                return
+            id_, text = FEE_NOTE
         if text and len(text) <= NOTE_MAX and not NOTE_SKIP.match(text) \
                 and all(t.lower() != text.lower() for _, t in out):
             out.append([clean(id_), text])
@@ -352,7 +360,7 @@ def add_products(acc: dict, products: list) -> None:
         paid = 1 if kind in PAID_TYPES else 0
         price = product_price(p)
         age = age_of(p, title, venue_name)
-        notes = [_index(acc["notes"], n) for n in notes_of(p, title)]
+        notes = [_index(acc["notes"], n) for n in notes_of(p, title, paid)]
         pid = clean(p.get("productID")) or None
         for o in p.get("offering") or []:
             d, t = o.get("offeringDate"), o.get("offeringTime")

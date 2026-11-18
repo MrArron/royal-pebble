@@ -46,6 +46,7 @@
   ["kbyg/flowrdr/WARNDISCLAIM", "Signed warning disclaimer required"],
   ["kbyg/Children12", "Children 12 years old and under must be supervised by parent or guardian"],
   ["kbyg/flowrdr/Standup-Surf", "When boogie boarding experience has been verified, guests may standup surf"],
+  ["fee", "Fee applies"],
   ["certified_diver", "This is for certified divers only. You have to have dived within the last two years"],
   ["kbyg/bellyflop/watercamera", "Remember to bring your waterproof camera"],
   ["kbyg/general/ecosun", "Only eco-friendly and biodegradable sunscreen or sun lotion allowed"]
@@ -76,8 +77,9 @@
   [[18, null], 15, [10]],
   [null, null, [31, 32, 33, 34, 2, 35, 7]],
   [null, null, [31, 36, 33, 37, 38, 19, 39, 40, 41, 35]],
+  [null, null, [42]],
   [[18, null], null, [2]],
-  [[12, null], 15, [42, 43, 44, 19, 34, 2]]
+  [[12, null], 15, [43, 44, 45, 19, 34, 2]]
 ],
 "fields": ["title", "venue", "cat", "date", "time", "minutes", "featured", "reservation", "paid", "price", "info", "pid"],
 "events": [
@@ -85,7 +87,7 @@
   ["Guess the Weight of the Sculpture", 6, 10, "2026-10-01", "10:00", 300, 0, 0, 0, null, null, "356"],
   ["Entertainment Today With Your Cruise Director", 8, 13, "2026-10-01", "10:30", 810, 0, 0, 0, null, null, "1726355602226"],
   ["Teen Open House (13-17)", 10, 4, "2026-10-01", "11:00", 300, 0, 0, 0, null, 10, "1766608765171"],
-  ["Complimentary Gaming Lessons", 20, 14, "2026-10-01", "16:30", 30, 0, 0, 0, null, 25, "1542056589050"],
+  ["Complimentary Gaming Lessons", 20, 14, "2026-10-01", "16:30", 30, 0, 0, 0, null, 26, "1542056589050"],
   ["Breitling Grand Opening", 13, 10, "2026-10-01", "17:00", 120, 0, 0, 0, null, 15, "1638022948408"],
   ["Guess the Weight of the Sculpture", 6, 10, "2026-10-01", "17:00", 240, 0, 0, 0, null, null, "356"],
   ["Evening Stretch", 3, 2, "2026-10-01", "18:00", 45, 0, 0, 0, null, 3, "259"],
@@ -98,7 +100,7 @@
   ["Hyperlink (18-25): Private Table at the Nightclub", 11, 8, "2026-10-01", "23:30", 15, 0, 0, 0, null, 11, "1768944680404"],
   ["Entertainment Today With Your Cruise Director", 8, 13, "2026-10-02", null, 720, 0, 0, 0, null, null, "1726355602226"],
   ["Junior Cruisers Curfew (17 & Under)", 8, 7, "2026-10-02", "01:00", 0, 1, 0, 0, null, 8, "1518297564554"],
-  ["Pure-Form Pilates", 3, 2, "2026-10-02", "07:30", 45, 0, 0, 0, null, null, "550"],
+  ["Pure-Form Pilates", 3, 2, "2026-10-02", "07:30", 45, 0, 0, 0, null, 25, "550"],
   ["Breezy Bay Full-Day Beach Bed Rental", 12, 9, "2026-10-02", "08:00", 0, 0, 1, 1, 539, 14, "ZHF3"],
   ["Hideaway Beach (Adults-Only) - Day Pass", 12, 9, "2026-10-02", "08:00", 0, 1, 1, 1, 119, 12, "Y6Y2"],
   ["Island Welcome With Junkanoo Dancers at Arrivals Plaza", 17, 5, "2026-10-02", "08:00", 150, 0, 0, 0, null, 21, "1565721967121"],
@@ -110,7 +112,7 @@
   ["Glass Bottom Boat", 12, 9, "2026-10-02", "10:00", 60, 0, 1, 1, 114, 0, "Y82D"],
   ["Glass Bottom Boat", 12, 9, "2026-10-02", "11:30", 60, 0, 1, 1, 114, 0, "Y82D"],
   ["Kayak Adventure", 12, 9, "2026-10-02", "11:30", 90, 0, 1, 1, 54, 13, "ZH20"],
-  ["Scuba Dive for Certified Divers", 12, 9, "2026-10-02", "11:30", 90, 0, 1, 1, 94, 26, "ZH17"],
+  ["Scuba Dive for Certified Divers", 12, 9, "2026-10-02", "11:30", 90, 0, 1, 1, 94, 27, "ZH17"],
   ["EscapeU: Science Lab - The Escape Room Experience", 2, 1, "2026-10-02", "13:00", 60, 0, 1, 1, 40, 2, "YO9Y"],
   ["Glass Bottom Boat", 12, 9, "2026-10-02", "13:00", 60, 0, 1, 1, 114, 0, "Y82D"],
   ["Beach Volleyball Competition at South Beach: Adults (18+)", 18, 3, "2026-10-02", "14:00", 45, 0, 0, 0, null, 22, "1576099842390"],

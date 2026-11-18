@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.mrarron.royalpebble.settings.CruiseData
 
-/** Settings > Filters (docs/DESIGN.md §12.4): featured events, age filters, categories. Saves as you go. */
+/** Settings > Filters (docs/DESIGN.md §12.4): featured events, age filters, cost, categories. Saves as you go. */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun FiltersTab(vm: CruiseViewModel) {
@@ -34,6 +34,11 @@ fun FiltersTab(vm: CruiseViewModel) {
             SwitchRow("Hide Family events", "family" in ages, { on -> save(a = if (on) ages + "family" else ages - "family") },
                 "Title starts with \"Family\" or contains \"All Ages\", or the venue is Adventure Ocean Theater")
             Note("Events you star always show. Events with no age listed never hide. Casino games are in the Casino category below.")
+        }
+        Section("Cost") {
+            SwitchRow("Hide events with a fee", "fee" in ages, { on -> save(a = if (on) ages + "fee" else ages - "fee") },
+                "Royal lists them with Fee applies")
+            Note("Free activities Royal marks Fee applies, such as some fitness classes. Paid classes and shore excursions already show only once you pick a session. Events you star always show.")
         }
         Section("Categories") {
             if (cats.isEmpty()) Note("No events yet. Download your sailing first.")

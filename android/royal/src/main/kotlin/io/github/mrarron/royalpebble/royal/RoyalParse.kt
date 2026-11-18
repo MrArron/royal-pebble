@@ -21,7 +21,10 @@ object RoyalParse {
     const val EXCURSION_PARENT = "Shore excursions"
     const val EXCURSION_CHILD = ""
     private val SKIP_TITLES = Regex("nextcruise", RegexOption.IGNORE_CASE)
-    private val NOTE_SKIP = Regex("^(images are illustrative|this activity has a fee|fee applies)", RegexOption.IGNORE_CASE)
+    private val NOTE_SKIP = Regex("^images are illustrative", RegexOption.IGNORE_CASE)
+    /** Royal's fee advisement: left out of paid events (already `paid`), the `fee` note on free-type ones. */
+    private val NOTE_FEE = Regex("^(this activity has a fee|fee applies)", RegexOption.IGNORE_CASE)
+    val FEE_NOTE = "fee" to "Fee applies"
     private const val NOTE_MAX = 120
     private const val EARLY_MAX = 120L
     private const val MEET_MAX = 240L
@@ -204,10 +207,16 @@ object RoyalParse {
     }
 
     /** [id, text] notes for a product (see royal.js notesOf). */
-    fun notesOf(p: JsonElement, title: String): List<Pair<String, String>> {
+    fun notesOf(p: JsonElement, title: String, paid: Int = 0): List<Pair<String, String>> {
         val out = mutableListOf<Pair<String, String>>()
-        fun add(id: JsonElement?, raw: JsonElement?) {
-            val text = clean(raw)
+        fun add(rawId: JsonElement?, raw: JsonElement?) {
+            var id = rawId
+            var text = clean(raw)
+            if (NOTE_FEE.containsMatchIn(text)) {
+                if (paid != 0) return
+                id = JsonPrimitive(FEE_NOTE.first)
+                text = FEE_NOTE.second
+            }
             if (text.isNotEmpty() && text.length <= NOTE_MAX && !NOTE_SKIP.containsMatchIn(text) &&
                 out.none { it.second.lowercase() == text.lowercase() }) {
                 out += clean(id) to text
@@ -273,7 +282,7 @@ object RoyalParse {
             val paid = if (kind in PAID_TYPES) 1 else 0
             val price = productPrice(p)
             val age = ageOf(p, title, venueName)
-            val notes = notesOf(p, title).map { acc.notes.index(jsonArrayOf(it.first, it.second)) }
+            val notes = notesOf(p, title, paid).map { acc.notes.index(jsonArrayOf(it.first, it.second)) }
             val pid = clean(p["productID"]).ifEmpty { null }
             for (o in p["offering"].arrOrEmpty()) {
                 val d = o["offeringDate"].string()

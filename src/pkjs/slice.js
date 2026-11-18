@@ -383,10 +383,12 @@ function eventCat(title, venue, cat) {
   return isCasino(title, venue, cat) ? ['Casino', ''] : cat;
 }
 
-// Settings > Filters > Ages (docs/DESIGN.md
-// §12.4): hide adult only events, teen and kid only events, family events.
-// Stored as a list of these names; all off until the user turns one on.
-var AGE_FILTERS = ['adult', 'young', 'family'];
+// Settings > Filters > Ages and Cost (docs/DESIGN.md §12.4): hide adult only
+// events, teen and kid only events, family events, and events with a fee
+// (FEE_BIT; the name `ageFilters` predates it). Stored as a list of these
+// names; all off until the user turns one on.
+var AGE_FILTERS = ['adult', 'young', 'family', 'fee'];
+var FEE_BIT = 8;
 
 function ageFilters(settings) {
   return Array.isArray(settings.ageFilters) ? settings.ageFilters : [];
@@ -444,6 +446,9 @@ var TAG_RULES = [
   [32, /bathing|activeattire|swim/i, /swimsuit|swimwear|bathing suit|active attire|dry clothes/i],
   [64, /limited|limseat|fcfs|\/early$/i, /limited (spots|seating)|first[- ]come|early arrival/i]
 ];
+// The note royal.js keeps for Royal's "Fee applies" on a free-type event
+// (docs/DATA_FORMAT.md, notes).
+var FEE_NOTE_ID = 'fee';
 var TAG_LIMITED = 64;        // left off when the event has an arrive-by time
 var TAG_MEETING_SPOT = 128;  // the short description names a meeting spot
 
@@ -476,14 +481,20 @@ function eventDetails(sched) {
     var age = Array.isArray(r[0]) ? r[0] : [];
     var early = detailByte(r[1]);
     var tags = 0;
+    var fee = false;
     (Array.isArray(r[2]) ? r[2] : []).forEach(function(i) {
       var n = notes[i];
       if (Array.isArray(n)) {
         tags |= noteTags(n[0], n[1]);
+        fee = fee || n[0] === FEE_NOTE_ID;
       }
     });
-    return {ageMin: detailByte(age[0]), ageMax: detailByte(age[1]), early: early,
-            tags: early ? tags & ~TAG_LIMITED : tags};
+    var out = {ageMin: detailByte(age[0]), ageMax: detailByte(age[1]), early: early,
+               tags: early ? tags & ~TAG_LIMITED : tags};
+    if (fee) {
+      out.fee = true;  // phone side only (Filters > Hide events with a fee); not sent to the watch
+    }
+    return out;
   });
 }
 
@@ -760,6 +771,9 @@ function buildEvents(bundle, settings, stars, dayIndex, sailDays, countOnly) {
     var d = details[info] || {};
     // Only schedule events (they have a cat) meet the age filters, not personal entries.
     var ages = cat ? ageMask(d.ageMin, d.ageMax, title, venue ? finder.entry(venue).name : '') : 0;
+    if (cat && d.fee && !paid) {
+      ages |= FEE_BIT;  // Filters > Cost: Hide events with a fee
+    }
     if (stars[key]) {
       flags |= FLAG_STARRED;
     } else if (!(flags & FLAG_STARRED) && (paid || (cat && isHidden(hidden, cat)) || (ages & hideAges))) {
@@ -1011,8 +1025,28 @@ function eventFinished(sailDays, e, nowMin) {
   return start + (e.minutes || FINISHED_GRACE) <= nowMin;
 }
 
+// A title for matching a booking (or a moved event) to the schedule: case,
+// punctuation, spacing and ® ™ © don't count, so "FlowRider®: Mixed Wave" is
+// "flowrider mixed wave" and "World’s" matches "World's".
+function titleKey(t) {
+  return String(t || '').toLowerCase().replace(/[\u00ae\u2122\u00a9]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 function sameTitle(a, b) {
-  return (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+  return titleKey(a) === titleKey(b);
+}
+
+// For the usage log after a login download (docs/WATCH_PROTOCOL.md, Test
+// log): how many timed bookings there are, how many shows and classes matched
+// a schedule event (they go to the watch as that event, starred and booked),
+// how many go as bookings on their own, and the titles of shows and classes
+// that didn't match (Royal's public titles, never personal data).
+function bookedSummary(bundle, settings) {
+  var list = bundle && bundle.sailDate ? bookedList(bundle, settings || {}) : [];
+  var matched = list.filter(function(o) { return o.venue !== undefined; });
+  var unmatched = list.filter(function(o) { return o.venue === undefined && !o.excursion; });
+  return {orders: list.length, matched: matched.length, own: list.length - matched.length,
+          unmatched: unmatched.map(function(o) { return o.title; })};
 }
 
 // Whether a bundle's schedule carries Royal's product id (`pid`, Phase 4).
@@ -1462,6 +1496,9 @@ module.exports = {
   FLAG_BOOKED: FLAG_BOOKED,
   bookedOrders: bookedOrders,
   bookedList: bookedList,
+  bookedSummary: bookedSummary,
+  titleKey: titleKey,
+  sameTitle: sameTitle,
   ALARM_ALL_ABOARD: ALARM_ALL_ABOARD,
   ALARM_REMINDER: ALARM_REMINDER,
   ALARM_TO_RESERVE: ALARM_TO_RESERVE,

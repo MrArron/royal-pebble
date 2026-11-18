@@ -1949,7 +1949,7 @@ test('event details: ages, arrive-early, tags; limited spots left off with an ar
   var fixture = require('../fixtures/expected-schedule.json');
   var d = slice.eventDetails(fixture.schedule || fixture);
   assert.deepStrictEqual(d.map(function(x) { return x.tags; }),
-                         [0, 1, 0, 0, 22, 21, 0, 65, 0, 0, 64, 0, 0, 41, 32, 0, 64, 176, 1, 4, 0, 0, 4, 11, 40, 1, 41]);
+                         [0, 1, 0, 0, 22, 21, 0, 65, 0, 0, 64, 0, 0, 41, 32, 0, 64, 176, 1, 4, 0, 0, 4, 11, 40, 0, 1, 41]);
   assert.deepStrictEqual(d[4], {ageMin: 18, ageMax: 0, early: 15, tags: 2 | 4 | 16});
   assert.deepStrictEqual(d[8], {ageMin: 0, ageMax: 17, early: 0, tags: 0});
   assert.deepStrictEqual(d[11], {ageMin: 18, ageMax: 25, early: 0, tags: 0});
@@ -2123,6 +2123,71 @@ test('age filters hide events on the watch; starred, personal and no-age events 
   assert.deepStrictEqual(day.cats, [
     ['Activities', '', 1, 2], ['Activities', '', 1], ['Activities', '', 4, 4],
     ['Entertainment', 'Comedy', 2], ['Entertainment', 'Comedy', 1, 1]]);
+});
+
+test('fee filter: Hide events with a fee hides fee-noted free events; starred stay (§12.4)', function() {
+  var b = {
+    ship: {code: 'HM'}, sailDate: '2027-03-06',
+    itinerary: [{day: 1, date: '2027-03-06', type: 'EMBARK', port: 'Miami', depart: '16:00'},
+                {day: 2, date: '2027-03-07', type: 'CRUISING', port: 'Cruising'},
+                {day: 3, date: '2027-03-08', type: 'DEBARK', port: 'Miami', arrive: '06:00'}],
+    schedule: {
+      published: true, cats: [['Fitness', ''], ['Activities', '']],
+      venues: ['Fitness Center', 'Studio B'],
+      notes: [['fee', 'Fee applies'], ['kbyg/general/seapass', 'Bring your SeaPass']],
+      infos: [[null, null, [0]], [null, null, [1]], [null, null, [0, 1]]],
+      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation', 'paid', 'price', 'info'],
+      events: [['Pure-Form Pilates', 0, 0, '2027-03-07', '07:30', 45, 0, 0, 0, null, 0],
+               ['Spin Class', 0, 0, '2027-03-07', '08:30', 45, 0, 0, 0, null, 2],
+               ['Trivia', 1, 1, '2027-03-07', '10:00', 30, 0, 0, 0, null, 1],
+               ['Open Mic', 1, 1, '2027-03-07', '21:00', 60, 0, 0, 0, null, null]]
+    }
+  };
+  var sail = slice.daysFromIso(b.sailDate);
+  function titles(settings, stars) {
+    return slice.buildEvents(b, settings, stars || {}, 1, sail).map(function(e) { return e.title; });
+  }
+  assert.deepStrictEqual(titles({}), ['Pure-Form Pilates', 'Spin Class', 'Trivia', 'Open Mic'], 'off by default');
+  assert.deepStrictEqual(titles({ageFilters: ['fee']}), ['Trivia', 'Open Mic']);
+  var stars = {};
+  stars[slice.starKey('Spin Class', '2027-03-07', '08:30', 'Fitness Center')] = true;
+  assert.deepStrictEqual(titles({ageFilters: ['fee']}, stars), ['Spin Class', 'Trivia', 'Open Mic'], 'starred');
+  assert.deepStrictEqual(slice.cleanAgeFilters(['fee', 'x', 'adult']), ['adult', 'fee']);
+  assert.strictEqual(slice.eventDetails(b.schedule)[0].fee, true);
+  assert.strictEqual(slice.eventDetails(b.schedule)[1].fee, undefined);
+  // Ready to sail counts carry the fee bit (8), like the age bits.
+  var day = slice.dayLoad(b, {ageFilters: ['fee']}, {})[1];
+  assert.ok(day.cats.some(function(c) { return c[0] === 'Fitness' && c[2] === 2 && c[3] === 8; }), JSON.stringify(day.cats));
+});
+
+test('booked orders match schedule events loosely by title; the booked summary counts them', function() {
+  assert.strictEqual(slice.titleKey('FlowRider\u00ae: Mixed Wave'), 'flowrider mixed wave');
+  assert.ok(slice.sameTitle('World\u2019s Sexiest Man Competition', "world's sexiest man  competition"));
+  assert.ok(!slice.sameTitle('Voices', 'Voices Encore'));
+  var b = {
+    ship: {code: 'HM'}, sailDate: '2027-03-06',
+    itinerary: [{day: 1, date: '2027-03-06', type: 'EMBARK', port: 'Miami', depart: '16:00'},
+                {day: 2, date: '2027-03-07', type: 'DOCKED', port: 'Nassau', arrive: '08:00', depart: '17:00'},
+                {day: 3, date: '2027-03-08', type: 'DEBARK', port: 'Miami', arrive: '06:00'}],
+    schedule: {
+      published: true, cats: [['Entertainment', 'Shows']], venues: ['AquaTheater', 'Royal Theater'],
+      fields: ['title', 'venue', 'cat', 'date', 'time', 'minutes', 'featured', 'reservation'],
+      events: [['The Fine Line', 0, 0, '2027-03-06', '20:00', 50, 1, 1],
+               ['Voices', 1, 0, '2027-03-06', '22:00', 50, 1, 1]]
+    },
+    mine: {orders: [
+      {title: 'THE FINE LINE\u00ae', category: 'pt_show', guests: 2, date: '2027-03-06', time: '20:00'},
+      {title: 'Voices', category: 'pt_show', guests: 2, date: '2027-03-06', time: '21:00'},
+      {title: 'Kayak Adventure', category: 'pt_shoreX', guests: 2, date: '2027-03-07', time: '09:00'},
+      {title: 'Deluxe Beverage Package', category: 'pt_beverage', guests: 2}]}
+  };
+  var sail = slice.daysFromIso(b.sailDate);
+  var day0 = slice.buildEvents(b, {}, {}, 0, sail);
+  var fine = day0.filter(function(e) { return e.title === 'The Fine Line'; })[0];
+  assert.ok(fine.booked, 'matched despite case and the mark');
+  assert.strictEqual(day0.filter(function(e) { return e.key.indexOf('B|') === 0; }).length, 1, 'Voices at 21:00 as its own booking');
+  assert.deepStrictEqual(slice.bookedSummary(b, {}), {orders: 3, matched: 1, own: 2, unmatched: ['Voices']});
+  assert.deepStrictEqual(slice.bookedSummary({}, {}), {orders: 0, matched: 0, own: 0, unmatched: []});
 });
 
 test('demo: some events carry Phase 4 details', function() {

@@ -144,8 +144,9 @@ class SettingsTest {
 
     // ------------------------------------------------------------ filters (slice.js rules)
 
-    private fun ev(title: String, venue: String = "", cat: String = "Activities", sub: String = "", min: Int? = null, max: Int? = null) =
-        Event(title, venue, cat, sub, "2027-03-08", "10:00", 30, false, false, false, null, min, max, null)
+    private fun ev(title: String, venue: String = "", cat: String = "Activities", sub: String = "", min: Int? = null, max: Int? = null,
+                   fee: Boolean = false, paid: Boolean = false) =
+        Event(title, venue, cat, sub, "2027-03-08", "10:00", 30, false, false, paid, null, min, max, null, fee)
 
     @Test
     fun shopIsHiddenUntilFiltersAreChanged() {
@@ -176,6 +177,39 @@ class SettingsTest {
         assertTrue(CruiseData.hiddenByFilters(ev("Movie", venue = "Adventure Ocean Theater"), with("family")))
         assertFalse(CruiseData.hiddenByFilters(ev("Trivia With Family Fun Crew"), with("family")))
         assertFalse(CruiseData.hiddenByFilters(ev("Trivia"), with("adult", "young", "family")))
+    }
+
+    @Test
+    fun costHidesEventsWithAFee() {
+        val off = JsonObject(mapOf("hiddenCats" to JsonArray(emptyList())))
+        val fee = JsonObject(off + ("ageFilters" to JsonArray(listOf(JsonPrimitive("fee")))))
+        assertTrue(CruiseData.hiddenByFilters(ev("Pure-Form Pilates", fee = true), fee))
+        assertFalse(CruiseData.hiddenByFilters(ev("Pure-Form Pilates", fee = true), off))
+        assertFalse(CruiseData.hiddenByFilters(ev("Trivia"), fee))
+        // A paid event has its own rule (shown once picked), not this switch.
+        assertFalse(CruiseData.hiddenByFilters(ev("Escape Room", fee = true, paid = true), fee))
+        // The shared fixture: Pilates carries Royal's Fee applies.
+        val b = JsonObject(mapOf("schedule" to io.github.mrarron.royalpebble.royal.Fixtures.json("expected-schedule.json")))
+        assertEquals(listOf("Pure-Form Pilates"), CruiseData.events(b).filter { it.fee }.map { it.title })
+    }
+
+    @Test
+    fun bookedSummaryMatchesLikeSliceJs() {
+        assertEquals("flowrider mixed wave", CruiseData.titleKey("FlowRider\u00ae: Mixed Wave"))
+        val b = json("""{"sailDate":"2027-03-06",
+            "itinerary":[{"day":1,"date":"2027-03-06","port":"Miami","type":"EMBARK"},{"day":2,"date":"2027-03-07","port":"Nassau","type":"DOCKED"}],
+            "schedule":{"published":true,"cats":[["Entertainment","Shows"]],"venues":["AquaTheater","Royal Theater"],
+              "fields":["title","venue","cat","date","time","minutes","featured","reservation"],
+              "events":[["The Fine Line",0,0,"2027-03-06","20:00",50,1,1],["Voices",1,0,"2027-03-06","22:00",50,1,1]]},
+            "mine":{"orders":[{"title":"THE FINE LINE\u00ae","category":"pt_show","date":"2027-03-06","time":"20:00"},
+              {"title":"Voices","category":"pt_show","date":"2027-03-06","time":"21:00"},
+              {"title":"Kayak Adventure","category":"pt_shoreX","date":"2027-03-07","time":"09:00"},
+              {"title":"Deluxe Beverage Package","category":"pt_beverage"}]}}""") as JsonObject
+        val s = CruiseData.bookedSummary(b)!!
+        assertEquals(CruiseData.BookedSummary(3, 1, 2, listOf("Voices")), s)
+        assertEquals("3 timed bookings, 1 matched schedule events (starred, booked), 2 shown as bookings; " +
+            "shows and classes not in the schedule: Voices", s.logText())
+        assertEquals(null, CruiseData.bookedSummary(JsonObject(emptyMap())))
     }
 
     @Test

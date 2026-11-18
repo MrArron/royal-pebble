@@ -206,7 +206,7 @@ class ScheduleTest(unittest.TestCase):
         self.assertEqual(schedule(products), expected)
         self.assertEqual(schedule(products, 7), expected)
         self.assertEqual(cs.schedule_summary(expected),
-                         "51 events (9 shore excursion sessions): 18 with age limits, 23 arrive early, 25 with notes")
+                         "51 events (9 shore excursion sessions): 18 with age limits, 23 arrive early, 26 with notes")
 
     def test_restriction_age(self):
         self.assertEqual(cs.restriction_age("Minimum 18 years old"), [18, None])
@@ -270,8 +270,11 @@ class ScheduleTest(unittest.TestCase):
                          {"advisementID": "kbyg/seapass", "advisementTitle": "Please bring your SeaPass®"}],
             isWaiverRequired=True), "Trivia")
         self.assertEqual(notes, [["age/13guardian", "Children 12 years old and under must be supervised"],
+                                 ["fee", "Fee applies"],
                                  ["kbyg/seapass", "Please bring your SeaPass"],
                                  ["waiver", "Signed waiver required"]])
+        self.assertEqual(cs.notes_of(product(advisements=[
+            {"advisementID": "kbyg/general/FEE", "advisementTitle": "This activity has a fee"}]), "Trivia", 1), [])
         disclaimer = [["kbyg/flowrdr/WARNDISCLAIM", "Signed warning disclaimer required"]]
         self.assertEqual(cs.notes_of(product(advisements=[
             {"advisementID": disclaimer[0][0], "advisementTitle": disclaimer[0][1]}], isWaiverRequired=True),

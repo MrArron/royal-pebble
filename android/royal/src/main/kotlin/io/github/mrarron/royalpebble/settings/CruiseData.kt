@@ -57,6 +57,8 @@ data class Event(
     val ageMin: Int?,
     val ageMax: Int?,
     val early: Int?,
+    /** Royal marks it "Fee applies" (the bundle's `fee` note); Filters > Cost can hide it. */
+    val fee: Boolean = false,
 ) {
     /** slice.js starKey: how stars and reserved marks name this event. */
     val key: String get() = "$title|$date|${time ?: ""}|$venue"
@@ -88,6 +90,7 @@ object CruiseData {
         val cats = sched["cats"].arr().orEmpty()
         val venues = sched["venues"].arr().orEmpty()
         val infos = sched["infos"].arr().orEmpty()
+        val notes = sched["notes"].arr().orEmpty()
         return sched["events"].arr().orEmpty().mapNotNull { row ->
             val r = row.arr() ?: return@mapNotNull null
             fun at(name: String): JsonElement? = fields[name]?.let { r.getOrNull(it) }
@@ -111,13 +114,19 @@ object CruiseData {
                 ageMin = age?.getOrNull(0).num()?.toInt(),
                 ageMax = age?.getOrNull(1).num()?.toInt(),
                 early = info?.getOrNull(1).num()?.toInt(),
+                fee = info?.getOrNull(2).arr().orEmpty().any { i ->
+                    notes.getOrNull(i.num()?.toInt() ?: -1).arr()?.getOrNull(0).str() == FEE_NOTE_ID
+                },
             )
         }
     }
 
     // ------------------------------------------------------------ filters (slice.js, docs/DESIGN.md §12.4)
 
-    val AGE_FILTERS = listOf("adult", "young", "family")
+    /** The age switches and, last, Cost's Hide events with a fee (slice.js AGE_FILTERS: one list, bit = place). */
+    val AGE_FILTERS = listOf("adult", "young", "family", "fee")
+    const val FEE_NOTE_ID = "fee"
+    const val FEE_BIT = 8
     val DEFAULT_HIDDEN = listOf("Shop")
 
     /** slice.js hiddenCats: the saved list, or Shop until the owner changes filters. */
@@ -144,11 +153,12 @@ object CruiseData {
         Regex("^\\s*family\\b|\\ball ages\\b", RegexOption.IGNORE_CASE).containsMatchIn(e.title) ||
             Regex("^adventure ocean theater$", RegexOption.IGNORE_CASE).matches(e.venue)
 
-    /** slice.js ageMask: 1 adult only (18+), 2 teen and kid only (17 and under), 4 family. */
+    /** slice.js ageMask: 1 adult only (18+), 2 teen and kid only (17 and under), 4 family; plus 8 a fee (FEE_BIT). */
     fun ageMask(e: Event): Int {
         val min = e.ageMin ?: 0
         val max = e.ageMax ?: 0
-        return (if (min >= 18) 1 else 0) or (if (max in 1..17) 2 else 0) or (if (isFamily(e)) 4 else 0)
+        return (if (min >= 18) 1 else 0) or (if (max in 1..17) 2 else 0) or (if (isFamily(e)) 4 else 0) or
+            (if (e.fee && !e.paid) FEE_BIT else 0)
     }
 
     fun ageFilterMask(settings: JsonObject): Int =
@@ -160,6 +170,39 @@ object CruiseData {
         val hidden = hiddenCats(settings)
         if (c in hidden || "$c / $s" in hidden) return true
         return (ageMask(e) and ageFilterMask(settings)) != 0
+    }
+
+    /** slice.js titleKey: case, punctuation, spacing and the ® ™ © marks don't count. */
+    fun titleKey(t: String?): String =
+        (t ?: "").lowercase().replace(Regex("[\u00ae\u2122\u00a9]"), "").replace(Regex("[^a-z0-9]+"), " ").trim()
+
+    data class BookedSummary(val orders: Int, val matched: Int, val own: Int, val unmatched: List<String>) {
+        /** The usage log's `booked` line, as index.js useBundle writes it. */
+        fun logText(): String = "$orders timed bookings, $matched matched schedule events (starred, booked), $own shown as bookings" +
+            (if (unmatched.isNotEmpty()) "; shows and classes not in the schedule: " + unmatched.joinToString(", ") else "")
+    }
+
+    /**
+     * slice.js bookedSummary: timed bookings of the sailing, those (shows and
+     * classes) that match a schedule event by title key, date and time, and the
+     * titles of shows and classes that don't. Null without login data.
+     */
+    fun bookedSummary(bundle: JsonObject?): BookedSummary? {
+        val orders = bundle?.get("mine").obj()?.get("orders").arr() ?: return null
+        val dates = itinerary(bundle).map { it.date }.toSet()
+        val events = events(bundle)
+        val timed = orders.mapNotNull { it.obj() }.filter { o ->
+            !o["title"].str().isNullOrEmpty() && o["date"].str() in dates && isHhmm(o["time"].str())
+        }
+        val unmatched = mutableListOf<String>()
+        var matched = 0
+        for (o in timed) {
+            if (o["category"].str() == "pt_shoreX") continue
+            val key = titleKey(o["title"].str())
+            if (events.any { it.date == o["date"].str() && it.time == o["time"].str() && titleKey(it.title) == key }) matched++
+            else unmatched += o["title"].str()!!
+        }
+        return BookedSummary(timed.size, matched, timed.size - matched, unmatched)
     }
 
     data class CatSummary(val name: String, val count: Int, val subs: List<Pair<String, Int>>)

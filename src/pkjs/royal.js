@@ -96,8 +96,12 @@ var EXCURSION_CAT = ['Shore excursions', ''];
 // would push busy days past the watch's 160 events.
 var SKIP_TITLES = /nextcruise/i;
 // Event details (docs/DATA_FORMAT.md, Event details).
-// Notes left out: boilerplate, the fee (already `paid`) and long legal text.
-var NOTE_SKIP = /^(images are illustrative|this activity has a fee|fee applies)/i;
+// Notes left out: boilerplate and long legal text. Royal's fee advisement is
+// left out of paid events (already `paid`); on a free-type event it becomes
+// the `fee` note, which Filters > Hide events with a fee looks for.
+var NOTE_SKIP = /^images are illustrative/i;
+var NOTE_FEE = /^(this activity has a fee|fee applies)/i;
+var FEE_NOTE = ['fee', 'Fee applies'];
 var NOTE_MAX = 120;
 var EARLY_MAX = 120;  // arrive-early minutes from lead time or advisement text
 var MEET_MAX = 240;   // a shore excursion's meeting time before its start
@@ -234,10 +238,17 @@ function saysMore(short, title) {
 // [id, text] notes for a product: a short description that says more than
 // the title, restrictions that aren't age limits, advisements and the waiver
 // flag. Boilerplate, long text and repeated text are left out.
-function notesOf(p, title) {
+function notesOf(p, title, paid) {
   var out = [];
   function add(id, text) {
     text = clean(text);
+    if (NOTE_FEE.test(text)) {
+      if (paid) {
+        return;
+      }
+      id = FEE_NOTE[0];
+      text = FEE_NOTE[1];
+    }
     if (text && text.length <= NOTE_MAX && !NOTE_SKIP.test(text) && out.every(function(n) {
       return n[1].toLowerCase() !== text.toLowerCase();
     })) {
@@ -310,7 +321,7 @@ function addProducts(acc, json) {
     var paid = PAID_TYPES.indexOf(kind) !== -1 ? 1 : 0;
     var price = productPrice(p);
     var age = ageOf(p, title, venueName);
-    var notes = notesOf(p, title).map(function(n) { return index(acc.notes, n); });
+    var notes = notesOf(p, title, paid).map(function(n) { return index(acc.notes, n); });
     var pid = clean(p.productID) || null;
     (p.offering || []).forEach(function(o) {
       var d = o.offeringDate;
