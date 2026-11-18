@@ -21,6 +21,11 @@ Read before making changes:
   watch
 - `docs/BUILD_AND_TEST.md` — the current architecture in one page, and how a
   build gets made, tested and handed to the owner (pbw, apk, checklists)
+- `docs/STORE_READINESS.md` and `docs/STORE_LISTING.md` — the Pebble appstore
+  plan, disclosures and listing text; `PRIVACY.md` and
+  `THIRD_PARTY_NOTICES.md` — keep them true when data handling or
+  dependencies change. The app is free forever: never add paid, premium
+  or ad features
 - `android/README.md` — the Android app: modules, password handling, watch
   alerts, serving the watch, its tests
 
@@ -37,6 +42,8 @@ Read before making changes:
   generated) from `venue-mishearings-HM.json` and `venues.js`. See its README.
 - `tools/quickjs-probe/` — the Phase 0 check that `src/pkjs` packs the same
   bytes in QuickJS as in Node (`docs/QUICKJS_PHASE0.md`).
+- `store/` — appstore icons, banner and (later) screenshots; `tools/store/`
+  draws the art.
 - `tools/mockups/` — design mockup scripts. `tools/screens.sh` — screenshot
   walk on both emulators. `tools/watch_size.py` — watch size check.
 - `docs/` — brief, design, plan, data format, protocol, build and test;

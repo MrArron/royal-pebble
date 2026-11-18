@@ -16,8 +16,10 @@ direction.
 
 - Private app, sideloaded to the owner's Android phone and Pebble Time 2, and
   to a travel companion's Pebble Round 2 (each phone keeps its own data; the
-  Round 2 is tested on the emulator until it arrives). No app store release
-  planned: skip store listings, first-run tutorials and other watches, but keep
+  Round 2 is tested on the emulator until it arrives). An appstore release
+  is being prepared for after the test cruise (owner, 2026-11-18;
+  `STORE_READINESS.md`): free and open source forever, no paid or premium
+  features. Until then skip first-run tutorials and other watches, but keep
   the code generic (any ship and sail date, nothing hardcoded).
 - Royal Caribbean only. Celebrity uses similar endpoints but is untested.
 - First real use: the owner's upcoming sailing on Harmony of the Seas (ship

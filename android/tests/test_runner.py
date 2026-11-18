@@ -36,8 +36,8 @@ FAKE_SCRIPT = textwrap.dedent('''
         rebook_decision TEXT, discount_applied TEXT, order_date TEXT, status TEXT);
       INSERT INTO runs VALUES (1, 'a', 'b', 'ok', NULL);
       INSERT INTO bookings VALUES (1, '123', 'UT', 'Utopia', '20270101', 4, 'BALCONY', '1234', 'Open now', '20261001', 1, 0, NULL, '[]');
-      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'addon', 'Deluxe Beverage', 'Arron', 99.0, 80.0, 'USD', 1, 'rebook', NULL, NULL, 'priced');
-      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'addon', 'Wifi', 'Arron', 20.0, 25.0, 'USD', 1, 'best_price', NULL, NULL, 'priced');
+      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'addon', 'Deluxe Beverage', 'Alex', 99.0, 80.0, 'USD', 1, 'rebook', NULL, NULL, 'priced');
+      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'addon', 'Wifi', 'Alex', 20.0, 25.0, 'USD', 1, 'best_price', NULL, NULL, 'priced');
     """)
     db.commit()
     sys.exit(2)
