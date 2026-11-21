@@ -159,7 +159,7 @@ appearing in new commits.
 
 | # | Question | Decision |
 |---|---|---|
-| D1 | Keep the name "Royal Pebble"? | Open: the owner asked for alternatives (§8). |
+| D1 | App name | Keep **Royal Pebble** (owner, 2026-11-21, after looking at the ideas in §8 and briefly picking Cruise Companion). Branding line: "Your unofficial Royal Caribbean cruise companion on your wrist"; the listing names the ships with Ship GPS and invites pull requests for more. |
 | D2 | App icon | **C3b**: a Pebble Time 2 whose screen shows a cruise ship bow-on over layered waves, the sun in the Pebble logo's coral (#FA4A36). Now the store icons and banner in `store/art/`; the other concepts stay in `store/concepts/`. |
 | D3 | Copyright line in `LICENSE` | Keep "Arron L.". |
 | D4 | Rewrite git history? | No rewrite. Switch commits to the GitHub noreply address and turn on "Block command line pushes that expose my email". |
@@ -223,7 +223,7 @@ expected to ignore `usesPermissions`, so 1.6.28 should build and behave like
 the sailing is not recommended (it is a new toolchain right before the
 freeze).
 
-## 8. Name ideas (D1)
+## 8. Name ideas considered (D1: kept Royal Pebble)
 
 Short enough for the watch's app list, clear about cruising, and free of
 Royal Caribbean's own names (avoid "Cruise Compass", "Navigator", "Crown",

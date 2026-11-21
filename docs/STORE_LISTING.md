@@ -33,13 +33,13 @@ The appstore has one description field; this first line is written to stand
 on its own where a listing is cut short.
 
 ```
-Your Royal Caribbean cruise on your wrist: all-aboard countdown, today's schedule, alerts and directions around the ship. Works offline at sea. Free, open source and unofficial.
+Your unofficial Royal Caribbean cruise companion on your wrist: all-aboard countdown, today's schedule, alerts and directions around the ship. Works offline at sea. Free and open source.
 ```
 
 ## 3. Description (long)
 
 ```
-Royal Pebble puts your Royal Caribbean cruise on your wrist. Glance at your watch for the all-aboard countdown, what's on next and how to get there, without pulling out your phone. Everything is downloaded before you sail, so it works at sea with no internet and no paid Wi-Fi.
+Royal Pebble is your unofficial Royal Caribbean cruise companion, on your wrist. Glance at your watch for the all-aboard countdown, what's on next and how to get there, without pulling out your phone. Everything is downloaded before you sail, so it works at sea with no internet and no paid Wi-Fi.
 
 ON THE WATCH
 - Home: on port days a big countdown to all-aboard in ship time and local time, with a time-ashore bar. Otherwise your next starred event with its deck and position. Before the cruise, the days to sailing.
@@ -47,13 +47,19 @@ ON THE WATCH
 - Today: the day's schedule with what's on now. Open an event for its deck, time, ages and what to bring; hold Select to star it. Clashes, last-chance shows and reservations still to make are flagged.
 - Alerts before all-aboard and before each starred event, even with the phone out of range.
 - My info: stateroom, deck, nearest stairs, muster station, dining room.
-- Ship directory by deck or area. On mapped ships (Harmony of the Seas so far), Ship GPS: walking distance from your cabin, the closest restroom and step-by-step routes.
+- Ship directory by deck or area. On mapped ships, Ship GPS: walking distance from your cabin, the closest restroom and step-by-step routes (see SHIPS below).
 - Voice: hold Select and ask "how do I get to Studio B" or "closest restroom". Speech is recognised on the phone, so it works in airplane mode with the phone nearby.
 
 ON THE PHONE (the app's settings page, works offline)
 - Download your sailing before you leave home: itinerary, the daily schedule (published about two weeks before sailing) and shore excursions.
 - Optional: sign in with your Royal Caribbean account for that one download to add your stateroom, muster station, terminal arrival time and booked excursions. Your password goes only to Royal Caribbean and is never saved.
 - Star events, mark reservations, add your own entries, set all-aboard times and filters, and share your plan with a travel companion.
+
+SHIPS
+- Cruise lines: Royal Caribbean today. The app is built so other lines can be added later.
+- Ship GPS and voice directions (ships mapped so far): Harmony of the Seas.
+- Every other Royal Caribbean ship gets everything else: schedule, alerts, my info and the directory by deck.
+- Want your ship mapped? The tools that mapped Harmony are in the project on GitHub, and pull requests adding ships are welcome.
 
 FREE AND OPEN SOURCE, FOREVER
 Royal Pebble is a free, open-source hobby project (MIT License). It will never charge money, sell a premium version, show ads or put features behind a paywall. The source code is on GitHub.
@@ -69,8 +75,8 @@ Requires a Pebble Time 2 or Pebble Round 2 and an Android phone with the Pebble 
 
 Notes on the text:
 
-- "Harmony of the Seas so far" must change when another ship is mapped (the
-  ship list in the README is the source).
+- The SHIPS list must change when another ship is mapped (the ship list in
+  the README is the source).
 - "Tested with Android only" stays until someone tries the Pebble app on
   iPhone (the settings page should work there; nothing iOS-specific is known
   to break).

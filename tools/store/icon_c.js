@@ -164,9 +164,9 @@ function svg(body, px) {
       background:linear-gradient(90deg,#07265C,#0B3D91 60%,#1257B8);font-family:'DejaVu Sans','Liberation Sans',sans-serif">
       ${svg(C3B, 220)}
       <div>
-        <div style="color:#FFFFFF;font-weight:700;font-size:50px;line-height:1.1">Royal Pebble</div>
-        <div style="color:#CFE3F7;font-weight:600;font-size:19px;margin-top:14px;white-space:nowrap">Your cruise on your wrist, offline at sea</div>
-        <div style="color:#9FBCE0;font-weight:600;font-size:18px;margin-top:10px">Free and open source. Unofficial.</div>
+        <div style="color:#FFFFFF;font-weight:700;font-size:50px;line-height:1.1;white-space:nowrap">Royal Pebble</div>
+        <div style="color:#CFE3F7;font-weight:600;font-size:18px;line-height:1.3;margin-top:12px">Your unofficial Royal Caribbean<br>cruise companion, on your wrist</div>
+        <div style="color:#9FBCE0;font-weight:600;font-size:14px;line-height:1.35;margin-top:10px;white-space:nowrap">Free and open source. Works offline at sea.<br>Ship GPS on Harmony of the Seas. More ships welcome.</div>
       </div></div></body></html>`);
   await page.locator('#b').screenshot({ path: path.join(ART, 'banner-720x320.png') });
   await browser.close();
