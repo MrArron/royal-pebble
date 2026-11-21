@@ -21,14 +21,11 @@
     },
     "companionApp": {
       "android": {
-        "url": "https://github.com/MrArron/royal-pebble",
+        "url": "https://github.com/MrArron/royal-pebble/releases/latest",
         "required": false,
         "apps": [
           {
             "package": "io.github.mrarron.royalpricecheck"
-          },
-          {
-            "package": "io.github.mrarron.royalpebble.linktest"
           }
         ]
       }

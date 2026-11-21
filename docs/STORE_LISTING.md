@@ -70,7 +70,7 @@ No account with us, no tracking, no analytics. Your cruise details stay on your 
 NOT AFFILIATED
 Royal Pebble is an independent, unofficial app. It is not made, endorsed or supported by Royal Caribbean Group or Royal Caribbean International. "Royal Caribbean" and ship names are trademarks of their owners, used only to say what the app works with. It reads Royal Caribbean's public website data through unofficial endpoints that can change or stop working at any time; always check the official Royal Caribbean app and the ship's announcements for times that matter, such as all-aboard.
 
-Requires a Pebble Time 2 or Pebble Round 2 and an Android phone with the Pebble app. Tested with Android only.
+Requires a Pebble Time 2 or Pebble Round 2 and a phone with the Pebble app (tested with Android only). Optional for Android: the Royal Pebble Android app adds price-drop and check-in alerts and can serve the watch itself; download the APK from https://github.com/MrArron/royal-pebble/releases/latest. Everything above works without it.
 ```
 
 Notes on the text:
@@ -129,13 +129,14 @@ shows only demo data. Save the picks as `store/screenshots/emery-1.png` ...
 
 ## 6. Companion app
 
-`package.json` lists two Android packages under `companionApp` (the Royal
-Pebble Android app and the Phase 0 link test app), with `required: false`.
-The appstore's companion fields want a Google Play listing (name, Play Store
-URL, 144×144 icon), and neither app is on Google Play. Recommended: don't
-declare a companion in the appstore listing; mention the optional Android app
-only through the GitHub link. Whether to drop the link test package from
-`package.json` before release is decision D6.
+`package.json` lists one Android package under `companionApp`, the Royal
+Pebble Android app (`io.github.mrarron.royalpricecheck`), with
+`required: false` and the latest GitHub release (which carries the APK) as
+its link (D6, 1.6.28). The watch app works fully without it: phones without
+Android, or people who skip the extra app, use the Pebble app's PebbleKit JS
+side as before. The appstore's own companion fields want a Google Play
+listing, and the app isn't on Google Play, so leave them empty and mention
+the optional Android app in the description through the GitHub link.
 
 ## 7. Policy checks against this listing
 

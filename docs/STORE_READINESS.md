@@ -23,7 +23,7 @@ SDK 4.44, and the release itself comes after the December test cruise (D8).
 | 8 | Repo scan for personal information (§5) | Files clean after this PR; history needs the owner (D4, D5) |
 | 9 | In-app notices: settings page Help > About, Android Settings > About (§4) | Next PR (watch-served JS, needs a version bump and an emulator check) |
 | 10 | Watch launcher icon (a menu icon resource in `package.json`) | Next PR; check the size the Time 2 and Round 2 launchers use in the current SDK docs first |
-| 11 | `companionApp` entry in `package.json` (D6) | Explained in D6; owner to confirm dropping the link test package |
+| 11 | `companionApp` entry in `package.json` (D6) | Done in 1.6.28: only the Android app, linked to the latest release |
 | 13 | Permissions: declare them so the app isn't a legacy app (§7) | Declared in 1.6.28; build with SDK 4.44 and test on the emulator before release |
 | 12 | Developer account on the appstore's developer dashboard, then submit | Owner, after the sailing (D8) |
 
@@ -164,7 +164,7 @@ appearing in new commits.
 | D3 | Copyright line in `LICENSE` | Keep "Arron L.". |
 | D4 | Rewrite git history? | No rewrite. Switch commits to the GitHub noreply address and turn on "Block command line pushes that expose my email". |
 | D5 | Replace the December sailing date in docs and tests? | Leave it. |
-| D6 | `companionApp` packages in `package.json` | Recommended: drop `io.github.mrarron.royalpebble.linktest` and keep the Royal Pebble Android app. Under the 2.0.0 permissions, the Pebble app asks the user about each companion package listed, so a store user would be asked about a test app they don't have. Don't fill in the store's companion fields (they want a Google Play listing). Waiting on the owner's yes. |
+| D6 | `companionApp` packages in `package.json` | Done (owner, 2026-11-21): only the Royal Pebble Android app (`io.github.mrarron.royalpricecheck`), `required: false`, linked to `https://github.com/MrArron/royal-pebble/releases/latest` for the APK. The link test package is gone, so store users aren't asked about it. People without Android, or who skip the app, get the PebbleKit JS side as before. The store's own companion fields stay empty (they want a Google Play listing). |
 | D7 | First release Unlisted or Listed? | Unlisted for a few testers, then Listed. |
 | D8 | When to submit? | After the sailing (the owner may revisit). |
 | D9 | Donation or sponsor links? | None. |
@@ -198,7 +198,8 @@ Microphone and Dictation guides.
   `Pebble.openURL`) have no permission either. No location, notifications,
   timeline or health.
 - Companion apps built on PebbleKit 2 need no declaration; the Pebble app asks
-  about each package in `companionApp` on its own (hence D6).
+  about each package in `companionApp` on its own (hence D6: only the
+  Android app is listed now).
   `LegacyPebbleKit` is only for PebbleKit Classic companions.
 
 To check before release (on the owner's PC, after upgrading the SDK to 4.44

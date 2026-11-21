@@ -134,9 +134,11 @@ the app's log listed REQUEST, SAVED, LOG, DIR_REQUEST, ROUTE_REQUEST and VOICE
 while PebbleKit JS answered them as usual.
 
 - **The watch app has to list the Android app.** `package.json` has a
-  `pebble.companionApp.android` entry naming the Android packages (the app,
-  `io.github.mrarron.royalpricecheck`, and the link test,
-  `io.github.mrarron.royalpebble.linktest`), with `required: false`.
+  `pebble.companionApp.android` entry naming the Android app
+  (`io.github.mrarron.royalpricecheck`), with `required: false` and the
+  latest GitHub release (which carries the APK) as its `url`. The Phase 0
+  link test app was listed too until 1.6.28; it was dropped so store users
+  aren't asked about it (`STORE_READINESS.md` D6).
   Without it the Pebble app never starts a PebbleKit Android 2 session for
   Royal Pebble, and every send from an Android app fails with
   `FailedDifferentAppOpen`. `required: false` means a phone without the
