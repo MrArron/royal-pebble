@@ -95,10 +95,12 @@ CloudPebble, which drops the `companionApp` entry the Android app needs), and
 sideload the `.apk`. A matched test build is a pbw and an apk from the same
 commit.
 
-SDK version: test builds use SDK 4.33.1, which makes a legacy-permissions
-app. A `.pbw` for the appstore must be built with SDK 4.44+ and pebble-tool
-5.1.0+, so the `usesPermissions` declaration in `package.json` takes effect;
-check it first with the steps in `STORE_READINESS.md` §7.
+SDK version: since 2026-11-21 the owner's PC builds with SDK 4.44 and
+pebble-tool 5.2.0, so every `.pbw` is a permissions app (`manifestVersion: 2`)
+that gets only what `package.json` `usesPermissions` declares (Internet for
+Royal Caribbean's domains, 1.6.28). Don't build a commit older than 1.6.28 on
+this SDK for real use: it would have no Internet access. Results of the first
+build: `STORE_READINESS.md` §7.
 
 ## 5. Tests
 
