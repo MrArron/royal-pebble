@@ -136,9 +136,10 @@ object Notifier {
 
     fun watchNotice(h: WatchHit): PhoneNotice {
         val now = money(h.price, h.currency)
+        val base = h.baseline
         val why = when {
             h.rule == WatchRule.BELOW -> "below your ${money(h.trigger, h.currency)}"
-            h.baseline != null -> "down ${h.percentOff ?: 0}% from ${money(h.baseline, h.currency)} when you set the watch"
+            base != null -> "down ${h.percentOff ?: 0}% from ${money(base, h.currency)} when you set the watch"
             else -> "at or below ${money(h.trigger, h.currency)}"
         }
         return PhoneNotice(
