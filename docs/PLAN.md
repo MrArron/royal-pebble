@@ -41,6 +41,9 @@ Last measured on 1.6.24 (2026-11-15):
 | Room to the hard limit (65,535) | 6,143 | 3,527 |
 | Heap at launch | not re-measured | 69,064 |
 
+On SDK 4.44 (the PC's SDK since 2026-11-21), 1.6.28 is 108 B bigger on both:
+Time 2 59,500 (3,988 under budget), Round 2 62,116 (**1,372** under budget).
+
 - **The Round 2 binary sets the limit:** shared watch code costs more there
   (round helpers), so judge every watch change by its gabbro size.
 - **Rule until the sailing:** Phase 6 watch code may use at most 600 B (on

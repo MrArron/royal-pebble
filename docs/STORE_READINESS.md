@@ -218,11 +218,34 @@ and pebble-tool to 5.1.0):
 4. Voice (Hold Select) still works.
 5. Run `tools/watch_size.py` as usual; a newer SDK can change the binary size.
 
-Until then nothing should change: SDK 4.33.1 predates permissions and is
-expected to ignore `usesPermissions`, so 1.6.28 should build and behave like
-1.6.27 on the current setup (confirm with one build; not yet tried). Upgrading the SDK before
-the sailing is not recommended (it is a new toolchain right before the
-freeze).
+### Results, 2026-11-21 (1.6.28, commit 05d8c84, owner's PC)
+
+The owner chose to upgrade fully: pebble-tool 5.0.40 to 5.2.0, SDK 4.33.1 to
+4.44 (the newest listed), now active.
+
+| Build | Builds | `appinfo.json` | Time 2 static / under budget | Round 2 static / under budget |
+|---|---|---|---|---|
+| SDK 4.33.1 | Yes | No `manifestVersion` (copies `usesPermissions` but doesn't act on it): legacy | 59,392 B / 4,096 B | 62,008 B / 1,480 B |
+| SDK 4.44 | Yes, same two harmless linker warnings | `manifestVersion: 2`, Internet for `rccl.com` and `royalcaribbean.com` (required, with the reason), one companion package | 59,500 B / 3,988 B | 62,116 B / 1,372 B |
+
+- Step 1: passed. Step 5: passed; SDK 4.44 adds 108 B on both watches, so
+  the Round 2 is tighter (1,372 B).
+- Emulators (demo cruise): installs and draws Home and Today on the Time 2
+  and the Round 2; 75 s of logs with no crashes, messages between watch and
+  phone get through. The new phone simulator repeats a harmless
+  `Exception decoding QemuInboundPacket.footer` warning.
+- Settings page in the emulator: opens, and the Harmony of the Seas sailing
+  list loads from Royal's API (one request). The emulator's browser doesn't
+  enforce the new permissions, so this proves the page works, not that the
+  phone allows it.
+- Still to do, on the owner's phone (Pebble app 2.0.0): install the 1.6.28
+  `.pbw` built with SDK 4.44 (`C:\Users\User\Royal-Pebble\store-test-1.6.28\`),
+  confirm the install asks for Internet access to Royal Caribbean and the app
+  page shows no "legacy" label (step 2), run a Download with and without
+  login from the settings page (step 3), and try voice (step 4).
+- SDK 4.33.1 is still installed (inactive); removing it was blocked by the
+  PC's permission rules. Copy `~/.local/share/pebble-sdk/4.33.1` aside first
+  (its emulator localstorage), then `pebble sdk uninstall 4.33.1`.
 
 ## 8. Name ideas considered (D1: kept Royal Pebble)
 

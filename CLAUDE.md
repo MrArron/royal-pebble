@@ -101,7 +101,8 @@ Read before making changes:
   see; run it outside the repo or keep its `royal-pebble-explore-*` output
   (personal data, git-ignored) out of commits.
 - Pebble SDK runs in WSL: distro `Ubuntu`, user `pebble`, tool at
-  `/home/pebble/.local/bin/pebble` (pebble-tool 5.0.40, SDK 4.33.1). From Git Bash,
+  `/home/pebble/.local/bin/pebble` (pebble-tool 5.2.0, SDK 4.44 since 2026-11-21; 4.33.1 is still installed but
+  inactive, and builds made with it are legacy-permission apps). From Git Bash,
   set `MSYS_NO_PATHCONV=1` and run a script file with
   `wsl -d Ubuntu -u pebble -- bash <script>` (inline `$PATH` gets expanded by Git
   Bash). In the script, `cd` to the repo under `/mnt/c/...`, then `pebble build`,
@@ -136,8 +137,8 @@ Read before making changes:
   events occurred while off" dialog instead of launching the app, and the phone
   simulator resets the clock when it connects.
 - If `pebble install --emulator` hangs at "Waiting for the firmware to boot", stray
-  `qemu-pebble` processes or a damaged `~/.local/share/pebble-sdk/4.33.1/emery/
-  qemu_spi_flash.bin` are the usual cause: kill the strays, move the flash file
+  `qemu-pebble` processes or a damaged `~/.local/share/pebble-sdk/4.44/emery/
+  qemu_spi_flash.bin` (gabbro beside it) are the usual cause: kill the strays, move the flash file
   aside (don't delete it) and remove `/tmp/pb-emulator.json`.
 - Voice on the emulator: start `pebble transcribe "how do I get to the theater"
   --emulator emery` in the background (one at a time; it answers the next
@@ -155,14 +156,17 @@ Read before making changes:
   task; a background `&` inside a one-off `wsl` script dies when the script ends.
   Don't `echo` markers into that file (the log writer overwrites them); filter by
   timestamp.
-- The emulator phone's saved data is `~/.local/share/pebble-sdk/4.33.1/emery/
-  localstorage`. Copy it aside before tests that change it, and never delete the
+- The emulator phone's saved data is `~/.local/share/pebble-sdk/4.44/emery/
+  localstorage` (the SDK itself is in `~/.local/share/pebble-sdk/SDKs/4.44/`;
+  the 4.33.1 emulator's older saved data is still in
+  `~/.local/share/pebble-sdk/4.33.1/emery/localstorage`). Copy it aside before tests that change it, and never delete the
   `localstorage.*` copies beside it without asking.
 - Settings page: `src/pkjs/config.js` builds it; `showConfiguration` must call
   `Pebble.openURL` right away (no network first). To view it in the emulator, run
-  `BROWSER=true pebble emu-app-config --emulator emery` in the background, copy the
-  newest `~/pebble-tool-emu-app-config-*.html` to a scratch folder and serve it on
-  127.0.0.1. The tool's return listener rejects results over about 64 KB, so paste
+  `BROWSER=true pebble emu-app-config --emulator emery` in the background; with
+  pebble-tool 5.2 the newest `~/pebble-tool-emu-app-config-*.html` only
+  redirects to a server the tool runs on localhost (new port each run), so open
+  that URL directly. The tool's return listener rejects results over about 64 KB, so paste
   a trimmed bundle there; real phones return via `pebblejs://close#`.
 - When editing files with Claude's tools, escape sequences typed in tool input
   (backslash-u-2028, backslash-b) can arrive as raw control characters. Build them
@@ -171,7 +175,7 @@ Read before making changes:
   stores it in a 16-bit field; the watch has 128 KB, the rest is heap). After
   `pebble build`, run `python3 tools/watch_size.py` (checks both platforms,
   fails over a 62 KB budget) and put its first lines for both in the PR
-  description. The Round 2 binary is the tight one (1,480 B left in 1.6.24). Big buffers go on the heap,
+  description. The Round 2 binary is the tight one (1,372 B left in 1.6.28 on SDK 4.44). Big buffers go on the heap,
   allocated while their screen is open. Budget status: `docs/PLAN.md`; what
   was done and what isn't worth it: the brief, Measurements and limits. The build
   uses link-time optimisation (`wscript`); keep its `-Wl,-u,__pbl_app_info`,
