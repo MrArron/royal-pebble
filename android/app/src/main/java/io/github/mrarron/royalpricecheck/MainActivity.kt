@@ -51,10 +51,24 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        takeShared(intent)
         setContent {
             val dark = isSystemInDarkTheme()
             io.github.mrarron.royalpricecheck.ui.RoyalTheme(dark) { AppShell(vm, dark) }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        takeShared(intent)
+    }
+
+    /** Share > Royal Pebble with a Cruise Planner link: Settings > Price watches opens with it filled in. */
+    private fun takeShared(intent: android.content.Intent?) {
+        if (intent?.action != android.content.Intent.ACTION_SEND) return
+        val text = intent.getStringExtra(android.content.Intent.EXTRA_TEXT) ?: return
+        if (io.github.mrarron.royalpebble.alerts.ProductLink.parse(text) != null) vm.sharedLink = text.trim()
+        else vm.sharedLink = null
     }
 }
 
@@ -88,7 +102,7 @@ internal fun SummaryTab(vm: MainViewModel) {
         }
         if (r.alerts.isNotEmpty()) {
             item { Text("Rebook to save", style = MaterialTheme.typography.titleMedium) }
-            items(r.alerts) { DropCard(it) }
+            items(r.alerts) { DropCard(it, vm) }
         }
         item { Text("Bookings", style = MaterialTheme.typography.titleMedium) }
         items(r.bookings) { b ->
@@ -111,14 +125,14 @@ internal fun SummaryTab(vm: MainViewModel) {
         val others = r.drops.filter { !it.alert }
         if (others.isNotEmpty()) {
             item { Text("Other price drops", style = MaterialTheme.typography.titleMedium) }
-            items(others) { DropCard(it) }
+            items(others) { DropCard(it, null) }
         }
     }
     }
 }
 
 @Composable
-private fun DropCard(d: PriceDrop) {
+private fun DropCard(d: PriceDrop, vm: MainViewModel?) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(d.itemName, style = MaterialTheme.typography.titleSmall)
@@ -134,6 +148,12 @@ private fun DropCard(d: PriceDrop) {
                 "Paid ${Notifier.money(d.paid, d.currency)} → now ${Notifier.money(d.current, d.currency)} " +
                     "(save ${Notifier.money(d.saving, d.currency)}${if (d.perNight) " per night" else ""})",
             )
+            if (vm != null) {
+                val muted = vm.mutes.any { it.key == d.muteKey }
+                OutlinedButton({ vm.setMuted(d.muteKey, "${d.itemName} (${d.guestName})", !muted) }) {
+                    Text(if (muted) "Unmute alerts for this item" else "Mute alerts for this item")
+                }
+            }
         }
     }
 }
@@ -260,9 +280,10 @@ internal fun PriceChecksPage(vm: MainViewModel) {
         Text("Watch alerts", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Switch(vm.watchAlerts, vm::changeWatchAlerts)
-            Text("Send new price drops, check-in changes and payment reminders to my Pebble")
+            Text("Send new price drops, price watches, check-in changes and payment reminders to my Pebble")
         }
         Text("Each alert is sent once, after a check finds it. If Royal Pebble isn't open on the watch, the alert waits for the next check. Needs Royal Pebble 1.6.20 or later on the watch.", style = MaterialTheme.typography.bodySmall)
+        AlertHoursSection(vm)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Switch(vm.useLatest, vm::changeUseLatest)
             Text("Use the newest downloaded script when available")

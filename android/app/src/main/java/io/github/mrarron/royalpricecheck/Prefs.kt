@@ -1,6 +1,11 @@
 package io.github.mrarron.royalpricecheck
 
 import android.content.Context
+import io.github.mrarron.royalpebble.alerts.AlertMutes
+import io.github.mrarron.royalpebble.alerts.Muted
+import io.github.mrarron.royalpebble.alerts.PriceWatch
+import io.github.mrarron.royalpebble.alerts.PriceWatches
+import io.github.mrarron.royalpebble.alerts.QuietHours
 import java.io.File
 
 object Prefs {
@@ -60,13 +65,34 @@ object Prefs {
     fun autoCheckHours(c: Context) = sp(c).getInt("auto_check_hours", 0) // 0 = off
     fun setAutoCheckHours(c: Context, v: Int) = sp(c).edit().putInt("auto_check_hours", v).apply()
 
-    /** Send new price drops, check-in changes and payment reminders to the watch (off until turned on). */
-    fun watchAlerts(c: Context) = sp(c).getBoolean("watch_alerts", false)
+    /** Send new price drops, price watch hits, check-in changes and payment reminders to the watch (on unless turned off). */
+    fun watchAlerts(c: Context) = sp(c).getBoolean("watch_alerts", true)
     fun setWatchAlerts(c: Context, v: Boolean) = sp(c).edit().putBoolean("watch_alerts", v).apply()
 
     /** Keys of the alerts the watch has acknowledged, so each is sent once. */
     fun watchAlertKeys(c: Context): Set<String> = sp(c).getStringSet("watch_alert_sent", emptySet()) ?: emptySet()
     fun setWatchAlertKeys(c: Context, keys: Set<String>) = sp(c).edit().putStringSet("watch_alert_sent", keys).apply()
+
+    /** Settings > Price watches: watches on Cruise Planner items not bought yet. */
+    fun priceWatches(c: Context): List<PriceWatch> = PriceWatches.decode(sp(c).getString("price_watches", null))
+    fun setPriceWatches(c: Context, list: List<PriceWatch>) = sp(c).edit().putString("price_watches", PriceWatches.encode(list)).apply()
+
+    /** Muted alerts (a booked item's price alert or a watch), shown with Unmute in Settings > Price watches. */
+    fun mutes(c: Context): List<Muted> = AlertMutes.decode(sp(c).getString("alert_mutes", null))
+    fun setMutes(c: Context, list: List<Muted>) = sp(c).edit().putString("alert_mutes", AlertMutes.encode(list)).apply()
+    fun mutedKeys(c: Context): Set<String> = mutes(c).mapTo(HashSet()) { it.key }
+
+    /** When background-check alerts may arrive (Settings > Price checks > Alert hours). */
+    fun quietHours(c: Context): QuietHours =
+        QuietHours.of(sp(c).getInt("alert_from", QuietHours.DEFAULT_FROM), sp(c).getInt("alert_until", QuietHours.DEFAULT_UNTIL))
+    fun setQuietHours(c: Context, q: QuietHours) = sp(c).edit().putInt("alert_from", q.fromMinute).putInt("alert_until", q.untilMinute).apply()
+
+    /** Phone notifications held for quiet hours (JSON array, [AlertDelivery.PhoneNotice]). */
+    fun heldNotices(c: Context): String = sp(c).getString("held_notices", "[]") ?: "[]"
+    fun setHeldNotices(c: Context, json: String) = sp(c).edit().putString("held_notices", json).apply()
+    /** The time held alerts go out (epoch ms), 0 when nothing waits. */
+    fun heldUntil(c: Context) = sp(c).getLong("held_until", 0)
+    fun setHeldUntil(c: Context, at: Long) = sp(c).edit().putLong("held_until", at).apply()
 
     fun notifiedKeys(c: Context): Set<String> = sp(c).getStringSet("notified", emptySet()) ?: emptySet()
     fun setNotifiedKeys(c: Context, keys: Set<String>) = sp(c).edit().putStringSet("notified", keys).apply()

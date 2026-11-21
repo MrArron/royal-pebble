@@ -7,6 +7,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.mrarron.royalpebble.alerts.AlertMutes
+import io.github.mrarron.royalpebble.alerts.Muted
+import io.github.mrarron.royalpebble.alerts.PriceWatch
+import io.github.mrarron.royalpebble.alerts.ProductLink
+import io.github.mrarron.royalpebble.alerts.QuietHours
+import io.github.mrarron.royalpebble.alerts.WatchRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,6 +37,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var accountReady by mutableStateOf(false); private set
     val log = mutableStateListOf<String>()
 
+    // Settings > Price watches and the alert hours.
+    var watches by mutableStateOf<List<PriceWatch>>(emptyList()); private set
+    var mutes by mutableStateOf<List<Muted>>(emptyList()); private set
+    var quiet by mutableStateOf(QuietHours()); private set
+    /** A Cruise Planner link shared to the app (Share > Royal Pebble): opens Price watches with it filled in. */
+    var sharedLink by mutableStateOf<String?>(null)
+
     init {
         reload()
     }
@@ -46,6 +59,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         scriptVersion = runCatching { PythonBridge.downloadedVersion(ctx) }.getOrDefault("")
         refreshMissing()
         result = Prefs.loadLastResult(ctx)
+        refreshAlerts()
         log.clear()
         log.addAll(Prefs.loadLastLog(ctx))
     }
@@ -155,15 +169,68 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }.getOrElse { RunResult.failure("${it::class.java.simpleName}: ${it.message}") }
             }
-            withContext(Dispatchers.IO) { WatchAlertBridge.afterCheck(ctx, r) }?.let {
-                lines.add(it)
-                log.add(it)
-            }
             Prefs.saveLast(ctx, r, lines)
-            Notifier.notifyChanges(ctx, previous, r, background = false)
+            // Run now is watched by the user, so its alerts go out at once (quiet hours are for background checks).
+            val extra = withContext(Dispatchers.IO) { AlertDelivery.afterCheck(ctx, previous, r, background = false) }
+            lines.addAll(extra)
+            log.addAll(extra)
+            Prefs.saveLast(ctx, r, lines)
             result = r
+            watches = Prefs.priceWatches(ctx)
             running = false
         }
+    }
+
+    fun refreshAlerts() {
+        watches = Prefs.priceWatches(ctx)
+        mutes = Prefs.mutes(ctx)
+        quiet = Prefs.quietHours(ctx)
+    }
+
+    /**
+     * Add a price watch from a Cruise Planner link. [priceNow] is the price shown now (optional:
+     * without it the next check sets the starting price). Returns an error to show, or null.
+     */
+    fun addWatch(link: String, name: String, priceNow: String, rule: WatchRule, percent: String, target: String, guestAge: String): String? {
+        val l = ProductLink.parse(link) ?: return "Paste the item's Cruise Planner link (it has /category/.../product/... in it)."
+        fun num(t: String) = t.trim().removePrefix("$").replace(",", "").toDoubleOrNull()
+        val base = num(priceNow)?.takeIf { it > 0 }
+        val pct = num(percent) ?: 0.0
+        val tgt = num(target) ?: 0.0
+        if (rule == WatchRule.PERCENT && (pct <= 0 || pct >= 100)) return "Enter a percent between 1 and 99."
+        if (rule == WatchRule.BELOW && tgt <= 0) return "Enter your price."
+        val all = Prefs.priceWatches(ctx)
+        if (all.any { it.code == "${l.prefix}/${l.product}" && it.reservationId == l.bookingId && it.guestAge == guestAge }) return "You already watch this item."
+        val w = PriceWatch(
+            id = java.util.UUID.randomUUID().toString().take(8), name = name.trim(), prefix = l.prefix, product = l.product,
+            reservationId = l.bookingId, guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
+            createdAt = System.currentTimeMillis(),
+        )
+        Prefs.setPriceWatches(ctx, all + w)
+        io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "added ${w.name.ifBlank { w.code }} (${w.code}, ${w.rule.code}${if (base != null) ", starting price typed" else ", starting price from next check"})")
+        refreshAlerts()
+        sharedLink = null
+        return null
+    }
+
+    fun removeWatch(id: String) {
+        val w = Prefs.priceWatches(ctx).firstOrNull { it.id == id } ?: return
+        Prefs.setPriceWatches(ctx, Prefs.priceWatches(ctx).filterNot { it.id == id })
+        Prefs.setMutes(ctx, AlertMutes.unmute(Prefs.mutes(ctx), w.muteKey))
+        io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "removed ${w.name.ifBlank { w.code }}")
+        refreshAlerts()
+    }
+
+    /** Mute or unmute one alert (a watch, or a booked item's price alert). */
+    fun setMuted(key: String, label: String, muted: Boolean) {
+        if (muted) AlertDelivery.mute(ctx, key, label) else AlertDelivery.unmute(ctx, key)
+        refreshAlerts()
+    }
+
+    fun changeQuiet(q: QuietHours) {
+        Prefs.setQuietHours(ctx, q)
+        io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "alerts", "alert hours set to ${q.text()}")
+        quiet = q
     }
 
     fun updateScript() {

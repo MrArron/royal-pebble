@@ -188,3 +188,57 @@ def test_update_rejects_script_that_does_not_compile(tmp_path, monkeypatch):
                               rcp_runner.SCRIPT_NAME: bad})
     result = json.loads(rcp_runner.update_script(str(tmp_path)))
     assert result["ok"] is False
+
+
+WATCH_SCRIPT = textwrap.dedent('''
+    import argparse, json, sqlite3, sys, yaml
+    p = argparse.ArgumentParser(); p.add_argument("-c"); a = p.parse_args()
+    cfg = yaml.safe_load(open(a.c))
+    print("watchList=" + json.dumps(cfg.get("watchList")))
+    db = sqlite3.connect(cfg["historyDb"])
+    db.executescript("""
+      CREATE TABLE runs (run_id INTEGER PRIMARY KEY, started_at TEXT, finished_at TEXT, status TEXT, error_summary TEXT);
+      CREATE TABLE bookings (run_id INT, reservation_id TEXT, ship_code TEXT, ship_name TEXT, sail_date TEXT,
+        nights INT, stateroom_type TEXT, stateroom_number TEXT, checkin_label TEXT, final_payment_date TEXT,
+        past_final_payment INT, balance_due INT, friendly_name TEXT, guests_json TEXT);
+      CREATE TABLE price_points (run_id INT, reservation_id TEXT, ship_code TEXT, sail_date TEXT, item_kind TEXT,
+        item_code TEXT, item_name TEXT, guest_name TEXT, paid_price REAL, current_price REAL, currency TEXT,
+        per_night INT, rebook_decision TEXT, discount_applied TEXT, order_date TEXT, status TEXT);
+      INSERT INTO runs VALUES (1, 'a', 'b', 'ok', NULL);
+      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'addon', 'pt_beverage/1', 'Deluxe Beverage', 'Alex', 99.0, 80.0, 'USD', 1, 'rebook', NULL, NULL, 'priced');
+      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'watchlist', 'pt_internet/7', 'Surf', 'Alex', 30.0, 25.0, 'USD', 1, 'consider_booking', NULL, NULL, 'priced');
+      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'watchlist', 'pt_shorex/9', 'Snorkel', 'Alex', 0.01, NULL, 'USD', 0, NULL, NULL, NULL, 'not_available_for_passenger');
+      INSERT INTO price_points VALUES (1, '123', 'UT', '20270101', 'watchlist', 'pt_dining/5', 'Own watch', 'Alex', 50.0, 40.0, 'USD', 0, 'consider_booking', NULL, NULL, 'priced');
+    """)
+    db.commit()
+''')
+
+
+def test_app_watches_join_watch_list_and_come_back_as_watched(fake_upstream):
+    work, cfg = fake_upstream
+    with open(os.path.join(rcp_runner.BUNDLED_DIR, rcp_runner.SCRIPT_NAME), "w") as f:
+        f.write(WATCH_SCRIPT)
+    cfg.write_text(cfg.read_text() + "watchList:\n  - name: Own\n    prefix: pt_dining\n    product: '5'\n    price: 50\n")
+    watches = json.dumps([
+        {"prefix": "pt_internet", "product": "7", "price": 30, "name": "Surf", "reservation": "123"},
+        {"prefix": "pt_shorex", "product": "9", "price": 0.01, "name": "Snorkel"},
+        {"prefix": "", "product": "x", "price": 5},  # incomplete: skipped
+    ])
+    out = Collector()
+    result = json.loads(rcp_runner.run(str(cfg), str(work), out, True, watches))
+    wl = json.loads(next(l for l in out.lines if l.startswith("watchList="))[len("watchList="):])
+    assert [w["name"] for w in wl] == ["Own", "Surf", "Snorkel"]
+    assert wl[1]["reservations"] == ["123"] and wl[1]["guestAgeString"] == "adult"
+    # The user's own watchList entry still alerts as before; the app's watches don't.
+    assert sorted(d["item_name"] for d in result["drops"]) == ["Deluxe Beverage", "Own watch"]
+    watched = {w["item_code"]: w for w in result["watched"]}
+    assert set(watched) == {"pt_internet/7", "pt_shorex/9"}
+    assert watched["pt_internet/7"]["current_price"] == 25.0
+    assert watched["pt_shorex/9"]["status"] == "not_available_for_passenger"
+
+
+def test_bad_app_watch_json_is_ignored(fake_upstream):
+    work, cfg = fake_upstream
+    result = json.loads(rcp_runner.run(str(cfg), str(work), Collector(), True, "{not json"))
+    assert result["watched"] == []
+    assert len(result["drops"]) == 1

@@ -808,7 +808,20 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   its last, else Planning; the demo cruise is always Planning.
 - Settings is a list of pages with a back arrow: Royal account (one login for
   price checks and downloads), Me and my stateroom (Planning only), Watch and
-  logs, Price checks, About, and Prices when On board.
+  logs, Price checks (with **Alert hours**), **Price watches** (1.6.29), About,
+  and Prices when On board.
+- **Price watches** (1.6.29, `PriceWatchesPage.kt`): an add form (Cruise
+  Planner link, optional name, optional price now, `Any drop` / `% below` /
+  `Below my price` chips, adult or child price), then a card per watch (rule,
+  price now, `below your trigger` in the primary colour, last check, Mute or
+  Unmute, Remove), then **Muted booked-item alerts** with Unmute. Sharing a
+  Cruise Planner link to the app opens this page with the link filled in. The
+  Trip screen's price glance counts watches and those below their trigger.
+- Price notifications come one per item with a **Mute this alert** (or **Mute
+  this watch**) button; Prices > Summary has **Mute alerts for this item** on
+  each drop worth rebooking. **Alert hours** (Settings > Price checks): From
+  7, 8 (default), 9 or 10 AM, Until 8, 9 (default) or 10 PM, and how many
+  alerts wait for the opening.
 - The top bar shows the screen's name; Cabin (and Me) hold edits until the
   **Save** button in the top bar, the other screens save as you go.
   `From booking` and `Edited` chips and the watch-colours preview card under

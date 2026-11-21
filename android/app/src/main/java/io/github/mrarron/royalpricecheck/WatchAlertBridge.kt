@@ -18,21 +18,28 @@ object WatchAlertBridge {
     @Volatile
     var senderFactory: ((Context) -> WatchSender)? = { c -> WatchLinkSender(c) }
 
-    fun toInput(r: RunResult) = AlertInput(
+    fun toInput(r: RunResult, hits: List<io.github.mrarron.royalpebble.alerts.WatchHit> = emptyList(), muted: Set<String> = emptySet()) = AlertInput(
         bookings = r.bookings.map {
             AlertBooking(it.reservationId, it.shipName, it.sailDate, it.checkinLabel, it.finalPaymentDate, it.balanceDue)
         },
         drops = r.drops.map {
             AlertDrop(it.reservationId, it.itemName, it.guestName, it.paid, it.current, it.currency, it.alert)
         },
+        hits = hits,
+        muted = muted,
     )
 
-    /** After a check: send what is new to the watch. Never throws; returns a log line or null when off. */
+    /**
+     * After a check (or when quiet hours end): send what is new to the watch, price watch hits
+     * included, muted alerts left out. Never throws; returns a log line or null when off.
+     */
     fun afterCheck(c: Context, result: RunResult): String? {
         if (!Prefs.watchAlerts(c) || !result.ok) return null
         val sender = senderFactory?.invoke(c) ?: return "Watch alerts: no watch link in this build"
         return runCatching {
-            val r: AlertReport = WatchAlerts(sender, PrefsAlertState(c)).process(toInput(result))
+            val muted = Prefs.mutedKeys(c)
+            val hits = io.github.mrarron.royalpebble.alerts.PriceWatches.hits(Prefs.priceWatches(c), muted)
+            val r: AlertReport = WatchAlerts(sender, PrefsAlertState(c)).process(toInput(result, hits, muted))
             "Watch alerts: ${r.detail} (sent ${r.sent}, waiting ${r.pending})"
         }.getOrElse { "Watch alerts failed: ${it::class.java.simpleName}: ${it.message}" }
     }

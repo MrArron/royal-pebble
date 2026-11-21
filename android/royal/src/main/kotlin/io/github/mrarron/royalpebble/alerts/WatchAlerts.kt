@@ -23,7 +23,16 @@ data class AlertDrop(
     val alert: Boolean,
 )
 
-data class AlertInput(val bookings: List<AlertBooking>, val drops: List<AlertDrop>)
+/**
+ * [hits] are price watches below their trigger ([PriceWatches.hits]); [muted] holds mute keys
+ * ([AlertMutes.dropKey], [WatchHit.muteKey]) whose alerts are never sent.
+ */
+data class AlertInput(
+    val bookings: List<AlertBooking>,
+    val drops: List<AlertDrop>,
+    val hits: List<WatchHit> = emptyList(),
+    val muted: Set<String> = emptySet(),
+)
 
 /** Keys of the alerts already delivered to the watch, kept between runs. */
 interface AlertState {
@@ -62,7 +71,7 @@ class WatchAlerts(
         val listed = input.bookings.mapTo(HashSet()) { it.reservationId }
         val keep = sent.filterTo(HashSet()) { k ->
             val parts = k.split('|')
-            if (parts[0] == "price") k in current else parts.getOrNull(1) in listed
+            if (parts[0] == "price" || parts[0] == "watch") k in current else parts.getOrNull(1) in listed
         }
         val fresh = candidates.filter { it.key !in keep }
         if (fresh.isEmpty()) {
@@ -98,10 +107,15 @@ class WatchAlerts(
         fun detect(input: AlertInput, today: LocalDate): List<Candidate> {
             val out = ArrayList<Candidate>()
             for (d in input.drops.filter { it.alert }) {
+                if (AlertMutes.dropKey(d.reservationId, d.itemName, d.guestName) in input.muted) continue
                 out.add(Candidate(
                     "price|${d.reservationId}|${d.itemName}|${d.guestName}|${d.current}",
                     NoticeEncoder.priceDrop(d.itemName, d.paid, d.current, symbol(d.currency)),
                 ))
+            }
+            for (h in input.hits) {
+                if (h.muteKey in input.muted) continue
+                out.add(Candidate(h.key, NoticeEncoder.watchHit(h, symbol(h.currency))))
             }
             for (b in input.bookings) {
                 val label = b.checkinLabel.trim()
