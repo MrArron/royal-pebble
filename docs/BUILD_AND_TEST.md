@@ -95,6 +95,11 @@ CloudPebble, which drops the `companionApp` entry the Android app needs), and
 sideload the `.apk`. A matched test build is a pbw and an apk from the same
 commit.
 
+SDK version: test builds use SDK 4.33.1, which makes a legacy-permissions
+app. A `.pbw` for the appstore must be built with SDK 4.44+ and pebble-tool
+5.1.0+, so the `usesPermissions` declaration in `package.json` takes effect;
+check it first with the steps in `STORE_READINESS.md` §7.
+
 ## 5. Tests
 
 | Suite | Runs where | Command |

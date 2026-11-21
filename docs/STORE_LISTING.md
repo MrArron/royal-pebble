@@ -137,3 +137,7 @@ only through the GitHub link. Whether to drop the link test package from
 - `.pbw` under 4.4 MB: 1.6 MB at 1.6.24.
 - UUID unique and unchanged; new version per release.
 - Settings page loads locally (`data:` URL), no internet needed to open it.
+- Permissions: the store lists the app's declared permissions as Required
+  or Optional. Royal Pebble declares one, Internet for Royal Caribbean's
+  domains, required (`STORE_READINESS.md` §7). Build the store `.pbw` with
+  SDK 4.44+ so it isn't shown as a legacy app.

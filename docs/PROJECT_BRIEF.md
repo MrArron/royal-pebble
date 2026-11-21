@@ -26,7 +26,7 @@ direction.
   code HM). It is also the app's test cruise: the usage log and map notes
   collected on board drive the next round of fixes.
 - Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
-  (`CLAUDE.md`). Current: **1.6.26**, phase 6 (`PLAN.md`). The Android app is
+  (`CLAUDE.md`). Current: **1.6.28**, phase 6 (`PLAN.md`). The Android app is
   versioned on its own (`0.1.0-<commit>`, `BUILD_AND_TEST.md`).
 
 ## Constraints

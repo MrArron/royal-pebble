@@ -1,7 +1,7 @@
 {
   "name": "cruise-watch",
   "author": "MrArron",
-  "version": "1.6.26",
+  "version": "1.6.28",
   "keywords": [
     "pebble-app"
   ],
@@ -113,6 +113,19 @@
     },
     "capabilities": [
       "configurable"
+    ],
+    "usesPermissions": [
+      {
+        "name": "Internet",
+        "parameters": {
+          "domains": [
+            "rccl.com",
+            "royalcaribbean.com"
+          ]
+        },
+        "reason": "To download your sailing's schedule from Royal Caribbean, and your booking if you sign in",
+        "required": true
+      }
     ]
   }
 }
