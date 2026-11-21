@@ -9,7 +9,8 @@
 //   c3-bow-on:        the ship heading toward the viewer, bow first, on
 //     those waves (the owner's pick of C2, 2026-11-21).
 //   c3b-bow-on-narrow: C3 with the hull about as wide as the superstructure
-//     and a little shorter (owner, 2026-11-21).
+//     and a little shorter, and a sun in the coral of the Pebble logo
+//     (#FA4A36, sampled from the logo image the owner sent) (owner, 2026-11-21).
 //
 // Writes store/concepts/<name>-{144,80}.png and c-variants-sheet.png.
 // Run: node tools/store/icon_c.js
@@ -108,7 +109,7 @@ const C3B = watch(`
     <stop offset="0" stop-color="#D9E3EF"/><stop offset="0.5" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9E3EF"/>
   </linearGradient></defs>
   <rect x="28" y="20" width="44" height="60" fill="url(#sky3b)"/>
-  <circle cx="63" cy="29" r="3.6" fill="#F2B705" fill-opacity="0.9"/>
+  <circle cx="63" cy="29" r="3.6" fill="#FA4A36"/>
   <path fill="#F2B705" d="M45.5,33 h9 l-0.8,8 h-7.4 z"/>
   <rect x="45.5" y="35" width="9" height="1.4" fill="#0B3D91"/>
   <rect x="33" y="41" width="34" height="3.6" rx="0.8" fill="#FFFFFF"/>
