@@ -157,4 +157,27 @@ class WatchAlertsTest {
         a.process(AlertInput(listOf(booking("TBD", id = "R2")), emptyList()))
         assertTrue(state.sentKeys().isEmpty())
     }
+
+    @Test
+    fun aMutedBookedItemIsNotSent() {
+        val s = FakeSender()
+        val muted = setOf(AlertMutes.dropKey("R1", "The Key", "Pat"))
+        val r = alerts(s).process(AlertInput(listOf(booking()), listOf(drop()), muted = muted))
+        assertEquals(0, s.sends.size)
+        assertEquals(0, r.found)
+    }
+
+    @Test
+    fun watchHitsAreSentOnceAndAgainOnAFurtherDrop() {
+        val s = FakeSender()
+        val a = alerts(s)
+        fun hit(p: Double) = WatchHit("w1", "Surf", p, 30.0, 30.0, WatchRule.ANY_DROP, "USD", "R1")
+        assertEquals(1, a.process(AlertInput(listOf(booking()), emptyList(), listOf(hit(25.0)))).sent)
+        assertEquals(NoticeEncoder.pack(listOf(NoticeEncoder.watchHit(hit(25.0)))).toList(), s.sends[0].second.toList())
+        assertEquals(0, a.process(AlertInput(listOf(booking()), emptyList(), listOf(hit(25.0)))).sent)
+        assertEquals(1, a.process(AlertInput(listOf(booking()), emptyList(), listOf(hit(22.0)))).sent)
+        // Muted: nothing more, even at a lower price.
+        assertEquals(0, a.process(AlertInput(listOf(booking()), emptyList(), listOf(hit(20.0)), setOf("watch|w1"))).sent)
+        assertEquals(2, s.sends.size)
+    }
 }

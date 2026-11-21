@@ -35,9 +35,10 @@ detail lives in the files this one points to; when they disagree, they win.
   `WATCH_PROTOCOL.md`.
 - **Android app** (`android/`, optional; `android/README.md`).
   - Price and booking checks with jdeath's script, background checks, and
-    **Watch alerts** (Settings): price drop, check-in and final payment
-    notices sent as one `NOTICE` through `WatchLink.sendNotice`
-    (`WATCH_PROTOCOL.md`, Booking notices).
+    **Watch alerts** (Settings): price drop, price watch, check-in and final
+    payment notices sent as one `NOTICE` through `WatchLink.sendNotice`
+    (`WATCH_PROTOCOL.md`, Booking notices); price watches, Mute and alert
+    hours in `AlertDelivery.kt` (1.6.27).
   - **Cruise** tab: native versions of the settings page's screens (Cruise,
     Days, Filters, Events, Me, Share) on the Kotlin Royal client and
     `CruiseStore` (`DESIGN.md` §12, Android app).

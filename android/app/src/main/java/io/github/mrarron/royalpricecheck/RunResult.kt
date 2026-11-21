@@ -1,5 +1,7 @@
 package io.github.mrarron.royalpricecheck
 
+import io.github.mrarron.royalpebble.alerts.AlertMutes
+import io.github.mrarron.royalpebble.alerts.WatchedRow
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -28,6 +30,8 @@ data class PriceDrop(
 ) {
     val saving: Double get() = paid - current
     val key: String get() = "$reservationId|$itemName|$guestName|$current"
+    /** Mutes this item's alerts at any price (Mute on the notification or the Prices card). */
+    val muteKey: String get() = AlertMutes.dropKey(reservationId, itemName, guestName)
 }
 
 data class GuestCheckin(val status: String, val window: String)
@@ -42,6 +46,8 @@ data class RunResult(
     val guestCheckin: List<GuestCheckin>,
     val itemsChecked: Int,
     val raw: String,
+    /** Rows for the app's own price watches (Settings > Price watches). */
+    val watched: List<WatchedRow> = emptyList(),
 ) {
     val ok: Boolean get() = exitCode == 0
     val alerts: List<PriceDrop> get() = drops.filter { it.alert }
@@ -95,6 +101,16 @@ data class RunResult(
                 },
                 itemsChecked = o.optInt("itemsChecked"),
                 raw = o.toString(),
+                watched = o.optJSONArray("watched").objects().map {
+                    WatchedRow(
+                        reservationId = it.optString("reservation_id"),
+                        code = it.optString("item_code"),
+                        itemName = it.optStringOrNull("item_name") ?: "",
+                        current = if (it.isNull("current_price") || !it.has("current_price")) null else it.optDouble("current_price"),
+                        currency = it.optStringOrNull("currency") ?: "USD",
+                        status = it.optString("status"),
+                    )
+                },
             )
         }
 

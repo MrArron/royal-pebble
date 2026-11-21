@@ -47,6 +47,7 @@ object PythonBridge {
                 workDir(context).absolutePath,
                 LineSink { onLine(it) },
                 Prefs.useLatestScript(context),
+                io.github.mrarron.royalpebble.alerts.PriceWatches.scriptJson(Prefs.priceWatches(context)),
             ).toString()
             return RunResult.parse(json, System.currentTimeMillis())
         } finally {

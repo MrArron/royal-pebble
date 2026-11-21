@@ -57,6 +57,20 @@ object NoticeEncoder : NoticePacker {
         )
     }
 
+    /**
+     * A price watch below its trigger: "Now $64.00 (-20%)" and "Was $80.00 when set", or
+     * "Below your $70.00" for a watch on the user's own price. Head `PRICE DROP` like [priceDrop].
+     */
+    fun watchHit(h: WatchHit, symbol: String = "$"): BookingNotice {
+        val off = h.percentOff?.takeIf { it > 0 }?.let { " (-$it%)" } ?: ""
+        val second = when {
+            h.rule == WatchRule.BELOW -> "Below your " + money(h.trigger, symbol)
+            h.baseline != null -> "Was " + money(h.baseline, symbol) + " when set"
+            else -> "Price watch"
+        }
+        return BookingNotice(NoticeKind.PRICE, h.name, "Now " + money(h.price, symbol) + off, second)
+    }
+
     fun checkinOpen(sailing: String, guests: Int, done: Int, closes: LocalDate? = null): BookingNotice {
         val first = if (guests > 1) "${guests - done} of $guests guests to go" else "Not checked in yet"
         return BookingNotice(

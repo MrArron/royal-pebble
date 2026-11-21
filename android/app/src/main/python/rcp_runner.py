@@ -208,11 +208,38 @@ def _android_compat():
         locale.setlocale = real_setlocale
 
 
-def _write_runtime_config(config_path: str, work_dir: str) -> tuple[str, str]:
+def _app_watch_entries(app_watches_json: str) -> list:
+    """The app's price watches (Settings > Price watches) as upstream `watchList` entries."""
+    if not app_watches_json:
+        return []
+    out = []
+    for w in json.loads(app_watches_json) or []:
+        prefix, product = str(w.get("prefix") or ""), str(w.get("product") or "")
+        price = float(w.get("price") or 0)
+        if not prefix or not product or price <= 0:
+            continue
+        entry = {
+            "name": str(w.get("name") or f"{prefix}/{product}"),
+            "prefix": prefix,
+            "product": product,
+            "price": round(price, 2),
+            "guestAgeString": str(w.get("guestAgeString") or "adult"),
+        }
+        if w.get("reservation"):
+            entry["reservations"] = [str(w["reservation"])]
+        out.append(entry)
+    return out
+
+
+def _write_runtime_config(config_path: str, work_dir: str, app_watches_json: str = "") -> tuple[str, str]:
     with open(config_path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     if not isinstance(data, dict):
         raise ValueError("config.yaml must be a YAML mapping (key: value pairs)")
+    extra = _app_watch_entries(app_watches_json)
+    if extra:
+        # Added after the user's own watchList entries; config.yaml itself is not changed.
+        data["watchList"] = list(data.get("watchList") or []) + extra
     db_path = os.path.join(work_dir, "history.db")
     data["historyDb"] = db_path  # the app reads results from here
     log_file = data.get("logFile")
@@ -224,11 +251,20 @@ def _write_runtime_config(config_path: str, work_dir: str) -> tuple[str, str]:
     return runtime, db_path
 
 
-def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = True) -> str:
+def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = True,
+        app_watches_json: str = "") -> str:
     """
     Run the price check. `callback` is any object with an `onLine(str)` method (a Kotlin
-    object from the app). Returns a JSON summary string.
+    object from the app). `app_watches_json` is the app's price watches (a JSON array of
+    {prefix, product, price, name, guestAgeString, reservation}); they are added to the
+    runtime config's `watchList`, and their rows come back under "watched" instead of "drops".
+    Returns a JSON summary string.
     """
+    app_codes = set()
+    try:
+        app_codes = {f"{e['prefix']}/{e['product']}" for e in _app_watch_entries(app_watches_json)}
+    except (ValueError, TypeError, AttributeError):
+        app_watches_json = ""
     def emit(line):
         callback.onLine(line)
 
@@ -259,7 +295,7 @@ def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = Tru
         old_handlers = list(root.handlers)
         db_path = None
         try:
-            runtime_config, db_path = _write_runtime_config(config_path, work_dir)
+            runtime_config, db_path = _write_runtime_config(config_path, work_dir, app_watches_json)
             os.chdir(work_dir)
             sys.argv = [script, "-c", runtime_config]
             sys.stdout = stream
@@ -289,7 +325,7 @@ def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = Tru
         with contextlib.suppress(OSError):
             os.remove(os.path.join(work_dir, "runtime-config.yaml"))
 
-        summary = summarize(db_path) if db_path else {}
+        summary = summarize(db_path, app_codes) if db_path else {}
         summary.update({
             "exitCode": exit_code,
             "error": error,
@@ -305,25 +341,41 @@ def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = Tru
 ALERT_DECISIONS = ("rebook", "consider_booking")
 
 
-def summarize(db_path: str) -> dict:
+def _columns(conn, table: str) -> set:
+    return {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def summarize(db_path: str, app_codes=None) -> dict:
+    """The last run's bookings and price drops; rows of the app's own watches (`app_codes`,
+    "prefix/product") are left out of "drops" and listed under "watched", priced or not."""
+    app_codes = set(app_codes or ())
     if not db_path or not os.path.exists(db_path):
-        return {"bookings": [], "drops": [], "run": None}
+        return {"bookings": [], "drops": [], "watched": [], "run": None}
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         run_row = conn.execute("SELECT * FROM runs ORDER BY run_id DESC LIMIT 1").fetchone()
         if run_row is None:
-            return {"bookings": [], "drops": [], "run": None}
+            return {"bookings": [], "drops": [], "watched": [], "run": None}
         run_id = run_row["run_id"]
+        has_code = "item_code" in _columns(conn, "price_points")
         bookings = [dict(r) for r in conn.execute(
             "SELECT reservation_id, ship_code, ship_name, sail_date, nights, stateroom_type, "
             "stateroom_number, checkin_label, final_payment_date, past_final_payment, balance_due, "
             "friendly_name, guests_json FROM bookings WHERE run_id = ? ORDER BY sail_date", (run_id,))]
+        code_col = "item_code" if has_code else "NULL AS item_code"
         drops = [dict(r) for r in conn.execute(
-            "SELECT reservation_id, ship_code, sail_date, item_kind, item_name, guest_name, paid_price, "
-            "current_price, currency, per_night, rebook_decision, discount_applied, order_date "
+            "SELECT reservation_id, ship_code, sail_date, item_kind, " + code_col + ", item_name, guest_name, "
+            "paid_price, current_price, currency, per_night, rebook_decision, discount_applied, order_date "
             "FROM price_points WHERE run_id = ? AND current_price IS NOT NULL AND paid_price IS NOT NULL "
             "AND current_price < paid_price ORDER BY (paid_price - current_price) DESC", (run_id,))]
+        drops = [d for d in drops if not (d["item_kind"] == "watchlist" and d["item_code"] in app_codes)]
+        watched = []
+        if has_code and app_codes:
+            watched = [dict(r) for r in conn.execute(
+                "SELECT reservation_id, sail_date, item_code, item_name, guest_name, current_price, currency, "
+                "per_night, status FROM price_points WHERE run_id = ? AND item_kind = 'watchlist'", (run_id,))
+                if r["item_code"] in app_codes]
         priced = conn.execute(
             "SELECT COUNT(*) FROM price_points WHERE run_id = ? AND status = 'priced'", (run_id,)).fetchone()[0]
         for d in drops:
@@ -332,9 +384,10 @@ def summarize(db_path: str) -> dict:
             "run": {k: run_row[k] for k in run_row.keys()},
             "bookings": bookings,
             "drops": drops,
+            "watched": watched,
             "itemsChecked": priced,
         }
     except sqlite3.Error as e:
-        return {"bookings": [], "drops": [], "run": None, "dbError": str(e)}
+        return {"bookings": [], "drops": [], "watched": [], "run": None, "dbError": str(e)}
     finally:
         conn.close()

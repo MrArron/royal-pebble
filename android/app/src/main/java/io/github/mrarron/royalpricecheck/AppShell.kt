@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -82,7 +83,7 @@ private val ONBOARD_TABS = listOf(Dest.TODAY, Dest.EVENTS, Dest.CABIN, Dest.SETT
 /** A page opened from Settings (or a card), with a back arrow. */
 private enum class Sub(val title: String) {
     ACCOUNT("Royal account"), CABIN("Me and my stateroom"), WATCH("Watch and logs"),
-    PRICE_CHECKS("Price checks"), PRICES("Prices"), ABOUT("About"),
+    PRICE_CHECKS("Price checks"), PRICE_WATCHES("Price watches"), PRICES("Prices"), ABOUT("About"),
 }
 
 /**
@@ -113,8 +114,10 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
     val pickMode: (TripPhase.Mode) -> Unit = { m -> AppPhase.setMode(ctx, m); mode = m }
 
     BackHandler(sub != null) { subName = null }
+    // A Cruise Planner link shared to the app opens Price watches with it filled in.
+    LaunchedEffect(vm.sharedLink) { if (vm.sharedLink != null) subName = Sub.PRICE_WATCHES.name }
     // Another screen can change the shared Royal login or config.yaml: pick it up on every move.
-    LaunchedEffect(tab, sub) { vm.accountChanged(); save.action = null }
+    LaunchedEffect(tab, sub) { vm.accountChanged(); vm.refreshAlerts(); save.action = null }
 
     Scaffold(
         topBar = {
@@ -151,6 +154,7 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
                         Sub.CABIN -> MeTab(cvm)
                         Sub.WATCH -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { WatchCard() }
                         Sub.PRICE_CHECKS -> PriceChecksPage(vm)
+                        Sub.PRICE_WATCHES -> PriceWatchesPage(vm)
                         Sub.PRICES -> PricesScreen(vm, dark)
                         Sub.ABOUT -> AboutPage()
                     }
@@ -163,7 +167,7 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
                             header = {
                                 ModeChips(mode, phase, pickMode)
                                 TripHero(cvm)
-                                PriceGlance(vm, onOpen = { tabName = Dest.PRICES.name })
+                                PriceGlance(vm, onOpen = { tabName = Dest.PRICES.name }, onWatches = { subName = Sub.PRICE_WATCHES.name })
                             },
                         )
                         Dest.PRICES -> PricesScreen(vm, dark)
@@ -181,7 +185,7 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
 
 /** The price check at a glance on Trip: last check, rebook alerts, the first booking's check-in. */
 @Composable
-private fun PriceGlance(vm: MainViewModel, onOpen: () -> Unit) {
+private fun PriceGlance(vm: MainViewModel, onOpen: () -> Unit, onWatches: () -> Unit) {
     val r = vm.result
     io.github.mrarron.royalpricecheck.cruise.Section("Prices") {
         when {
@@ -191,13 +195,21 @@ private fun PriceGlance(vm: MainViewModel, onOpen: () -> Unit) {
                 val at = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(r.finishedAt))
                 Text(if (r.ok) "Last check $at" else "Last check failed $at")
                 if (r.alerts.isNotEmpty()) Text("${r.alerts.size} ${if (r.alerts.size == 1) "drop" else "drops"} worth rebooking", color = MaterialTheme.colorScheme.primary)
+                val below = vm.watches.count { w -> w.lastPrice?.let { w.isHit(it) } == true }
+                if (vm.watches.isNotEmpty()) {
+                    Text("${vm.watches.size} price ${if (vm.watches.size == 1) "watch" else "watches"}" + if (below > 0) ", $below below your trigger" else "",
+                        color = if (below > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                }
                 r.bookings.firstOrNull()?.let { b ->
                     Text("Check-in: ${b.checkinLabel}")
                     b.balanceDue?.let { Text(if (it) "Balance due" else "Paid in full") }
                 }
             }
         }
-        androidx.compose.material3.OutlinedButton(onOpen) { Text("Open Prices") }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.OutlinedButton(onOpen) { Text("Open Prices") }
+            androidx.compose.material3.OutlinedButton(onWatches) { Text("Price watches") }
+        }
     }
 }
 
@@ -229,7 +241,8 @@ private fun SettingsList(phase: TripPhase.Phase, open: (Sub) -> Unit) {
         if (phase == TripPhase.Phase.ONBOARD) add(Triple(Sub.PRICES, "Prices", "Results and full report"))
         if (phase == TripPhase.Phase.PLANNING) add(Triple(Sub.CABIN, "Me and my stateroom", "Stateroom, muster, dining, walking, theme"))
         add(Triple(Sub.WATCH, "Watch and logs", "Serve the watch · test alerts · share the log file"))
-        add(Triple(Sub.PRICE_CHECKS, "Price checks", "Background checks · on board · script updates"))
+        add(Triple(Sub.PRICE_CHECKS, "Price checks", "Background checks · alert hours · on board · script updates"))
+        add(Triple(Sub.PRICE_WATCHES, "Price watches", "Watch items you haven't bought · muted alerts"))
         add(Triple(Sub.ABOUT, "About", "App ${BuildConfig.VERSION_NAME}"))
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
