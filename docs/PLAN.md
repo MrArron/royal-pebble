@@ -344,6 +344,10 @@ Bug fixes only; no new features.
   overrides or the venue table, fix port/starboard in the data and remove the
   flip settings, rebuild (`tools/shipmap/README.md`).
 - Tune route costs and the step length from what was walked.
+- **Pebble appstore release** (`STORE_READINESS.md`): in-app About notices
+  (settings page and Android app), a watch launcher icon, screenshots from the
+  demo cruise, then an unlisted first release. Before the sailing only the
+  docs and listing drafts land, so the freeze is untouched.
 
 ## 7. Open questions for the owner
 

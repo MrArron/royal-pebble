@@ -13,6 +13,12 @@ you sail, so it works at sea with no internet.
 > say what the app works with. The app reads Royal Caribbean's website data
 > through unofficial endpoints that can change or stop working at any time.
 
+> **Free and open source, forever.** Royal Pebble is a hobby project under the
+> MIT License. It will never charge money, sell a premium version, show ads or
+> put features behind a paywall, and it has no server and no accounts. See
+> [`PRIVACY.md`](PRIVACY.md) for what data it handles (none of it reaches the
+> developer).
+
 ## Features at a glance
 
 On the watch (open it with a Quick Launch button hold):
@@ -73,7 +79,8 @@ it, and open a pull request; the README there explains each step.
 
 ## Install on a Pebble Time 2 or Pebble Round 2
 
-Royal Pebble isn't in the Pebble app store; you sideload it with the Pebble app
+Royal Pebble isn't in the Pebble appstore yet (the plan is in
+[`docs/STORE_READINESS.md`](docs/STORE_READINESS.md)); for now you sideload it with the Pebble app
 on an Android phone (the only phone it has been tested with). One `.pbw` works
 on both watches. The Round 2 layouts have been tried on the emulator only so
 far.
@@ -106,6 +113,8 @@ connection.
   your login, and you paste it into **Cruise > Backup: paste cruise data**.
 
 ## Privacy
+
+The full policy is [`PRIVACY.md`](PRIVACY.md). In short:
 
 - The app reads public sailing and schedule data, plus your booking when you
   use the Advanced download or the sync tool's login. Your password is used
@@ -149,9 +158,14 @@ builds are made and tested is in
 | [`docs/ROYAL_LOGIN_DATA.md`](docs/ROYAL_LOGIN_DATA.md) | What a Royal login can see |
 | [`docs/PRICE_SCRIPT_UPDATES.md`](docs/PRICE_SCRIPT_UPDATES.md) | How the Android app's copy of the price script is kept verified |
 | [`docs/QUICKJS_PHASE0.md`](docs/QUICKJS_PHASE0.md) | Why the Android app can run the phone script in QuickJS |
+| [`docs/STORE_READINESS.md`](docs/STORE_READINESS.md) | Getting ready for the Pebble appstore: checklist, disclosures, personal-info scan, decisions |
+| [`docs/STORE_LISTING.md`](docs/STORE_LISTING.md) | The appstore listing text, images and screenshot plan |
 | [`android/README.md`](android/README.md) | The Android app |
 
 ## Credits and attributions
+
+Every third-party library, data source and license is listed in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 - **[jdeath/CheckRoyalCaribbeanPrice](https://github.com/jdeath/CheckRoyalCaribbeanPrice/tree/main)**
   (MIT License, Copyright (c) 2025 jdeath): the knowledge of Royal Caribbean's web
