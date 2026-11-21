@@ -12,7 +12,9 @@
 //     and a little shorter, and a sun in the coral of the Pebble logo
 //     (#FA4A36, sampled from the logo image the owner sent) (owner, 2026-11-21).
 //
-// Writes store/concepts/<name>-{144,80}.png and c-variants-sheet.png.
+// Writes store/concepts/<name>-{144,80}.png and c-variants-sheet.png, and the
+// chosen icon (C3b, owner 2026-11-21) as the store art: store/art/icon-144.png,
+// store/art/icon-80.png and store/art/banner-720x320.png.
 // Run: node tools/store/icon_c.js
 'use strict';
 const fs = require('fs');
@@ -20,6 +22,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 
 const OUT = path.join(__dirname, '..', '..', 'store', 'concepts');
+const ART = path.join(__dirname, '..', '..', 'store', 'art');
 
 // The watch around the screen (100-unit grid): one button left, three right.
 function watch(screen) {
@@ -149,6 +152,23 @@ function svg(body, px) {
   await page.setViewportSize({ width: 1180, height: 470 });
   await page.setContent(`<html><body style="margin:0;background:#f5f6f8">${VARIANTS.map(cell).join('')}</body></html>`);
   await page.screenshot({ path: path.join(OUT, 'c-variants-sheet.png') });
+  // Store art from the chosen icon.
+  fs.mkdirSync(ART, { recursive: true });
+  for (const px of [144, 80]) {
+    fs.copyFileSync(path.join(OUT, `c3b-bow-on-narrow-${px}.png`), path.join(ART, `icon-${px}.png`));
+  }
+  // Banner, 720x320: navy gradient, the icon on the left, name and two lines.
+  await page.setViewportSize({ width: 720, height: 320 });
+  await page.setContent(`<html><body style="margin:0">
+    <div id="b" style="width:720px;height:320px;box-sizing:border-box;padding:0 40px;display:flex;align-items:center;gap:36px;
+      background:linear-gradient(90deg,#07265C,#0B3D91 60%,#1257B8);font-family:'DejaVu Sans','Liberation Sans',sans-serif">
+      ${svg(C3B, 220)}
+      <div>
+        <div style="color:#FFFFFF;font-weight:700;font-size:50px;line-height:1.1">Royal Pebble</div>
+        <div style="color:#CFE3F7;font-weight:600;font-size:19px;margin-top:14px;white-space:nowrap">Your cruise on your wrist, offline at sea</div>
+        <div style="color:#9FBCE0;font-weight:600;font-size:18px;margin-top:10px">Free and open source. Unofficial.</div>
+      </div></div></body></html>`);
+  await page.locator('#b').screenshot({ path: path.join(ART, 'banner-720x320.png') });
   await browser.close();
-  console.log('Wrote', VARIANTS.length, 'variants to', path.normalize(OUT));
+  console.log('Wrote', VARIANTS.length, 'variants to', path.normalize(OUT), 'and the store art to', path.normalize(ART));
 })();

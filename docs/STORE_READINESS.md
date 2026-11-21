@@ -18,7 +18,7 @@ SDK 4.44, and the release itself comes after the December test cruise (D8).
 | 3 | Privacy policy (`PRIVACY.md`) | Done in this PR |
 | 4 | Third-party licenses (`THIRD_PARTY_NOTICES.md`) | Done; three licenses to confirm (§4) |
 | 5 | Listing text: name, category, short and long description, release notes | Draft (`STORE_LISTING.md`) |
-| 6 | Icons 80×80 and 144×144, banner 720×320 | Drafts in `store/art/` (D2) |
+| 6 | Icons 80×80 and 144×144, banner 720×320 | Done: concept C3b in `store/art/` (D2) |
 | 7 | Screenshots, 5 per watch, demo data only | To do on the owner's PC (`STORE_LISTING.md` §5) |
 | 8 | Repo scan for personal information (§5) | Files clean after this PR; history needs the owner (D4, D5) |
 | 9 | In-app notices: settings page Help > About, Android Settings > About (§4) | Next PR (watch-served JS, needs a version bump and an emulator check) |
@@ -160,7 +160,7 @@ appearing in new commits.
 | # | Question | Decision |
 |---|---|---|
 | D1 | Keep the name "Royal Pebble"? | Open: the owner asked for alternatives (§8). |
-| D2 | Use the draft icon and banner (`store/art/`)? | Open: icon concepts in `store/concepts/` (a ship whose hull is a Pebble Time 2, and the Android app's ship-on-wave icon with a watch) are with the owner. The owner likes C; refinements C1 (the original icon on the screen) and C2 (smoother waves), then C3 (C2 with the ship bow-on) and C3b (C3 with a hull as wide as the superstructure and a little shorter; the owner set C4 aside) are in `store/concepts/`. |
+| D2 | App icon | **C3b**: a Pebble Time 2 whose screen shows a cruise ship bow-on over layered waves, the sun in the Pebble logo's coral (#FA4A36). Now the store icons and banner in `store/art/`; the other concepts stay in `store/concepts/`. |
 | D3 | Copyright line in `LICENSE` | Keep "Arron L.". |
 | D4 | Rewrite git history? | No rewrite. Switch commits to the GitHub noreply address and turn on "Block command line pushes that expose my email". |
 | D5 | Replace the December sailing date in docs and tests? | Leave it. |

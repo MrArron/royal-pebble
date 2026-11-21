@@ -49,7 +49,7 @@ this file and the release page are the notice (`docs/STORE_READINESS.md` §4).
 | `tools/cruise-sync/` | Python standard library only; endpoints from CheckRoyalCaribbeanPrice | MIT (jdeath notice in `LICENSE`) |
 | `tools/quickjs-probe/`: `quickjs-emscripten`, `@jitl/quickjs-ng-wasmfile-release-sync` | Phase 0 check | MIT |
 | `tools/shipmap/`, `tools/mockups/`, `tools/store/`: Playwright (Chromium), Pillow | Rendering deck plans, mockups and store art | Apache-2.0; MIT-CMU (HPND) |
-| DejaVu Sans Bold (system font, used by `tools/store/make_store_art.py` to draw the banner text) | Text in `store/art/banner-720x320.png` | Bitstream Vera / DejaVu license (free to use, embed and modify) |
+| DejaVu Sans (system font, used by `tools/store/icon_c.js` to draw the banner text) | Text in `store/art/banner-720x320.png` | Bitstream Vera / DejaVu license (free to use, embed and modify) |
 
 ## 4. Trademarks
 

@@ -94,13 +94,14 @@ exactly the display size and **not** framed in a watch outline.
 
 | Asset | Size | Count | Source |
 |---|---|---|---|
-| Large icon | 144×144 | 1 | `store/art/icon-144.png` (draft) |
-| Small icon | 80×80 | 1 | `store/art/icon-80.png` (draft) |
-| Banner | 720×320 | 1 per platform (optional) | `store/art/banner-720x320.png` (draft) |
+| Large icon | 144×144 | 1 | `store/art/icon-144.png` (C3b, chosen) |
+| Small icon | 80×80 | 1 | `store/art/icon-80.png` (C3b, chosen) |
+| Banner | 720×320 | 1 per platform (optional) | `store/art/banner-720x320.png` |
 | Screenshots, Pebble Time 2 | 200×228 | up to 5 | emulator, `emery`, demo cruise |
 | Screenshots, Pebble Round 2 | 260×260 | up to 5 | emulator, `gabbro`, demo cruise |
 
-`python3 tools/store/make_store_art.py` regenerates the icons and banner.
+`node tools/store/icon_c.js` regenerates the icons and banner (the chosen
+icon is concept C3b, a Pebble Time 2 showing a cruise ship bow-on).
 
 ### Screenshot plan (5 per watch)
 
