@@ -63,7 +63,7 @@ WorkManager, with a network constraint. A notification appears only for things t
 the previous check (a new rebook alert or price watch hit, each its own notification with a Mute
 button; a changed check-in label; a failed check).
 
-## Price watches, Mute and alert hours (1.6.27)
+## Price watches, Mute and alert hours (1.6.29)
 
 `AlertDelivery.kt` runs after every check; the rules are plain Kotlin in `royal/.../alerts/`
 (`PriceWatch.kt`, `QuietHours.kt`, tested in `PriceWatchTest`).
@@ -88,7 +88,7 @@ button; a changed check-in label; a failed check).
 
 ## Watch alerts
 
-Settings > Price checks, "Watch alerts" (on by default since 1.6.27): after a check (background or Run now) the app sends what
+Settings > Price checks, "Watch alerts" (on by default since 1.6.29): after a check (background or Run now) the app sends what
 is new to the Pebble as one NOTICE message (`docs/WATCH_PROTOCOL.md`, Booking notices):
 
 - a price drop flagged rebook or consider-booking (again only if the price falls further);

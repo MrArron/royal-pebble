@@ -5,8 +5,9 @@ done, and what the owner still decides. The listing text itself is in
 [`STORE_LISTING.md`](STORE_LISTING.md). Started 2026-11-18 at 1.6.26.
 
 Until now the app was private (`PROJECT_BRIEF.md`, Status). Publishing doesn't
-change the sailing plan: nothing here touches the watch code, and the release
-itself is meant to come after the December test cruise (decision D8).
+change the sailing plan: the only app change is the permission declaration in
+`package.json` (§7, 1.6.28), which changes nothing until the app is built with
+SDK 4.44, and the release itself comes after the December test cruise (D8).
 
 ## 1. Checklist
 
@@ -17,12 +18,13 @@ itself is meant to come after the December test cruise (decision D8).
 | 3 | Privacy policy (`PRIVACY.md`) | Done in this PR |
 | 4 | Third-party licenses (`THIRD_PARTY_NOTICES.md`) | Done; three licenses to confirm (§4) |
 | 5 | Listing text: name, category, short and long description, release notes | Draft (`STORE_LISTING.md`) |
-| 6 | Icons 80×80 and 144×144, banner 720×320 | Drafts in `store/art/` (D2) |
+| 6 | Icons 80×80 and 144×144, banner 720×320 | Done: concept C3b in `store/art/` (D2) |
 | 7 | Screenshots, 5 per watch, demo data only | To do on the owner's PC (`STORE_LISTING.md` §5) |
 | 8 | Repo scan for personal information (§5) | Files clean after this PR; history needs the owner (D4, D5) |
 | 9 | In-app notices: settings page Help > About, Android Settings > About (§4) | Next PR (watch-served JS, needs a version bump and an emulator check) |
 | 10 | Watch launcher icon (a menu icon resource in `package.json`) | Next PR; check the size the Time 2 and Round 2 launchers use in the current SDK docs first |
-| 11 | `companionApp` entry in `package.json` (D6) | Owner decides |
+| 11 | `companionApp` entry in `package.json` (D6) | Done in 1.6.28: only the Android app, linked to the latest release |
+| 13 | Permissions: declare them so the app isn't a legacy app (§7) | Declared in 1.6.28; build with SDK 4.44 and test on the emulator before release |
 | 12 | Developer account on the appstore's developer dashboard, then submit | Owner, after the sailing (D8) |
 
 ## 2. Free forever: why it's spelled out
@@ -153,17 +155,91 @@ and GitHub keeps the old commits reachable through closed pull requests
 the cheaper choice is to accept the email as already public and stop it
 appearing in new commits.
 
-## 6. Decisions for the owner
+## 6. Decisions (answered by the owner 2026-11-21)
 
-| # | Question | Recommended |
+| # | Question | Decision |
 |---|---|---|
-| D1 | Keep the name "Royal Pebble"? | Keep. It's short, fits the watch list and is already known. The listing's first line says "unofficial". |
-| D2 | Use the draft icon and banner (`store/art/`)? | Use them for an unlisted first release; replace later if you'd like something nicer. |
-| D3 | Copyright line in `LICENSE`: "Arron L." or the GitHub handle "MrArron"? | "MrArron", if you'd rather keep your name off the store and repo. |
-| D4 | Rewrite git history to remove the Gmail address and old files? | No rewrite; switch to the noreply address and block pushes that expose your email. |
-| D5 | Replace the December sailing date in docs and tests? | Leave it; it's over before any store release, and changing test dates churns many files. |
-| D6 | `companionApp` in `package.json`: keep both Android packages, drop the link test app, or drop the entry? | Drop the link test package in the next watch-app PR; don't declare a companion in the listing. |
-| D7 | First release Unlisted (link only) or Listed? | Unlisted for a few testers, then Listed. A public app can't be made private again. |
-| D8 | When to submit? | After the sailing: port/starboard checked on board, Round 2 on real hardware, and the freeze over. |
-| D9 | Donation or sponsor links? | None, to keep the free-forever line simple. |
-| D10 | Support contact on the listing | GitHub issues only, or a new address just for the app, not your personal email. |
+| D1 | App name | Keep **Royal Pebble** (owner, 2026-11-21, after looking at the ideas in §8 and briefly picking Cruise Companion). Branding line: "Your unofficial Royal Caribbean cruise companion on your wrist"; the listing names the ships with Ship GPS and invites pull requests for more. |
+| D2 | App icon | **C3b**: a Pebble Time 2 whose screen shows a cruise ship bow-on over layered waves, the sun in the Pebble logo's coral (#FA4A36). Now the store icons and banner in `store/art/`; the other concepts stay in `store/concepts/`. |
+| D3 | Copyright line in `LICENSE` | Keep "Arron L.". |
+| D4 | Rewrite git history? | No rewrite. Switch commits to the GitHub noreply address and turn on "Block command line pushes that expose my email". |
+| D5 | Replace the December sailing date in docs and tests? | Leave it. |
+| D6 | `companionApp` packages in `package.json` | Done (owner, 2026-11-21): only the Royal Pebble Android app (`io.github.mrarron.royalpricecheck`), `required: false`, linked to `https://github.com/MrArron/royal-pebble/releases/latest` for the APK. The link test package is gone, so store users aren't asked about it. People without Android, or who skip the app, get the PebbleKit JS side as before. The store's own companion fields stay empty (they want a Google Play listing). |
+| D7 | First release Unlisted or Listed? | Unlisted for a few testers, then Listed. |
+| D8 | When to submit? | After the sailing (the owner may revisit). |
+| D9 | Donation or sponsor links? | None. |
+| D10 | Support contact | GitHub issues, or replies on the Pebble store. No personal email. |
+
+## 7. Permissions (Pebble app 2.0.0)
+
+Pebble app 2.0.0 (autumn 2026) turned on app permissions for everyone. Source:
+the Pebble Plugins Preview guide
+(developer.repebble.com/guides/plugins/preview/, read 2026-11-21), plus its
+Microphone and Dictation guides.
+
+- A `.pbw` built with **SDK 4.44 or later and pebble-tool 5.1.0 or later** is
+  marked `manifestVersion: 2` (the default since SDK 4.44) and uses
+  permissions. Anything older is a **legacy app**: it keeps the old blanket
+  access (internet, location, timeline pins) and the Pebble app shows its
+  permissions as legacy. Every build so far used SDK 4.33.1, which is why
+  Royal Pebble shows as legacy today.
+- A permissions app gets only what it declares in `usesPermissions` in the
+  `pebble` block of `package.json`. Required ones are asked at install; a
+  blocked request fails. So moving to SDK 4.44 **without** the declaration
+  would break every download.
+- Declared in 1.6.28: `Internet` for `rccl.com` and `royalcaribbean.com`,
+  required, with a reason. Each domain covers its subdomains, so this covers
+  `aws-prd.api.rccl.com` (the API used by `src/pkjs/royal.js` and the
+  settings page) and `www.royalcaribbean.com` (the login). These are the only
+  hosts the watch app's JS contacts.
+- Not needed: **dictation** (`DictationSession`) has no permission in the
+  guides; `WatchMicrophone` is only for raw audio (`mic_*` APIs), which Royal
+  Pebble doesn't use. Wakeups, AppMessage and the settings page (opened with
+  `Pebble.openURL`) have no permission either. No location, notifications,
+  timeline or health.
+- Companion apps built on PebbleKit 2 need no declaration; the Pebble app asks
+  about each package in `companionApp` on its own (hence D6: only the
+  Android app is listed now).
+  `LegacyPebbleKit` is only for PebbleKit Classic companions.
+
+To check before release (on the owner's PC, after upgrading the SDK to 4.44
+and pebble-tool to 5.1.0):
+
+1. `pebble build`, then confirm `appinfo.json` inside the `.pbw` has
+   `"manifestVersion": 2` and the `usesPermissions` entry.
+2. Install on the emulator and on the phone: the install should ask once for
+   Internet access to Royal Caribbean, and the app page should list it (no
+   "legacy" label).
+3. Open the settings page and run a Download, with and without login. The
+   settings page is a local `data:` URL that calls Royal's API itself; the
+   guide says a settings page may only load or connect to declared domains,
+   and says nothing about `data:` pages, so this is the step most likely to
+   surprise.
+4. Voice (Hold Select) still works.
+5. Run `tools/watch_size.py` as usual; a newer SDK can change the binary size.
+
+Until then nothing should change: SDK 4.33.1 predates permissions and is
+expected to ignore `usesPermissions`, so 1.6.28 should build and behave like
+1.6.27 on the current setup (confirm with one build; not yet tried). Upgrading the SDK before
+the sailing is not recommended (it is a new toolchain right before the
+freeze).
+
+## 8. Name ideas considered (D1: kept Royal Pebble)
+
+Short enough for the watch's app list, clear about cruising, and free of
+Royal Caribbean's own names (avoid "Cruise Compass", "Navigator", "Crown",
+"Anchor" and ship names; "Royal" alone is a common word). "Pebble" in a name
+is the watch maker's trademark too; other appstore apps use it, but a name
+without it is the safer choice.
+
+| Name | Why |
+|---|---|
+| **Shipmate** | Friendly, says "companion on board", no brand words |
+| **All Aboard** | The app's signature screen; instantly cruise |
+| **Cruise Pebble** | Keeps the current feel, drops "Royal" |
+| Sea Day | Short, cruise slang, calm |
+| Gangway | Cruise word tied to the all-aboard countdown |
+| Deck Buddy | Playful; hints at the deck-by-deck directory |
+| Wristwake | Wrist + a ship's wake (matches the icon art) |
+| Lido | The pool deck; short and memorable, but less obvious |
+| Royal Pebble | The current name; known, but leans on "Royal" |

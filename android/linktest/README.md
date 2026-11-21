@@ -21,9 +21,11 @@ What the Pebble app's source says to expect is in `docs/WATCH_PROTOCOL.md`,
 ## Needs
 
 - The Core Pebble app 1.0.7.7 or later (or microPebble 1.0.0-alpha35).
-- Royal Pebble 1.6.19 or later **built with `pebble build`**, since its
-  `package.json` lists this app's package (`companionApp`). CloudPebble drops
-  that entry, so its builds won't work for this test.
+- Royal Pebble 1.6.19 to 1.6.27 **built with `pebble build`**, since their
+  `package.json` lists this app's package (`companionApp`). 1.6.28 dropped it
+  (store prep), so to run this test again, add
+  `io.github.mrarron.royalpebble.linktest` back to `companionApp` in a local
+  build. CloudPebble drops that entry, so its builds won't work for this test.
 
 ## Build
 

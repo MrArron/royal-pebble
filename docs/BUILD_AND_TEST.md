@@ -38,7 +38,7 @@ detail lives in the files this one points to; when they disagree, they win.
     **Watch alerts** (Settings): price drop, price watch, check-in and final
     payment notices sent as one `NOTICE` through `WatchLink.sendNotice`
     (`WATCH_PROTOCOL.md`, Booking notices); price watches, Mute and alert
-    hours in `AlertDelivery.kt` (1.6.27).
+    hours in `AlertDelivery.kt` (1.6.29).
   - **Cruise** tab: native versions of the settings page's screens (Cruise,
     Days, Filters, Events, Me, Share) on the Kotlin Royal client and
     `CruiseStore` (`DESIGN.md` §12, Android app).
@@ -95,6 +95,11 @@ Install: open the `.pbw` in the Pebble app on the phone (not through
 CloudPebble, which drops the `companionApp` entry the Android app needs), and
 sideload the `.apk`. A matched test build is a pbw and an apk from the same
 commit.
+
+SDK version: test builds use SDK 4.33.1, which makes a legacy-permissions
+app. A `.pbw` for the appstore must be built with SDK 4.44+ and pebble-tool
+5.1.0+, so the `usesPermissions` declaration in `package.json` takes effect;
+check it first with the steps in `STORE_READINESS.md` §7.
 
 ## 5. Tests
 

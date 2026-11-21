@@ -1,7 +1,7 @@
 {
   "name": "cruise-watch",
   "author": "MrArron",
-  "version": "1.6.27",
+  "version": "1.6.29",
   "keywords": [
     "pebble-app"
   ],
@@ -21,14 +21,11 @@
     },
     "companionApp": {
       "android": {
-        "url": "https://github.com/MrArron/royal-pebble",
+        "url": "https://github.com/MrArron/royal-pebble/releases/latest",
         "required": false,
         "apps": [
           {
             "package": "io.github.mrarron.royalpricecheck"
-          },
-          {
-            "package": "io.github.mrarron.royalpebble.linktest"
           }
         ]
       }
@@ -113,6 +110,19 @@
     },
     "capabilities": [
       "configurable"
+    ],
+    "usesPermissions": [
+      {
+        "name": "Internet",
+        "parameters": {
+          "domains": [
+            "rccl.com",
+            "royalcaribbean.com"
+          ]
+        },
+        "reason": "To download your sailing's schedule from Royal Caribbean, and your booking if you sign in",
+        "required": true
+      }
     ]
   }
 }

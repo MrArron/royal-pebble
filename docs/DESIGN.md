@@ -808,9 +808,9 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   its last, else Planning; the demo cruise is always Planning.
 - Settings is a list of pages with a back arrow: Royal account (one login for
   price checks and downloads), Me and my stateroom (Planning only), Watch and
-  logs, Price checks (with **Alert hours**), **Price watches** (1.6.27), About,
+  logs, Price checks (with **Alert hours**), **Price watches** (1.6.29), About,
   and Prices when On board.
-- **Price watches** (1.6.27, `PriceWatchesPage.kt`): an add form (Cruise
+- **Price watches** (1.6.29, `PriceWatchesPage.kt`): an add form (Cruise
   Planner link, optional name, optional price now, `Any drop` / `% below` /
   `Below my price` chips, adult or child price), then a card per watch (rule,
   price now, `below your trigger` in the primary colour, last check, Mute or

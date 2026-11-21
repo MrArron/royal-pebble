@@ -134,9 +134,11 @@ the app's log listed REQUEST, SAVED, LOG, DIR_REQUEST, ROUTE_REQUEST and VOICE
 while PebbleKit JS answered them as usual.
 
 - **The watch app has to list the Android app.** `package.json` has a
-  `pebble.companionApp.android` entry naming the Android packages (the app,
-  `io.github.mrarron.royalpricecheck`, and the link test,
-  `io.github.mrarron.royalpebble.linktest`), with `required: false`.
+  `pebble.companionApp.android` entry naming the Android app
+  (`io.github.mrarron.royalpricecheck`), with `required: false` and the
+  latest GitHub release (which carries the APK) as its `url`. The Phase 0
+  link test app was listed too until 1.6.28; it was dropped so store users
+  aren't asked about it (`STORE_READINESS.md` D6).
   Without it the Pebble app never starts a PebbleKit Android 2 session for
   Royal Pebble, and every send from an Android app fails with
   `FailedDifferentAppOpen`. `required: false` means a phone without the
@@ -480,7 +482,7 @@ tests in `test/pkjs/booking-notices.test.js`):
 | 6 | `CHECKED IN` | the sailing | `All guests checked in` | `Boarding 11:30a-12:00p`, or empty |
 | 7 | `PAYMENT DUE` | the sailing | `$1,235 due Dec 20` | `In 5 days`, `Due tomorrow`, `Due today`, `Overdue` |
 
-Price watches (1.6.27, items not bought yet) use kind 4 too: the item, `Now
+Price watches (1.6.29, items not bought yet) use kind 4 too: the item, `Now
 $25.00 (-17%)`, and `Was $30.00 when set` (or `Below your $70.00` for a watch
 on the user's own price), so the watch needs no change.
 
