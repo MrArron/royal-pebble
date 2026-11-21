@@ -160,7 +160,7 @@ appearing in new commits.
 | # | Question | Decision |
 |---|---|---|
 | D1 | Keep the name "Royal Pebble"? | Open: the owner asked for alternatives (§8). |
-| D2 | Use the draft icon and banner (`store/art/`)? | Open: icon concepts in `store/concepts/` (a ship whose hull is a Pebble Time 2, and the Android app's ship-on-wave icon with a watch) are with the owner. |
+| D2 | Use the draft icon and banner (`store/art/`)? | Open: icon concepts in `store/concepts/` (a ship whose hull is a Pebble Time 2, and the Android app's ship-on-wave icon with a watch) are with the owner. The owner likes C; refinements C1 (the original icon on the screen) and C2 (smoother waves) are in `store/concepts/`. |
 | D3 | Copyright line in `LICENSE` | Keep "Arron L.". |
 | D4 | Rewrite git history? | No rewrite. Switch commits to the GitHub noreply address and turn on "Block command line pushes that expose my email". |
 | D5 | Replace the December sailing date in docs and tests? | Leave it. |

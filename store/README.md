@@ -7,7 +7,10 @@ Images for the Pebble appstore listing (`docs/STORE_LISTING.md` §5).
 - `concepts/`: three icon concepts and `sheet.png` (A: a ship whose hull is
   a Pebble Time 2; B: the Android app's ship-on-wave icon with a watch as the
   cabin; C: a watch whose screen shows that ship), drawn by
-  `tools/store/make_icon_concepts.py`.
+  `tools/store/make_icon_concepts.py`. The owner preferred C; its two
+  refinements (`c1-original-icon`, the Android icon unchanged on the screen,
+  and `c2-smooth-waves`) are drawn by `tools/store/icon_c.js` (Playwright),
+  with `c-variants-sheet.png`.
 - `screenshots/`: not yet taken. Five per watch, 200×228 (Pebble Time 2) and
   260×260 (Pebble Round 2), from the demo cruise only, no watch frame.
 
