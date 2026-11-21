@@ -6,6 +6,8 @@
 //     (android/app/src/main/res/drawable/ic_launcher.xml), unchanged, on the
 //     watch screen.
 //   c2-smooth-waves:  the same ship riding filled, layered waves.
+//   c3-bow-on:        the ship heading toward the viewer, bow first, on
+//     those waves (the owner's pick of C2, 2026-11-21).
 //
 // Writes store/concepts/<name>-{144,80}.png and c-variants-sheet.png.
 // Run: node tools/store/icon_c.js
@@ -66,7 +68,34 @@ const C2 = watch(`
   ${waveBand(69, 2.4, 12, -9, '#4FC3F7', 0.9)}
   ${waveBand(74, 2.2, 13, -2, '#1E88E5', 1)}`);
 
-const VARIANTS = [['c1-original-icon', C1], ['c2-smooth-waves', C2]];
+
+// Bow-on: symmetric about x = 50. Funnel, wide bridge wings, two decks of
+// windows, a flared hull narrowing to the stem, a bow wave at the waterline.
+const C3 = watch(`
+  <defs><linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#0A2F70"/><stop offset="1" stop-color="#1257B8"/>
+  </linearGradient>
+  <linearGradient id="hull3" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#D9E3EF"/><stop offset="0.5" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9E3EF"/>
+  </linearGradient></defs>
+  <rect x="28" y="20" width="44" height="60" fill="url(#sky3)"/>
+  <circle cx="63" cy="29" r="3.6" fill="#F2B705" fill-opacity="0.9"/>
+  <path fill="#F2B705" d="M45.5,33 h9 l-0.8,8 h-7.4 z"/>
+  <rect x="45.5" y="35" width="9" height="1.4" fill="#0B3D91"/>
+  <rect x="33" y="41" width="34" height="3.6" rx="0.8" fill="#FFFFFF"/>
+  <rect x="35" y="42.1" width="30" height="1.3" fill="#0B3D91"/>
+  <path fill="url(#hull3)" d="M37,44.6 h26 v8 h-26 z"/>
+  ${[46.5, 49.8].map(y => [39.5, 43, 46.5, 50, 53.5, 57, 60.5].map(x =>
+    `<rect x="${x - 0.8}" y="${y}" width="1.6" height="1.6" fill="#0B3D91"/>`).join('')).join('')}
+  ${waveBand(64, 2.2, 11, -4, '#4FC3F7', 0.55)}
+  <path fill="url(#hull3)" d="M31,52.6 H69 Q66,63 52.5,71.5 H47.5 Q34,63 31,52.6 Z"/>
+  <path fill="none" stroke="#0B3D91" stroke-width="1.1" d="M31.6,54.2 H68.4"/>
+  <path fill="none" stroke="#B8C6D8" stroke-width="0.5" d="M50,55 V71"/>
+  ${waveBand(68.5, 2.4, 12, -9, '#4FC3F7', 0.9)}
+  <path fill="#FFFFFF" fill-opacity="0.9" d="M40,70.5 q5,-3.5 10,-1 q5,-2.5 10,1 q-5,1.2 -10,0.4 q-5,0.8 -10,-0.4 z"/>
+  ${waveBand(74, 2.2, 13, -2, '#1E88E5', 1)}`);
+
+const VARIANTS = [['c1-original-icon', C1], ['c2-smooth-waves', C2], ['c3-bow-on', C3]];
 
 function svg(body, px) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 100 100">${body}</svg>`;
@@ -86,7 +115,7 @@ function svg(body, px) {
   // Review sheet: each variant large and at both store sizes.
   const cell = ([name, body]) => `<div style="display:inline-block;margin:16px;vertical-align:top;font:600 16px sans-serif;color:#1e232d">
       ${svg(body, 256)}<br>${svg(body, 144)} ${svg(body, 80)}<br>${name}</div>`;
-  await page.setViewportSize({ width: 620, height: 520 });
+  await page.setViewportSize({ width: 900, height: 470 });
   await page.setContent(`<html><body style="margin:0;background:#f5f6f8">${VARIANTS.map(cell).join('')}</body></html>`);
   await page.screenshot({ path: path.join(OUT, 'c-variants-sheet.png') });
   await browser.close();
