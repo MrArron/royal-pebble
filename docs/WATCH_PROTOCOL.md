@@ -480,6 +480,10 @@ tests in `test/pkjs/booking-notices.test.js`):
 | 6 | `CHECKED IN` | the sailing | `All guests checked in` | `Boarding 11:30a-12:00p`, or empty |
 | 7 | `PAYMENT DUE` | the sailing | `$1,235 due Dec 20` | `In 5 days`, `Due tomorrow`, `Due today`, `Overdue` |
 
+Price watches (1.6.27, items not bought yet) use kind 4 too: the item, `Now
+$25.00 (-17%)`, and `Was $30.00 when set` (or `Below your $70.00` for a watch
+on the user's own price), so the watch needs no change.
+
 Amounts show cents below $100 and whole dollars from $100 (both prices in
 whole dollars when either is), so two prices fit one line. The top bar reads `Booking` on these and `Schedule` on the others.
 A watch app before 1.6.20 would show kinds 4-7 as `CANCELLED`, so install

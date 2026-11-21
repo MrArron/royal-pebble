@@ -52,6 +52,9 @@ they may log the request like any visit to their site.
   stay on your phone and leave it only if you copy or share them yourself.
   The usage log can be turned off on the Me tab. Treat a shared copy as
   private: it can hold your cabin number.
+- **Price watches** in the Android app (the item links you add, their prices,
+  and which alerts you muted) stay in the app's storage on your phone. They
+  are checked with the same signed-in price check as your bookings.
 - **Share my plan** creates a text you send yourself (it can include your
   stars and personal entries). Nothing is uploaded.
 - The sync tool writes a `cruise-watch-*.json` file on your PC, which can

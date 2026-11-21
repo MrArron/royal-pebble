@@ -60,15 +60,40 @@ merge to get an APK, `docs/BUILD_AND_TEST.md`).
 ## Background checks
 
 WorkManager, with a network constraint. A notification appears only for things that are new since
-the previous check (new rebook alerts, a changed check-in label, a failed check).
+the previous check (a new rebook alert or price watch hit, each its own notification with a Mute
+button; a changed check-in label; a failed check).
+
+## Price watches, Mute and alert hours (1.6.27)
+
+`AlertDelivery.kt` runs after every check; the rules are plain Kotlin in `royal/.../alerts/`
+(`PriceWatch.kt`, `QuietHours.kt`, tested in `PriceWatchTest`).
+
+- **Price watches** (Settings > Price watches, or Share a Cruise Planner link to Royal Pebble): an
+  item not bought yet, named by its Cruise Planner link (`.../category/<prefix>/product/<product>
+  ?bookingId=...`). The app adds each watch to the runtime config's `watchList` (your `config.yaml`
+  is not changed) and `rcp_runner.summarize` returns their rows as `watched`, not as drops. The app
+  decides when one alerts: **Any drop** below the price when the watch was set (default), **% below**
+  that price, or **Below my price**. The price when set is the one you type, or the next check's.
+  A further drop alerts again; a price back above the trigger is forgotten.
+- **Mute**: the notification's Mute button, Prices > Summary's Mute on a drop, or Mute on a watch's
+  card. Muted alerts go to neither the phone nor the watch; Settings > Price watches lists them with
+  Unmute (the item then alerts again at its current price).
+- **Alert hours** (Settings > Price checks; From 7-10 AM, Until 8-10 PM, default 8 AM to 9 PM):
+  alerts from a background check outside them are held (phone notifications saved, watch alerts
+  left waiting) and a one-time `ReleaseWorker` sends them when the hours open. Run now always shows
+  its results at once.
+- Test log lines: `watches  check: ...`, `watches  hit: ...`, `watches  added/removed ...`,
+  `alerts  sent: ...`, `alerts  quiet hours (...): held N phone ...; out at 8:00 AM`,
+  `alerts  released at 8:00 AM: ...`, `alerts  muted: ...` / `unmuted: ...`, `alerts  alert hours set to ...`.
 
 ## Watch alerts
 
-Settings > Price checks, "Watch alerts" (off by default): after a check (background or Run now) the app sends what
+Settings > Price checks, "Watch alerts" (on by default since 1.6.27): after a check (background or Run now) the app sends what
 is new to the Pebble as one NOTICE message (`docs/WATCH_PROTOCOL.md`, Booking notices):
 
 - a price drop flagged rebook or consider-booking (again only if the price falls further);
 - check-in open, then checked in (with the boarding window when the label has one);
+- a price watch below its trigger (again only if the price falls further);
 - final payment due, at 7, 3, 1 and 0 days and once when overdue (only while a balance is due). The
   price script reports whether a balance is due, not the amount, so the notice reads
   "Balance due Dec 20".
