@@ -14,9 +14,9 @@ class RefreshRulesTest {
         RefreshRules.skipReason(on, date, last, LocalDate.parse(today), login, lastRun, now)
 
     @Test
-    fun runsFromTwoWeeksBeforeToTheLastDay() {
-        assertEquals("15 days before sailing (Royal publishes the schedule about 14 days out)", skip("2026-11-27"))
-        assertNull(skip("2026-11-28"))
+    fun runsFromThreeWeeksBeforeToTheLastDay() {
+        assertEquals("22 days before sailing (the refresh starts 21 days out)", skip("2026-11-20"))
+        assertNull(skip("2026-11-21"))
         assertNull(skip("2026-12-15"))
         assertNull(skip("2026-12-19"))
         assertEquals("the cruise is over", skip("2026-12-20"))

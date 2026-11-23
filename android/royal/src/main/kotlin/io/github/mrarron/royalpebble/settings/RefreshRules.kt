@@ -5,8 +5,8 @@ import java.time.temporal.ChronoUnit
 
 /** When the app's background schedule refresh runs (the app's ScheduleRefresh); plain rules, so they run in JVM tests. */
 object RefreshRules {
-    /** Royal publishes the schedule about two weeks before sailing. */
-    const val DAYS_BEFORE = 14L
+    /** Royal publishes the schedule about two weeks before sailing; start a week early to catch it the day it's posted. */
+    const val DAYS_BEFORE = 21L
     /** At most one refresh this often, however often the price checks run. */
     const val MIN_GAP_HOURS = 6L
 
@@ -19,7 +19,7 @@ object RefreshRules {
         val sail = sailDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return "no saved sailing"
         val end = lastDay?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: sail
         val before = ChronoUnit.DAYS.between(today, sail)
-        if (before > DAYS_BEFORE) return "$before days before sailing (Royal publishes the schedule about $DAYS_BEFORE days out)"
+        if (before > DAYS_BEFORE) return "$before days before sailing (the refresh starts $DAYS_BEFORE days out)"
         if (today.isAfter(end)) return "the cruise is over"
         if (!hasLogin) return "no remembered Royal Caribbean login (Download with login and Remember it)"
         val since = nowMs - lastRunMs

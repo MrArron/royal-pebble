@@ -275,7 +275,7 @@ internal fun PriceChecksPage(vm: MainViewModel) {
             Switch(refresh, { v -> refresh = v; io.github.mrarron.royalpricecheck.cruise.ScheduleRefresh.setEnabled(c, v) })
             Text("Also refresh the schedule")
         }
-        Text("Each background check also downloads your sailing again with your remembered Royal login, so moved or cancelled events, their stars and new bookings reach the watch. From 14 days before sailing to the last day, at most every 6 hours, and paused on board like the price checks. The watch gets it right away when App serves the watch is on.", style = MaterialTheme.typography.bodySmall)
+        Text("Each background check also downloads your sailing again with your remembered Royal login, so moved or cancelled events, their stars and new bookings reach the watch. From 21 days before sailing to the last day, at most every 6 hours, and paused on board like the price checks. The watch gets it right away when App serves the watch is on. When the daily schedule is first posted, or a lot more of it appears, you get a Schedule is up alert on the phone and the watch.", style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = { CheckWorker.runOnce(c) }) { Text("Run a background check now") }
         Text("Watch alerts", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

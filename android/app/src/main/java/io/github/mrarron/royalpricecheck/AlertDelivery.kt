@@ -30,7 +30,8 @@ import java.util.concurrent.TimeUnit
  * - `alerts  sent: 2 phone (1 price, 1 watch), Watch alerts: ...`;
  * - `alerts  quiet hours (8:00 AM to 9:00 PM): held 2 phone, watch alerts wait; out at 8:00 AM`;
  * - `alerts  released at 8:00 AM: 2 phone, Watch alerts: ...`;
- * - `alerts  muted: <item>` and `alerts  unmuted: <item>`.
+ * - `alerts  muted: <item>` and `alerts  unmuted: <item>`;
+ * - `alerts  schedule: 1 phone sent, Schedule watch alert: watch ACKed` (the schedule is up, [deliver]).
  */
 object AlertDelivery {
     private fun log(c: Context, kind: String, detail: String) = WatchHost.logApp(c, kind, detail)
@@ -55,7 +56,9 @@ object AlertDelivery {
             val all = merge(held, notices)
             val posted = all.count { Notifier.post(c, it) }
             val watch = WatchAlertBridge.afterCheck(c, result)
-            val line = "sent: $posted phone${counts(all)}${if (held.isNotEmpty()) " (${held.size} held from quiet hours)" else ""}, ${watch ?: "Watch alerts off"}"
+            val schedule = ScheduleNotify.sendPendingWatch(c)
+            val line = "sent: $posted phone${counts(all)}${if (held.isNotEmpty()) " (${held.size} held from quiet hours)" else ""}, ${watch ?: "Watch alerts off"}" +
+                (schedule?.let { ", $it" } ?: "")
             log(c, "alerts", line)
             lines.add("Alerts: $line")
             watch?.let { lines.add(it) }
@@ -63,12 +66,35 @@ object AlertDelivery {
         return lines
     }
 
+    /**
+     * Alerts that don't come from the price script (the schedule is up, [ScheduleNotify]): posted now,
+     * or held like a background check's during quiet hours. The watch's copy waits in
+     * [ScheduleNotify] and goes out with them. Background only, so the alert hours always apply.
+     */
+    fun deliver(c: Context, notices: List<PhoneNotice>) {
+        val q = Prefs.quietHours(c)
+        val now = LocalDateTime.now()
+        if (!q.allowed(now.toLocalTime())) {
+            val held = merge(PhoneNotice.listFromJson(Prefs.heldNotices(c)), notices)
+            Prefs.setHeldNotices(c, PhoneNotice.listToJson(held))
+            val at = q.nextAllowed(now)
+            scheduleRelease(c, at)
+            log(c, "alerts", "schedule: quiet hours (${q.text()}): held ${held.size} phone, watch alert waits; out at ${QuietHours.clock(at.hour * 60 + at.minute)}")
+            return
+        }
+        val posted = notices.count { Notifier.post(c, it) }
+        val watch = ScheduleNotify.sendPendingWatch(c) ?: "Watch alerts off"
+        log(c, "alerts", "schedule: $posted phone sent${if (posted < notices.size) " (notifications not allowed)" else ""}, $watch")
+    }
+
     /** Quiet hours are over: post what was held and send the watch what is still waiting. */
     fun release(c: Context) {
         val held = takeHeld(c)
         val posted = held.count { Notifier.post(c, it) }
         val watch = Prefs.loadLastResult(c)?.let { WatchAlertBridge.afterCheck(c, it) }
-        log(c, "alerts", "released at ${QuietHours.clock(LocalDateTime.now().let { it.hour * 60 + it.minute })}: $posted phone${counts(held)}, ${watch ?: "Watch alerts off"}")
+        val schedule = ScheduleNotify.sendPendingWatch(c)
+        log(c, "alerts", "released at ${QuietHours.clock(LocalDateTime.now().let { it.hour * 60 + it.minute })}: $posted phone${counts(held)}, ${watch ?: "Watch alerts off"}" +
+            (schedule?.let { ", $it" } ?: ""))
     }
 
     private fun updateWatches(c: Context, result: RunResult): String? {

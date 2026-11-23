@@ -29,7 +29,9 @@ import java.time.ZoneId
  * top of that: only from [RefreshRules.DAYS_BEFORE] days before sailing to the last cruise
  * day (Royal publishes the schedule about two weeks out), at most once every
  * [RefreshRules.MIN_GAP_HOURS] hours, and only with a remembered Royal Caribbean login.
- * Every run, and every skip, writes one `schedule` line to the app's log.
+ * Every run, and every skip, writes one `schedule` line to the app's log. When the refresh
+ * finds the schedule newly posted, or much bigger, [io.github.mrarron.royalpricecheck.ScheduleNotify]
+ * sends the "schedule is up" alert.
  */
 object ScheduleRefresh {
     private fun sp(c: Context) = c.getSharedPreferences("schedule_refresh", Context.MODE_PRIVATE)
@@ -65,11 +67,20 @@ object ScheduleRefresh {
         val service = DownloadService(RoyalClient(UrlConnectionTransport()), store)
         val ship = RoyalParse.Ship(sailing.shipCode, sailing.shipName)
         val started = System.currentTimeMillis()
+        val before = io.github.mrarron.royalpebble.alerts.ScheduleCounts.of(bundle)
         when (val outcome = service.download(ship, sailing.sailDate, DownloadService.Login(account.email, account.password))) {
             is DownloadOutcome.Done -> {
                 WatchHost.logApp(app, "schedule", "background refresh done in ${System.currentTimeMillis() - started} ms: " +
                     outcome.summary + (outcome.mineError?.let { "; booking details failed: $it" } ?: ""))
                 afterDownload(app, store, outcome)
+                // The schedule is up: phone and watch alert (before the watch gets the new data).
+                runCatching {
+                    io.github.mrarron.royalpricecheck.ScheduleNotify.afterRefresh(
+                        app, sailing.shipCode, sailing.shipName, sailing.sailDate,
+                        if (outcome.saved.sameSailing) before else io.github.mrarron.royalpebble.alerts.ScheduleCounts.NONE,
+                        io.github.mrarron.royalpebble.alerts.ScheduleCounts.of(store.bundle()),
+                    )
+                }.onFailure { WatchHost.logApp(app, "schedule", "alert failed unexpectedly (${it::class.java.simpleName})") }
                 WatchHost.storeChanged(app, "schedule refreshed (${sailing.shipCode} ${sailing.sailDate})")
             }
             is DownloadOutcome.Failed -> WatchHost.logApp(app, "schedule", "background refresh FAILED: ${outcome.error}")

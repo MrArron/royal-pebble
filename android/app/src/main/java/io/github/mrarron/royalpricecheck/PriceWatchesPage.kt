@@ -51,10 +51,10 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
         val muted = vm.mutes.mapTo(HashSet()) { it.key }
         vm.watches.forEach { w -> WatchCardRow(vm, w, w.muteKey in muted) }
 
-        val bookedMutes = vm.mutes.filter { it.key.startsWith("price|") }
-        Text("Muted booked-item alerts", style = MaterialTheme.typography.titleMedium)
+        val bookedMutes = vm.mutes.filter { it.key.startsWith("price|") || it.key.startsWith("schedule|") }
+        Text("Muted booked-item and schedule alerts", style = MaterialTheme.typography.titleMedium)
         if (bookedMutes.isEmpty()) {
-            Text("None. Tap Mute this alert on a price notification, or Mute on a drop in Prices, to stop one item's alerts.", style = MaterialTheme.typography.bodySmall)
+            Text("None. Tap Mute this alert on a price or Schedule is up notification, or Mute on a drop in Prices, to stop those alerts.", style = MaterialTheme.typography.bodySmall)
         }
         bookedMutes.forEach { m ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

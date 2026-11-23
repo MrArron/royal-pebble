@@ -22,7 +22,8 @@ static int s_index;
 static bool s_pending;
 
 // NOTICE_PRICE on.
-static const char *const BOOKING_HEADS[] = {"PRICE DROP", "CHECK-IN OPEN", "CHECKED IN", "PAYMENT DUE"};
+static const char *const BOOKING_HEADS[] = {"PRICE DROP", "CHECK-IN OPEN", "CHECKED IN", "PAYMENT DUE",
+                                              "SCHEDULE UP"};
 
 // "Booking" in the top bar for price and check-in notices, else "Schedule".
 static void set_bar(void) {

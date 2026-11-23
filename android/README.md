@@ -31,9 +31,12 @@ One bottom bar whose tabs follow the trip (`AppShell.kt`, `TripPhase`):
 - **Also refresh the schedule** (Settings > Price checks, on; 1.6.26, `cruise/ScheduleRefresh.kt`, rules in
   `royal/.../settings/RefreshRules.kt`): after each background price check, Download with login for the saved
   sailing with the remembered Royal Caribbean login, then star reconciling and a push to the watch (when the app
-  serves it). From 14 days before sailing to the last day, at most every 6 hours, paused on board with the price
+  serves it). From 21 days before sailing to the last day, at most every 6 hours, paused on board with the price
   checks. Log lines `schedule  background refresh done in N ms: ...` or `... skipped: <reason>`, then `stars` and
-  `booked`. **Run a background check now** runs the worker once (WorkManager), for testing.
+  `booked`. When the refresh finds the schedule newly posted (at least 20 events) or 25% bigger, a **Schedule is
+  up** phone notification and a `SCHEDULE UP` watch notice give the event, free and to-reserve counts
+  (`ScheduleNotify.kt`, rules in `royal/.../alerts/ScheduleAlert.kt`; alert hours and Mute apply; log line
+  `schedule  alert first|grew|none: ...`). **Run a background check now** runs the worker once (WorkManager), for testing.
 
 ## One Royal login
 
