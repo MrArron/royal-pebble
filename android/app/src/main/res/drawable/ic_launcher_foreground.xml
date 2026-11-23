@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Royal Pebble launcher icon, foreground (C3b: the ship bow-on over layered waves,
+     the sun in the Pebble logo's coral). Generated from tools/store/icon_c.js' C3b
+     geometry, scaled into the adaptive icon's 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FA4A36" android:pathData="M59.94,32.8a3.96,3.96 0 1,0 7.92,0a3.96,3.96 0 1,0 -7.92,0z"/>
+    <path android:fillColor="#F2B705" android:pathData="M49.05,36.1 L58.95,36.1 L58.07,44.9 L49.93,44.9z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M49.05,38.3h9.9v1.54h-9.9z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M35.3,44.9h37.4v3.96h-37.4z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M37.5,46.11h33.0v1.43h-33.0z"/>
+    <path android:fillColor="#EEF3F9" android:pathData="M39.7,48.86h28.6v8.8h-28.6z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M41.57,50.95h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M45.42,50.95h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M49.27,50.95h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M53.12,50.95h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M56.97,50.95h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M60.82,50.95h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M64.67,50.95h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M41.57,54.58h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M45.42,54.58h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M49.27,54.58h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M53.12,54.58h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M56.97,54.58h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M60.82,54.58h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M64.67,54.58h1.76v1.76h-1.76z"/>
+    <path android:fillColor="#8C4FC3F7" android:pathData="M-4.4,68.0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 q3.02,-2.42 6.05,0 t6.05,0 V108 H-20 Z"/>
+    <path android:fillColor="#EEF3F9" android:pathData="M38.05,57.66 H69.95 Q67.75,66.9 56.2,74.05 H51.8 Q40.25,66.9 38.05,57.66z"/>
+    <path android:fillColor="#0B3D91" android:pathData="M38.6,58.76h30.8v1.21h-30.8z"/>
+    <path android:fillColor="#E64FC3F7" android:pathData="M-9.9,72.4 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 q3.3,-2.64 6.6,0 t6.6,0 V108 H-20 Z"/>
+    <path android:fillColor="#1E88E5" android:pathData="M-2.2,79.0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 q3.58,-2.42 7.15,0 t7.15,0 V108 H-20 Z"/>
+</vector>

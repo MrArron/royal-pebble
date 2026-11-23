@@ -75,7 +75,7 @@ object WatchHost {
     fun buildText(): String = "${BuildConfig.VERSION_NAME} (${BuildConfig.COMMIT})"
 
     /** The Royal Pebble version of the bundled phone code (package.json), as the watch's usage log shows it. */
-    private val jsVersion: String by lazy {
+    val jsVersion: String by lazy {
         runCatching {
             val text = WatchHost::class.java.classLoader!!.getResourceAsStream("royalpebble/package.json")!!
                 .use { it.readBytes().toString(Charsets.UTF_8) }

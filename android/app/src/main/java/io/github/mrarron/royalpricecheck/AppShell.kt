@@ -101,6 +101,8 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33) askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
+    // Once a day while the app is open (switch in Settings > About); a failure is silent.
+    LaunchedEffect(Unit) { vm.update.autoCheck() }
 
     var mode by remember { mutableStateOf(AppPhase.mode(ctx)) }
     // Recomputed after a mode pick or a cruise change (a download can start or end the sailing).
@@ -156,7 +158,7 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
                         Sub.PRICE_CHECKS -> PriceChecksPage(vm)
                         Sub.PRICE_WATCHES -> PriceWatchesPage(vm)
                         Sub.PRICES -> PricesScreen(vm, dark)
-                        Sub.ABOUT -> AboutPage()
+                        Sub.ABOUT -> AboutPage(vm.update)
                     }
                 } else {
                     when (tab) {
@@ -175,7 +177,7 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
                         Dest.TODAY -> TodayScreen(cvm, mode, phase, pickMode, onEvents = { tabName = Dest.EVENTS.name },
                             watchStatus = remember(cvm.version) { WatchHost.status(ctx) })
                         Dest.CABIN -> MeTab(cvm)
-                        Dest.SETTINGS -> SettingsList(phase, open = { subName = it.name })
+                        Dest.SETTINGS -> SettingsList(phase, vm.update.state, open = { subName = it.name })
                     }
                 }
             }
@@ -233,7 +235,7 @@ private fun PricesScreen(vm: MainViewModel, dark: Boolean) {
 
 /** Settings: one list, each row a page. On board it also leads to Prices (not a tab then). */
 @Composable
-private fun SettingsList(phase: TripPhase.Phase, open: (Sub) -> Unit) {
+private fun SettingsList(phase: TripPhase.Phase, update: AppUpdate.State, open: (Sub) -> Unit) {
     val ctx = LocalContext.current
     val email = RoyalAccount.knownEmail(ctx)
     val rows = buildList {
@@ -243,7 +245,8 @@ private fun SettingsList(phase: TripPhase.Phase, open: (Sub) -> Unit) {
         add(Triple(Sub.WATCH, "Watch and logs", "Serve the watch · test alerts · share the log file"))
         add(Triple(Sub.PRICE_CHECKS, "Price checks", "Background checks · alert hours · on board · script updates"))
         add(Triple(Sub.PRICE_WATCHES, "Price watches", "Watch items you haven't bought · muted alerts"))
-        add(Triple(Sub.ABOUT, "About", "App ${BuildConfig.VERSION_NAME}"))
+        add(Triple(Sub.ABOUT, "About", "App ${BuildConfig.VERSION_NAME}" +
+            ((update as? AppUpdate.State.Available)?.let { " · update ${it.release.version} available" } ?: "")))
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         rows.forEach { (sub, title, detail) ->
@@ -258,15 +261,63 @@ private fun SettingsList(phase: TripPhase.Phase, open: (Sub) -> Unit) {
 }
 
 @Composable
-private fun AboutPage() {
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun AboutPage(update: AppUpdate) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Royal Pebble for Android", style = MaterialTheme.typography.titleMedium)
         Text("App ${WatchHost.buildText()}")
+        Text("Royal Pebble ${WatchHost.jsVersion}")
         Text("Bundled price script: ${BuildConfig.UPSTREAM_VERSION}")
         Text(
             "Trip and Today switch by themselves: On board from the first day of your downloaded sailing " +
                 "through the last, Planning otherwise. Pick Planning or On board on either screen to stay put.",
             style = MaterialTheme.typography.bodySmall,
         )
+        UpdateSection(update)
     }
+}
+
+/** App updates: Check now, and when a newer release exists, its notes and Download then Install. */
+@Composable
+private fun UpdateSection(u: AppUpdate) {
+    val st = u.state
+    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+    Text("App updates", style = MaterialTheme.typography.titleMedium)
+    Text(
+        when (st) {
+            AppUpdate.State.Idle -> "Looks for a newer Royal Pebble release on GitHub. Nothing about you is sent."
+            AppUpdate.State.Checking -> "Checking GitHub…"
+            is AppUpdate.State.UpToDate -> "Up to date (latest release ${st.latest})."
+            is AppUpdate.State.Available -> "Update ${st.release.version} is available."
+            is AppUpdate.State.Downloading -> "Downloading ${st.release.version}" +
+                (if (st.total > 0) ": ${st.done * 100 / st.total}%" else "…")
+            is AppUpdate.State.Ready -> "Downloaded and checked. Install opens Android's installer, which asks you to confirm."
+            is AppUpdate.State.NeedsPermission -> "Downloaded. Android needs you to allow installs from Royal Pebble: press Install, switch Allow on, then come back and press Install again."
+            is AppUpdate.State.Failed -> st.reason
+        },
+        color = if (st is AppUpdate.State.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+    )
+    val release = when (st) {
+        is AppUpdate.State.Available -> st.release
+        is AppUpdate.State.Downloading -> st.release
+        is AppUpdate.State.Ready -> st.release
+        is AppUpdate.State.NeedsPermission -> st.release
+        else -> null
+    }
+    release?.notes?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (st) {
+            is AppUpdate.State.Available -> Button(onClick = u::download) { Text("Download ${st.release.version}") }
+            is AppUpdate.State.Ready, is AppUpdate.State.NeedsPermission -> Button(onClick = u::install) { Text("Install") }
+            else -> {}
+        }
+        androidx.compose.material3.OutlinedButton(onClick = { u.check() }, enabled = st !is AppUpdate.State.Checking && st !is AppUpdate.State.Downloading) {
+            Text("Check for updates")
+        }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        androidx.compose.material3.Switch(u.auto, u::setAuto)
+        Text("Check once a day when the app opens")
+    }
+    Text("Updates come from this app's GitHub releases only, are checked against their size and checksum, and install over the current app with your data kept. It's free. With no internet the check just stops quietly.",
+        style = MaterialTheme.typography.bodySmall)
 }
