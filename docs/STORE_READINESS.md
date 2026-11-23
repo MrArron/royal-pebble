@@ -22,7 +22,7 @@ SDK 4.44, and the release itself comes after the December test cruise (D8).
 | 7 | Screenshots, 5 per watch, demo data only | To do on the owner's PC (`STORE_LISTING.md` §5) |
 | 8 | Repo scan for personal information (§5) | Files clean after this PR; history needs the owner (D4, D5) |
 | 9 | In-app notices: settings page Help > About, Android Settings > About (§4) | Next PR (watch-served JS, needs a version bump and an emulator check) |
-| 10 | Watch launcher icon (a menu icon resource in `package.json`) | Next PR; check the size the Time 2 and Round 2 launchers use in the current SDK docs first |
+| 10 | Watch launcher icon (a menu icon resource in `package.json`) | Done in 1.6.32: `resources/images/menu-icon.png`, 25x25 (the only size the SDK docs give, larger is rejected), `menuIcon: true` in `package.json`; drawn by `tools/store/make_menu_icon.js`. Check it in the launcher on both watches |
 | 11 | `companionApp` entry in `package.json` (D6) | Done in 1.6.28: only the Android app, linked to the latest release |
 | 13 | Permissions: declare them so the app isn't a legacy app (§7) | Declared in 1.6.28; build with SDK 4.44 and test on the emulator before release |
 | 12 | Developer account on the appstore's developer dashboard, then submit | Owner, after the sailing (D8) |

@@ -287,30 +287,22 @@ private fun UpdateSection(u: AppUpdate) {
             AppUpdate.State.Idle -> "Looks for a newer Royal Pebble release on GitHub. Nothing about you is sent."
             AppUpdate.State.Checking -> "Checking GitHub…"
             is AppUpdate.State.UpToDate -> "Up to date (latest release ${st.latest})."
-            is AppUpdate.State.Available -> "Update ${st.release.version} is available."
-            is AppUpdate.State.Downloading -> "Downloading ${st.release.version}" +
-                (if (st.total > 0) ": ${st.done * 100 / st.total}%" else "…")
-            is AppUpdate.State.Ready -> "Downloaded and checked. Install opens Android's installer, which asks you to confirm."
-            is AppUpdate.State.NeedsPermission -> "Downloaded. Android needs you to allow installs from Royal Pebble: press Install, switch Allow on, then come back and press Install again."
+            is AppUpdate.State.Available -> "Update ${st.release.version} is available. Download opens the file in your browser; tap it when it finishes to install over this app."
             is AppUpdate.State.Failed -> st.reason
         },
         color = if (st is AppUpdate.State.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
     )
     val release = when (st) {
         is AppUpdate.State.Available -> st.release
-        is AppUpdate.State.Downloading -> st.release
-        is AppUpdate.State.Ready -> st.release
-        is AppUpdate.State.NeedsPermission -> st.release
         else -> null
     }
     release?.notes?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         when (st) {
-            is AppUpdate.State.Available -> Button(onClick = u::download) { Text("Download ${st.release.version}") }
-            is AppUpdate.State.Ready, is AppUpdate.State.NeedsPermission -> Button(onClick = u::install) { Text("Install") }
+            is AppUpdate.State.Available -> Button(onClick = u::openDownload) { Text("Download ${st.release.version}") }
             else -> {}
         }
-        androidx.compose.material3.OutlinedButton(onClick = { u.check() }, enabled = st !is AppUpdate.State.Checking && st !is AppUpdate.State.Downloading) {
+        androidx.compose.material3.OutlinedButton(onClick = { u.check() }, enabled = st !is AppUpdate.State.Checking) {
             Text("Check for updates")
         }
     }
@@ -318,6 +310,6 @@ private fun UpdateSection(u: AppUpdate) {
         androidx.compose.material3.Switch(u.auto, u::changeAuto)
         Text("Check once a day when the app opens")
     }
-    Text("Updates come from this app's GitHub releases only, are checked against their size and checksum, and install over the current app with your data kept. It's free. With no internet the check just stops quietly.",
+    Text("Updates come from this app's GitHub releases only and install over the current app with your data kept. It's free. With no internet the check just stops quietly.",
         style = MaterialTheme.typography.bodySmall)
 }

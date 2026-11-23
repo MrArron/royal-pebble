@@ -6,11 +6,7 @@ import io.github.mrarron.royalpebble.royal.parseJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import java.io.File
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
-import java.security.MessageDigest
 
 /** A published Royal Pebble release that carries the Android app's APK. */
 data class ReleaseInfo(
@@ -32,6 +28,8 @@ data class ReleaseInfo(
  * Android), so `:royal:test` covers it with a fake [Transport]. Free forever: one
  * anonymous GET to api.github.com that carries no account or cruise data; the app
  * sends it only when the owner asks, or once a day while the app is open if left on.
+ * The app never installs anything itself (Play Protect flags apps that do): it only
+ * offers the release's APK link, which opens in the browser.
  *
  * "Newer" compares the release tag with the Royal Pebble version bundled in the app
  * (package.json, the number the usage log and Settings > About show), because the
@@ -102,62 +100,6 @@ object UpdateCheck {
             if (a != b) return a > b
         }
         return false
-    }
-
-    /**
-     * Downloads [release]'s APK to [dest] (GitHub redirects to its file host; https only),
-     * calling [progress] with bytes so far and the total (-1 when unknown), then checks the
-     * size and, when GitHub listed one, the SHA-256. Deletes a bad file and throws [IOException].
-     */
-    fun download(release: ReleaseInfo, dest: File, progress: (Long, Long) -> Unit = { _, _ -> }) {
-        dest.parentFile?.mkdirs()
-        val tmp = File(dest.path + ".part")
-        try {
-            var url = URL(release.apkUrl)
-            var conn: HttpURLConnection
-            var hops = 0
-            while (true) {
-                conn = url.openConnection() as HttpURLConnection
-                conn.instanceFollowRedirects = false
-                conn.connectTimeout = 20_000
-                conn.readTimeout = 30_000
-                conn.setRequestProperty("User-Agent", "royal-pebble-update-check")
-                val code = conn.responseCode
-                if (code in 301..308) {
-                    val next = URL(url, conn.getHeaderField("Location") ?: throw IOException("redirect without a place"))
-                    conn.disconnect()
-                    if (next.protocol != "https" || ++hops > 5) throw IOException("unsafe or endless redirect")
-                    url = next
-                    continue
-                }
-                if (code != 200) { conn.disconnect(); throw IOException("download answered HTTP $code") }
-                break
-            }
-            val total = conn.contentLengthLong.takeIf { it > 0 } ?: release.apkSize
-            val md = MessageDigest.getInstance("SHA-256")
-            var done = 0L
-            conn.inputStream.use { input ->
-                tmp.outputStream().use { out ->
-                    val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        out.write(buf, 0, n)
-                        md.update(buf, 0, n)
-                        done += n
-                        progress(done, total)
-                    }
-                }
-            }
-            conn.disconnect()
-            if (release.apkSize > 0 && done != release.apkSize) throw IOException("downloaded $done bytes, expected ${release.apkSize}")
-            val sum = md.digest().joinToString("") { "%02x".format(it) }
-            if (release.sha256 != null && sum != release.sha256) throw IOException("checksum doesn't match the release's")
-            dest.delete()
-            if (!tmp.renameTo(dest)) throw IOException("couldn't save the file")
-        } finally {
-            tmp.delete()
-        }
     }
 
     /** Once-a-day rule for the automatic check: true when [lastMs] is unset or at least [intervalMs] ago. */
