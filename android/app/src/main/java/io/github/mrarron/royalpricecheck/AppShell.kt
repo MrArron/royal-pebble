@@ -315,7 +315,7 @@ private fun UpdateSection(u: AppUpdate) {
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        androidx.compose.material3.Switch(u.auto, u::setAuto)
+        androidx.compose.material3.Switch(u.auto, u::changeAuto)
         Text("Check once a day when the app opens")
     }
     Text("Updates come from this app's GitHub releases only, are checked against their size and checksum, and install over the current app with your data kept. It's free. With no internet the check just stops quietly.",

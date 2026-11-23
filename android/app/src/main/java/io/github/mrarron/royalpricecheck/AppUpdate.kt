@@ -46,7 +46,7 @@ class AppUpdate(private val ctx: Context, private val scope: CoroutineScope) {
 
     private fun log(detail: String) = WatchHost.logApp(ctx, "update", detail)
 
-    fun setAuto(on: Boolean) {
+    fun changeAuto(on: Boolean) {
         auto = on
         Prefs.setUpdateCheckAuto(ctx, on)
         log("automatic check: " + if (on) "on" else "off")
