@@ -106,7 +106,14 @@
       "route_title"
     ],
     "resources": {
-      "media": []
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "MENU_ICON",
+          "file": "images/menu-icon.png",
+          "menuIcon": true
+        }
+      ]
     },
     "capabilities": [
       "configurable"

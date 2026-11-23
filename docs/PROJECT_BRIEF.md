@@ -216,6 +216,7 @@ was built later for other reasons.
   watches), the same alerts on the watch (Watch alerts now on by default),
   and alert hours (default 8 AM to 9 PM) that hold background-check alerts
   overnight until the hours open.
+- **Watch launcher icon** (1.6.32): the C3b ship as a 25x25 menu icon (`resources/images/menu-icon.png`).
 - **In-app update** (1.6.31): Settings > About checks this repo's newest GitHub release (once a day if left on, or on
   Check for updates), shows its notes and offers the APK link, which opens in the browser (1.6.32: no in-app install, so no
   install permission; Play Protect flagged 1.6.31's). The launcher icon is the C3b art as an adaptive icon.
