@@ -196,7 +196,8 @@ typedef enum {
   NOTICE_CHECKIN_OPEN = 5,   // online check-in is open and not done
   NOTICE_CHECKIN_DONE = 6,   // every guest is checked in
   NOTICE_PAYMENT = 7,        // the final payment is coming up
-  NOTICE_LAST = NOTICE_PAYMENT,
+  NOTICE_SCHEDULE = 8,       // the sailing's daily schedule was posted
+  NOTICE_LAST = NOTICE_SCHEDULE,
 } NoticeKind;
 
 #define MAX_NOTICES 8

@@ -26,7 +26,7 @@ direction.
   code HM). It is also the app's test cruise: the usage log and map notes
   collected on board drive the next round of fixes.
 - Version `1.X.Y`: X is the v1.1 phase in progress, Y counts PRs in it
-  (`CLAUDE.md`). Current: **1.6.29**, phase 6 (`PLAN.md`). The Android app is
+  (`CLAUDE.md`). Current: **1.6.30**, phase 6 (`PLAN.md`). The Android app is
   versioned on its own (`0.1.0-<commit>`, `BUILD_AND_TEST.md`).
 
 ## Constraints
@@ -198,7 +198,7 @@ was built later for other reasons.
 **Round 2 phase (1.6.0-1.6.7)** and the **1.6 hardware-test fixes
 (1.6.9-1.6.18)**: see "Watches" above and `PLAN.md` §3a.
 
-**Android app (1.6.19-1.6.29; `android/README.md`)**
+**Android app (1.6.19-1.6.30; `android/README.md`)**
 
 - Price and booking checker running jdeath's script (Chaquopy), with
   background checks, a Keystore-encrypted password only while those are on,
@@ -216,6 +216,11 @@ was built later for other reasons.
   watches), the same alerts on the watch (Watch alerts now on by default),
   and alert hours (default 8 AM to 9 PM) that hold background-check alerts
   overnight until the hours open.
+- **Schedule is up** alert (1.6.30): the background schedule refresh starts
+  21 days before sailing, and when it finds the daily schedule newly posted
+  (or 25% bigger) the phone and the watch (`SCHEDULE UP`, NOTICE kind 8) say
+  how many events there are, how many are free and how many free ones take a
+  reservation, so shows get booked before they fill up.
 - Kotlin Royal client and `CruiseStore` (port of `royal.js`, same fixtures),
   native Cruise screens (Cruise, Days, Filters, Events, Me, Share; laid out
   by trip phase in 1.6.25), restyled

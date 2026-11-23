@@ -447,7 +447,7 @@ delivered; undelivered ones wait for the next slice (e.g. the next app start).
 
 | Bytes | Field |
 |---|---|
-| 1 | `kind`: 0 moved (the star moved with it), 1 cancelled (star dropped), 2 check (several new times; star dropped); 4-7 booking notices (below). 3 is the watch's own `PHONE NEEDED` and never sent. The watch skips kinds above 7 |
+| 1 | `kind`: 0 moved (the star moved with it), 1 cancelled (star dropped), 2 check (several new times; star dropped); 4-8 booking notices (below). 3 is the watch's own `PHONE NEEDED` and never sent. The watch skips kinds above 8 (above 7 before 1.6.30) |
 | 4 | `from`: int32 cruise minutes, the old start (−1 untimed) |
 | 4 | `to`: int32 cruise minutes, the new start if moved, else `from` |
 | 1 + n | title, ≤ 39 bytes |
@@ -481,6 +481,11 @@ tests in `test/pkjs/booking-notices.test.js`):
 | 5 | `CHECK-IN OPEN` | the sailing | `2 of 3 guests to go` or `Not checked in yet` | `Closes Dec 9` or `Check in on Royal app` |
 | 6 | `CHECKED IN` | the sailing | `All guests checked in` | `Boarding 11:30a-12:00p`, or empty |
 | 7 | `PAYMENT DUE` | the sailing | `$1,235 due Dec 20` | `In 5 days`, `Due tomorrow`, `Due today`, `Overdue` |
+| 8 | `SCHEDULE UP` | the sailing | `412 events, 380 free` | `45 to reserve` or `Book in the Royal app` |
+
+Kind 8 (1.6.30) is sent only by the Android app's background schedule refresh
+(`ScheduleAlert.watchNotice`; `pack.js` has no encoder, PebbleKit JS never
+sends it). A watch app before 1.6.30 skips it (kinds above its last).
 
 Price watches (1.6.29, items not bought yet) use kind 4 too: the item, `Now
 $25.00 (-17%)`, and `Was $30.00 when set` (or `Below your $70.00` for a watch

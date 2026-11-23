@@ -542,7 +542,9 @@ screen and buzz, top bar `Booking`, then `PRICE DROP` / `CHECK-IN OPEN` /
 `CHECKED IN` / `PAYMENT DUE`, the title (the add-on or the sailing) and two
 lines the phone wrote: bold `Save $20.00` over muted `Was $109 now $89`;
 `2 of 3 guests to go` / `Check in on Royal app`; `All guests checked in` /
-`Boarding 11:30a-12:00p`; `$1,235 due Dec 20` / `In 5 days`. They mix with
+`Boarding 11:30a-12:00p`; `$1,235 due Dec 20` / `In 5 days`. Since 1.6.30,
+`SCHEDULE UP` (kind 8): the sailing, `412 events, 380 free` / `45 to reserve`
+(the "schedule is up" alert, §12). They mix with
 schedule notices in one `1 of N` run, the top bar following each one.
 
 ### 8.5 Silent morning sync
@@ -839,10 +841,24 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   background check also runs Download with login for the saved sailing
   with the remembered Royal Caribbean login (`ScheduleRefresh`), so moved or
   cancelled events, their stars and new bookings reach the watch. It pauses
-  on board with the price checks, runs from 14 days before sailing to the
-  last cruise day, at most once every 6 hours (`RefreshRules`), and writes a
-  `schedule` log line for every run or skip, then the `stars` and `booked`
-  lines a Cruise download writes.
+  on board with the price checks, runs from 21 days before sailing (1.6.30;
+  14 before) to the last cruise day, at most once every 6 hours
+  (`RefreshRules`), and writes a `schedule` log line for every run or skip,
+  then the `stars` and `booked` lines a Cruise download writes.
+- **Schedule is up** alert (1.6.30, `ScheduleNotify`, rules in
+  `royal/.../alerts/ScheduleAlert.kt`): after a background refresh, when the
+  schedule becomes published with at least 20 events, one phone notification
+  (channel "Schedule posted", with Mute) reads `Schedule is up: Harmony of the
+  Seas Dec 12` / `412 events posted, 380 free, 45 free shows and activities to
+  reserve. Reserve them in the Royal app before they fill up.`, and the watch
+  gets a `SCHEDULE UP` notice (Watch alerts on). Free means no price and no
+  `Fee applies`; to reserve counts free events that take a reservation; shore
+  excursions are left out. A later refresh alerts again (`More of the schedule
+  is up`, `Now N events (was M)`) when the count grows by 25% and at least 20
+  events. A schedule already downloaded before the first background refresh
+  only sets the baseline. It follows the alert hours and Mute (Unmute in
+  Settings > Price watches); log line `schedule  alert first|grew|none: ...`
+  and `alerts  schedule: 1 phone sent, Schedule watch alert: ...`.
 
 ### 12.1 Shared patterns
 

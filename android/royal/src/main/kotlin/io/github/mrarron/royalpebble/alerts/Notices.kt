@@ -9,6 +9,8 @@ object NoticeKind {
     const val CHECKIN_OPEN = 5
     const val CHECKIN_DONE = 6
     const val PAYMENT = 7
+    /** The Android app only: a sailing's daily schedule was posted (ScheduleAlert). */
+    const val SCHEDULE = 8
 }
 
 /** One booking notice as the watch shows it: a title and two lines of text made on the phone. */

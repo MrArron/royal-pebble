@@ -26,7 +26,7 @@ data class PhoneNotice(
     /** Set on price alerts: the notification gets a Mute button for this key. */
     val muteKey: String? = null,
     val muteLabel: String? = null,
-    /** "price", "watch", "checkin" or "status", for the test log's counts. */
+    /** "price", "watch", "schedule", "checkin" or "status", for the test log's counts. */
     val kind: String = "status",
 ) {
     fun toJson(): JSONObject = JSONObject().put("channel", channel).put("id", id).put("title", title).put("text", text)
@@ -54,11 +54,13 @@ object Notifier {
     const val CH_WATCH = "price_watches"
     const val CH_CHECKIN = "checkin"
     const val CH_STATUS = "status"
+    const val CH_SCHEDULE = "schedule_posted"
 
     fun createChannels(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_PRICE, "Price drops", NotificationManager.IMPORTANCE_HIGH))
         nm.createNotificationChannel(NotificationChannel(CH_WATCH, "Price watches", NotificationManager.IMPORTANCE_HIGH))
+        nm.createNotificationChannel(NotificationChannel(CH_SCHEDULE, "Schedule posted", NotificationManager.IMPORTANCE_HIGH))
         nm.createNotificationChannel(NotificationChannel(CH_CHECKIN, "Check-in changes", NotificationManager.IMPORTANCE_DEFAULT))
         nm.createNotificationChannel(NotificationChannel(CH_STATUS, "Check problems", NotificationManager.IMPORTANCE_LOW))
     }
