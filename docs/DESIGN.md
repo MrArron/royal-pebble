@@ -812,6 +812,10 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   price checks and downloads), Me and my stateroom (Planning only), Watch and
   logs, Price checks (with **Alert hours**), **Price watches** (1.6.29), About,
   and Prices when On board.
+- **About > App updates** (1.6.31): status line, release notes, `Download 1.6.x` then
+  `Install` (Android's own installer confirms), `Check for updates`, and a switch
+  `Check once a day when the app opens`. The Settings list's About row adds
+  `update 1.6.x available` when one is found.
 - **Price watches** (1.6.29, `PriceWatchesPage.kt`): an add form (Cruise
   Planner link, optional name, optional price now, `Any drop` / `% below` /
   `Below my price` chips, adult or child price), then a card per watch (rule,

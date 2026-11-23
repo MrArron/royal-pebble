@@ -36,6 +36,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var accountRemembered by mutableStateOf(false); private set
     var accountReady by mutableStateOf(false); private set
     val log = mutableStateListOf<String>()
+    /** Settings > About: the in-app update check, download and install. */
+    val update = AppUpdate(app, viewModelScope)
 
     // Settings > Price watches and the alert hours.
     var watches by mutableStateOf<List<PriceWatch>>(emptyList()); private set

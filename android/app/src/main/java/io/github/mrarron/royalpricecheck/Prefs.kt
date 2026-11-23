@@ -69,6 +69,12 @@ object Prefs {
     fun watchAlerts(c: Context) = sp(c).getBoolean("watch_alerts", true)
     fun setWatchAlerts(c: Context, v: Boolean) = sp(c).edit().putBoolean("watch_alerts", v).apply()
 
+    /** Settings > About: look for a newer release when the app opens, at most once a day (on unless turned off). */
+    fun updateCheckAuto(c: Context) = sp(c).getBoolean("update_check_auto", true)
+    fun setUpdateCheckAuto(c: Context, v: Boolean) = sp(c).edit().putBoolean("update_check_auto", v).apply()
+    fun updateCheckedAt(c: Context) = sp(c).getLong("update_checked_at", 0)
+    fun setUpdateCheckedAt(c: Context, at: Long) = sp(c).edit().putLong("update_checked_at", at).apply()
+
     /** Keys of the alerts the watch has acknowledged, so each is sent once. */
     fun watchAlertKeys(c: Context): Set<String> = sp(c).getStringSet("watch_alert_sent", emptySet()) ?: emptySet()
     fun setWatchAlertKeys(c: Context, keys: Set<String>) = sp(c).edit().putStringSet("watch_alert_sent", keys).apply()
