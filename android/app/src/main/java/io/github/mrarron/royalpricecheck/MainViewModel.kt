@@ -45,12 +45,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var quiet by mutableStateOf(QuietHours()); private set
     /** A Cruise Planner link shared to the app (Share > Royal Pebble): opens Price watches with it filled in. */
     var sharedLink by mutableStateOf<String?>(null)
+    /** The Cruise Planner items loaded from Royal for the picker, and the state of loading them. */
+    var catalog by mutableStateOf<List<io.github.mrarron.royalpebble.royal.CatalogItem>>(emptyList()); private set
+    var catalogBusy by mutableStateOf(false); private set
+    var catalogMessage by mutableStateOf<String?>(null); private set
 
     init {
         reload()
     }
 
     private fun reload() {
+        catalog = Prefs.catalogItems(ctx)
         runCatching { Prefs.migratePlainPasswords(ctx) }
         hasConfig = Prefs.hasConfig(ctx)
         config = Prefs.readConfig(ctx)
@@ -220,10 +225,61 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         return null
     }
 
-    /** The schedule's shore excursions that can be watched without a link (docs/DESIGN.md, Price watches). */
+    /** What can be watched without a link: the schedule's shore excursions plus the loaded Cruise Planner items (docs/DESIGN.md, Price watches). */
     fun watchCandidates(): List<io.github.mrarron.royalpebble.alerts.WatchCandidate> {
         val bundle = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).bundle()
-        return io.github.mrarron.royalpebble.alerts.WatchCandidates.of(bundle, Prefs.priceWatches(ctx).mapTo(HashSet()) { it.code })
+        return io.github.mrarron.royalpebble.alerts.WatchCandidates.all(bundle, catalog, Prefs.priceWatches(ctx).mapTo(HashSet()) { it.code })
+    }
+
+    /** True when a sailing is downloaded and a Royal login is saved, so the Cruise Planner list can be loaded. */
+    fun canLoadCatalog(): Boolean = catalogSailing() != null && RoyalAccount.current(ctx)?.takeIf { it.cruiseLine == "royal" } != null
+
+    private fun catalogSailing(): Pair<String, String>? {
+        val bundle = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).bundle() ?: return null
+        val ship = (bundle["ship"] as? kotlinx.serialization.json.JsonObject)?.get("code")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+        val date = (bundle["sailDate"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+        if (ship.isNullOrBlank() || date.isNullOrBlank()) return null
+        return ship to date.replace("-", "")
+    }
+
+    /**
+     * Loads drinks, internet, dining, activities and spa from the Cruise Planner for the downloaded sailing,
+     * signed in with the saved Royal login (about 10 to 20 requests, a pause between each). The list is kept
+     * on the phone and refreshed only when asked.
+     */
+    fun loadCatalog() {
+        if (catalogBusy) return
+        val sailing = catalogSailing()
+        val account = RoyalAccount.current(ctx)?.takeIf { it.cruiseLine == "royal" }
+        if (sailing == null || account == null) {
+            catalogMessage = "Download your sailing in Trip and save your Royal login (Settings > Royal account) first."
+            return
+        }
+        catalogBusy = true
+        catalogMessage = "Loading from Royal Caribbean..."
+        viewModelScope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                try {
+                    val client = io.github.mrarron.royalpebble.royal.RoyalClient(io.github.mrarron.royalpebble.royal.UrlConnectionTransport())
+                    val auth = client.login(account.email, account.password)
+                    Result.success(client.fetchCatalog(auth, sailing.first, sailing.second))
+                } catch (e: io.github.mrarron.royalpebble.royal.RoyalException) {
+                    Result.failure<io.github.mrarron.royalpebble.royal.CatalogResult>(e)
+                } catch (e: Exception) {
+                    Result.failure<io.github.mrarron.royalpebble.royal.CatalogResult>(RuntimeException("Could not load the list from Royal Caribbean."))
+                }
+            }
+            outcome.onSuccess { r ->
+                if (r.items.isNotEmpty()) { Prefs.setCatalogItems(ctx, r.items); catalog = r.items }
+                catalogMessage = if (r.items.isEmpty()) "Royal Caribbean listed nothing${if (r.failed.isNotEmpty()) " (" + r.failed.joinToString() + " failed)" else ""}. Try again later."
+                else "Loaded ${r.items.size} items" + (if (r.failed.isNotEmpty()) ". Could not load: ${r.failed.joinToString()}." else ".")
+                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "planner list loaded: ${r.items.size} items" + (if (r.failed.isNotEmpty()) ", failed: ${r.failed.joinToString()}" else ""))
+            }.onFailure { e ->
+                catalogMessage = e.message ?: "Could not load the list."
+                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "planner list failed: ${e.message}")
+            }
+            catalogBusy = false
+        }
     }
 
     fun removeWatch(id: String) {

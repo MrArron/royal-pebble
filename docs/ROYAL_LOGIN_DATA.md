@@ -132,6 +132,32 @@ jdeath/CheckRoyalCaribbeanPrice (MIT).
 - `departurePortInformation.terminals[]` has the terminal's address and
   coordinates. Not copied; a candidate for the Later "back to the ship" pin.
 
+### The Cruise Planner product list (probe, 2026-11-24)
+
+What the planner's own pages call, found from Royal's public web config and the signed-in Cruise Planner
+for the owner's sailing; run once through `catalog_probe2.py` and used by the Android picker
+(`RoyalClient.fetchCatalog`).
+
+- `POST /en/royal/web/graphql`, operation `WebProductsByCategory`, with login headers. Variables: `category`,
+  `passengerId` and `reservationId` (from the booking in endpoint 4), `shipCode`, `sailDate` (`YYYY-MM-DD`),
+  `pageSize` (**at most 24**), `currentPage` from 0, `currencyCode`, a `filter`. Per product: `id`, `baseId`,
+  `title`, `type { id }` (the `pt_...` id), `price` (**a list**: `promotionalPrice`, `shipboardPrice`,
+  `formattedBasePrice`, `formattedPromotionalPrice`, `salesUnit { code }`), `bookingEligibility`, `stock`.
+- Category names that answered: `beverage` (17 items), `internet` (3), `dining` (32), `shorex` (132),
+  `spa` (125), `activities` and `onboardActivities` (25), `packages` (8), `photo` (7), `celebrations` (40),
+  `royalbeachclub` (19), `roomdelivery` (27). `entertainment`, `merchandise`, `perfectday` and `vip` returned
+  an exception (wrong names).
+- Type ids seen: `pt_packages` and `pt_beverage` (drink packages), `pt_internet`, `pt_shoreX`, `pt_spa`,
+  `pt_dining`, `pt_onboardActivities`, `pt_arcades`. The same product can be listed under several
+  categories (a Party package under beverage, internet and packages), so a watch keeps the type id and
+  product id as listed. Planner product page URL: `/account/cruise-planner/category/{category}/product/{id}`.
+- Prices: `promotionalPrice` is empty when there is no discount (use `formattedBasePrice`); `shipboardPrice`
+  was empty for every item before sailing; `salesUnit.code` is `perDay`, `perNight`, `perSeat` or `perPackage`.
+- *Unverified:* categories with no products in the date range, why `beverage` showed 14 of 17 (probably variant
+  products), the child price, and whether the call works long after sailing.
+- Also in Royal's public `endpoints.min.json`: `GET catalog/v2/{ship}/home` and `categories` (need
+  `startDate=YYYYMMDD`, `passengerId`, `reservationId`, `currencyIso`, `regionCode`) and `catalog-unauth` variants.
+
 ### Other data
 
 - Onboard credit amount (endpoint 6): a starting balance for the Later

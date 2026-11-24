@@ -24,6 +24,9 @@ class RoyalAuth internal constructor(internal val token: String, val accountId: 
 /** A download with login: the bundle, and why the booking details are missing when they are. */
 data class LoginDownload(val bundle: JsonObject, val mineError: String?)
 
+/** The planner's products, and the categories that could not be read. */
+data class CatalogResult(val items: List<CatalogItem>, val failed: List<String>)
+
 /**
  * Royal Caribbean's web endpoints, ported from the network parts of
  * src/pkjs/royal.js. tools/cruise-sync/cruise_sync.py is the reference for the
@@ -298,6 +301,70 @@ class RoyalClient(
         } catch (e: RoyalException) {
             LoginDownload(bundle, e.message)
         }
+    }
+
+    // ------------------------------------------------------------ the Cruise Planner product list
+
+    /** A POST with a JSON body and the same retries as [getJson]. */
+    private fun postJson(url: String, body: String, auth: RoyalAuth): JsonElement {
+        val headers = baseHeaders()
+        headers["Content-Type"] = "application/json"
+        headers.putAll(auth.headers())
+        val request = HttpRequest("POST", url, headers, body)
+        var last: Reply? = null
+        for (attempt in 1..ATTEMPTS) {
+            val r = once(request)
+            if (r.error == null) return r.json!!
+            if (r.status in 400..499) throw RoyalException(r.error)
+            last = r
+            if (attempt < ATTEMPTS) sleep(2000L * attempt)
+        }
+        throw RoyalException(last!!.error!!)
+    }
+
+    /**
+     * What the Cruise Planner lists for this sailing: drinks, internet, dining, activities and spa
+     * ([RoyalCatalog.CATEGORIES]), so a price watch can be picked without a link. Needs the login, because
+     * the list is asked for as the booking's guest. Sequential and gentle: a pause between requests,
+     * at most [RoyalCatalog.MAX_PAGES] pages a category. A category that fails is skipped and named in
+     * [CatalogResult.failed]; nothing is thrown unless the booking itself can't be found.
+     */
+    fun fetchCatalog(auth: RoyalAuth, code: String, date8: String): CatalogResult {
+        val res = getJson("$API/v1/profileBookings/enriched/${encodeUriComponent(auth.accountId)}", auth,
+            params("brand" to "R", "includeCheckin" to "true"))
+        val bookings = res["payload"].objOrEmpty()["profileBookings"].arrOrEmpty()
+        val match = bookings.filter {
+            it["shipCode"].string() == code && (if (it["sailDate"].truthy()) it["sailDate"].jsString() else "").replace("-", "") == date8
+        }
+        if (match.isEmpty()) throw RoyalException(ERR_NO_BOOKING + RoyalParse.bookingList(bookings))
+        val booking = if (match.size == 1) match[0] else pickOwnBooking(auth, match).first
+        val passenger = booking["passengerId"].let { if (it.truthy()) it.jsString() else "" }
+        val reservation = booking["bookingId"].let { if (it.truthy()) it.jsString() else "" }
+        if (passenger.isEmpty() || reservation.isEmpty()) throw RoyalException(ERR_NO_BOOKING)
+        val sailDate = "${date8.substring(0, 4)}-${date8.substring(4, 6)}-${date8.substring(6, 8)}"
+
+        val items = LinkedHashMap<String, CatalogItem>()
+        val failed = mutableListOf<String>()
+        var first = true
+        for ((category, label) in RoyalCatalog.CATEGORIES) {
+            try {
+                var page = 0
+                while (page < RoyalCatalog.MAX_PAGES) {
+                    if (!first) sleep(1500)
+                    first = false
+                    val reply = postJson("$API/en/royal/web/graphql",
+                        RoyalCatalog.requestBody(category, code, sailDate, passenger, reservation, page), auth)
+                    val parsed = RoyalCatalog.parsePage(reply, label)
+                    if (parsed.error != null && page == 0) { failed += label; break }
+                    parsed.items.forEach { items.putIfAbsent(it.code, it) }
+                    if (!parsed.hasNext) break
+                    page++
+                }
+            } catch (e: RoyalException) {
+                failed += label
+            }
+        }
+        return CatalogResult(items.values.toList(), failed)
     }
 
     private fun orNone(value: JsonElement?): String? = RoyalParse.clean(value).ifEmpty { null }

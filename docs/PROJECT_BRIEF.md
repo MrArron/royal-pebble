@@ -213,9 +213,10 @@ was built later for other reasons.
   percent below it; or below your own price), checked by the price script's
   `watchList` and decided by the app (`royal/.../alerts/PriceWatch.kt`); one
   phone notification per alert with Mute (Unmute in Settings > Price
-  watches; shore excursions can be picked from the downloaded schedule instead of pasting a link,
-  while drink packages, internet and paid activities still need the link: the schedule data has no
-  type id or product id for them), the same alerts on the watch (Watch alerts now on by default),
+  watches; items can be picked instead of pasting a link: shore excursions from the downloaded schedule, and
+  drinks, internet, dining, activities and spa from the Cruise Planner's own product list, loaded
+  with the saved Royal login (`RoyalClient.fetchCatalog`, Royal's `WebProductsByCategory` GraphQL call;
+  see `docs/ROYAL_LOGIN_DATA.md`)), the same alerts on the watch (Watch alerts now on by default),
   and alert hours (default 8 AM to 9 PM) that hold background-check alerts
   overnight until the hours open.
 - **Watch launcher icon** (1.6.32): the C3b ship as a 25x25 menu icon (`resources/images/menu-icon.png`).
