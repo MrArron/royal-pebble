@@ -1,5 +1,6 @@
 package io.github.mrarron.royalpricecheck
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,6 +45,8 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
                 "you get a phone notification and a watch alert when the price drops.",
             style = MaterialTheme.typography.bodySmall,
         )
+        PickFromSchedule(vm)
+        Text("Or paste a link", style = MaterialTheme.typography.titleSmall)
         AddWatchForm(vm)
 
         Text("Your watches", style = MaterialTheme.typography.titleMedium)
@@ -64,6 +67,86 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
         }
         Text("Alerts from background checks arrive only from ${vm.quiet.text()} (Settings > Price checks > Alert hours).", style = MaterialTheme.typography.bodySmall)
     }
+}
+
+/**
+ * Shore excursions from the downloaded schedule, so no link is needed. Drink packages, internet
+ * and paid activities are not in the schedule data (no Cruise Planner type id), so they still
+ * need the link below.
+ */
+@Composable
+private fun PickFromSchedule(vm: MainViewModel) {
+    val tick = vm.watches.size   // a new watch drops out of the list
+    val all = remember(tick) { vm.watchCandidates() }
+    var query by rememberSaveable { mutableStateOf("") }
+    var pickedCode by rememberSaveable { mutableStateOf<String?>(null) }
+    var ruleCode by rememberSaveable { mutableStateOf(WatchRule.ANY_DROP.code) }
+    var percent by rememberSaveable { mutableStateOf("20") }
+    var target by rememberSaveable { mutableStateOf("") }
+    var guest by rememberSaveable { mutableStateOf("adult") }
+    var message by remember { mutableStateOf<String?>(null) }
+    val money = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+    val rule = WatchRule.of(ruleCode)
+
+    Text("Pick a shore excursion from your schedule", style = MaterialTheme.typography.titleSmall)
+    if (all.isEmpty()) {
+        Text("No shore excursions to pick from. Download the schedule first (Trip), or you already watch them all.", style = MaterialTheme.typography.bodySmall)
+        return
+    }
+    val picked = all.firstOrNull { it.code == pickedCode }
+    if (picked == null) {
+        OutlinedTextField(query, { query = it }, label = { Text("Search ${all.size} excursions") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        val shown = io.github.mrarron.royalpebble.alerts.WatchCandidates.filter(all, query)
+        shown.take(12).forEach { c ->
+            Card(Modifier.fillMaxWidth().clickable { pickedCode = c.code; message = null }) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(c.title, style = MaterialTheme.typography.titleSmall)
+                    Text(candidateLine(c), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        if (shown.size > 12) Text("${shown.size - 12} more: type to narrow the list.", style = MaterialTheme.typography.bodySmall)
+        if (shown.isEmpty()) Text("Nothing matches.", style = MaterialTheme.typography.bodySmall)
+    } else {
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(picked.title, style = MaterialTheme.typography.titleSmall)
+                Text(candidateLine(picked), style = MaterialTheme.typography.bodySmall)
+                Text("The listed price is Royal's adult \"from\" price at download. Your watch's starting price is set by the next check, so alerts compare like with like.", style = MaterialTheme.typography.bodySmall)
+                Text("Alert me when", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(rule == WatchRule.ANY_DROP, { ruleCode = WatchRule.ANY_DROP.code }, label = { Text("Any drop") })
+                    FilterChip(rule == WatchRule.PERCENT, { ruleCode = WatchRule.PERCENT.code }, label = { Text("% below") })
+                    FilterChip(rule == WatchRule.BELOW, { ruleCode = WatchRule.BELOW.code }, label = { Text("Below my price") })
+                }
+                when (rule) {
+                    WatchRule.ANY_DROP -> Unit
+                    WatchRule.PERCENT -> OutlinedTextField(percent, { percent = it }, label = { Text("Percent below the price when set") }, singleLine = true, keyboardOptions = money)
+                    WatchRule.BELOW -> OutlinedTextField(target, { target = it }, label = { Text("My price") }, singleLine = true, keyboardOptions = money)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(guest == "adult", { guest = "adult" }, label = { Text("Adult price") })
+                    FilterChip(guest == "child", { guest = "child" }, label = { Text("Child price") })
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button({
+                        val err = vm.addWatchFor(picked.prefix, picked.product, "", picked.title, "", rule, percent, target, guest, "schedule")
+                        message = err ?: "Watch added. It is priced by the next check (Prices > Run now, or the background check)."
+                        if (err == null) { pickedCode = null; query = ""; target = "" }
+                    }) { Text("Watch this") }
+                    TextButton({ pickedCode = null }) { Text("Back to the list") }
+                }
+            }
+        }
+    }
+    message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+}
+
+private fun candidateLine(c: io.github.mrarron.royalpebble.alerts.WatchCandidate): String {
+    val price = c.listedPrice?.let { "listed from $$it" } ?: "no listed price"
+    val days = if (c.firstDate == c.lastDate) c.firstDate else "${c.firstDate} to ${c.lastDate}"
+    val sessions = "${c.sessions} ${if (c.sessions == 1) "session" else "sessions"}"
+    return listOfNotNull(c.place.takeIf { it.isNotBlank() }, days, sessions, price).joinToString(" · ")
 }
 
 @Composable

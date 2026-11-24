@@ -85,7 +85,8 @@ button; a changed check-in label; a failed check).
 (`PriceWatch.kt`, `QuietHours.kt`, tested in `PriceWatchTest`).
 
 - **Price watches** (Settings > Price watches, or Share a Cruise Planner link to Royal Pebble): an
-  item not bought yet, named by its Cruise Planner link (`.../category/<prefix>/product/<product>
+  item not bought yet, picked from the downloaded schedule's shore excursions (`WatchCandidates`:
+  product id from the schedule's `pid`, type id `pt_shoreX`) or named by its Cruise Planner link (`.../category/<prefix>/product/<product>
   ?bookingId=...`). The app adds each watch to the runtime config's `watchList` (your `config.yaml`
   is not changed) and `rcp_runner.summarize` returns their rows as `watched`, not as drops. The app
   decides when one alerts: **Any drop** below the price when the watch was set (default), **% below**

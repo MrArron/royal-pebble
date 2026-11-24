@@ -816,7 +816,11 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   APK link in the browser; no in-app install), `Check for updates`, and a switch
   `Check once a day when the app opens`. The Settings list's About row adds
   `update 1.6.x available` when one is found.
-- **Price watches** (1.6.29, `PriceWatchesPage.kt`): an add form (Cruise
+- **Price watches** (1.6.29, `PriceWatchesPage.kt`): first **Pick a shore
+  excursion from your schedule** (search box, a card per excursion product
+  with place, dates, sessions and Royal's listed adult "from" price; tap one
+  for the rule chips and **Watch this**; no link needed; the starting price
+  still comes from the next check, not the listed price), then an add form (Cruise
   Planner link, optional name, optional price now, `Any drop` / `% below` /
   `Below my price` chips, adult or child price), then a card per watch (rule,
   price now, `below your trigger` in the primary colour, last check, Mute or

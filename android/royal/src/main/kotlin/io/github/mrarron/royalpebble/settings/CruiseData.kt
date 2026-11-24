@@ -59,6 +59,8 @@ data class Event(
     val early: Int?,
     /** Royal marks it "Fee applies" (the bundle's `fee` note); Filters > Cost can hide it. */
     val fee: Boolean = false,
+    /** Royal's productID (the same for every session of an activity), or null. */
+    val pid: String? = null,
 ) {
     /** slice.js starKey: how stars and reserved marks name this event. */
     val key: String get() = "$title|$date|${time ?: ""}|$venue"
@@ -117,6 +119,7 @@ object CruiseData {
                 fee = info?.getOrNull(2).arr().orEmpty().any { i ->
                     notes.getOrNull(i.num()?.toInt() ?: -1).arr()?.getOrNull(0).str() == FEE_NOTE_ID
                 },
+                pid = at("pid").str()?.takeIf { it.isNotBlank() },
             )
         }
     }
