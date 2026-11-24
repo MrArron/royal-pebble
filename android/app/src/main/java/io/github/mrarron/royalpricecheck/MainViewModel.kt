@@ -195,6 +195,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun addWatch(link: String, name: String, priceNow: String, rule: WatchRule, percent: String, target: String, guestAge: String): String? {
         val l = ProductLink.parse(link) ?: return "Paste the item's Cruise Planner link (it has /category/.../product/... in it)."
+        return addWatchFor(l.prefix, l.product, l.bookingId, name, priceNow, rule, percent, target, guestAge, "link")
+    }
+
+    /** Adds a watch for a known product: from a pasted link ([how] = "link") or picked from the schedule ("schedule"). */
+    fun addWatchFor(prefix: String, product: String, bookingId: String, name: String, priceNow: String, rule: WatchRule, percent: String, target: String, guestAge: String, how: String): String? {
         fun num(t: String) = t.trim().removePrefix("$").replace(",", "").toDoubleOrNull()
         val base = num(priceNow)?.takeIf { it > 0 }
         val pct = num(percent) ?: 0.0
@@ -202,17 +207,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (rule == WatchRule.PERCENT && (pct <= 0 || pct >= 100)) return "Enter a percent between 1 and 99."
         if (rule == WatchRule.BELOW && tgt <= 0) return "Enter your price."
         val all = Prefs.priceWatches(ctx)
-        if (all.any { it.code == "${l.prefix}/${l.product}" && it.reservationId == l.bookingId && it.guestAge == guestAge }) return "You already watch this item."
+        if (all.any { it.code == "$prefix/$product" && it.reservationId == bookingId && it.guestAge == guestAge }) return "You already watch this item."
         val w = PriceWatch(
-            id = java.util.UUID.randomUUID().toString().take(8), name = name.trim(), prefix = l.prefix, product = l.product,
-            reservationId = l.bookingId, guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
+            id = java.util.UUID.randomUUID().toString().take(8), name = name.trim(), prefix = prefix, product = product,
+            reservationId = bookingId, guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
             createdAt = System.currentTimeMillis(),
         )
         Prefs.setPriceWatches(ctx, all + w)
-        io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "added ${w.name.ifBlank { w.code }} (${w.code}, ${w.rule.code}${if (base != null) ", starting price typed" else ", starting price from next check"})")
+        io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "added ${w.name.ifBlank { w.code }} ($how, ${w.code}, ${w.rule.code}${if (base != null) ", starting price typed" else ", starting price from next check"})")
         refreshAlerts()
         sharedLink = null
         return null
+    }
+
+    /** The schedule's shore excursions that can be watched without a link (docs/DESIGN.md, Price watches). */
+    fun watchCandidates(): List<io.github.mrarron.royalpebble.alerts.WatchCandidate> {
+        val bundle = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).bundle()
+        return io.github.mrarron.royalpebble.alerts.WatchCandidates.of(bundle, Prefs.priceWatches(ctx).mapTo(HashSet()) { it.code })
     }
 
     fun removeWatch(id: String) {
