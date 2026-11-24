@@ -40,9 +40,9 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Watch an item you haven't bought", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Open the item in the Cruise Planner on royalcaribbean.com (drink package, internet, excursion, dining), " +
-                "then share its link to Royal Pebble or paste it here. Each price check also prices your watches, and " +
-                "you get a phone notification and a watch alert when the price drops.",
+            "Pick it from the list below (shore excursions, drinks, internet, dining, activities, spa), or open the item " +
+                "in the Cruise Planner on royalcaribbean.com and share its link to Royal Pebble or paste it here. " +
+                "Each price check also prices your watches, and you get a phone notification and a watch alert when the price drops.",
             style = MaterialTheme.typography.bodySmall,
         )
         PickFromSchedule(vm)
@@ -70,14 +70,14 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
 }
 
 /**
- * Shore excursions from the downloaded schedule, so no link is needed. Drink packages, internet
- * and paid activities are not in the schedule data (no Cruise Planner type id), so they still
- * need the link below.
+ * Items to watch without a link: shore excursions from the downloaded schedule, plus drinks, internet,
+ * dining, activities and spa from the Cruise Planner's own list, loaded from Royal with the saved login
+ * ([MainViewModel.loadCatalog]). Anything else still needs the link below.
  */
 @Composable
 private fun PickFromSchedule(vm: MainViewModel) {
     val tick = vm.watches.size   // a new watch drops out of the list
-    val all = remember(tick) { vm.watchCandidates() }
+    val all = remember(tick, vm.catalog) { vm.watchCandidates() }
     var query by rememberSaveable { mutableStateOf("") }
     var pickedCode by rememberSaveable { mutableStateOf<String?>(null) }
     var ruleCode by rememberSaveable { mutableStateOf(WatchRule.ANY_DROP.code) }
@@ -88,14 +88,15 @@ private fun PickFromSchedule(vm: MainViewModel) {
     val money = KeyboardOptions(keyboardType = KeyboardType.Decimal)
     val rule = WatchRule.of(ruleCode)
 
-    Text("Pick a shore excursion from your schedule", style = MaterialTheme.typography.titleSmall)
+    Text("Pick an item to watch", style = MaterialTheme.typography.titleSmall)
+    CatalogLoader(vm)
     if (all.isEmpty()) {
-        Text("No shore excursions to pick from. Download the schedule first (Trip), or you already watch them all.", style = MaterialTheme.typography.bodySmall)
+        Text("Nothing to pick from yet. Download your sailing (Trip) for shore excursions, and load the Cruise Planner list for drinks, internet, dining, activities and spa. Or you already watch them all.", style = MaterialTheme.typography.bodySmall)
         return
     }
     val picked = all.firstOrNull { it.code == pickedCode }
     if (picked == null) {
-        OutlinedTextField(query, { query = it }, label = { Text("Search ${all.size} excursions") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(query, { query = it }, label = { Text("Search ${all.size} items (try drinks, internet, spa, a name)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         val shown = io.github.mrarron.royalpebble.alerts.WatchCandidates.filter(all, query)
         shown.take(12).forEach { c ->
             Card(Modifier.fillMaxWidth().clickable { pickedCode = c.code; message = null }) {
@@ -112,7 +113,7 @@ private fun PickFromSchedule(vm: MainViewModel) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(picked.title, style = MaterialTheme.typography.titleSmall)
                 Text(candidateLine(picked), style = MaterialTheme.typography.bodySmall)
-                Text("The listed price is Royal's adult \"from\" price at download. Your watch's starting price is set by the next check, so alerts compare like with like.", style = MaterialTheme.typography.bodySmall)
+                Text("The listed price is Royal's own from price when it was loaded. Your watch's starting price is set by the next check, so alerts compare like with like.", style = MaterialTheme.typography.bodySmall)
                 Text("Alert me when", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(rule == WatchRule.ANY_DROP, { ruleCode = WatchRule.ANY_DROP.code }, label = { Text("Any drop") })
@@ -142,7 +143,24 @@ private fun PickFromSchedule(vm: MainViewModel) {
     message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 }
 
+/** The button that loads the Cruise Planner list, and what the last load said. */
+@Composable
+private fun CatalogLoader(vm: MainViewModel) {
+    val ready = vm.canLoadCatalog()
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedButton({ vm.loadCatalog() }, enabled = ready && !vm.catalogBusy) {
+            Text(if (vm.catalog.isEmpty()) "Load drinks, internet, dining, activities, spa" else "Refresh the Cruise Planner list (${vm.catalog.size})")
+        }
+    }
+    when {
+        vm.catalogMessage != null -> Text(vm.catalogMessage!!, style = MaterialTheme.typography.bodySmall)
+        !ready -> Text("Needs a downloaded sailing (Trip) and a saved Royal login (Settings > Royal account). It signs in once and makes about 10 to 20 requests.", style = MaterialTheme.typography.bodySmall)
+        vm.catalog.isEmpty() -> Text("Not loaded yet. Shore excursions below come from your schedule.", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
 private fun candidateLine(c: io.github.mrarron.royalpebble.alerts.WatchCandidate): String {
+    if (c.sessions == 0) return listOf(c.group, c.priceText.ifBlank { "no listed price" }).joinToString(" · ")
     val price = c.listedPrice?.let { "listed from $$it" } ?: "no listed price"
     val days = if (c.firstDate == c.lastDate) c.firstDate else "${c.firstDate} to ${c.lastDate}"
     val sessions = "${c.sessions} ${if (c.sessions == 1) "session" else "sessions"}"

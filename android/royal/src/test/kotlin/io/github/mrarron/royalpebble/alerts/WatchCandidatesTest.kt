@@ -34,6 +34,25 @@ class WatchCandidatesTest {
         assertEquals(2, WatchCandidates.filter(both, " ").size)
     }
 
+    @Test
+    fun plannerItemsJoinTheExcursionsAndASharedProductKeepsItsScheduleRow() {
+        val catalog = listOf(
+            io.github.mrarron.royalpebble.royal.CatalogItem("pt_packages", "YOUC", "Party Package", "Drinks", "${'$'}96.99 per day"),
+            io.github.mrarron.royalpebble.royal.CatalogItem("pt_internet", "N1", "Internet", "Internet", ""),
+            io.github.mrarron.royalpebble.royal.CatalogItem("pt_shoreX", "AB1", "Snorkel Reef (planner)", "Activities", ""),
+        )
+        val all = WatchCandidates.all(fixed(), catalog)
+        assertEquals(listOf("Atlantis Day Pass", "Snorkel Reef", "Party Package", "Internet"), all.map { it.title })
+        assertEquals("Snorkel Reef", all.first { it.code == "pt_shoreX/AB1" }.title)  // schedule row wins
+        val party = all.first { it.group == "Drinks" }
+        assertEquals("pt_packages/YOUC", party.code)
+        assertEquals("${'$'}96.99 per day", party.priceText)
+        assertEquals(0, party.sessions)
+        assertEquals(listOf("Party Package"), WatchCandidates.filter(all, "drinks").map { it.title })
+        assertEquals(listOf("Internet"), WatchCandidates.all(fixed(), catalog, setOf("pt_packages/YOUC", "pt_shoreX/AB1"))
+            .filter { it.sessions == 0 }.map { it.title })
+    }
+
     private fun fixed() = Json.parseToJsonElement(
         """{"schedule":{"published":true,
           "fields":["title","venue","cat","date","time","minutes","featured","reservation","paid","price","info","pid"],

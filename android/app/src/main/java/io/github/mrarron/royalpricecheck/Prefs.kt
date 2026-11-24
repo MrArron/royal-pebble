@@ -83,6 +83,12 @@ object Prefs {
     fun priceWatches(c: Context): List<PriceWatch> = PriceWatches.decode(sp(c).getString("price_watches", null))
     fun setPriceWatches(c: Context, list: List<PriceWatch>) = sp(c).edit().putString("price_watches", PriceWatches.encode(list)).apply()
 
+    /** Settings > Price watches: the Cruise Planner's drinks, internet, dining, activities and spa, loaded from Royal (public listing data, no personal data). */
+    fun catalogItems(c: Context): List<io.github.mrarron.royalpebble.royal.CatalogItem> =
+        io.github.mrarron.royalpebble.royal.RoyalCatalog.decode(sp(c).getString("planner_catalog", null))
+    fun setCatalogItems(c: Context, list: List<io.github.mrarron.royalpebble.royal.CatalogItem>) =
+        sp(c).edit().putString("planner_catalog", io.github.mrarron.royalpebble.royal.RoyalCatalog.encode(list)).apply()
+
     /** Muted alerts (a booked item's price alert or a watch), shown with Unmute in Settings > Price watches. */
     fun mutes(c: Context): List<Muted> = AlertMutes.decode(sp(c).getString("alert_mutes", null))
     fun setMutes(c: Context, list: List<Muted>) = sp(c).edit().putString("alert_mutes", AlertMutes.encode(list)).apply()
