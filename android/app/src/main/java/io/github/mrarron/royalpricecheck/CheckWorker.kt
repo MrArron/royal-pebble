@@ -40,7 +40,7 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
     companion object {
         private const val NAME = "periodic-price-check"
 
-        /** Settings > Price checks > Run a background check now: the same work, once, for testing. */
+        /** Prices > Checks > Run a background check now: the same work, once, for testing. */
         fun runOnce(c: Context) {
             val req = androidx.work.OneTimeWorkRequestBuilder<CheckWorker>()
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())

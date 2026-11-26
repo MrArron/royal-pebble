@@ -2,6 +2,7 @@ package io.github.mrarron.royalpricecheck
 
 import android.app.Application
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -39,16 +40,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Settings > About: the in-app update check, download and install. */
     val update = AppUpdate(app, viewModelScope)
 
-    // Settings > Price watches and the alert hours.
+    // Prices > Watches and the alert hours.
     var watches by mutableStateOf<List<PriceWatch>>(emptyList()); private set
     var mutes by mutableStateOf<List<Muted>>(emptyList()); private set
     var quiet by mutableStateOf(QuietHours()); private set
     /** A Cruise Planner link shared to the app (Share > Royal Pebble): opens Price watches with it filled in. */
     var sharedLink by mutableStateOf<String?>(null)
-    /** The Cruise Planner items loaded from Royal for the picker, and the state of loading them. */
+    /** The Cruise Planner items loaded from Royal for the picker (kept by [RoyalSync]). */
     var catalog by mutableStateOf<List<io.github.mrarron.royalpebble.royal.CatalogItem>>(emptyList()); private set
-    var catalogBusy by mutableStateOf(false); private set
-    var catalogMessage by mutableStateOf<String?>(null); private set
+    /** Prices > Refresh from Royal: running, what it said, and a counter the shell watches to redraw Trip. */
+    var syncBusy by mutableStateOf(false); private set
+    var syncMessage by mutableStateOf<String?>(null); private set
+    var syncTick by mutableIntStateOf(0); private set
 
     init {
         reload()
@@ -189,6 +192,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshAlerts() {
+        catalog = Prefs.catalogItems(ctx)
         watches = Prefs.priceWatches(ctx)
         mutes = Prefs.mutes(ctx)
         quiet = Prefs.quietHours(ctx)
@@ -231,54 +235,55 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         return io.github.mrarron.royalpebble.alerts.WatchCandidates.all(bundle, catalog, Prefs.priceWatches(ctx).mapTo(HashSet()) { it.code })
     }
 
-    /** True when a sailing is downloaded and a Royal login is saved, so the Cruise Planner list can be loaded. */
-    fun canLoadCatalog(): Boolean = catalogSailing() != null && RoyalAccount.current(ctx)?.takeIf { it.cruiseLine == "royal" } != null
-
-    private fun catalogSailing(): Pair<String, String>? {
-        val bundle = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).bundle() ?: return null
-        val ship = (bundle["ship"] as? kotlinx.serialization.json.JsonObject)?.get("code")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
-        val date = (bundle["sailDate"] as? kotlinx.serialization.json.JsonPrimitive)?.content
-        if (ship.isNullOrBlank() || date.isNullOrBlank()) return null
-        return ship to date.replace("-", "")
-    }
+    /** True when a sailing is downloaded and a Royal login is saved, so Royal data can be refreshed. */
+    fun canRefreshRoyal(): Boolean =
+        io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing() != null &&
+            RoyalAccount.current(ctx)?.takeIf { it.cruiseLine == "royal" } != null
 
     /**
-     * Loads drinks, internet, dining, activities and spa from the Cruise Planner for the downloaded sailing,
-     * signed in with the saved Royal login (about 10 to 20 requests, a pause between each). The list is kept
-     * on the phone and refreshed only when asked.
+     * Prices > Refresh from Royal: the downloaded sailing's schedule and booking details plus the Cruise
+     * Planner list (drinks, internet, dining, activities, spa), on one sign-in through [RoyalSync], the same
+     * path as Trip's download. About 10 to 20 requests, a pause between each. Trip redraws afterwards ([syncTick]).
      */
-    fun loadCatalog() {
-        if (catalogBusy) return
-        val sailing = catalogSailing()
+    fun refreshFromRoyal() {
+        if (syncBusy) return
+        val store = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx)
+        val sailing = store.sailing()
         val account = RoyalAccount.current(ctx)?.takeIf { it.cruiseLine == "royal" }
         if (sailing == null || account == null) {
-            catalogMessage = "Download your sailing in Trip and save your Royal login (Settings > Royal account) first."
+            syncMessage = "Download your sailing in Trip and save your Royal login (Settings > Royal account) first."
             return
         }
-        catalogBusy = true
-        catalogMessage = "Loading from Royal Caribbean..."
+        syncBusy = true
+        syncMessage = "Loading from Royal Caribbean..."
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) {
-                try {
-                    val client = io.github.mrarron.royalpebble.royal.RoyalClient(io.github.mrarron.royalpebble.royal.UrlConnectionTransport())
-                    val auth = client.login(account.email, account.password)
-                    Result.success(client.fetchCatalog(auth, sailing.first, sailing.second))
-                } catch (e: io.github.mrarron.royalpebble.royal.RoyalException) {
-                    Result.failure<io.github.mrarron.royalpebble.royal.CatalogResult>(e)
-                } catch (e: Exception) {
-                    Result.failure<io.github.mrarron.royalpebble.royal.CatalogResult>(RuntimeException("Could not load the list from Royal Caribbean."))
+                runCatching {
+                    RoyalSync.run(ctx, io.github.mrarron.royalpebble.royal.RoyalParse.Ship(sailing.shipCode, sailing.shipName), sailing.sailDate,
+                        io.github.mrarron.royalpebble.settings.DownloadService.Login(account.email, account.password), true, "Prices refresh")
                 }
             }
-            outcome.onSuccess { r ->
-                if (r.items.isNotEmpty()) { Prefs.setCatalogItems(ctx, r.items); catalog = r.items }
-                catalogMessage = if (r.items.isEmpty()) "Royal Caribbean listed nothing${if (r.failed.isNotEmpty()) " (" + r.failed.joinToString() + " failed)" else ""}. Try again later."
-                else "Loaded ${r.items.size} items" + (if (r.failed.isNotEmpty()) ". Could not load: ${r.failed.joinToString()}." else ".")
-                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "planner list loaded: ${r.items.size} items" + (if (r.failed.isNotEmpty()) ", failed: ${r.failed.joinToString()}" else ""))
-            }.onFailure { e ->
-                catalogMessage = e.message ?: "Could not load the list."
-                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "watches", "planner list failed: ${e.message}")
+            val done = outcome.getOrNull()
+            syncMessage = when {
+                done is io.github.mrarron.royalpebble.settings.DownloadOutcome.Done -> {
+                    io.github.mrarron.royalpricecheck.cruise.ScheduleRefresh.afterDownload(ctx, store, done)
+                    io.github.mrarron.royalpricecheck.watch.WatchHost.storeChanged(ctx, "royal refreshed (Prices)")
+                    "Refreshed: " + done.summary +
+                        (done.mineError?.let { ". Booking details failed: $it" } ?: "") +
+                        when {
+                            done.catalog != null && done.catalog!!.items.isNotEmpty() ->
+                                ". Planner list: ${done.catalog!!.items.size} items" +
+                                    (if (done.catalog!!.failed.isNotEmpty()) " (could not load: ${done.catalog!!.failed.joinToString()})" else "") + "."
+                            done.catalogError != null -> ". Planner list failed: ${done.catalogError}"
+                            else -> ". Royal listed no planner items; the old list was kept."
+                        }
+                }
+                done is io.github.mrarron.royalpebble.settings.DownloadOutcome.Failed -> done.error
+                else -> "Could not refresh from Royal Caribbean."
             }
-            catalogBusy = false
+            refreshAlerts()
+            syncTick++
+            syncBusy = false
         }
     }
 

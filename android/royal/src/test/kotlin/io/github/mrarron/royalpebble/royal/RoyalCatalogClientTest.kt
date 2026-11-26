@@ -78,4 +78,19 @@ class RoyalCatalogClientTest {
             assertTrue(e.message!!.startsWith("Signed in, but found no booking"))
         }
     }
+
+    @Test
+    fun aDownloadWithLoginCanLoadThePlannerListOnTheSameSignIn() {
+        val fake = FakeRoyal(replies = mapOf("/graphql" to page(product("A1", "pt_packages", "Drinks A"))))
+        val got = RoyalClient(fake, sleep = { }).downloadWithLogin(RoyalParse.Ship("HM", "Harmony of the Seas"), "2027-03-06", "me@example.com", "pw", catalog = true)
+        assertEquals(1, fake.calls.count { it.path.endsWith("oauth2/access_token") })  // one sign-in for everything
+        assertTrue(got.bundle.containsKey("mine"))
+        assertEquals(null, got.catalogError)
+        assertTrue(got.catalog!!.items.any { it.code == "pt_packages/A1" })
+        // Not asked for: no planner requests at all.
+        val plain = FakeRoyal()
+        val without = RoyalClient(plain, sleep = { }).downloadWithLogin(RoyalParse.Ship("HM", "Harmony of the Seas"), "2027-03-06", "me@example.com", "pw")
+        assertEquals(null, without.catalog)
+        assertEquals(0, plain.calls.count { it.path.endsWith("/graphql") })
+    }
 }

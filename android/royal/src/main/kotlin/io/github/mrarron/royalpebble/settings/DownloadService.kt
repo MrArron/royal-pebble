@@ -1,5 +1,6 @@
 package io.github.mrarron.royalpebble.settings
 
+import io.github.mrarron.royalpebble.royal.CatalogResult
 import io.github.mrarron.royalpebble.royal.RoyalClient
 import io.github.mrarron.royalpebble.royal.RoyalException
 import io.github.mrarron.royalpebble.royal.RoyalParse
@@ -18,6 +19,9 @@ sealed class DownloadOutcome {
         val mineError: String?,
         val bookingSummary: String?,
         val saved: SaveResult,
+        /** The Cruise Planner list, when it was asked for with the same sign-in (see [DownloadService.download]'s `withCatalog`). */
+        val catalog: CatalogResult? = null,
+        val catalogError: String? = null,
     ) : DownloadOutcome()
 
     data class Failed(val error: String) : DownloadOutcome()
@@ -59,13 +63,15 @@ class DownloadService(
 
     /**
      * Downloads [sailDate] for [ship]. With [login] it also signs in and adds the
-     * booking details. A failure is recorded in the store (status) and returned.
+     * booking details; with [withCatalog] too it also loads the Cruise Planner list on that same sign-in.
+     * A failure is recorded in the store (status) and returned.
      */
-    fun download(ship: RoyalParse.Ship, sailDate: String, login: Login? = null): DownloadOutcome {
+    fun download(ship: RoyalParse.Ship, sailDate: String, login: Login? = null, withCatalog: Boolean = false): DownloadOutcome {
         val at = stamp()
         return try {
+            var got: io.github.mrarron.royalpebble.royal.LoginDownload? = null
             val (bundle, mineError) = if (login != null) {
-                client.downloadWithLogin(ship, sailDate, login.email, login.password).let { it.bundle to it.mineError }
+                client.downloadWithLogin(ship, sailDate, login.email, login.password, withCatalog).let { got = it; it.bundle to it.mineError }
             } else {
                 client.download(ship, sailDate) to null
             }
@@ -77,6 +83,8 @@ class DownloadService(
                 mineError = mineError,
                 bookingSummary = if (login != null && mineError == null && mine != null) RoyalParse.mineSummary(mine) else null,
                 saved = saved,
+                catalog = got?.catalog,
+                catalogError = got?.catalogError,
             )
         } catch (e: RoyalException) {
             fail(e.message ?: "The download failed.", at)

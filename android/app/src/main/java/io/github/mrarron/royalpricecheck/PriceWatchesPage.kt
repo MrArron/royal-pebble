@@ -32,7 +32,7 @@ import io.github.mrarron.royalpebble.alerts.QuietHours
 import io.github.mrarron.royalpebble.alerts.WatchRule
 
 /**
- * Settings > Price watches: watch Cruise Planner items you haven't bought, and mute or unmute
+ * Prices > Watches: watch Cruise Planner items you haven't bought, and mute or unmute
  * alerts. Each background check prices every watch; an alert goes to the phone and the watch.
  */
 @Composable
@@ -65,14 +65,14 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
                 OutlinedButton({ vm.setMuted(m.key, m.label, false) }) { Text("Unmute") }
             }
         }
-        Text("Alerts from background checks arrive only from ${vm.quiet.text()} (Settings > Price checks > Alert hours).", style = MaterialTheme.typography.bodySmall)
+        Text("Alerts from background checks arrive only from ${vm.quiet.text()} (Prices > Checks > Alert hours).", style = MaterialTheme.typography.bodySmall)
     }
 }
 
 /**
  * Items to watch without a link: shore excursions from the downloaded schedule, plus drinks, internet,
  * dining, activities and spa from the Cruise Planner's own list, loaded from Royal with the saved login
- * ([MainViewModel.loadCatalog]). Anything else still needs the link below.
+ * ([MainViewModel.refreshFromRoyal]). Anything else still needs the link below.
  */
 @Composable
 private fun PickFromSchedule(vm: MainViewModel) {
@@ -91,7 +91,7 @@ private fun PickFromSchedule(vm: MainViewModel) {
     Text("Pick an item to watch", style = MaterialTheme.typography.titleSmall)
     CatalogLoader(vm)
     if (all.isEmpty()) {
-        Text("Nothing to pick from yet. Download your sailing (Trip) for shore excursions, and load the Cruise Planner list for drinks, internet, dining, activities and spa. Or you already watch them all.", style = MaterialTheme.typography.bodySmall)
+        Text("Nothing to pick from yet. Download your sailing (Trip) for shore excursions, and refresh from Royal for drinks, internet, dining, activities and spa. Or you already watch them all.", style = MaterialTheme.typography.bodySmall)
         return
     }
     val picked = all.firstOrNull { it.code == pickedCode }
@@ -143,18 +143,18 @@ private fun PickFromSchedule(vm: MainViewModel) {
     message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 }
 
-/** The button that loads the Cruise Planner list, and what the last load said. */
+/** The Cruise Planner list is refreshed with the rest of Royal's data (Summary > Refresh from Royal); this says where it stands. */
 @Composable
 private fun CatalogLoader(vm: MainViewModel) {
-    val ready = vm.canLoadCatalog()
+    val ready = vm.canRefreshRoyal()
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton({ vm.loadCatalog() }, enabled = ready && !vm.catalogBusy) {
-            Text(if (vm.catalog.isEmpty()) "Load drinks, internet, dining, activities, spa" else "Refresh the Cruise Planner list (${vm.catalog.size})")
+        OutlinedButton({ vm.refreshFromRoyal() }, enabled = ready && !vm.syncBusy) {
+            Text(if (vm.catalog.isEmpty()) "Load drinks, internet, dining, activities, spa" else "Refresh from Royal (${vm.catalog.size} planner items)")
         }
     }
     when {
-        vm.catalogMessage != null -> Text(vm.catalogMessage!!, style = MaterialTheme.typography.bodySmall)
-        !ready -> Text("Needs a downloaded sailing (Trip) and a saved Royal login (Settings > Royal account). It signs in once and makes about 10 to 20 requests.", style = MaterialTheme.typography.bodySmall)
+        vm.syncMessage != null -> Text(vm.syncMessage!!, style = MaterialTheme.typography.bodySmall)
+        !ready -> Text("Needs a downloaded sailing (Trip) and a saved Royal login (Settings > Royal account). It signs in once and also refreshes your schedule and bookings.", style = MaterialTheme.typography.bodySmall)
         vm.catalog.isEmpty() -> Text("Not loaded yet. Shore excursions below come from your schedule.", style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -239,7 +239,7 @@ private fun WatchCardRow(vm: MainViewModel, w: PriceWatch, muted: Boolean) {
     }
 }
 
-/** Settings > Price checks > Alert hours. The choices never reach past 10 PM or before 7 AM. */
+/** Prices > Checks > Alert hours. The choices never reach past 10 PM or before 7 AM. */
 @Composable
 internal fun AlertHoursSection(vm: MainViewModel) {
     val c = androidx.compose.ui.platform.LocalContext.current

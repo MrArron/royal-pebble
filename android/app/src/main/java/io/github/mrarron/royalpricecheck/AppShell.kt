@@ -83,8 +83,11 @@ private val ONBOARD_TABS = listOf(Dest.TODAY, Dest.EVENTS, Dest.CABIN, Dest.SETT
 /** A page opened from Settings (or a card), with a back arrow. */
 private enum class Sub(val title: String) {
     ACCOUNT("Royal account"), CABIN("Me and my stateroom"), WATCH("Watch and logs"),
-    PRICE_CHECKS("Price checks"), PRICE_WATCHES("Price watches"), PRICES("Prices"), ABOUT("About"),
+    PRICES("Prices"), ABOUT("About"),
 }
+
+/** The sections of Prices (a tab while planning, a Settings row on board): everything price-related in one place. */
+internal enum class PriceSeg(val label: String) { SUMMARY("Summary"), WATCHES("Watches"), CHECKS("Checks"), REPORT("Report") }
 
 /**
  * The app's one navigation (docs/DESIGN.md §13): a bottom bar whose tabs follow the
@@ -111,13 +114,22 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
     var tabName by rememberSaveable { mutableStateOf(tabs[0].name) }
     val tab = Dest.valueOf(tabName).takeIf { it in tabs } ?: tabs[0]
     var subName by rememberSaveable { mutableStateOf<String?>(null) }
-    val sub = subName?.let { Sub.valueOf(it) }
+    var segName by rememberSaveable { mutableStateOf(PriceSeg.SUMMARY.name) }
+    val seg = PriceSeg.valueOf(segName)
+    /** Opens Prices at [s]: the tab while planning, the Settings page on board. */
+    val openPrices: (PriceSeg) -> Unit = { s ->
+        segName = s.name
+        if (Dest.PRICES in tabs) { subName = null; tabName = Dest.PRICES.name } else subName = Sub.PRICES.name
+    }
+    val sub = subName?.let { n -> runCatching { Sub.valueOf(n) }.getOrNull() }
     val save = remember { SaveControl() }
     val pickMode: (TripPhase.Mode) -> Unit = { m -> AppPhase.setMode(ctx, m); mode = m }
 
     BackHandler(sub != null) { subName = null }
-    // A Cruise Planner link shared to the app opens Price watches with it filled in.
-    LaunchedEffect(vm.sharedLink) { if (vm.sharedLink != null) subName = Sub.PRICE_WATCHES.name }
+    // A Cruise Planner link shared to the app opens Prices > Watches with it filled in.
+    LaunchedEffect(vm.sharedLink) { if (vm.sharedLink != null) openPrices(PriceSeg.WATCHES) }
+    // A refresh from Prices changed the shared Royal data: redraw Trip and the rest.
+    LaunchedEffect(vm.syncTick) { if (vm.syncTick > 0) cvm.changed() }
     // Another screen can change the shared Royal login or config.yaml: pick it up on every move.
     LaunchedEffect(tab, sub) { vm.accountChanged(); vm.refreshAlerts(); save.action = null }
 
@@ -155,9 +167,7 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
                         Sub.ACCOUNT -> AccountTab(vm)
                         Sub.CABIN -> MeTab(cvm)
                         Sub.WATCH -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { WatchCard() }
-                        Sub.PRICE_CHECKS -> PriceChecksPage(vm)
-                        Sub.PRICE_WATCHES -> PriceWatchesPage(vm)
-                        Sub.PRICES -> PricesScreen(vm, dark)
+                        Sub.PRICES -> PricesScreen(vm, dark, seg) { segName = it.name }
                         Sub.ABOUT -> AboutPage(vm.update)
                     }
                 } else {
@@ -169,10 +179,10 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
                             header = {
                                 ModeChips(mode, phase, pickMode)
                                 TripHero(cvm)
-                                PriceGlance(vm, onOpen = { tabName = Dest.PRICES.name }, onWatches = { subName = Sub.PRICE_WATCHES.name })
+                                PriceGlance(vm, cvm.version, onOpen = { openPrices(PriceSeg.SUMMARY) }, onWatches = { openPrices(PriceSeg.WATCHES) })
                             },
                         )
-                        Dest.PRICES -> PricesScreen(vm, dark)
+                        Dest.PRICES -> PricesScreen(vm, dark, seg) { segName = it.name }
                         Dest.PLAN, Dest.EVENTS -> PlanScreen(cvm)
                         Dest.TODAY -> TodayScreen(cvm, mode, phase, pickMode, onEvents = { tabName = Dest.EVENTS.name },
                             watchStatus = remember(cvm.version) { WatchHost.status(ctx) })
@@ -187,7 +197,7 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
 
 /** The price check at a glance on Trip: last check, rebook alerts, the first booking's check-in. */
 @Composable
-private fun PriceGlance(vm: MainViewModel, onOpen: () -> Unit, onWatches: () -> Unit) {
+private fun PriceGlance(vm: MainViewModel, tick: Int, onOpen: () -> Unit, onWatches: () -> Unit) {
     val r = vm.result
     io.github.mrarron.royalpricecheck.cruise.Section("Prices") {
         when {
@@ -213,22 +223,31 @@ private fun PriceGlance(vm: MainViewModel, onOpen: () -> Unit, onWatches: () -> 
             androidx.compose.material3.OutlinedButton(onWatches) { Text("Price watches") }
         }
     }
+    RoyalDataCard(vm, tick, title = null)
 }
 
-/** Prices: the check's results and its full output (the old Summary and Log tabs). */
+/**
+ * Prices: everything price-related in one place. Summary (the check's results, Run now and Refresh from
+ * Royal), Watches (items you haven't bought, mutes), Checks (background checks, alert hours, script) and
+ * Report (the full output).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PricesScreen(vm: MainViewModel, dark: Boolean) {
-    val tabs = listOf("Summary", "Full report")
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+private fun PricesScreen(vm: MainViewModel, dark: Boolean, seg: PriceSeg, onSeg: (PriceSeg) -> Unit) {
+    val segs = PriceSeg.entries
     Column(Modifier.fillMaxSize()) {
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-            tabs.forEachIndexed { i, t ->
-                SegmentedButton(tab == i, { tab = i }, SegmentedButtonDefaults.itemShape(i, tabs.size), label = { Text(t, maxLines = 1) })
+            segs.forEachIndexed { i, t ->
+                SegmentedButton(seg == t, { onSeg(t) }, SegmentedButtonDefaults.itemShape(i, segs.size), label = { Text(t.label, maxLines = 1) })
             }
         }
         Box(Modifier.weight(1f)) {
-            if (tab == 0) SummaryTab(vm) else LogTab(vm, dark)
+            when (seg) {
+                PriceSeg.SUMMARY -> SummaryTab(vm)
+                PriceSeg.WATCHES -> PriceWatchesPage(vm)
+                PriceSeg.CHECKS -> PriceChecksPage(vm)
+                PriceSeg.REPORT -> LogTab(vm, dark)
+            }
         }
     }
 }
@@ -240,11 +259,9 @@ private fun SettingsList(phase: TripPhase.Phase, update: AppUpdate.State, open: 
     val email = RoyalAccount.knownEmail(ctx)
     val rows = buildList {
         add(Triple(Sub.ACCOUNT, "Royal account", email?.let { RoyalAccount.masked(it) + if (RoyalAccount.remembered(ctx)) " · remembered" else "" } ?: "Not set"))
-        if (phase == TripPhase.Phase.ONBOARD) add(Triple(Sub.PRICES, "Prices", "Results and full report"))
+        if (phase == TripPhase.Phase.ONBOARD) add(Triple(Sub.PRICES, "Prices", "Summary · watches · checks · report"))
         if (phase == TripPhase.Phase.PLANNING) add(Triple(Sub.CABIN, "Me and my stateroom", "Stateroom, muster, dining, walking, theme"))
         add(Triple(Sub.WATCH, "Watch and logs", "Serve the watch · test alerts · share the log file"))
-        add(Triple(Sub.PRICE_CHECKS, "Price checks", "Background checks · alert hours · on board · script updates"))
-        add(Triple(Sub.PRICE_WATCHES, "Price watches", "Watch items you haven't bought · muted alerts"))
         add(Triple(Sub.ABOUT, "About", "App ${BuildConfig.VERSION_NAME}" +
             ((update as? AppUpdate.State.Available)?.let { " · update ${it.release.version} available" } ?: "")))
     }

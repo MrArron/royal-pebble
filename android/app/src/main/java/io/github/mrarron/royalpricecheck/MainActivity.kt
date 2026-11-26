@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
         takeShared(intent)
     }
 
-    /** Share > Royal Pebble with a Cruise Planner link: Settings > Price watches opens with it filled in. */
+    /** Share > Royal Pebble with a Cruise Planner link: Prices > Watches opens with it filled in. */
     private fun takeShared(intent: android.content.Intent?) {
         if (intent?.action != android.content.Intent.ACTION_SEND) return
         val text = intent.getStringExtra(android.content.Intent.EXTRA_TEXT) ?: return
@@ -84,6 +84,14 @@ internal fun SummaryTab(vm: MainViewModel) {
                 }
                 if (vm.running) CircularProgressIndicator(Modifier.padding(4.dp))
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = vm::refreshFromRoyal, enabled = !vm.syncBusy && vm.canRefreshRoyal()) {
+                    Text(if (vm.syncBusy) "Refreshing…" else "Refresh from Royal")
+                }
+                if (vm.syncBusy) CircularProgressIndicator(Modifier.padding(4.dp))
+            }
+            vm.syncMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            RoyalDataCard(vm)
             if (!vm.hasConfig) Text("Add your Royal account in Settings first.")
             vm.status?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
@@ -251,7 +259,7 @@ private fun PasswordPrompt(vm: MainViewModel) {
     }
 }
 
-/** Settings > Price checks: background checks, on board, watch alerts, script updates. */
+/** Prices > Checks: background checks, on board, watch alerts, script updates. */
 @Composable
 internal fun PriceChecksPage(vm: MainViewModel) {
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {

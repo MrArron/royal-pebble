@@ -810,16 +810,30 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   its last, else Planning; the demo cruise is always Planning.
 - Settings is a list of pages with a back arrow: Royal account (one login for
   price checks and downloads), Me and my stateroom (Planning only), Watch and
-  logs, Price checks (with **Alert hours**), **Price watches** (1.6.29), About,
-  and Prices when On board.
+  logs, About, and Prices when On board.
+- **Prices** (tab while Planning, Settings row On board) holds everything
+  price-related in four segments: **Summary** (Run now, **Refresh from Royal**,
+  the **Royal data** card, drops, bookings), **Watches** (the price watches page
+  below), **Checks** (the old Settings > Price checks page, with **Alert
+  hours**) and **Report** (the full output). Trip's `Open Prices` and `Price
+  watches` buttons and a shared Cruise Planner link open the matching segment.
+- **One Royal sync** (`RoyalSync.kt`): Trip's Download, the background schedule
+  refresh and Prices > Refresh from Royal all fetch through one path on one
+  sign-in: schedule, booking details and (Refresh from Royal always; a Trip
+  download when a planner list is already loaded; the background refresh when
+  the list is a day old) the Cruise Planner list. The **Royal data** card, on
+  Trip under the price glance and on Prices > Summary, shows when the schedule
+  and bookings, the planner list and the price check were last fetched. The
+  price check itself is still jdeath's script with its own sign-in. Log line
+  `sync  <who>: schedule ok, bookings ok|failed (...), planner list N items|..., one sign-in, N ms`.
 - **About > App updates** (1.6.31): status line, release notes, `Download 1.6.x` (opens the
   APK link in the browser; no in-app install), `Check for updates`, and a switch
   `Check once a day when the app opens`. The Settings list's About row adds
   `update 1.6.x available` when one is found.
 - **Price watches** (1.6.29, `PriceWatchesPage.kt`): first **Pick an item
-  to watch**: a **Load drinks, internet, dining, activities, spa** button (signs in with the saved Royal
-  login, needs a downloaded sailing; becomes **Refresh the Cruise Planner list**; says what it loaded
-  and which categories failed), then a search box over the schedule's shore excursions plus the loaded
+  to watch**: a **Load drinks, internet, dining, activities, spa** button (the same Refresh from Royal:
+  one sign-in with the saved Royal login, needs a downloaded sailing; becomes **Refresh from Royal (N planner
+  items)**; says what it loaded and which categories failed), then a search box over the schedule's shore excursions plus the loaded
   Cruise Planner items (a card per product: for an excursion place, dates, sessions and Royal's
   listed adult "from" price; for a planner item its group and listed price such as "$96.99 per day";
   tap one for the rule chips and **Watch this**; no link needed; the starting price
@@ -832,7 +846,7 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   Trip screen's price glance counts watches and those below their trigger.
 - Price notifications come one per item with a **Mute this alert** (or **Mute
   this watch**) button; Prices > Summary has **Mute alerts for this item** on
-  each drop worth rebooking. **Alert hours** (Settings > Price checks): From
+  each drop worth rebooking. **Alert hours** (Prices > Checks): From
   7, 8 (default), 9 or 10 AM, Until 8, 9 (default) or 10 PM, and how many
   alerts wait for the opening.
 - The top bar shows the screen's name; Cabin (and Me) hold edits until the
@@ -846,7 +860,7 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   and **Clear** (the app's lines and the message log, not the usage log); the
   export is described in `WATCH_PROTOCOL.md`, Test log. The price checker's
   pages are in `android/README.md`.
-- Settings > Price checks (1.6.26) adds **Also refresh the schedule** (on)
+- Prices > Checks (was Settings > Price checks; 1.6.26) adds **Also refresh the schedule** (on)
   under Keep checking while on board, and **Run a background check now**
   (the background check once, for testing). With the switch on, each
   background check also runs Download with login for the saved sailing
@@ -868,7 +882,7 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   is up`, `Now N events (was M)`) when the count grows by 25% and at least 20
   events. A schedule already downloaded before the first background refresh
   only sets the baseline. It follows the alert hours and Mute (Unmute in
-  Settings > Price watches); log line `schedule  alert first|grew|none: ...`
+  Prices > Watches); log line `schedule  alert first|grew|none: ...`
   and `alerts  schedule: 1 phone sent, Schedule watch alert: ...`.
 
 ### 12.1 Shared patterns
