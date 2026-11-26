@@ -18,6 +18,9 @@ fun interface LineSink {
 object PythonBridge {
     private val lock = Any()
 
+    /** One check at a time: a background check and Run now used to share one temp config file. */
+    private val runLock = Any()
+
     private fun module(context: Context) = synchronized(lock) {
         if (!Python.isStarted()) Python.start(AndroidPlatform(context.applicationContext))
         Python.getInstance().getModule("rcp_runner")
@@ -38,20 +41,38 @@ object PythonBridge {
                     "(it is only kept after a restart while background checks are on).",
             )
         }
-        val temp = File(workDir(context), "injected-config.yaml")
-        try {
-            temp.writeText(injected.yaml)
-            val json = module(context).callAttr(
-                "run",
-                temp.absolutePath,
-                workDir(context).absolutePath,
-                LineSink { onLine(it) },
-                Prefs.useLatestScript(context),
-                io.github.mrarron.royalpebble.alerts.PriceWatches.scriptJson(Prefs.priceWatches(context)),
-            ).toString()
-            return RunResult.parse(json, System.currentTimeMillis())
-        } finally {
-            temp.delete()
+        // Only one check at a time. Earlier builds had a bug: a background check and "Run now" (or a second
+        // background check) shared one fixed file name: the first to finish deleted the file the
+        // other was about to read, and Python reported FileNotFoundError for injected-config.yaml.
+        return synchronized(runLock) {
+            val dir = workDir(context)
+            // Recreate the folder if Android cleared it, and sweep leftovers from a killed run.
+            dir.mkdirs()
+            dir.listFiles { f -> f.name.startsWith("injected-config") }?.forEach { it.delete() }
+            val temp = File(dir, "injected-config.yaml")
+            try {
+                temp.writeText(injected.yaml)
+                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(context, "prices", "check started, config copy written")
+                val json = module(context).callAttr(
+                    "run",
+                    temp.absolutePath,
+                    dir.absolutePath,
+                    LineSink { onLine(it) },
+                    Prefs.useLatestScript(context),
+                    io.github.mrarron.royalpebble.alerts.PriceWatches.scriptJson(Prefs.priceWatches(context)),
+                ).toString()
+                RunResult.parse(json, System.currentTimeMillis())
+            } catch (e: Exception) {
+                // Python's FileNotFoundError arrives as a PyException. Should not happen now; if it does,
+                // put it in the exported log with the folder state, then fail as before.
+                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(
+                    context, "prices",
+                    "check failed to start (${e::class.java.simpleName}); config copy exists=${temp.exists()} dir exists=${dir.exists()}",
+                )
+                throw e
+            } finally {
+                temp.delete()
+            }
         }
     }
 
