@@ -79,22 +79,22 @@ object Prefs {
     fun watchAlertKeys(c: Context): Set<String> = sp(c).getStringSet("watch_alert_sent", emptySet()) ?: emptySet()
     fun setWatchAlertKeys(c: Context, keys: Set<String>) = sp(c).edit().putStringSet("watch_alert_sent", keys).apply()
 
-    /** Settings > Price watches: watches on Cruise Planner items not bought yet. */
+    /** Prices > Watches: watches on Cruise Planner items not bought yet. */
     fun priceWatches(c: Context): List<PriceWatch> = PriceWatches.decode(sp(c).getString("price_watches", null))
     fun setPriceWatches(c: Context, list: List<PriceWatch>) = sp(c).edit().putString("price_watches", PriceWatches.encode(list)).apply()
 
-    /** Settings > Price watches: the Cruise Planner's drinks, internet, dining, activities and spa, loaded from Royal (public listing data, no personal data). */
+    /** Prices > Watches: the Cruise Planner's drinks, internet, dining, activities and spa, loaded from Royal (public listing data, no personal data). */
     fun catalogItems(c: Context): List<io.github.mrarron.royalpebble.royal.CatalogItem> =
         io.github.mrarron.royalpebble.royal.RoyalCatalog.decode(sp(c).getString("planner_catalog", null))
     fun setCatalogItems(c: Context, list: List<io.github.mrarron.royalpebble.royal.CatalogItem>) =
         sp(c).edit().putString("planner_catalog", io.github.mrarron.royalpebble.royal.RoyalCatalog.encode(list)).apply()
 
-    /** Muted alerts (a booked item's price alert or a watch), shown with Unmute in Settings > Price watches. */
+    /** Muted alerts (a booked item's price alert or a watch), shown with Unmute in Prices > Watches. */
     fun mutes(c: Context): List<Muted> = AlertMutes.decode(sp(c).getString("alert_mutes", null))
     fun setMutes(c: Context, list: List<Muted>) = sp(c).edit().putString("alert_mutes", AlertMutes.encode(list)).apply()
     fun mutedKeys(c: Context): Set<String> = mutes(c).mapTo(HashSet()) { it.key }
 
-    /** When background-check alerts may arrive (Settings > Price checks > Alert hours). */
+    /** When background-check alerts may arrive (Prices > Checks > Alert hours). */
     fun quietHours(c: Context): QuietHours =
         QuietHours.of(sp(c).getInt("alert_from", QuietHours.DEFAULT_FROM), sp(c).getInt("alert_until", QuietHours.DEFAULT_UNTIL))
     fun setQuietHours(c: Context, q: QuietHours) = sp(c).edit().putInt("alert_from", q.fromMinute).putInt("alert_until", q.untilMinute).apply()

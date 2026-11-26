@@ -2,9 +2,7 @@ package io.github.mrarron.royalpricecheck.cruise
 
 import android.app.Application
 import android.content.Context
-import io.github.mrarron.royalpebble.royal.RoyalClient
 import io.github.mrarron.royalpebble.royal.RoyalParse
-import io.github.mrarron.royalpebble.royal.UrlConnectionTransport
 import io.github.mrarron.royalpebble.settings.CruiseData
 import io.github.mrarron.royalpebble.settings.DownloadOutcome
 import io.github.mrarron.royalpebble.settings.DownloadService
@@ -19,8 +17,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * The background schedule refresh (docs/DESIGN.md §12, Settings > Price
- * checks): after a background price check, the saved sailing is downloaded
+ * The background schedule refresh (docs/DESIGN.md §12, Prices > Checks): after a background price check, the saved sailing is downloaded
  * again with the Royal login, the way Download with login does it, so moved or
  * cancelled events, their stars and new bookings reach the watch on their own.
  *
@@ -36,7 +33,7 @@ import java.time.ZoneId
 object ScheduleRefresh {
     private fun sp(c: Context) = c.getSharedPreferences("schedule_refresh", Context.MODE_PRIVATE)
 
-    /** Settings > Price checks > Also refresh the schedule. On until turned off. */
+    /** Prices > Checks > Also refresh the schedule. On until turned off. */
     fun enabled(c: Context): Boolean = sp(c).getBoolean("on", true)
 
     fun setEnabled(c: Context, on: Boolean) {
@@ -64,11 +61,12 @@ object ScheduleRefresh {
         }
         sailing!!; account!!
         sp(app).edit().putLong("last_run", now).apply()
-        val service = DownloadService(RoyalClient(UrlConnectionTransport()), store)
         val ship = RoyalParse.Ship(sailing.shipCode, sailing.shipName)
         val started = System.currentTimeMillis()
         val before = io.github.mrarron.royalpebble.alerts.ScheduleCounts.of(bundle)
-        when (val outcome = service.download(ship, sailing.sailDate, DownloadService.Login(account.email, account.password))) {
+        // The same shared sync as Trip's download; a planner list loaded earlier is renewed here once it's a day old.
+        val withCatalog = io.github.mrarron.royalpricecheck.RoyalSync.catalogDue(app, now)
+        when (val outcome = io.github.mrarron.royalpricecheck.RoyalSync.run(app, ship, sailing.sailDate, DownloadService.Login(account.email, account.password), withCatalog, "background refresh")) {
             is DownloadOutcome.Done -> {
                 WatchHost.logApp(app, "schedule", "background refresh done in ${System.currentTimeMillis() - started} ms: " +
                     outcome.summary + (outcome.mineError?.let { "; booking details failed: $it" } ?: ""))

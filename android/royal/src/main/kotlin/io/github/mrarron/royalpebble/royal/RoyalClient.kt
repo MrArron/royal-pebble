@@ -21,8 +21,17 @@ class RoyalAuth internal constructor(internal val token: String, val accountId: 
     override fun toString(): String = "RoyalAuth(<token>)"
 }
 
-/** A download with login: the bundle, and why the booking details are missing when they are. */
-data class LoginDownload(val bundle: JsonObject, val mineError: String?)
+/**
+ * A download with login: the bundle, and why the booking details are missing when they are. When the
+ * planner list was asked for too ([RoyalClient.downloadWithLogin]'s `catalog`), [catalog] holds it, or
+ * [catalogError] says why not.
+ */
+data class LoginDownload(
+    val bundle: JsonObject,
+    val mineError: String?,
+    val catalog: CatalogResult? = null,
+    val catalogError: String? = null,
+)
 
 /** The planner's products, and the categories that could not be read. */
 data class CatalogResult(val items: List<CatalogItem>, val failed: List<String>)
@@ -292,14 +301,20 @@ class RoyalClient(
      * Signs in, downloads the sailing as usual, then adds `mine`. Throws when
      * nothing downloaded; [LoginDownload.mineError] says why the booking details didn't.
      */
-    fun downloadWithLogin(ship: RoyalParse.Ship, sailDate: String, email: String, password: String): LoginDownload {
+    fun downloadWithLogin(ship: RoyalParse.Ship, sailDate: String, email: String, password: String, catalog: Boolean = false): LoginDownload {
         val auth = login(email, password)
         val bundle = download(ship, sailDate)
-        return try {
-            val mine = fetchMine(auth, ship.code, sailDate.replace("-", ""), bundle["schedule"])
-            LoginDownload(JsonObject(bundle + ("mine" to mine)), null)
+        val mineResult = try {
+            JsonObject(bundle + ("mine" to fetchMine(auth, ship.code, sailDate.replace("-", ""), bundle["schedule"]))) to null
         } catch (e: RoyalException) {
-            LoginDownload(bundle, e.message)
+            bundle to e.message
+        }
+        if (!catalog) return LoginDownload(mineResult.first, mineResult.second)
+        // The planner list rides on the same sign-in: one login for everything the app pulls from Royal.
+        return try {
+            LoginDownload(mineResult.first, mineResult.second, fetchCatalog(auth, ship.code, sailDate.replace("-", "")))
+        } catch (e: RoyalException) {
+            LoginDownload(mineResult.first, mineResult.second, null, e.message)
         }
     }
 

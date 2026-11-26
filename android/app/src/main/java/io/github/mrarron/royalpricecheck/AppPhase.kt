@@ -43,7 +43,7 @@ object AppPhase {
         return phase
     }
 
-    /** Price checks keep running on board only when the owner asks (Settings > Price checks). */
+    /** Price checks keep running on board only when the owner asks (Prices > Checks). */
     fun checksAtSea(c: Context): Boolean = sp(c).getBoolean("checks_at_sea", false)
 
     fun setChecksAtSea(c: Context, on: Boolean) {

@@ -212,14 +212,15 @@ was built later for other reasons.
   items not bought yet (any drop below the price when set, the default; a
   percent below it; or below your own price), checked by the price script's
   `watchList` and decided by the app (`royal/.../alerts/PriceWatch.kt`); one
-  phone notification per alert with Mute (Unmute in Settings > Price
-  watches; items can be picked instead of pasting a link: shore excursions from the downloaded schedule, and
+  phone notification per alert with Mute (Unmute in Prices >
+  Watches; items can be picked instead of pasting a link: shore excursions from the downloaded schedule, and
   drinks, internet, dining, activities and spa from the Cruise Planner's own product list, loaded
   with the saved Royal login (`RoyalClient.fetchCatalog`, Royal's `WebProductsByCategory` GraphQL call;
   see `docs/ROYAL_LOGIN_DATA.md`)), the same alerts on the watch (Watch alerts now on by default),
   and alert hours (default 8 AM to 9 PM) that hold background-check alerts
   overnight until the hours open.
 - **Price watch picker** (1.6.33, PRs #139 and #140): items are picked from a list instead of pasted: shore excursions from the schedule, and drinks, internet, dining, activities and spa loaded from the Cruise Planner with the saved login. No watch change; the version bump only lets the update check see the release.
+- **Prices in one place, one Royal sync** (Android app only, no version bump): the Prices tab holds Summary, Watches, Checks and Report (price watches and price check settings left Settings), and Trip's download, the background schedule refresh and Prices > Refresh from Royal share one sign-in and one copy of the schedule, bookings and Cruise Planner list (`RoyalSync.kt`), with a Royal data card on Trip and Prices showing when each was fetched. The price check script still signs in by itself.
 - **Watch launcher icon** (1.6.32): the C3b ship as a 25x25 menu icon (`resources/images/menu-icon.png`).
 - **In-app update** (1.6.31): Settings > About checks this repo's newest GitHub release (once a day if left on, or on
   Check for updates), shows its notes and offers the APK link, which opens in the browser (1.6.32: no in-app install, so no

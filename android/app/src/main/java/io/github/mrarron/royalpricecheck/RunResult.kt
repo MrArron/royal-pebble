@@ -46,7 +46,7 @@ data class RunResult(
     val guestCheckin: List<GuestCheckin>,
     val itemsChecked: Int,
     val raw: String,
-    /** Rows for the app's own price watches (Settings > Price watches). */
+    /** Rows for the app's own price watches (Prices > Watches). */
     val watched: List<WatchedRow> = emptyList(),
 ) {
     val ok: Boolean get() = exitCode == 0

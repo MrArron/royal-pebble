@@ -18,7 +18,9 @@ import io.github.mrarron.royalpebble.store.CruiseStore
 import io.github.mrarron.royalpebble.store.StarReconciler
 import io.github.mrarron.royalpebble.watch.JsStarReconciler
 import io.github.mrarron.royalpricecheck.watch.ZiplineRuntime
+import io.github.mrarron.royalpricecheck.Prefs
 import io.github.mrarron.royalpricecheck.RoyalAccount
+import io.github.mrarron.royalpricecheck.RoyalSync
 import io.github.mrarron.royalpricecheck.watch.WatchHost
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -159,7 +161,9 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
         message = null
         error = null
         viewModelScope.launch {
-            val outcome = io { service.download(ship, date, login) }
+            // One shared sync (RoyalSync): with a login it renews the planner list too when one is already loaded.
+            val app0 = getApplication<Application>()
+            val outcome = io { RoyalSync.run(app0, ship, date, login, Prefs.catalogItems(app0).isNotEmpty(), "Trip download") }
             when (outcome) {
                 is DownloadOutcome.Done -> {
                     // Done means Royal accepted the sign-in; the login is kept for this session, and saved only when asked.
