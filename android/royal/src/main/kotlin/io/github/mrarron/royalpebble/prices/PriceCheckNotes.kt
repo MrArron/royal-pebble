@@ -92,7 +92,7 @@ object PriceCheckNotes {
             )
         }
         for ((item, n) in unchecked) {
-            if (failedUrls.keys.any { it.endsWith("/categories/${item.replace('/', '/products/')}") }) continue
+            if (failedUrls.keys.any { it.endsWith("/categories/${item.replace("/", "/products/")}") }) continue
             notes["unchecked|$item"] = PriceNote(
                 "Couldn't check $item" + if (n > 1) " ($n guests)" else "",
                 "Royal didn't answer for this item; it will be tried again on the next check.",
