@@ -815,7 +815,10 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   price-related in four segments: **Summary** (Run now, **Refresh from Royal**,
   the **Royal data** card, drops, bookings), **Watches** (the price watches page
   below), **Checks** (the old Settings > Price checks page, with **Alert
-  hours**) and **Report** (the full output). Trip's `Open Prices` and `Price
+  hours**) and **Report** (the full output). The Summary and the top of Report show **Notes on this check**
+  (`PriceCheckNotes`): plain-language readings of lines that look like errors but aren't
+  (a guarantee booking with no cabin yet, an item Royal doesn't sell on that ship, Royal's
+  repeated 500 for it); the raw output below is untouched, and Copy includes the notes. Trip's `Open Prices` and `Price
   watches` buttons and a shared Cruise Planner link open the matching segment.
 - **One Royal sync** (`RoyalSync.kt`): Trip's Download, the background schedule
   refresh and Prices > Refresh from Royal all fetch through one path on one

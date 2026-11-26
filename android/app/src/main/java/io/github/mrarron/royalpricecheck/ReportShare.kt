@@ -43,7 +43,7 @@ object ReportShare {
     }
 
     /** The Summary as plain text: what the screen shows, in the same order. */
-    fun summaryText(r: RunResult): String = buildString {
+    fun summaryText(r: RunResult, notes: List<io.github.mrarron.royalpebble.prices.PriceNote> = emptyList()): String = buildString {
         val at = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(r.finishedAt))
         appendLine(if (r.ok) "Last check: $at (${r.itemsChecked} items)" else "Last check failed: $at")
         if (!r.ok && !r.error.isNullOrBlank()) appendLine(r.error)
@@ -65,6 +65,7 @@ object ReportShare {
                 b.balanceDue?.let { appendLine(if (it) "  Balance due" else "  Paid in full") }
             }
         }
+        if (notes.isNotEmpty()) { appendLine(); appendLine("Notes on this check"); append(io.github.mrarron.royalpebble.prices.PriceCheckNotes.text(notes)); appendLine() }
         if (r.guestCheckin.isNotEmpty()) {
             appendLine(); appendLine("Check-in by guest")
             r.guestCheckin.forEach { g -> appendLine("- ${g.status}" + if (g.window.isNotBlank()) " (boarding window ${g.window})" else "") }
