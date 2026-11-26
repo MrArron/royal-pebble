@@ -106,8 +106,11 @@ internal fun SummaryTab(vm: MainViewModel) {
                 color = if (r.ok) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
             )
             if (r.script.isNotBlank()) Text("Script: ${r.script}", style = MaterialTheme.typography.bodySmall)
-            ReportButtons("price check report", "royal-pebble-price-report.txt") { ReportShare.summaryText(r) }
+            ReportButtons("price check report", "royal-pebble-price-report.txt") {
+                ReportShare.summaryText(r, io.github.mrarron.royalpebble.prices.PriceCheckNotes.from(vm.log.toList()))
+            }
         }
+        item { NotesCard(vm) }
         if (r.alerts.isNotEmpty()) {
             item { Text("Rebook to save", style = MaterialTheme.typography.titleMedium) }
             items(r.alerts) { DropCard(it, vm) }
@@ -136,6 +139,25 @@ internal fun SummaryTab(vm: MainViewModel) {
             items(others) { DropCard(it, null) }
         }
     }
+    }
+}
+
+/** What the script's error-looking lines mean (guarantee cabins, items not sold on a ship, Royal's 500s). */
+@Composable
+internal fun NotesCard(vm: MainViewModel) {
+    val notes = remember(vm.log.size) { io.github.mrarron.royalpebble.prices.PriceCheckNotes.from(vm.log.toList()) }
+    if (notes.isEmpty() || vm.running) return
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Notes on this check", style = MaterialTheme.typography.titleSmall)
+            Text("These look like errors in the full output but are normal, and need nothing from you.", style = MaterialTheme.typography.bodySmall)
+            notes.forEach {
+                Column {
+                    Text(it.title, style = MaterialTheme.typography.labelLarge)
+                    Text(it.detail, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
     }
 }
 
@@ -169,7 +191,7 @@ private fun DropCard(d: PriceDrop, vm: MainViewModel?) {
 @Composable
 internal fun LogTab(vm: MainViewModel, dark: Boolean) {
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
-    LaunchedEffect(vm.log.size) { if (vm.log.isNotEmpty()) state.scrollToItem(vm.log.size - 1) }
+    LaunchedEffect(vm.log.size) { if (vm.log.isNotEmpty()) state.scrollToItem(vm.log.size) }
     Column(Modifier.fillMaxSize()) {
         if (vm.log.isNotEmpty() && !vm.running) {
             Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp)) {
@@ -178,6 +200,7 @@ internal fun LogTab(vm: MainViewModel, dark: Boolean) {
         }
         androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f)) {
             LazyColumn(Modifier.fillMaxSize().padding(8.dp), state = state) {
+                if (vm.log.isNotEmpty() && !vm.running) item { NotesCard(vm) }
                 if (vm.log.isEmpty()) item { Text("The script's output appears here while a check runs.") }
                 items(vm.log) { Text(ansiToAnnotated(it, dark), fontFamily = FontFamily.Monospace, fontSize = 11.sp) }
             }
