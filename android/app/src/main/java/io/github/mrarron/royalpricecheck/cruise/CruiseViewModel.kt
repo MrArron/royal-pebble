@@ -15,6 +15,7 @@ import io.github.mrarron.royalpebble.settings.DownloadOutcome
 import io.github.mrarron.royalpebble.settings.DownloadService
 import io.github.mrarron.royalpebble.settings.Readiness
 import io.github.mrarron.royalpebble.store.CruiseStore
+import io.github.mrarron.royalpebble.store.SailingRef
 import io.github.mrarron.royalpebble.store.StarReconciler
 import io.github.mrarron.royalpebble.watch.JsStarReconciler
 import io.github.mrarron.royalpricecheck.watch.ZiplineRuntime
@@ -115,7 +116,7 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
                 ships = io { service.ships(force) }
                 if (selectedShip == null) {
                     // The saved sailing's ship first, else nothing chosen.
-                    val code = store.sailing()?.shipCode
+                    val code = store.activeSailing()?.shipCode
                     selectedShip = ships.firstOrNull { it.code == code }
                     selectedShip?.let { selectShip(it) }
                 }
@@ -135,8 +136,8 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
                 val dates = io { service.sailDates(ship.code) }
                 if (selectedShip == ship) {
                     sailDates = dates
-                    val saved = store.sailing()
-                    selectedDate = if (saved != null && saved.shipCode == ship.code && saved.sailDate in dates) saved.sailDate else null
+                    val saved = store.activeSailing()
+                    selectedDate = if (saved != null && saved.shipCode == ship.code && saved.sailDate in dates) saved.sailDate else selectedDate?.takeIf { it in dates }
                     if (dates.isEmpty()) error = "Royal Caribbean lists no upcoming sailings for ${ship.name}."
                 }
             } catch (e: Exception) {
@@ -148,6 +149,32 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun selectDate(date: String) { selectedDate = date }
+
+    // ------------------------------------------------------------ several sailings (docs/DESIGN.md, Sailings)
+
+    /** Makes a stored sailing the one every screen and the watch follow (the Prices picker uses this too). */
+    fun useSailing(ref: SailingRef) {
+        store.selectSailing(ref)
+        selectedShip = ships.firstOrNull { it.code == ref.shipCode }
+        selectedDate = null
+        selectedShip?.let { selectShip(it) }
+        message = null
+        error = null
+        saved("sailing switched")
+    }
+
+    /** Adds the chosen ship and date to the list without downloading (it downloads when you use it). */
+    fun addChosenSailing(): Boolean {
+        val ship = selectedShip ?: return false
+        val date = selectedDate ?: return false
+        store.addSailing(SailingRef(ship.code, ship.name, date))
+        changed()
+        return true
+    }
+
+    fun removeSailing(key: String) {
+        if (store.removeSailing(key)) changed()
+    }
 
     val canDownload: Boolean get() = !busy && selectedShip != null && selectedDate != null
 

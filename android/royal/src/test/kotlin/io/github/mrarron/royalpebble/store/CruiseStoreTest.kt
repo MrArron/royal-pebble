@@ -142,4 +142,57 @@ class CruiseStoreTest {
         assertEquals(s.sailing(), store().sailing())
         assertFalse(File(tmp.root, "cruise").listFiles()!!.any { it.name.endsWith(".tmp") })
     }
+
+    @Test
+    fun aSecondSailingIsShelvedNotReplaced() {
+        val s = store()
+        s.saveDownload(bundle("HM", "2026-12-12", mine = true), "a")
+        s.applyStarChanges(mapOf("Trivia|2026-12-12|14:00|" to true))
+        s.saveDownload(bundle("EX", "2027-03-19"), "b")
+        // The new sailing is active and starts clean; the first one is kept whole on the shelf.
+        assertEquals("2027-03-19", s.sailing()!!.sailDate)
+        assertNull(s.booking())
+        assertTrue(s.stars().isEmpty())
+        assertEquals(listOf("2026-12-12" to false, "2027-03-19" to true), s.sailings().map { it.ref.sailDate to it.active })
+        // Going back brings the first sailing's booking and stars with it.
+        s.selectSailing(SailingRef("HM", "Harmony of the Seas", "2026-12-12"))
+        assertEquals("2026-12-12", s.sailing()!!.sailDate)
+        assertEquals("1234", s.booking()!!.stateroom)
+        assertEquals(mapOf("Trivia|2026-12-12|14:00|" to true), s.stars())
+        assertEquals(listOf(true, false), s.sailings().map { it.active })
+    }
+
+    @Test
+    fun anAddedSailingHasNoDataUntilItIsDownloaded() {
+        val s = store()
+        s.saveDownload(bundle("HM", "2026-12-12"), "a")
+        s.addSailing(SailingRef("EX", "Explorer of the Seas", "2027-03-19"))
+        s.addSailing(SailingRef("EX", "Explorer of the Seas", "2027-03-19"))   // twice: still one
+        assertEquals(2, s.sailings().size)
+        assertFalse(s.sailings().last().hasData)
+        s.selectSailing(SailingRef("EX", "Explorer of the Seas", "2027-03-19"))
+        assertNull(s.sailing())   // nothing downloaded yet, but the sailing is the active one
+        assertEquals("EX|20270319", s.activeSailing()!!.key)
+        assertEquals(listOf("2026-12-12" to false, "2027-03-19" to true), s.sailings().map { it.ref.sailDate to it.active })
+        assertTrue(s.sailings().first().hasData)
+        // Downloading it fills the active sailing; the other stays shelved.
+        s.saveDownload(bundle("EX", "2027-03-19"), "b")
+        assertEquals("2027-03-19", s.sailing()!!.sailDate)
+        assertEquals(2, s.sailings().size)
+    }
+
+    @Test
+    fun removingASailingForgetsItsDataButNotTheActiveOne() {
+        val s = store()
+        s.saveDownload(bundle("HM", "2026-12-12"), "a")
+        s.saveDownload(bundle("EX", "2027-03-19"), "b")
+        assertFalse(s.removeSailing("EX|20270319"))   // active
+        assertTrue(s.removeSailing("HM|20261212"))
+        assertEquals(listOf("2027-03-19"), s.sailings().map { it.ref.sailDate })
+        // Settings are shared by every sailing.
+        s.updateSettings(mapOf("theme" to JsonPrimitive("dark")))
+        s.addSailing(SailingRef("HM", "Harmony of the Seas", "2026-12-12"))
+        s.selectSailing(SailingRef("HM", "Harmony of the Seas", "2026-12-12"))
+        assertEquals(JsonPrimitive("dark"), s.settings()["theme"])
+    }
 }

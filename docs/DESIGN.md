@@ -851,11 +851,18 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   December watch is not priced on a March booking. A linked guest's booking on the
   same sailing counts. A link's `bookingId` also means the sailing when that booking is on the downloaded one; otherwise the watch stays on that booking.
   **Sailing picker** (top of Prices): *All sailings* or one sailing, listed from the last check's bookings
-  (a ship and sail date, linked bookings together) plus the sailing downloaded in Trip (marked *added*). A
-  picked sailing limits Summary (bookings, drops) and Watches to it, and new watches go to it. It only changes
-  what Prices shows: background checks, schedule refresh and alerts always cover every booking and every
-  watch. Not built yet: Trip's schedule, Days, Events and the watch still follow the one downloaded sailing
-  (the store keeps one bundle); the Report tab shows the whole check.
+  (a ship and sail date, linked bookings together) plus every sailing the phone keeps (marked *added* when no
+  booking covers it). Picking one makes it **the sailing in use** (below) and limits Summary (bookings, drops)
+  and Watches to it; new watches go to it. Background checks, schedule refresh and alerts always cover every
+  booking and every watch; the Report tab shows the whole check.
+- **Several sailings** (Trip > Your sailings, shown once there are two or an added one): the phone keeps each
+  sailing's schedule, stars, booking details and notices separately. One is **in use**: Trip, Days, Events,
+  Cabin, Filters and the watch all show it (settings are shared by every sailing). *Use* switches, *Remove*
+  forgets a sailing that is not in use, **Add without downloading** lists the chosen ship and date until you
+  use it and download it, and downloading a different sailing adds it and makes it the one in use instead of
+  replacing the old one. Stored as the active sailing's files where they always were, the others moved to
+  `sailings/<ship>_<date>/` (`CruiseStore.selectSailing`), so nothing that reads the store changes. Only the
+  sailing in use is on the watch; schedule refresh after a download covers that one.
 - Price notifications come one per item with a **Mute this alert** (or **Mute
   this watch**) button; Prices > Summary has **Mute alerts for this item** on
   each drop worth rebooking. **Alert hours** (Prices > Checks): From

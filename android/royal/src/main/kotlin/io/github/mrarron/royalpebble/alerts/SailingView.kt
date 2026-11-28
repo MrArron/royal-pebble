@@ -47,10 +47,10 @@ object SailingView {
     }
 
     /**
-     * The picker's list, soonest first: sailings with a booking in the last check, plus [added] (the sailing
-     * downloaded in Trip) when no booking covers it.
+     * The picker's list, soonest first: sailings with a booking in the last check, plus [stored] (the sailings
+     * the phone keeps: downloaded in Trip or added by hand) that no booking covers.
      */
-    fun options(bookings: List<BookingRef>, added: BookingRef? = null): List<SailingOption> {
+    fun options(bookings: List<BookingRef>, stored: List<BookingRef> = emptyList()): List<SailingOption> {
         fun code(b: BookingRef) = b.shipCode.ifBlank { b.shipName }
         val booked = bookings.filter { it.sailDate.isNotBlank() && code(it).isNotBlank() }
             .groupBy { key(code(it), it.sailDate) }
@@ -58,12 +58,11 @@ object SailingView {
                 val f = list.first()
                 SailingOption(k, f.shipCode, f.shipName, dashed(f.sailDate), list.mapTo(HashSet()) { it.reservationId }, true)
             }
-        val extra = added?.takeIf { it.sailDate.isNotBlank() && code(it).isNotBlank() }?.let {
-            val k = key(code(it), it.sailDate)
-            if (booked.any { o -> o.key == k }) null
-            else SailingOption(k, it.shipCode, it.shipName, dashed(it.sailDate), emptySet(), false)
-        }
-        return (booked + listOfNotNull(extra)).sortedBy { it.sailDate }
+        val extra = stored.filter { it.sailDate.isNotBlank() && code(it).isNotBlank() }
+            .distinctBy { key(code(it), it.sailDate) }
+            .filter { s -> booked.none { it.key == key(code(s), s.sailDate) } }
+            .map { SailingOption(key(code(it), it.sailDate), it.shipCode, it.shipName, dashed(it.sailDate), emptySet(), false) }
+        return (booked + extra).sortedBy { it.sailDate }
     }
 
     /** The selected option, or null for all sailings (or a stored choice that is gone). */

@@ -26,11 +26,11 @@ class SailingViewTest {
     @Test
     fun aSailingAddedInTripJoinsTheListUnlessABookingCoversIt() {
         val added = BookingRef("", "ZZ", "Third Ship", "2027-05-01")
-        val o = SailingView.options(listOf(dec1), added)
+        val o = SailingView.options(listOf(dec1), listOf(added))
         assertEquals(2, o.size)
         assertFalse(o[1].booked)
         assertEquals("Third Ship · 2027-05-01 (added)", o[1].label)
-        assertEquals(1, SailingView.options(listOf(dec1), BookingRef("", "xx", "Test Ship", "2026-12-12")).size)
+        assertEquals(1, SailingView.options(listOf(dec1), listOf(BookingRef("", "xx", "Test Ship", "2026-12-12"))).size)
     }
 
     @Test

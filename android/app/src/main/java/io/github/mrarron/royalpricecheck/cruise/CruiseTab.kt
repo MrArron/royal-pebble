@@ -63,9 +63,41 @@ fun CruiseTab(vm: CruiseViewModel, onCabin: () -> Unit, onFilters: () -> Unit, h
                 (status["at"] as? JsonPrimitive)?.content?.let { Note(it) }
             }
         }
+        SailingsCard(vm)
         DownloadCard(vm)
         if (sailing != null) ReadyCard(vm, onCabin, onFilters)
         BackupCard(vm)
+    }
+}
+
+/**
+ * Every sailing the phone keeps. The one in use is what Trip, Days, Events, Cabin and the watch show; the
+ * others keep their own schedule, stars and booking details until you use them. Price checks and alerts cover
+ * all of them regardless. Downloading a different sailing adds it here and makes it the one in use.
+ */
+@Composable
+private fun SailingsCard(vm: CruiseViewModel) {
+    val list = vm.read { store.sailings() }
+    if (list.size < 2 && list.none { !it.hasData }) return
+    Section("Your sailings") {
+        list.forEach { s ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("${s.ref.shipName.ifBlank { s.ref.shipCode }} · ${CruiseData.sailText(s.ref.sailDate)}", style = MaterialTheme.typography.titleSmall)
+                    Note(when {
+                        s.active && !s.hasData -> "In use, not downloaded yet. Download it below."
+                        s.active -> "In use"
+                        s.hasData -> "Saved"
+                        else -> "Added, not downloaded yet"
+                    })
+                }
+                if (!s.active) {
+                    OutlinedButton({ vm.useSailing(s.ref) }) { Text("Use") }
+                    TextButton({ vm.removeSailing(s.ref.key) }) { Text("Remove") }
+                }
+            }
+        }
+        Note("Only the sailing in use is on your watch. Price checks and alerts cover every booking and watch.")
     }
 }
 
@@ -105,6 +137,7 @@ private fun DownloadCard(vm: CruiseViewModel) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = { vm.download() }, enabled = vm.canDownload) { Text("Download") }
+            OutlinedButton(onClick = { vm.addChosenSailing() }, enabled = vm.canDownload) { Text("Add without downloading") }
             if (vm.busy) CircularProgressIndicator(Modifier.padding(4.dp))
         }
         vm.message?.let { Text(it) }

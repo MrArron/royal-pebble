@@ -57,30 +57,37 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // read Prefs directly and always cover every booking and watch.
     var selectedSailingKey by mutableStateOf(""); private set
 
+    /**
+     * Picks a sailing for the app (or [io.github.mrarron.royalpebble.alerts.SailingView.ALL]). A sailing becomes the one
+     * the phone keeps active (Trip, Days, Events and the watch follow it); the choice only limits what Prices shows.
+     */
     fun selectSailing(key: String) {
+        if (key != io.github.mrarron.royalpebble.alerts.SailingView.ALL) {
+            val o = sailingOptions().firstOrNull { it.key == key } ?: return
+            io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx)
+                .selectSailing(io.github.mrarron.royalpebble.store.SailingRef(o.shipCode, o.shipName, o.sailDate))
+            io.github.mrarron.royalpricecheck.watch.WatchHost.storeChanged(ctx, "sailing switched")
+            syncTick++   // Trip redraws
+        }
         selectedSailingKey = key
         Prefs.setSelectedSailing(ctx, key)
     }
 
-    private var optionsFor: Pair<RunResult?, Int>? = null
-    private var optionsCache: List<io.github.mrarron.royalpebble.alerts.SailingOption> = emptyList()
-
-    /** Sailings from the last check's bookings, plus the sailing downloaded in Trip (read again after a check or a sync). */
+    /** Sailings from the last check's bookings, plus the sailings the phone keeps (downloaded in Trip or added by hand). */
     fun sailingOptions(): List<io.github.mrarron.royalpebble.alerts.SailingOption> {
-        val stamp = result to syncTick
-        if (optionsFor == stamp) return optionsCache
         val bookings = result?.bookings.orEmpty().map { io.github.mrarron.royalpebble.alerts.BookingRef(it.reservationId, it.shipCode, it.shipName, it.sailDate) }
-        val added = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()?.let {
-            io.github.mrarron.royalpebble.alerts.BookingRef("", it.shipCode, it.shipName, it.sailDate)
+        val stored = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailings().map {
+            io.github.mrarron.royalpebble.alerts.BookingRef("", it.ref.shipCode, it.ref.shipName, it.ref.sailDate)
         }
-        optionsCache = io.github.mrarron.royalpebble.alerts.SailingView.options(bookings, added)
-        optionsFor = stamp
-        return optionsCache
+        return io.github.mrarron.royalpebble.alerts.SailingView.options(bookings, stored)
     }
 
-    /** The picked sailing, or null for all sailings. */
-    fun selectedSailing(): io.github.mrarron.royalpebble.alerts.SailingOption? =
-        io.github.mrarron.royalpebble.alerts.SailingView.selected(sailingOptions(), selectedSailingKey)
+    /** The sailing Prices is limited to (the one in use, once one is picked), or null for all sailings. */
+    fun selectedSailing(): io.github.mrarron.royalpebble.alerts.SailingOption? {
+        if (selectedSailingKey == io.github.mrarron.royalpebble.alerts.SailingView.ALL) return null
+        val active = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).activeSailing()?.key ?: return null
+        return io.github.mrarron.royalpebble.alerts.SailingView.selected(sailingOptions(), active)
+    }
 
     init {
         reload()
@@ -250,7 +257,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // not on the downloaded sailing (or is not known from a check yet); then it stays on that booking.
         // New watches go to the picked sailing (Prices > sailing picker), else the sailing downloaded in Trip.
         val picked = selectedSailing()?.takeIf { it.shipCode.isNotBlank() }
-        val downloaded = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()
+        val downloaded = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).activeSailing()
         val scopeShip = picked?.shipCode ?: downloaded?.shipCode
         val scopeDate = picked?.sailDate ?: downloaded?.sailDate
         val linked = if (bookingId.isNotBlank()) Prefs.loadLastResult(ctx)?.bookings?.firstOrNull { it.reservationId == bookingId } else null

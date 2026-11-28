@@ -39,6 +39,13 @@ class CruiseStore(
         const val STAR_CHANGES = "starChanges"
         const val NOTICES = "notices"
         const val WATCH_SAVED = "watchSaved"
+        /** The sailing the screens and the watch follow: `{ship: {code, name}, sailDate}`; the bundle's own when one is saved. */
+        const val ACTIVE = "activeSailing"
+
+        /** The keys that belong to one sailing. Settings, the ship list and the like are shared by all sailings. */
+        val PER_SAILING = listOf(BUNDLE, STARS, STAR_TIMES, STAR_CHANGES, NOTICES, STATUS, WATCH_SAVED)
+        private const val SHELF = "sailings"
+        private const val META = "meta.json"
 
         /** Reserved marks live with the stars under this prefix (slice.js RESERVED_PREFIX). */
         const val RESERVED_PREFIX = "R|"
@@ -98,6 +105,105 @@ class CruiseStore(
 
     private fun readObject(key: String): JsonObject = read(key) as? JsonObject ?: JsonObject(emptyMap())
 
+    // ------------------------------------------------------------ several sailings
+
+    /**
+     * One sailing is active: its data sits in [dir] where every screen, the watch and the JS read it. The
+     * others are shelved under `sailings/<key>/` (the same files, moved there) until they are selected. So
+     * nothing that reads the store needs to know about other sailings.
+     */
+    private fun shelfDir(key: String) = File(File(dir, SHELF), key.replace(Regex("[^A-Za-z0-9]"), "_"))
+
+    private fun refJson(r: SailingRef) = JsonObject(mapOf(
+        "ship" to JsonObject(mapOf("code" to JsonPrimitive(r.shipCode), "name" to JsonPrimitive(r.shipName))),
+        "sailDate" to JsonPrimitive(r.sailDate),
+    ))
+
+    private fun refOf(o: JsonObject?): SailingRef? {
+        o ?: return null
+        val ship = o["ship"] as? JsonObject
+        return SailingRef(ship.text("code") ?: return null, ship.text("name") ?: "", o.text("sailDate") ?: return null)
+    }
+
+    /** The active sailing: the saved bundle's, else the one selected before it was downloaded. */
+    @Synchronized
+    fun activeSailing(): SailingRef? {
+        // The bundle is big: parse it again only when its file changed.
+        val f = File(dir, "$BUNDLE.json")
+        val stamp = if (f.exists()) f.lastModified() * 31 + f.length() else -1L
+        activeMemo?.takeIf { it.first == stamp }?.let { return it.second }
+        val ref = refOf(bundle()) ?: refOf(read(ACTIVE) as? JsonObject)
+        if (stamp != -1L) activeMemo = stamp to ref else activeMemo = null
+        return ref
+    }
+
+    private var activeMemo: Pair<Long, SailingRef?>? = null
+
+    /** The active sailing and the shelved ones, soonest first. */
+    @Synchronized
+    fun sailings(): List<StoredSailing> {
+        val active = activeSailing()
+        val shelved = (File(dir, SHELF).listFiles() ?: emptyArray()).filter { it.isDirectory }.mapNotNull { d ->
+            val meta = File(d, META).takeIf { it.exists() }?.let { runCatching { parseJson(it.readText(Charsets.UTF_8)) as? JsonObject }.getOrNull() }
+            refOf(meta)?.let { StoredSailing(it, active = false, hasData = File(d, "$BUNDLE.json").exists()) }
+        }
+        val all = shelved.filter { it.ref.key != active?.key } +
+            listOfNotNull(active?.let { StoredSailing(it, active = true, hasData = File(dir, "$BUNDLE.json").exists()) })
+        return all.sortedBy { it.ref.sailDate }
+    }
+
+    /** Adds a sailing without data (shown in the list; its schedule downloads when it is selected). No-op when known. */
+    @Synchronized
+    fun addSailing(ref: SailingRef) {
+        if (sailings().any { it.ref.key == ref.key }) return
+        val d = shelfDir(ref.key)
+        d.mkdirs()
+        File(d, META).writeText(refJson(ref).toString(), Charsets.UTF_8)
+    }
+
+    /**
+     * Makes [ref] the active sailing: the current one's data moves to its shelf, the target's comes back
+     * (empty when it has none yet). Settings and everything shared stay as they are.
+     */
+    @Synchronized
+    fun selectSailing(ref: SailingRef) {
+        val current = activeSailing()
+        if (current?.key == ref.key) {
+            if (read(ACTIVE) == null) write(ACTIVE, refJson(ref))
+            return
+        }
+        if (current != null) {
+            val d = shelfDir(current.key)
+            d.mkdirs()
+            File(d, META).writeText(refJson(current).toString(), Charsets.UTF_8)
+            for (k in PER_SAILING) moveFile(File(dir, "$k.json"), File(d, "$k.json"))
+        }
+        val target = shelfDir(ref.key)
+        for (k in PER_SAILING) moveFile(File(target, "$k.json"), File(dir, "$k.json"))
+        File(target, META).delete()
+        target.delete()   // only when empty
+        write(ACTIVE, refJson(ref))
+    }
+
+    /** Forgets a shelved sailing and its data. The active one can't be removed (select another first). */
+    @Synchronized
+    fun removeSailing(key: String): Boolean {
+        if (activeSailing()?.key == key) return false
+        val d = shelfDir(key)
+        if (!d.exists()) return false
+        d.listFiles()?.forEach { it.delete() }
+        return d.delete()
+    }
+
+    private fun moveFile(from: File, to: File) {
+        if (!from.exists()) { to.delete(); return }
+        to.delete()
+        if (!from.renameTo(to)) {
+            to.writeBytes(from.readBytes())
+            from.delete()
+        }
+    }
+
     // ------------------------------------------------------------ the sailing
 
     fun bundle(): JsonObject? = read(BUNDLE) as? JsonObject
@@ -126,6 +232,8 @@ class CruiseStore(
      */
     @Synchronized
     fun saveDownload(bundle: JsonObject, at: String, mineError: String? = null, nowMs: Long = System.currentTimeMillis()): SaveResult {
+        // A different sailing becomes the active one: the sailing that was active is shelved, not replaced.
+        refOf(bundle)?.let { incoming -> activeSailing()?.let { if (it.key != incoming.key) selectSailing(incoming) } }
         val old = bundle()
         val same = sameSailing(old, bundle)
         var saved = bundle
@@ -284,6 +392,14 @@ fun sameSailing(a: JsonObject?, b: JsonObject?): Boolean {
     val cb = (b["ship"] as? JsonObject).text("code")
     return a["ship"] is JsonObject && b["ship"] is JsonObject && sa == b.text("sailDate") && ca == cb
 }
+
+/** A sailing by ship and sail date (`YYYY-MM-DD`). */
+data class SailingRef(val shipCode: String, val shipName: String, val sailDate: String) {
+    val key: String get() = "${shipCode.trim().uppercase()}|${sailDate.replace("-", "")}"
+}
+
+/** A sailing the phone keeps: the active one, or one shelved with its data (or added and not downloaded yet). */
+data class StoredSailing(val ref: SailingRef, val active: Boolean, val hasData: Boolean)
 
 data class Sailing(
     val shipCode: String,
