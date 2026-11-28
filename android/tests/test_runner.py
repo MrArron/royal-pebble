@@ -242,3 +242,29 @@ def test_bad_app_watch_json_is_ignored(fake_upstream):
     result = json.loads(rcp_runner.run(str(cfg), str(work), Collector(), True, "{not json"))
     assert result["watched"] == []
     assert len(result["drops"]) == 1
+
+
+def test_watch_with_a_sailing_is_scoped_to_that_sailings_bookings(tmp_path):
+    import sqlite3
+    db = tmp_path / "history.db"
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE bookings (run_id INT, reservation_id TEXT, ship_code TEXT, sail_date TEXT)")
+    conn.executemany("INSERT INTO bookings VALUES (1, ?, ?, ?)", [
+        ("1001", "HM", "20261212"), ("1002", "HM", "20261212"), ("2001", "EX", "20270319")])
+    conn.commit()
+    conn.close()
+    watches = json.dumps([
+        {"prefix": "pt_a", "product": "1", "price": 5, "ship": "HM", "sailDate": "2026-12-12"},
+        {"prefix": "pt_a", "product": "2", "price": 5, "ship": "HM", "sailDate": "20261212", "reservation": "1001"},
+        {"prefix": "pt_a", "product": "3", "price": 5},
+        {"prefix": "pt_a", "product": "4", "price": 5, "ship": "ZZ", "sailDate": "20300101"},
+    ])
+    out = rcp_runner._scope_to_sailings(rcp_runner._app_watch_entries(watches), str(db))
+    assert sorted(out[0]["reservations"]) == ["1001", "1002"]   # the sailing's bookings, not 2001
+    assert out[1]["reservations"] == ["1001"]                   # an explicit booking wins
+    assert "reservations" not in out[2]                         # no sailing: unchanged
+    assert "reservations" not in out[3]                         # sailing not in the history yet
+    assert not any(k.startswith("_") for e in out for k in e)   # helper keys never reach the script
+    # No history yet (first run): left unscoped, the app filters the rows afterwards.
+    first = rcp_runner._scope_to_sailings(rcp_runner._app_watch_entries(watches), str(tmp_path / "none.db"))
+    assert "reservations" not in first[0]

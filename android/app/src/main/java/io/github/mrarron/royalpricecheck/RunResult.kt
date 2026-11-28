@@ -15,6 +15,7 @@ data class Booking(
     val finalPaymentDate: String,
     val balanceDue: Boolean?,
     val friendlyName: String,
+    val shipCode: String = "",
 )
 
 data class PriceDrop(
@@ -81,6 +82,7 @@ data class RunResult(
                         finalPaymentDate = it.optString("final_payment_date"),
                         balanceDue = if (it.isNull("balance_due")) null else it.optInt("balance_due") == 1,
                         friendlyName = it.optString("friendly_name"),
+                        shipCode = it.optString("ship_code"),
                     )
                 },
                 drops = o.optJSONArray("drops").objects().map {
@@ -109,6 +111,8 @@ data class RunResult(
                         current = if (it.isNull("current_price") || !it.has("current_price")) null else it.optDouble("current_price"),
                         currency = it.optStringOrNull("currency") ?: "USD",
                         status = it.optString("status"),
+                        shipCode = it.optString("ship_code"),
+                        sailDate = it.optString("sail_date"),
                     )
                 },
             )

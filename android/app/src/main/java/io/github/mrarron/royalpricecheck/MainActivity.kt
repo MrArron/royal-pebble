@@ -75,6 +75,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 internal fun SummaryTab(vm: MainViewModel) {
     val r = vm.result
+    val sailing = vm.selectedSailing()   // null: all sailings
+    fun mine(reservationId: String) = sailing?.owns(reservationId) ?: true
     androidx.compose.foundation.text.selection.SelectionContainer {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -108,12 +110,12 @@ internal fun SummaryTab(vm: MainViewModel) {
             if (r.script.isNotBlank()) Text("Script: ${r.script}", style = MaterialTheme.typography.bodySmall)
             ReportButtons("price check report", "royal-pebble-price-report.txt") { ReportShare.summaryText(r) }
         }
-        if (r.alerts.isNotEmpty()) {
+        if (r.alerts.any { mine(it.reservationId) }) {
             item { Text("Rebook to save", style = MaterialTheme.typography.titleMedium) }
-            items(r.alerts) { DropCard(it, vm) }
+            items(r.alerts.filter { mine(it.reservationId) }) { DropCard(it, vm) }
         }
         item { Text("Bookings", style = MaterialTheme.typography.titleMedium) }
-        items(r.bookings) { b ->
+        items(r.bookings.filter { mine(it.reservationId) }) { b ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp)) {
                     Text("${b.shipName} · ${prettyDate(b.sailDate)}", style = MaterialTheme.typography.titleSmall)
@@ -130,7 +132,7 @@ internal fun SummaryTab(vm: MainViewModel) {
                 Text(g.status + if (g.window.isNotBlank()) "\nBoarding window: ${g.window}" else "")
             }
         }
-        val others = r.drops.filter { !it.alert }
+        val others = r.drops.filter { !it.alert && mine(it.reservationId) }
         if (others.isNotEmpty()) {
             item { Text("Other price drops", style = MaterialTheme.typography.titleMedium) }
             items(others) { DropCard(it, null) }

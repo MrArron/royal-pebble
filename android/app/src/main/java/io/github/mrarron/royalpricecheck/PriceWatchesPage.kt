@@ -50,9 +50,10 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
         AddWatchForm(vm)
 
         Text("Your watches", style = MaterialTheme.typography.titleMedium)
-        if (vm.watches.isEmpty()) Text("No price watches yet.")
+        val shown = io.github.mrarron.royalpebble.alerts.SailingView.watches(vm.watches, vm.selectedSailing())
+        if (shown.isEmpty()) Text(if (vm.watches.isEmpty()) "No price watches yet." else "No price watches on this sailing.")
         val muted = vm.mutes.mapTo(HashSet()) { it.key }
-        vm.watches.forEach { w -> WatchCardRow(vm, w, w.muteKey in muted) }
+        shown.forEach { w -> WatchCardRow(vm, w, w.muteKey in muted) }
 
         val bookedMutes = vm.mutes.filter { it.key.startsWith("price|") || it.key.startsWith("schedule|") }
         Text("Muted booked-item and schedule alerts", style = MaterialTheme.typography.titleMedium)

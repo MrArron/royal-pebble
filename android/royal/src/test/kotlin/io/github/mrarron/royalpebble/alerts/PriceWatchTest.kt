@@ -135,6 +135,31 @@ class PriceWatchTest {
         assertEquals(m, AlertMutes.decode(AlertMutes.encode(m)))
         assertTrue(AlertMutes.unmute(m, "watch|w1").isEmpty())
     }
+
+    @Test
+    fun aWatchOnlyCountsRowsOfItsOwnSailing() {
+        val w = watch().copy(shipCode = "HM", sailDate = "2026-12-12")
+        val dec = row(80.0).copy(shipCode = "HM", sailDate = "20261212")
+        val mar = row(28.0, res = "R2").copy(shipCode = "EX", sailDate = "20270319")
+        val u = PriceWatches.apply(listOf(w), listOf(mar, dec), 1000)
+        assertEquals(80.0, u.watches.single().lastPrice!!, 0.0)   // the cheaper March row is ignored
+        assertTrue(u.hits.isEmpty())
+        val only = PriceWatches.apply(listOf(w), listOf(mar), 1000).watches.single()
+        assertEquals("not in the last check", only.lastStatus)
+        // Rows without a sailing (older results) and watches without one still match.
+        assertEquals(30.0, PriceWatches.apply(listOf(w), listOf(row(30.0)), 1).watches.single().lastPrice!!, 0.0)
+        assertEquals(28.0, PriceWatches.apply(listOf(watch()), listOf(mar), 1).watches.single().lastPrice!!, 0.0)
+    }
+
+    @Test
+    fun sailingSurvivesStorageAndReachesTheScript() {
+        val w = watch().copy(shipCode = "HM", sailDate = "2026-12-12")
+        assertEquals(w, PriceWatches.decode(PriceWatches.encode(listOf(w))).single())
+        val sent = PriceWatches.scriptJson(listOf(w))
+        assertTrue(sent.contains("\"ship\":\"HM\"") && sent.contains("\"sailDate\":\"20261212\""))
+        // A watch tied to one booking sends just that booking.
+        assertFalse(PriceWatches.scriptJson(listOf(w.copy(reservationId = "R1"))).contains("sailDate"))
+    }
 }
 
 class QuietHoursTest {

@@ -92,6 +92,9 @@ object Prefs {
     /** Muted alerts (a booked item's price alert or a watch), shown with Unmute in Prices > Watches. */
     fun mutes(c: Context): List<Muted> = AlertMutes.decode(sp(c).getString("alert_mutes", null))
     fun setMutes(c: Context, list: List<Muted>) = sp(c).edit().putString("alert_mutes", AlertMutes.encode(list)).apply()
+    /** The sailing the screens are limited to (Prices > sailing picker); "" is all sailings. Checks never use it. */
+    fun selectedSailing(c: Context): String = sp(c).getString("selected_sailing", "") ?: ""
+    fun setSelectedSailing(c: Context, key: String) = sp(c).edit().putString("selected_sailing", key).apply()
     fun mutedKeys(c: Context): Set<String> = mutes(c).mapTo(HashSet()) { it.key }
 
     /** When background-check alerts may arrive (Prices > Checks > Alert hours). */

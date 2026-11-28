@@ -236,6 +236,7 @@ private fun PriceGlance(vm: MainViewModel, tick: Int, onOpen: () -> Unit, onWatc
 private fun PricesScreen(vm: MainViewModel, dark: Boolean, seg: PriceSeg, onSeg: (PriceSeg) -> Unit) {
     val segs = PriceSeg.entries
     Column(Modifier.fillMaxSize()) {
+        SailingPicker(vm)
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
             segs.forEachIndexed { i, t ->
                 SegmentedButton(seg == t, { onSeg(t) }, SegmentedButtonDefaults.itemShape(i, segs.size), label = { Text(t.label, maxLines = 1) })
@@ -249,6 +250,32 @@ private fun PricesScreen(vm: MainViewModel, dark: Boolean, seg: PriceSeg, onSeg:
                 PriceSeg.REPORT -> LogTab(vm, dark)
             }
         }
+    }
+}
+
+/**
+ * The sailing picker: all sailings, or one (from your bookings, or the sailing you added in Trip). It only
+ * limits what Summary and Watches show here; checks, alerts and refreshes still cover every booking and watch.
+ */
+@Composable
+private fun SailingPicker(vm: MainViewModel) {
+    val options = vm.sailingOptions()
+    if (options.isEmpty()) return
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val current = vm.selectedSailing()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Box {
+            androidx.compose.material3.OutlinedButton({ open = true }, Modifier.fillMaxWidth()) {
+                Text("Sailing: " + (current?.label ?: "All sailings"), maxLines = 1)
+            }
+            androidx.compose.material3.DropdownMenu(open, { open = false }) {
+                androidx.compose.material3.DropdownMenuItem(text = { Text("All sailings") }, onClick = { vm.selectSailing(io.github.mrarron.royalpebble.alerts.SailingView.ALL); open = false })
+                options.forEach { o ->
+                    androidx.compose.material3.DropdownMenuItem(text = { Text(o.label) }, onClick = { vm.selectSailing(o.key); open = false })
+                }
+            }
+        }
+        if (current != null) Text("Showing this sailing only. Background checks and alerts still cover all bookings and watches.", style = MaterialTheme.typography.bodySmall)
     }
 }
 
