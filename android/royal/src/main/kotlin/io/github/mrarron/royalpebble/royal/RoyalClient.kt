@@ -13,10 +13,22 @@ import java.time.temporal.ChronoUnit
 /** A problem worth showing the user as it is. Fixed wording plus a status code, never Royal's reply. */
 class RoyalException(message: String) : Exception(message)
 
-/** Headers for logged-in requests, from [RoyalClient.login]. Lives only for one download. */
+/**
+ * Headers for logged-in requests, from [RoyalClient.login]. Kept in memory only, for a few minutes at most
+ * ([SignInCache]), so one refresh signs in once. Never written to disk or the log.
+ */
 class RoyalAuth internal constructor(internal val token: String, val accountId: String) {
     internal fun headers(): Map<String, String> =
         linkedMapOf("Access-Token" to token, "account-id" to accountId, "vds-id" to accountId)
+
+    /** When Royal says the token expires (ms), or null when it doesn't say. */
+    val expiresAtMs: Long? get() = RoyalParse.expiresAtMs(token)
+
+    /**
+     * The token itself, only to hand to the bundled price script in memory (the app's rcp_runner answers the
+     * script's own sign-in with it, so a refresh signs in once). Never log or store it.
+     */
+    fun tokenForPriceScript(): String = token
 
     override fun toString(): String = "RoyalAuth(<token>)"
 }
@@ -301,8 +313,11 @@ class RoyalClient(
      * Signs in, downloads the sailing as usual, then adds `mine`. Throws when
      * nothing downloaded; [LoginDownload.mineError] says why the booking details didn't.
      */
-    fun downloadWithLogin(ship: RoyalParse.Ship, sailDate: String, email: String, password: String, catalog: Boolean = false): LoginDownload {
-        val auth = login(email, password)
+    fun downloadWithLogin(ship: RoyalParse.Ship, sailDate: String, email: String, password: String, catalog: Boolean = false): LoginDownload =
+        downloadWithAuth(ship, sailDate, login(email, password), catalog)
+
+    /** [downloadWithLogin] on a sign-in made earlier (one sign-in for a whole refresh: see [SignInCache]). */
+    fun downloadWithAuth(ship: RoyalParse.Ship, sailDate: String, auth: RoyalAuth, catalog: Boolean = false): LoginDownload {
         val bundle = download(ship, sailDate)
         val mineResult = try {
             JsonObject(bundle + ("mine" to fetchMine(auth, ship.code, sailDate.replace("-", ""), bundle["schedule"]))) to null

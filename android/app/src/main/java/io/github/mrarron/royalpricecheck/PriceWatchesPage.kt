@@ -73,7 +73,7 @@ internal fun PriceWatchesPage(vm: MainViewModel) {
 /**
  * Items to watch without a link: shore excursions from the downloaded schedule, plus drinks, internet,
  * dining, activities and spa from the Cruise Planner's own list, loaded from Royal with the saved login
- * ([MainViewModel.refreshFromRoyal]). Anything else still needs the link below.
+ * ([MainViewModel.refresh], pull down). Anything else still needs the link below.
  */
 @Composable
 private fun PickFromSchedule(vm: MainViewModel) {
@@ -144,19 +144,13 @@ private fun PickFromSchedule(vm: MainViewModel) {
     message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
 }
 
-/** The Cruise Planner list is refreshed with the rest of Royal's data (Summary > Refresh from Royal); this says where it stands. */
+/** The Cruise Planner list comes with the rest of Royal's data (pull down to refresh); this says where it stands. */
 @Composable
 private fun CatalogLoader(vm: MainViewModel) {
-    val ready = vm.canRefreshRoyal()
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton({ vm.refreshFromRoyal() }, enabled = ready && !vm.syncBusy) {
-            Text(if (vm.catalog.isEmpty()) "Load drinks, internet, dining, activities, spa" else "Refresh from Royal (${vm.catalog.size} planner items)")
-        }
-    }
     when {
-        vm.syncMessage != null -> Text(vm.syncMessage!!, style = MaterialTheme.typography.bodySmall)
-        !ready -> Text("Needs a downloaded sailing (Trip) and a saved Royal login (Settings > Royal account). It signs in once and also refreshes your schedule and bookings.", style = MaterialTheme.typography.bodySmall)
-        vm.catalog.isEmpty() -> Text("Not loaded yet. Shore excursions below come from your schedule.", style = MaterialTheme.typography.bodySmall)
+        vm.refreshing || vm.syncMessage != null -> RefreshHint(vm)
+        vm.catalog.isEmpty() -> Text("Drinks, internet, dining, activities and spa aren't loaded yet: pull down to refresh (needs a downloaded sailing and a saved Royal login). Shore excursions below come from your schedule.", style = MaterialTheme.typography.bodySmall)
+        else -> Text("${vm.catalog.size} planner items, loaded ${RoyalSync.stamp(RoyalSync.status(androidx.compose.ui.platform.LocalContext.current).catalogAt)}. Pull down to refresh.", style = MaterialTheme.typography.bodySmall)
     }
 }
 

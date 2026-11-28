@@ -346,7 +346,21 @@ object RoyalParse {
     // ------------------------------------------------------------ with login
 
     /** The account id (`sub`) from the token's middle part (base64url JSON). */
-    fun accountOf(token: String?): String? {
+    fun accountOf(token: String?): String? = try {
+        val sub = parseJson(tokenPayload(token))["sub"]
+        if (sub.truthy()) sub.jsString() else null
+    } catch (e: Exception) {
+        null
+    }
+
+    /** When the token stops working (its `exp`, in ms), or null when it doesn't say. */
+    fun expiresAtMs(token: String?): Long? = try {
+        (parseJson(tokenPayload(token))["exp"] as? JsonPrimitive)?.content?.toDoubleOrNull()?.let { (it * 1000).toLong() }
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun tokenPayload(token: String?): String {
         val part = (token ?: "").split(".").getOrNull(1) ?: ""
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
         var bits = 0
@@ -362,12 +376,7 @@ object RoyalParse {
                 out.append(((value shr bits) and 255).toChar())
             }
         }
-        return try {
-            val sub = parseJson(out.toString())["sub"]
-            if (sub.truthy()) sub.jsString() else null
-        } catch (e: Exception) {
-            null
-        }
+        return out.toString()
     }
 
     /** Royal's many time spellings -> 'HH:MM' (24h), or null when it isn't one. */

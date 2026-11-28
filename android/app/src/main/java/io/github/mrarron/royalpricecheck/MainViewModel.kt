@@ -21,7 +21,6 @@ import kotlinx.coroutines.withContext
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val ctx get() = getApplication<Application>()
 
-    var running by mutableStateOf(false); private set
     var result by mutableStateOf<RunResult?>(null); private set
     var config by mutableStateOf(""); private set
     var hasConfig by mutableStateOf(false); private set
@@ -48,8 +47,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var sharedLink by mutableStateOf<String?>(null)
     /** The Cruise Planner items loaded from Royal for the picker (kept by [RoyalSync]). */
     var catalog by mutableStateOf<List<io.github.mrarron.royalpebble.royal.CatalogItem>>(emptyList()); private set
-    /** Prices > Refresh from Royal: running, what it said, and a counter the shell watches to redraw Trip. */
-    var syncBusy by mutableStateOf(false); private set
+    /**
+     * The one refresh (pull down on Trip, Today or Prices, [refresh]): running, the step it is on, what it said,
+     * and a counter the shell watches to redraw Trip and the other screens.
+     */
+    var refreshing by mutableStateOf(false); private set
+    var refreshStep by mutableStateOf<String?>(null); private set
     var syncMessage by mutableStateOf<String?>(null); private set
     var syncTick by mutableIntStateOf(0); private set
 
@@ -222,39 +225,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         followUpstream = v
     }
 
-    fun runNow() {
-        if (running) return
-        refreshMissing()
-        if (missingPasswords.isNotEmpty()) {
-            status = "Password needed. Enter it in Settings > Royal account."
-            return
-        }
-        running = true
-        status = null
-        log.clear()
-        viewModelScope.launch {
-            val previous = result
-            val lines = ArrayList<String>()
-            val r = withContext(Dispatchers.IO) {
-                runCatching {
-                    PythonBridge.run(ctx) { line ->
-                        lines.add(line)
-                        viewModelScope.launch(Dispatchers.Main) { log.add(line) }
-                    }
-                }.getOrElse { RunResult.failure("${it::class.java.simpleName}: ${it.message}") }
-            }
-            Prefs.saveLast(ctx, r, lines)
-            // Run now is watched by the user, so its alerts go out at once (quiet hours are for background checks).
-            val extra = withContext(Dispatchers.IO) { AlertDelivery.afterCheck(ctx, previous, r, background = false) }
-            lines.addAll(extra)
-            log.addAll(extra)
-            Prefs.saveLast(ctx, r, lines)
-            result = r
-            watches = Prefs.priceWatches(ctx)
-            running = false
-        }
-    }
-
     fun refreshAlerts() {
         catalog = Prefs.catalogItems(ctx)
         watches = Prefs.priceWatches(ctx)
@@ -310,56 +280,134 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         return io.github.mrarron.royalpebble.alerts.WatchCandidates.all(bundle, catalog, Prefs.priceWatches(ctx).mapTo(HashSet()) { it.code })
     }
 
-    /** True when a sailing is downloaded and a Royal login is saved, so Royal data can be refreshed. */
-    fun canRefreshRoyal(): Boolean =
-        io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing() != null &&
-            RoyalAccount.current(ctx)?.takeIf { it.cruiseLine == "royal" } != null
+    /** True when there is anything to refresh: a downloaded sailing, or a Royal account for the price check. */
+    fun canRefresh(): Boolean = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing() != null || hasConfig
 
     /**
-     * Prices > Refresh from Royal: the downloaded sailing's schedule and booking details plus the Cruise
-     * Planner list (drinks, internet, dining, activities, spa), on one sign-in through [RoyalSync], the same
-     * path as Trip's download. About 10 to 20 requests, a pause between each. Trip redraws afterwards ([syncTick]).
+     * The app's one refresh, started by pulling down on Trip, Today or Prices: the shown sailing's schedule and
+     * booking details (plus the Cruise Planner list when it isn't loaded or is 6 hours old), then the price check,
+     * on one sign-in ([RoyalSync.signIn]; the script is handed the same token). To go easy on Royal it never runs
+     * twice within [io.github.mrarron.royalpebble.settings.PullRules.MIN_GAP_MS] (2 minutes after one where nothing
+     * worked), a sailing downloaded in the last few minutes isn't pulled again, and a price check from the last
+     * few minutes is kept. Writes one `refresh` line to the app log with what ran and what was skipped.
      */
-    fun refreshFromRoyal() {
-        if (syncBusy) return
+    fun refresh() {
+        if (refreshing) return
+        val rules = io.github.mrarron.royalpebble.settings.PullRules
+        val now = System.currentTimeMillis()
+        val wait = rules.refreshWait(RoyalRefreshGate.nextAllowed(ctx), now)
+        if (wait > 0) {
+            syncMessage = "Up to date: refreshed from Royal at ${RoyalSync.stamp(RoyalRefreshGate.lastStart(ctx))}. " +
+                "To go easy on Royal's servers, pull again in ${rules.waitMinutes(wait)} min."
+            io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "refresh", "pull down skipped: last refresh ${(now - RoyalRefreshGate.lastStart(ctx)) / 60_000} min ago")
+            syncTick++   // the indicator springs back
+            return
+        }
+        refreshMissing()
         val store = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx)
         val sailing = store.sailing()
         val account = RoyalAccount.current(ctx)?.takeIf { it.cruiseLine == "royal" }
-        if (sailing == null || account == null) {
-            syncMessage = "Download your sailing in Trip and save your Royal login (Settings > Royal account) first."
+        val canCheck = hasConfig && missingPasswords.isEmpty()
+        if (sailing == null && !canCheck) {
+            syncMessage = if (hasConfig) "Enter your password in Settings > Royal account, or download your sailing in Trip, to refresh."
+            else "Download your sailing in Trip or add your Royal account in Settings to refresh."
+            syncTick++
             return
         }
-        syncBusy = true
-        syncMessage = "Loading from Royal Caribbean..."
+        refreshing = true
+        syncMessage = null
+        RoyalRefreshGate.started(ctx, now)
         viewModelScope.launch {
-            val outcome = withContext(Dispatchers.IO) {
-                runCatching {
-                    RoyalSync.run(ctx, io.github.mrarron.royalpebble.royal.RoyalParse.Ship(sailing.shipCode, sailing.shipName), sailing.sailDate,
-                        io.github.mrarron.royalpebble.settings.DownloadService.Login(account.email, account.password), true, "Prices refresh")
+            val parts = ArrayList<String>()   // for the screen
+            val logParts = ArrayList<String>()   // for the app log (counts and fixed words only)
+            var anyOk = false
+
+            // 1. The shown sailing: schedule and bookings (and the planner list), on the shared sign-in.
+            if (sailing != null) {
+                refreshStep = "Schedule and bookings…"
+                val st = RoyalSync.status(ctx)
+                val withCatalog = account != null && rules.catalogWanted(st.catalogCount, st.catalogAt, now)
+                val outcome = withContext(Dispatchers.IO) {
+                    runCatching {
+                        RoyalSync.run(ctx, io.github.mrarron.royalpebble.royal.RoyalParse.Ship(sailing.shipCode, sailing.shipName), sailing.sailDate,
+                            account?.let { io.github.mrarron.royalpebble.settings.DownloadService.Login(it.email, it.password) }, withCatalog, "pull to refresh")
+                    }.getOrNull()
                 }
-            }
-            val done = outcome.getOrNull()
-            syncMessage = when {
-                done is io.github.mrarron.royalpebble.settings.DownloadOutcome.Done -> {
-                    io.github.mrarron.royalpricecheck.cruise.ScheduleRefresh.afterDownload(ctx, store, done)
-                    io.github.mrarron.royalpricecheck.watch.WatchHost.storeChanged(ctx, "royal refreshed (Prices)")
-                    "Refreshed: " + done.summary +
-                        (done.mineError?.let { ". Booking details failed: $it" } ?: "") +
+                when (outcome) {
+                    is io.github.mrarron.royalpebble.settings.DownloadOutcome.Done -> {
+                        anyOk = true
+                        io.github.mrarron.royalpricecheck.cruise.ScheduleRefresh.afterDownload(ctx, store, outcome)
+                        io.github.mrarron.royalpricecheck.watch.WatchHost.storeChanged(ctx, "royal refreshed (pull down)")
+                        parts += "Schedule: " + outcome.summary + (outcome.mineError?.let { ". Booking details failed: $it" } ?: "")
                         when {
-                            done.catalog != null && done.catalog!!.items.isNotEmpty() ->
-                                ". Planner list: ${done.catalog!!.items.size} items" +
-                                    (if (done.catalog!!.failed.isNotEmpty()) " (could not load: ${done.catalog!!.failed.joinToString()})" else "") + "."
-                            done.catalogError != null -> ". Planner list failed: ${done.catalogError}"
-                            else -> ". Royal listed no planner items; the old list was kept."
+                            !withCatalog -> {}
+                            outcome.catalog?.items?.isNotEmpty() == true -> parts += "Planner list: ${outcome.catalog!!.items.size} items" +
+                                (if (outcome.catalog!!.failed.isNotEmpty()) " (could not load: ${outcome.catalog!!.failed.joinToString()})" else "")
+                            outcome.catalogError != null -> parts += "Planner list failed: ${outcome.catalogError}"
                         }
+                        logParts += "sync ok" + if (withCatalog) " with planner list" else ""
+                    }
+                    is io.github.mrarron.royalpebble.settings.DownloadOutcome.Fresh -> {
+                        anyOk = true
+                        parts += "Schedule and bookings: kept the copy from ${outcome.minutesAgo} min ago"
+                        logParts += "sync fresh (${outcome.minutesAgo} min)"
+                    }
+                    is io.github.mrarron.royalpebble.settings.DownloadOutcome.Failed -> { parts += "Schedule: ${outcome.error}"; logParts += "sync failed" }
+                    null -> { parts += "Schedule: could not refresh from Royal Caribbean"; logParts += "sync failed" }
                 }
-                done is io.github.mrarron.royalpebble.settings.DownloadOutcome.Failed -> done.error
-                else -> "Could not refresh from Royal Caribbean."
+                if (account == null) parts += "Save your Royal login (Settings > Royal account) to refresh booking details and prices too"
             }
+
+            // 2. The price check (every booking and watch), on the same sign-in.
+            val last = result
+            when {
+                !canCheck -> logParts += "check skipped (no account or password)"
+                last != null && rules.checkIsFresh(last.finishedAt, last.ok, System.currentTimeMillis()) -> {
+                    anyOk = true
+                    parts += "Prices: kept the check from ${RoyalSync.stamp(last.finishedAt)}"
+                    logParts += "check fresh"
+                }
+                else -> {
+                    refreshStep = "Checking prices…"
+                    log.clear()
+                    val r = runCheck()
+                    if (r.ok) anyOk = true
+                    parts += if (r.ok) "Prices: checked ${r.itemsChecked} items" else "Prices: check failed${r.error?.let { " ($it)" } ?: ""}"
+                    logParts += if (r.ok) "check ok" else "check failed"
+                }
+            }
+            RoyalRefreshGate.finished(ctx, now, anyOk)
+            io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "refresh", "pull down: " + logParts.joinToString(", ") +
+                ", ${(System.currentTimeMillis() - now) / 1000} s")
+            syncMessage = parts.joinToString(". ") + "."
             refreshAlerts()
+            refreshStep = null
             syncTick++
-            syncBusy = false
+            refreshing = false
         }
+    }
+
+    /** One price check as the screen runs it: output streams into [log], alerts go out at once (the user is watching). */
+    private suspend fun runCheck(): RunResult {
+        val previous = result
+        val lines = ArrayList<String>()
+        val r = withContext(Dispatchers.IO) {
+            runCatching {
+                PythonBridge.run(ctx) { line ->
+                    lines.add(line)
+                    viewModelScope.launch(Dispatchers.Main) { log.add(line) }
+                }
+            }.getOrElse { RunResult.failure("${it::class.java.simpleName}: ${it.message}") }
+        }
+        Prefs.saveLast(ctx, r, lines)
+        // A check the user started: its alerts go out at once (quiet hours are for background checks).
+        val extra = withContext(Dispatchers.IO) { AlertDelivery.afterCheck(ctx, previous, r, background = false) }
+        lines.addAll(extra)
+        log.addAll(extra)
+        Prefs.saveLast(ctx, r, lines)
+        result = r
+        watches = Prefs.priceWatches(ctx)
+        return r
     }
 
     fun removeWatch(id: String) {

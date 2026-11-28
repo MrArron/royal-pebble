@@ -55,3 +55,15 @@ advanced "follow jdeath's main" setting.
 - The checks run jdeath's code, so the checkout step does not keep the token; only the final
   push-and-PR step receives it.
 - Branch protection on `main` is not needed. Nothing here pushes to `main`.
+
+## The shared sign-in (why there is no fork)
+
+The app signs in to Royal once per refresh and hands that sign-in to the script in memory:
+`rcp_runner._shared_sign_in` wraps the HTTP library's request method for the run and answers the
+script's own `POST .../auth/oauth2/access_token` for the app's account with the app's token; every
+other request goes out unchanged, and the wrapper is removed afterwards. The script itself stays
+byte-identical to upstream, so this pipeline keeps working as before. If a new upstream version signs
+in differently, nothing breaks: the wrapper doesn't match and the script signs in itself, which the app
+log shows as `prices  check signed in itself (the script did not ask in the usual way)`. The bridge test
+`test_real_upstream_login_accepts_the_shared_sign_in` runs the bundled script's own `login()` against
+the wrapper, so an upstream change there shows up in the bridge tests of the update PR.

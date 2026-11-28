@@ -22,6 +22,11 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             return@withContext Result.success()
         }
         if (Prefs.useLatestScript(c)) PythonBridge.updateScript(c) // keeps the old copy on failure
+        // The schedule refresh goes first when it's due (ScheduleRefresh: its own switch and limits), so the price
+        // check below reuses its sign-in (RoyalSync.signIn): one sign-in to Royal for the whole background run.
+        runCatching { io.github.mrarron.royalpricecheck.cruise.ScheduleRefresh.runIfDue(c) }.onFailure {
+            io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(c, "schedule", "background refresh failed unexpectedly (${it::class.java.simpleName})")
+        }
         val previous = Prefs.loadLastResult(c)
         val log = ArrayList<String>()
         val result = runCatching { PythonBridge.run(c) { log.add(it) } }
@@ -30,10 +35,6 @@ class CheckWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         // Price watches, phone notifications and watch alerts; held during quiet hours.
         log.addAll(AlertDelivery.afterCheck(c, previous, result, background = true))
         Prefs.saveLast(c, result, log)
-        // The same check also refreshes the schedule when it's due (ScheduleRefresh: its own switch and limits).
-        runCatching { io.github.mrarron.royalpricecheck.cruise.ScheduleRefresh.runIfDue(c) }.onFailure {
-            io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(c, "schedule", "background refresh failed unexpectedly (${it::class.java.simpleName})")
-        }
         Result.success()
     }
 

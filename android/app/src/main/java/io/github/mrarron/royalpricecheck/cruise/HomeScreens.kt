@@ -101,7 +101,7 @@ fun TripHero(vm: CruiseViewModel) {
  */
 @Composable
 fun TodayScreen(vm: CruiseViewModel, mode: TripPhase.Mode, phase: TripPhase.Phase, onMode: (TripPhase.Mode) -> Unit,
-                onEvents: () -> Unit, watchStatus: String) {
+                onEvents: () -> Unit, watchStatus: String, top: @Composable () -> Unit = {}) {
     val today = LocalDate.now().toString()
     val days = vm.read { itinerary() }
     val bundle = vm.read { bundle() }
@@ -112,6 +112,7 @@ fun TodayScreen(vm: CruiseViewModel, mode: TripPhase.Mode, phase: TripPhase.Phas
     val now = LocalTime.now().let { it.hour * 60 + it.minute }
     Page {
         ModeChips(mode, phase, onMode)
+        top()
         if (day == null) {
             HeroCard(vm.read { shipName() }, "Not a cruise day", "Today isn't on this sailing's itinerary.", onBoard = true)
         } else {

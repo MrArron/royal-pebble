@@ -201,10 +201,14 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
                     if (outcome.mineError != null) error = "Your sailing downloaded, but your booking details didn't: ${outcome.mineError}"
                 }
                 is DownloadOutcome.Failed -> error = outcome.error
+                // Downloaded a few minutes ago: Royal isn't asked again (PullRules.syncIsFresh).
+                is DownloadOutcome.Fresh -> message = "Already up to date: this sailing was downloaded ${outcome.minutesAgo} min ago, so that copy is kept."
             }
             busy = false
             if (outcome is DownloadOutcome.Done) ScheduleRefresh.afterDownload(getApplication(), store, outcome)
-            if (outcome is DownloadOutcome.Done) saved("cruise downloaded (${ship.code} $date)") else changed()
+            if (outcome is DownloadOutcome.Done) saved("cruise downloaded (${ship.code} $date)")
+            else if (outcome is DownloadOutcome.Fresh) saved("cruise kept (${ship.code} $date, downloaded ${outcome.minutesAgo} min ago)")
+            else changed()
         }
     }
 
