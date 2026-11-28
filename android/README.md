@@ -26,13 +26,30 @@ One bottom bar whose tabs follow the trip (`AppShell.kt`, `TripPhase`):
   Planning or On board. Every change of the phase shown writes a `phase` line to the test log.
 - **Settings** is a list of pages: Royal account (plus `config.yaml`), Me and my stateroom, Watch and
   logs, About; on board also Prices.
-- **Prices** holds every price feature: Summary (Run now, Refresh from Royal, the Royal data card),
+- **Prices** holds every price feature: Summary (the refresh status, the Royal data card, results),
   Watches (price watches and mutes), Checks (background checks, alert hours, watch alerts, script) and Report.
-- **One Royal sync** (`RoyalSync.kt`): Trip's Download, the background schedule refresh and Prices >
-  Refresh from Royal share one path and one sign-in for the schedule, booking details and the Cruise Planner
-  list (`RoyalClient.downloadWithLogin(..., catalog = true)`), kept in one place (`CruiseStore` and the
-  planner list in `Prefs`), with fetch times in `royal_sync` shown on Trip and Prices. Log line `sync  ...`.
-  The price check (jdeath's script) still signs in by itself.
+- **One refresh: pull down** on Trip, Today or Prices (`MainViewModel.refresh`, Material 3 `PullToRefreshBox`
+  in `AppShell.kt`). It replaces Run now and Refresh from Royal: the shown sailing's schedule and booking
+  details (plus the Cruise Planner list when it isn't loaded or is 6 hours old), then the price check, on
+  **one sign-in**. Limits (`royal/.../settings/PullRules.kt`): at most one refresh every 10 minutes (2 minutes
+  after one where nothing worked; the gap is kept in `royal_refresh` so it holds across restarts); a sailing
+  downloaded with as much in the last 10 minutes is not pulled again, Trip's Download included
+  (`DownloadOutcome.Fresh`); a price check from the last 10 minutes is kept. Log lines `refresh  pull down:
+  sync ok|fresh|failed, check ok|fresh|failed|skipped, N s` and `refresh  pull down skipped: last refresh N min ago`.
+- **One sign-in** (`royal/.../royal/SignInCache.kt`, `RoyalSync.signIn`): the app signs in to Royal once and
+  reuses that sign-in for up to 15 minutes (never within 5 minutes of the token's own expiry), in memory only.
+  The sync uses it (`RoyalClient.downloadWithAuth`), and so does the price check: jdeath's script is still run
+  unchanged, but `rcp_runner._shared_sign_in` answers the script's own sign-in request for the app's account
+  with that token instead of sending a second one (only the HTTP library's request method is wrapped, for
+  the run). An owner-written `config.yaml` or another account signs in as before. A login Royal rejected is
+  remembered for 30 minutes (same email and password), so the sync and the check of one refresh, or the next
+  background run, don't send it again; a new password is tried at once. Log lines `prices  check started, ..., reused the app's
+  sign-in|app signed in once for the check` and `prices  check used the app's sign-in (no second sign-in)`.
+  Background runs do the schedule refresh first (when due) and then the check, on the same sign-in.
+- **One Royal sync** (`RoyalSync.kt`): the refresh, Trip's Download and the background schedule refresh share
+  one path for the schedule, booking details and the Cruise Planner list, kept in one place (`CruiseStore` and
+  the planner list in `Prefs`), with fetch times in `royal_sync` shown on Trip and Prices. Log line
+  `sync  <who>: ..., one sign-in|reused sign-in, N ms` or `sync  <who>: skipped, ... downloaded N min ago`.
 - **App updates** (Settings > About, 1.6.31; `AppUpdate.kt`, rules in `royal/.../update/UpdateCheck.kt`): Check
   for updates asks GitHub's `releases/latest` for MrArron/royal-pebble (one anonymous request, no account or
   cruise data) and compares the release tag with the Royal Pebble version bundled in the app (the APK's own
@@ -72,7 +89,8 @@ merge to get an APK, `docs/BUILD_AND_TEST.md`).
 ## Your password
 
 - `config.yaml` never holds your password. Saving swaps it for a placeholder (`'@password-0'`).
-- It stays in memory until the app process ends, so Run now works after you typed it once.
+- It stays in memory until the app process ends, so a refresh works after you typed it once. The sign-in
+  token made with it is kept in memory for 15 minutes at most and handed to the price script in memory only.
 - **Only while background checks are on**, it is also saved encrypted with the Android Keystore
   (AES-256-GCM, key held by the Keystore, not readable by the app). Turning checks off deletes the
   saved copy and the key.
@@ -94,7 +112,7 @@ button; a changed check-in label; a failed check).
 - **Price watches** (Prices > Watches, or Share a Cruise Planner link to Royal Pebble): an
   item not bought yet, picked from the downloaded schedule's shore excursions (`WatchCandidates`:
   product id from the schedule's `pid`, type id `pt_shoreX`), picked from the Cruise Planner list
-  (drinks, internet, dining, activities, spa: the **Load** button is Refresh from Royal, one sign-in with the
+  (drinks, internet, dining, activities, spa: loaded by the pull-down refresh, one sign-in with the
   saved Royal login, and `RoyalClient.fetchCatalog` reads Royal's own `WebProductsByCategory` GraphQL list, 24 items a page,
   keeping each item's type id and product id exactly as listed; kept on the phone until refreshed), or named by its Cruise Planner link (`.../category/<prefix>/product/<product>
   ?bookingId=...`). The app adds each watch to the runtime config's `watchList` (your `config.yaml`
@@ -107,15 +125,15 @@ button; a changed check-in label; a failed check).
   Unmute (the item then alerts again at its current price).
 - **Alert hours** (Prices > Checks; From 7-10 AM, Until 8-10 PM, default 8 AM to 9 PM):
   alerts from a background check outside them are held (phone notifications saved, watch alerts
-  left waiting) and a one-time `ReleaseWorker` sends them when the hours open. Run now always shows
-  its results at once.
+  left waiting) and a one-time `ReleaseWorker` sends them when the hours open. A pull-down refresh always
+  shows its results at once.
 - Test log lines: `watches  check: ...`, `watches  hit: ...`, `watches  added/removed ...`,
   `alerts  sent: ...`, `alerts  quiet hours (...): held N phone ...; out at 8:00 AM`,
   `alerts  released at 8:00 AM: ...`, `alerts  muted: ...` / `unmuted: ...`, `alerts  alert hours set to ...`.
 
 ## Watch alerts
 
-Prices > Checks, "Watch alerts" (on by default since 1.6.29): after a check (background or Run now) the app sends what
+Prices > Checks, "Watch alerts" (on by default since 1.6.29): after a check (background or a pull-down refresh) the app sends what
 is new to the Pebble as one NOTICE message (`docs/WATCH_PROTOCOL.md`, Booking notices):
 
 - a price drop flagged rebook or consider-booking (again only if the price falls further);

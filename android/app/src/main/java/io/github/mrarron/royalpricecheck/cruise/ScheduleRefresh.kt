@@ -17,7 +17,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * The background schedule refresh (docs/DESIGN.md §12, Prices > Checks): after a background price check, the saved sailing is downloaded
+ * The background schedule refresh (docs/DESIGN.md §12, Prices > Checks): with each background price check (just before it, so the
+ * check reuses this sign-in), the saved sailing is downloaded
  * again with the Royal login, the way Download with login does it, so moved or
  * cancelled events, their stars and new bookings reach the watch on their own.
  *
@@ -103,6 +104,7 @@ object ScheduleRefresh {
                     if (k.active) changedActive = true
                 }
                 is DownloadOutcome.Failed -> WatchHost.logApp(app, "schedule", "background refresh of ${sailing.shipCode} ${sailing.sailDate} FAILED: ${outcome.error}")
+                is DownloadOutcome.Fresh -> WatchHost.logApp(app, "schedule", "background refresh of ${sailing.shipCode} ${sailing.sailDate} not needed: downloaded ${outcome.minutesAgo} min ago")
             }
         }
         if (changedActive) WatchHost.storeChanged(app, "schedule refreshed")

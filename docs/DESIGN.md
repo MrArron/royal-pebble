@@ -812,28 +812,46 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   price checks and downloads), Me and my stateroom (Planning only), Watch and
   logs, About, and Prices when On board.
 - **Prices** (tab while Planning, Settings row On board) holds everything
-  price-related in four segments: **Summary** (Run now, **Refresh from Royal**,
+  price-related in four segments: **Summary** (the refresh status line,
   the **Royal data** card, drops, bookings), **Watches** (the price watches page
   below), **Checks** (the old Settings > Price checks page, with **Alert
   hours**) and **Report** (the full output). Trip's `Open Prices` and `Price
   watches` buttons and a shared Cruise Planner link open the matching segment.
-- **One Royal sync** (`RoyalSync.kt`): Trip's Download, the background schedule
-  refresh and Prices > Refresh from Royal all fetch through one path on one
-  sign-in: schedule, booking details and (Refresh from Royal always; a Trip
-  download when a planner list is already loaded; the background refresh when
-  the list is a day old) the Cruise Planner list. The **Royal data** card, on
-  Trip under the price glance and on Prices > Summary, shows when the schedule
-  and bookings, the planner list and the price check were last fetched. The
-  price check itself is still jdeath's script with its own sign-in. Log line
-  `sync  <who>: schedule ok, bookings ok|failed (...), planner list N items|..., one sign-in, N ms`.
+- **Pull down to refresh** (replaces Run now and Refresh from Royal): the usual
+  drag-down gesture on **Trip**, **Today** and **Prices** (every segment, tab or
+  Settings page) runs the one refresh: the shown sailing's schedule and booking
+  details, the Cruise Planner list when it isn't loaded or is 6 hours old, then
+  the price check for every booking and watch, all on **one sign-in** to Royal
+  (the price script is handed the app's sign-in). A status line under the Trip
+  countdown, under the Today mode chips and at the top of Prices > Summary reads
+  `Pull down to refresh the schedule, bookings and prices.`, then
+  `Refreshing from Royal: Schedule and bookings…` / `Checking prices…` while it
+  runs, then what it did (`Schedule: N events .... Prices: checked N items.`).
+  To go easy on Royal: at most one refresh every 10 minutes (`Up to date:
+  refreshed from Royal at Nov 27, 8:07p. To go easy on Royal's servers, pull
+  again in N min.`), 2 minutes after one where nothing worked; a sailing
+  downloaded in the last 10 minutes isn't pulled again (Trip's Download says
+  `Already up to date: this sailing was downloaded N min ago, so that copy is
+  kept.`); a price check from the last 10 minutes is kept.
+- **One Royal sync** (`RoyalSync.kt`): the refresh, Trip's Download and the
+  background schedule refresh all fetch through one path on one shared sign-in
+  (`SignInCache`, memory only, 15 minutes at most): schedule, booking details
+  and (a refresh when the list is missing or 6 hours old; a Trip download when a
+  planner list is already loaded; the background refresh when the list is a day
+  old) the Cruise Planner list. The **Royal data** card, on Trip under the price
+  glance and on Prices > Summary, shows when the schedule and bookings, the
+  planner list and the price check were last fetched. Background runs refresh
+  the schedule first (when due), then check prices on the same sign-in. Log lines
+  `sync  <who>: schedule ok, bookings ok|failed (...), planner list N items|..., one sign-in|reused sign-in, N ms`,
+  `refresh  pull down: ...` and `prices  check used the app's sign-in (no second sign-in)`.
 - **About > App updates** (1.6.31): status line, release notes, `Download 1.6.x` (opens the
   APK link in the browser; no in-app install), `Check for updates`, and a switch
   `Check once a day when the app opens`. The Settings list's About row adds
   `update 1.6.x available` when one is found.
 - **Price watches** (1.6.29, `PriceWatchesPage.kt`): first **Pick an item
-  to watch**: a **Load drinks, internet, dining, activities, spa** button (the same Refresh from Royal:
-  one sign-in with the saved Royal login, needs a downloaded sailing; becomes **Refresh from Royal (N planner
-  items)**; says what it loaded and which categories failed), then a search box over the schedule's shore excursions plus the loaded
+  to watch**: a line saying the Cruise Planner list (drinks, internet, dining, activities,
+  spa) comes with the pull-down refresh (needs a downloaded sailing and the saved Royal login; `N planner
+  items, loaded <time>. Pull down to refresh.`; after a refresh, what it loaded and which categories failed), then a search box over the schedule's shore excursions plus the loaded
   Cruise Planner items (a card per product: for an excursion place, dates, sessions and Royal's
   listed adult "from" price; for a planner item its group and listed price such as "$96.99 per day";
   tap one for the rule chips and **Watch this**; no link needed; the starting price

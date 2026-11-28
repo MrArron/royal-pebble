@@ -6,7 +6,9 @@ would run it on a computer. This module only:
   * picks which copy of the script to run (a newer one downloaded from GitHub, or the one bundled
     in the APK),
   * writes a runtime copy of the user's config with `historyDb` pointed at app storage,
-  * streams every output line back to Kotlin, and
+  * streams every output line back to Kotlin,
+  * answers the script's own sign-in with the app's, when the app hands one over (see
+    _shared_sign_in), so one refresh signs in to Royal once, and
   * reads the script's own SQLite history database afterwards to build a JSON summary
     (bookings, check-in labels, price drops) for the app's UI and notifications.
 """
@@ -26,6 +28,7 @@ import sqlite3
 import sys
 import threading
 import traceback
+import urllib.parse
 import urllib.request
 
 import yaml
@@ -208,6 +211,74 @@ def _android_compat():
         locale.setlocale = real_setlocale
 
 
+LOGIN_PATH = "/auth/oauth2/access_token"
+
+
+def _shared_login(shared_login_json: str):
+    """The app's sign-in as (username, token), or None. Bad input is ignored (the script signs in itself)."""
+    if not shared_login_json:
+        return None
+    try:
+        d = json.loads(shared_login_json)
+        user, token = str(d.get("username") or "").strip(), str(d.get("token") or "")
+    except (ValueError, TypeError, AttributeError):
+        return None
+    if not user or token.count(".") < 2:
+        return None
+    return user, token
+
+
+def _login_username(data) -> str:
+    """The username in the script's sign-in body (form-encoded string or dict)."""
+    if isinstance(data, (bytes, bytearray)):
+        data = data.decode("utf-8", "replace")
+    if isinstance(data, dict):
+        return str(data.get("username") or "")
+    if isinstance(data, str):
+        # The script puts the email in as it is (not form-encoded), so a "+" in it stays a "+".
+        m = re.search(r"(?:^|&)username=([^&]*)", data)
+        return urllib.parse.unquote(m.group(1)) if m else ""
+    return ""
+
+
+@contextlib.contextmanager
+def _shared_sign_in(shared, emit, used: list):
+    """
+    While the script runs, its sign-in request for the app's own account is answered with the token the
+    app signed in with a few minutes earlier, instead of a second sign-in to Royal. Everything else goes
+    out as usual, and the script is not changed: only the HTTP library's request method is wrapped, and
+    unwrapped afterwards. Another account in an owner-written config.yaml, a different sign-in address
+    in a newer script, or no shared sign-in all fall through to the real request.
+    """
+    if not shared:
+        yield
+        return
+    import requests  # the library the script uses on Android (no curl_cffi there)
+
+    user, token = shared
+    real = requests.sessions.Session.request
+
+    def request(self, method, url, *args, **kwargs):
+        if (str(method).upper() == "POST" and str(url).split("?")[0].endswith(LOGIN_PATH)
+                and _login_username(kwargs.get("data")).strip().lower() == user.lower()):
+            resp = requests.models.Response()
+            resp.status_code = 200
+            resp._content = json.dumps({"access_token": token, "token_type": "Bearer"}).encode("utf-8")
+            resp.headers["Content-Type"] = "application/json"
+            resp.encoding = "utf-8"
+            resp.url = url
+            used.append(True)
+            emit("[app] Sign-in: using the app's sign-in from this refresh (no second sign-in to Royal)")
+            return resp
+        return real(self, method, url, *args, **kwargs)
+
+    requests.sessions.Session.request = request
+    try:
+        yield
+    finally:
+        requests.sessions.Session.request = real
+
+
 def _app_watch_entries(app_watches_json: str) -> list:
     """The app's price watches (Settings > Price watches) as upstream `watchList` entries."""
     if not app_watches_json:
@@ -291,14 +362,17 @@ def _write_runtime_config(config_path: str, work_dir: str, app_watches_json: str
 
 
 def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = True,
-        app_watches_json: str = "") -> str:
+        app_watches_json: str = "", shared_login_json: str = "") -> str:
     """
     Run the price check. `callback` is any object with an `onLine(str)` method (a Kotlin
     object from the app). `app_watches_json` is the app's price watches (a JSON array of
     {prefix, product, price, name, guestAgeString, reservation}); they are added to the
     runtime config's `watchList`, and their rows come back under "watched" instead of "drops".
-    Returns a JSON summary string.
+    `shared_login_json` is {"username", "token"}: the app's sign-in, used in place of the script's own
+    for that account (memory only; it is never written to disk or printed). Returns a JSON summary string.
     """
+    shared = _shared_login(shared_login_json)
+    shared_used: list = []
     app_codes = set()
     try:
         app_codes = {f"{e['prefix']}/{e['product']}" for e in _app_watch_entries(app_watches_json)}
@@ -339,7 +413,7 @@ def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = Tru
             sys.argv = [script, "-c", runtime_config]
             sys.stdout = stream
             sys.stderr = stream
-            with _android_compat():
+            with _android_compat(), _shared_sign_in(shared, emit, shared_used):
                 runpy.run_path(script, run_name="__main__")
         except SystemExit as e:
             exit_code = e.code if isinstance(e.code, int) else (0 if e.code is None else 1)
@@ -370,6 +444,7 @@ def run(config_path: str, work_dir: str, callback, prefer_downloaded: bool = Tru
             "error": error,
             "script": script_label,
             "guestCheckin": checkin_lines,
+            "sharedSignIn": bool(shared_used),
         })
         return json.dumps(summary)
 

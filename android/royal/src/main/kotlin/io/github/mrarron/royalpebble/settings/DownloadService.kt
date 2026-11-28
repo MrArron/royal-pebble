@@ -25,6 +25,12 @@ sealed class DownloadOutcome {
     ) : DownloadOutcome()
 
     data class Failed(val error: String) : DownloadOutcome()
+
+    /**
+     * Nothing was pulled: the same sailing was downloaded [minutesAgo] minutes ago and that copy is kept
+     * ([PullRules.syncIsFresh]), so Royal isn't asked for the same data twice in a few minutes.
+     */
+    data class Fresh(val minutesAgo: Long) : DownloadOutcome()
 }
 
 /**
@@ -67,12 +73,16 @@ class DownloadService(
      * A failure is recorded in the store (status) and returned. With [makeActive] false (background refresh), a sailing
      * that isn't the active one is updated where it is kept and the app keeps following the active sailing.
      */
-    fun download(ship: RoyalParse.Ship, sailDate: String, login: Login? = null, withCatalog: Boolean = false, makeActive: Boolean = true): DownloadOutcome {
+    fun download(ship: RoyalParse.Ship, sailDate: String, login: Login? = null, withCatalog: Boolean = false, makeActive: Boolean = true,
+                 signIn: io.github.mrarron.royalpebble.royal.SignInCache? = null): DownloadOutcome {
         val at = stamp()
         return try {
             var got: io.github.mrarron.royalpebble.royal.LoginDownload? = null
             val (bundle, mineError) = if (login != null) {
-                client.downloadWithLogin(ship, sailDate, login.email, login.password, withCatalog).let { got = it; it.bundle to it.mineError }
+                // With [signIn], a sign-in made a few minutes ago is reused (one sign-in per refresh).
+                val auth = signIn?.get(login.email, login.password) { client.login(login.email, login.password) }?.first
+                    ?: client.login(login.email, login.password)
+                client.downloadWithAuth(ship, sailDate, auth, withCatalog).let { got = it; it.bundle to it.mineError }
             } else {
                 client.download(ship, sailDate) to null
             }

@@ -44,6 +44,34 @@ object PythonBridge {
 
     fun workDir(context: Context): File = File(context.filesDir, "rcp").apply { mkdirs() }
 
+    /** What [sharedSignIn] decided: the JSON for the script (or ""), a log note, and an error that stops the check. */
+    private class Shared(val json: String, val note: String, val stop: String? = null)
+
+    /**
+     * The app's Royal sign-in for the script, so a refresh signs in once ([RoyalSync.signIn]: reused when the sync
+     * just signed in, else made here and kept for the sync that may follow). Only for the app's own simple
+     * config.yaml with a Royal Caribbean login; an owner-written config.yaml signs in as before. A rejected
+     * login stops the check (trying the same password again would only risk the account); any other problem
+     * lets the script sign in itself as it always has.
+     */
+    private fun sharedSignIn(context: Context, configYaml: String): Shared {
+        val account = RoyalAccount.current(context)?.takeIf { it.cruiseLine == "royal" } ?: return Shared("", "script signs in (no shared Royal login)")
+        val simple = RoyalAccount.parseSimple(configYaml)
+        if (simple == null || !simple.username.equals(account.email, ignoreCase = true)) return Shared("", "script signs in (own config.yaml)")
+        return try {
+            val (auth, reused) = RoyalSync.signIn.get(account.email, account.password) {
+                io.github.mrarron.royalpebble.royal.RoyalClient(io.github.mrarron.royalpebble.royal.UrlConnectionTransport()).login(account.email, account.password)
+            }
+            val json = org.json.JSONObject().put("username", account.email).put("token", auth.tokenForPriceScript()).toString()
+            Shared(json, if (reused) "reused the app's sign-in" else "app signed in once for the check")
+        } catch (e: io.github.mrarron.royalpebble.royal.RoyalException) {
+            if (e.message == io.github.mrarron.royalpebble.royal.RoyalClient.ERR_LOGIN_REJECTED) Shared("", "sign-in rejected", e.message)
+            else Shared("", "app sign-in failed (${e.message}), script signs in itself")
+        } catch (e: Exception) {
+            Shared("", "app sign-in failed (${e::class.java.simpleName}), script signs in itself")
+        }
+    }
+
     fun run(context: Context, onLine: (String) -> Unit): RunResult {
         val config = Prefs.configFile(context)
         if (!config.exists()) {
@@ -66,9 +94,14 @@ object PythonBridge {
             dir.mkdirs()
             dir.listFiles { f -> f.name.startsWith("injected-config") }?.forEach { it.delete() }
             val temp = File(dir, "injected-config.yaml")
+            val shared = sharedSignIn(context, config.readText())
+            if (shared.stop != null) {
+                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(context, "prices", "check not started: ${shared.note}")
+                return@synchronized RunResult.failure(shared.stop)
+            }
             try {
                 temp.writeText(injected.yaml)
-                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(context, "prices", "check started, config copy written")
+                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(context, "prices", "check started, config copy written, ${shared.note}")
                 val json = module(context).callAttr(
                     "run",
                     temp.absolutePath,
@@ -76,8 +109,15 @@ object PythonBridge {
                     LineSink { onLine(it) },
                     Prefs.useLatestScript(context),
                     io.github.mrarron.royalpebble.alerts.PriceWatches.scriptJson(assignSailing(context)),
+                    shared.json,
                 ).toString()
-                RunResult.parse(json, System.currentTimeMillis())
+                val result = RunResult.parse(json, System.currentTimeMillis())
+                if (shared.json.isNotEmpty()) {
+                    val used = runCatching { JSONObject(json).optBoolean("sharedSignIn") }.getOrDefault(false)
+                    io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(context, "prices",
+                        if (used) "check used the app's sign-in (no second sign-in)" else "check signed in itself (the script did not ask in the usual way)")
+                }
+                result
             } catch (e: Exception) {
                 // Python's FileNotFoundError arrives as a PyException. Should not happen now; if it does,
                 // put it in the exported log with the folder state, then fail as before.

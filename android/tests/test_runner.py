@@ -268,3 +268,107 @@ def test_watch_with_a_sailing_is_scoped_to_that_sailings_bookings(tmp_path):
     # No history yet (first run): left unscoped, the app filters the rows afterwards.
     first = rcp_runner._scope_to_sailings(rcp_runner._app_watch_entries(watches), str(tmp_path / "none.db"))
     assert "reservations" not in first[0]
+
+
+# ------------------------------------------------------------------ one sign-in per refresh
+def _token(sub="ACC1"):
+    import base64
+    payload = base64.urlsafe_b64encode(json.dumps({"sub": sub, "exp": 4102444800}).encode()).decode().rstrip("=")
+    return "h." + payload + ".s"
+
+
+SIGNIN_SCRIPT = textwrap.dedent('''
+    import argparse, sys, yaml, requests
+    p = argparse.ArgumentParser(); p.add_argument("-c"); a = p.parse_args()
+    cfg = yaml.safe_load(open(a.c))
+    for acct in cfg["accountInfo"]:
+        r = requests.Session().post("https://www.royalcaribbean.com/auth/oauth2/access_token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data="grant_type=password&username=" + acct["username"] + "&password=x&scope=openid", timeout=5)
+        print("login", acct["username"], r.status_code, r.json().get("access_token", "")[:2])
+''')
+
+
+def _signin_upstream(tmp_path, monkeypatch, accounts):
+    bundled = tmp_path / "bundled"
+    bundled.mkdir()
+    (bundled / rcp_runner.SCRIPT_NAME).write_text(SIGNIN_SCRIPT)
+    monkeypatch.setattr(rcp_runner, "BUNDLED_DIR", str(bundled))
+    work = tmp_path / "work"
+    work.mkdir()
+    cfg = work / "config.yaml"
+    cfg.write_text("accountInfo:\n" + "".join(f'  - username: "{u}"\n    password: "x"\n' for u in accounts))
+    return work, cfg
+
+
+def test_script_sign_in_is_answered_with_the_apps_and_nothing_goes_out(tmp_path, monkeypatch):
+    import requests
+    sent = []
+    monkeypatch.setattr(requests.sessions.Session, "request", lambda self, m, url, *a, **k: sent.append(url))
+    work, cfg = _signin_upstream(tmp_path, monkeypatch, ["Me@Example.com"])
+    c = Collector()
+    out = json.loads(rcp_runner.run(str(cfg), str(work), c, prefer_downloaded=False,
+                                    shared_login_json=json.dumps({"username": "me@example.com", "token": _token()})))
+    assert out["sharedSignIn"] is True
+    assert sent == []   # no request reached the network
+    assert any(l.startswith("login Me@Example.com 200 h.") for l in c.lines)
+    assert any("using the app's sign-in" in l for l in c.lines)
+    assert not any(_token() in l for l in c.lines)   # the token is never printed
+    # Unwrapped afterwards: the real (here stubbed) request method is back.
+
+
+def test_other_accounts_and_no_shared_sign_in_go_to_royal_as_before(tmp_path, monkeypatch):
+    import requests
+    sent = []
+
+    class Reply:
+        status_code = 200
+
+        def json(self):
+            return {"access_token": "zz.real"}
+
+    def fake(self, method, url, *a, **k):
+        sent.append(rcp_runner._login_username(k.get("data")))
+        return Reply()
+
+    monkeypatch.setattr(requests.sessions.Session, "request", fake)
+    work, cfg = _signin_upstream(tmp_path, monkeypatch, ["me@example.com", "other@example.com"])
+    out = json.loads(rcp_runner.run(str(cfg), str(work), Collector(), prefer_downloaded=False,
+                                    shared_login_json=json.dumps({"username": "me@example.com", "token": _token()})))
+    assert out["sharedSignIn"] is True
+    assert sent == ["other@example.com"]
+    assert requests.sessions.Session.request is fake   # restored
+    sent.clear()
+    out = json.loads(rcp_runner.run(str(cfg), str(work), Collector(), prefer_downloaded=False))
+    assert out["sharedSignIn"] is False
+    assert sent == ["me@example.com", "other@example.com"]
+
+
+def test_login_username_keeps_a_plus_in_the_email():
+    assert rcp_runner._login_username("grant_type=password&username=me+trip@example.com&password=a&b") == "me+trip@example.com"
+    assert rcp_runner._login_username("username=me%40example.com") == "me@example.com"
+    assert rcp_runner._login_username({"username": "x@y.z"}) == "x@y.z"
+    assert rcp_runner._login_username(None) == ""
+
+
+def test_bad_shared_sign_in_is_ignored():
+    assert rcp_runner._shared_login("") is None
+    assert rcp_runner._shared_login("not json") is None
+    assert rcp_runner._shared_login(json.dumps({"username": "a@b.c", "token": "nodots"})) is None
+    assert rcp_runner._shared_login(json.dumps({"username": " a@b.c ", "token": "a.b.c"})) == ("a@b.c", "a.b.c")
+
+
+def test_real_upstream_login_accepts_the_shared_sign_in(monkeypatch):
+    """jdeath's own login() takes the answered sign-in and reads the account id from it (no network)."""
+    import requests
+    monkeypatch.setattr(requests.sessions.Session, "request",
+                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("network used")))
+    g = __import__("runpy").run_path(os.path.join(rcp_runner.BUNDLED_DIR, rcp_runner.SCRIPT_NAME), run_name="upstream_under_test")
+    g["login"].__globals__["IMPERSONATE_ARGS"] = {}
+    g["login"].__globals__["requests"] = requests
+    info = g["AccountInfo"](username="me@example.com", password="secret")
+    lines = []
+    with rcp_runner._shared_sign_in(("me@example.com", _token("ACC9")), lines.append, []):
+        access = g["login"](info)
+    assert access.id == "ACC9" and access.token == _token("ACC9")
+    assert lines and "app's sign-in" in lines[0]

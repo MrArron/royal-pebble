@@ -162,7 +162,9 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
             }
         },
     ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
+        // Pull down to refresh (docs/DESIGN.md §13): Trip, Today and Prices, the screens that show Royal's data.
+        val pullable = if (sub != null) sub == Sub.PRICES else tab == Dest.TRIP || tab == Dest.TODAY || tab == Dest.PRICES
+        val body: @Composable () -> Unit = {
             CompositionLocalProvider(LocalSave provides save) {
                 if (sub != null) {
                     when (sub) {
@@ -181,18 +183,26 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
                             header = {
                                 ModeChips(mode, phase, pickMode)
                                 TripHero(cvm)
+                                RefreshHint(vm)
                                 PriceGlance(vm, cvm.version, onOpen = { openPrices(PriceSeg.SUMMARY) }, onWatches = { openPrices(PriceSeg.WATCHES) })
                             },
                         )
                         Dest.PRICES -> PricesScreen(vm, dark, seg) { segName = it.name }
                         Dest.PLAN, Dest.EVENTS -> PlanScreen(cvm)
                         Dest.TODAY -> TodayScreen(cvm, mode, phase, pickMode, onEvents = { tabName = Dest.EVENTS.name },
-                            watchStatus = remember(cvm.version) { WatchHost.status(ctx) })
+                            watchStatus = remember(cvm.version) { WatchHost.status(ctx) }, top = { RefreshHint(vm) })
                         Dest.CABIN -> MeTab(cvm)
                         Dest.SETTINGS -> SettingsList(phase, vm.update.state, open = { subName = it.name })
                     }
                 }
             }
+        }
+        Box(Modifier.padding(pad).fillMaxSize()) {
+            if (pullable) {
+                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                    isRefreshing = vm.refreshing, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize(),
+                ) { body() }
+            } else body()
         }
     }
 }
@@ -229,8 +239,7 @@ private fun PriceGlance(vm: MainViewModel, tick: Int, onOpen: () -> Unit, onWatc
 }
 
 /**
- * Prices: everything price-related in one place. Summary (the check's results, Run now and Refresh from
- * Royal), Watches (items you haven't bought, mutes), Checks (background checks, alert hours, script) and
+ * Prices: everything price-related in one place. Summary (the check's results; pull down to refresh), Watches (items you haven't bought, mutes), Checks (background checks, alert hours, script) and
  * Report (the full output).
  */
 @OptIn(ExperimentalMaterial3Api::class)

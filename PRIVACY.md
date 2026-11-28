@@ -40,7 +40,9 @@ they may log the request like any visit to their site.
   background price checks. Then the password is saved encrypted with the
   Android Keystore (AES-256-GCM; the key never leaves the Keystore). Turning
   background checks off deletes the saved copy and its key. `config.yaml`
-  never holds your password.
+  never holds your password. One refresh signs in to Royal once: the sign-in
+  token is kept in the app's memory for 15 minutes at most and shared with the
+  bundled price check script in memory, never saved or logged.
 - **Windows sync tool:** asks for the password each run and doesn't save it.
 
 ## What stays on your devices

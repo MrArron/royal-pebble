@@ -80,19 +80,7 @@ internal fun SummaryTab(vm: MainViewModel) {
     androidx.compose.foundation.text.selection.SelectionContainer {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = vm::runNow, enabled = !vm.running && vm.hasConfig) {
-                    Text(if (vm.running) "Checking…" else "Run now")
-                }
-                if (vm.running) CircularProgressIndicator(Modifier.padding(4.dp))
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
-                OutlinedButton(onClick = vm::refreshFromRoyal, enabled = !vm.syncBusy && vm.canRefreshRoyal()) {
-                    Text(if (vm.syncBusy) "Refreshing…" else "Refresh from Royal")
-                }
-                if (vm.syncBusy) CircularProgressIndicator(Modifier.padding(4.dp))
-            }
-            vm.syncMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            RefreshHint(vm)
             RoyalDataCard(vm)
             if (!vm.hasConfig) Text("Add your Royal account in Settings first.")
             vm.status?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -173,7 +161,7 @@ internal fun LogTab(vm: MainViewModel, dark: Boolean) {
     val state = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(vm.log.size) { if (vm.log.isNotEmpty()) state.scrollToItem(vm.log.size - 1) }
     Column(Modifier.fillMaxSize()) {
-        if (vm.log.isNotEmpty() && !vm.running) {
+        if (vm.log.isNotEmpty() && !vm.refreshing) {
             Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp)) {
                 ReportButtons("price check output", "royal-pebble-price-output.txt") { ReportShare.logText(vm.log.toList()) }
             }

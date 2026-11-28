@@ -85,6 +85,7 @@ object RoyalAccount {
 
     /** Forgets the shared login (memory and saved copies). config.yaml stays, with its placeholder. */
     fun forget(c: Context) {
+        RoyalSync.signIn.forget()   // the sign-in made with it goes too
         PasswordVault.forgetPebbleLogin(c)
         // The simple config.yaml's password is the same login: drop it too, so nothing still signs in.
         parseSimple(Prefs.readConfig(c))?.passwordIndex?.let { i ->
