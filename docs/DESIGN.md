@@ -850,6 +850,12 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   from earlier runs' history), and rows from other sailings are ignored, so a
   December watch is not priced on a March booking. A linked guest's booking on the
   same sailing counts. A link's `bookingId` also means the sailing when that booking is on the downloaded one; otherwise the watch stays on that booking.
+  **Sailing picker** (top of Prices): *All sailings* or one sailing, listed from the last check's bookings
+  (a ship and sail date, linked bookings together) plus the sailing downloaded in Trip (marked *added*). A
+  picked sailing limits Summary (bookings, drops) and Watches to it, and new watches go to it. It only changes
+  what Prices shows: background checks, schedule refresh and alerts always cover every booking and every
+  watch. Not built yet: Trip's schedule, Days, Events and the watch still follow the one downloaded sailing
+  (the store keeps one bundle); the Report tab shows the whole check.
 - Price notifications come one per item with a **Mute this alert** (or **Mute
   this watch**) button; Prices > Summary has **Mute alerts for this item** on
   each drop worth rebooking. **Alert hours** (Prices > Checks): From

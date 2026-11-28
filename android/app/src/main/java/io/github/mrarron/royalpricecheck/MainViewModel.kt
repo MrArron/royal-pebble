@@ -53,12 +53,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var syncMessage by mutableStateOf<String?>(null); private set
     var syncTick by mutableIntStateOf(0); private set
 
+    // The sailing picker limits what the Prices screens show. Background checks, schedule refresh and alerts
+    // read Prefs directly and always cover every booking and watch.
+    var selectedSailingKey by mutableStateOf(""); private set
+
+    fun selectSailing(key: String) {
+        selectedSailingKey = key
+        Prefs.setSelectedSailing(ctx, key)
+    }
+
+    private var optionsFor: Pair<RunResult?, Int>? = null
+    private var optionsCache: List<io.github.mrarron.royalpebble.alerts.SailingOption> = emptyList()
+
+    /** Sailings from the last check's bookings, plus the sailing downloaded in Trip (read again after a check or a sync). */
+    fun sailingOptions(): List<io.github.mrarron.royalpebble.alerts.SailingOption> {
+        val stamp = result to syncTick
+        if (optionsFor == stamp) return optionsCache
+        val bookings = result?.bookings.orEmpty().map { io.github.mrarron.royalpebble.alerts.BookingRef(it.reservationId, it.shipCode, it.shipName, it.sailDate) }
+        val added = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()?.let {
+            io.github.mrarron.royalpebble.alerts.BookingRef("", it.shipCode, it.shipName, it.sailDate)
+        }
+        optionsCache = io.github.mrarron.royalpebble.alerts.SailingView.options(bookings, added)
+        optionsFor = stamp
+        return optionsCache
+    }
+
+    /** The picked sailing, or null for all sailings. */
+    fun selectedSailing(): io.github.mrarron.royalpebble.alerts.SailingOption? =
+        io.github.mrarron.royalpebble.alerts.SailingView.selected(sailingOptions(), selectedSailingKey)
+
     init {
         reload()
     }
 
     private fun reload() {
         catalog = Prefs.catalogItems(ctx)
+        selectedSailingKey = Prefs.selectedSailing(ctx)
         runCatching { Prefs.migratePlainPasswords(ctx) }
         hasConfig = Prefs.hasConfig(ctx)
         config = Prefs.readConfig(ctx)
@@ -218,14 +248,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val all = Prefs.priceWatches(ctx)
         // Watches are for a sailing, linked bookings included. A link's booking id is only kept when its booking is
         // not on the downloaded sailing (or is not known from a check yet); then it stays on that booking.
-        val sailing = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()
+        // New watches go to the picked sailing (Prices > sailing picker), else the sailing downloaded in Trip.
+        val picked = selectedSailing()?.takeIf { it.shipCode.isNotBlank() }
+        val downloaded = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()
+        val scopeShip = picked?.shipCode ?: downloaded?.shipCode
+        val scopeDate = picked?.sailDate ?: downloaded?.sailDate
         val linked = if (bookingId.isNotBlank()) Prefs.loadLastResult(ctx)?.bookings?.firstOrNull { it.reservationId == bookingId } else null
-        val onSailing = sailing != null && (bookingId.isBlank() || (linked != null && linked.sailDate.replace("-", "") == sailing.sailDate.replace("-", "")))
+        val onSailing = scopeShip != null && scopeDate != null &&
+            (bookingId.isBlank() || (linked != null && linked.sailDate.replace("-", "") == scopeDate.replace("-", "")))
         val reservation = if (onSailing) "" else bookingId
-        if (all.any { it.code == "$prefix/$product" && it.reservationId == reservation && it.guestAge == guestAge && (!onSailing || it.sailDate == sailing?.sailDate) }) return "You already watch this item."
+        if (all.any { it.code == "$prefix/$product" && it.reservationId == reservation && it.guestAge == guestAge && (!onSailing || it.sailDate == scopeDate) }) return "You already watch this item."
         val w = PriceWatch(
             id = java.util.UUID.randomUUID().toString().take(8), name = name.trim(), prefix = prefix, product = product,
-            reservationId = reservation, shipCode = if (onSailing) sailing!!.shipCode else "", sailDate = if (onSailing) sailing!!.sailDate else "", guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
+            reservationId = reservation, shipCode = if (onSailing) scopeShip!! else "", sailDate = if (onSailing) scopeDate!! else "", guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
             createdAt = System.currentTimeMillis(),
         )
         Prefs.setPriceWatches(ctx, all + w)
