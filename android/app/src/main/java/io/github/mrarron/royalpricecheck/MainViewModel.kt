@@ -216,12 +216,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (rule == WatchRule.PERCENT && (pct <= 0 || pct >= 100)) return "Enter a percent between 1 and 99."
         if (rule == WatchRule.BELOW && tgt <= 0) return "Enter your price."
         val all = Prefs.priceWatches(ctx)
-        if (all.any { it.code == "$prefix/$product" && it.reservationId == bookingId && it.guestAge == guestAge }) return "You already watch this item."
-        // A watch is for the sailing it was set from (the downloaded cruise), not every booking the login sees.
-        val sailing = if (bookingId.isBlank()) io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing() else null
+        // Watches are for a sailing, linked bookings included. A link's booking id is only kept when its booking is
+        // not on the downloaded sailing (or is not known from a check yet); then it stays on that booking.
+        val sailing = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()
+        val linked = if (bookingId.isNotBlank()) Prefs.loadLastResult(ctx)?.bookings?.firstOrNull { it.reservationId == bookingId } else null
+        val onSailing = sailing != null && (bookingId.isBlank() || (linked != null && linked.sailDate.replace("-", "") == sailing.sailDate.replace("-", "")))
+        val reservation = if (onSailing) "" else bookingId
+        if (all.any { it.code == "$prefix/$product" && it.reservationId == reservation && it.guestAge == guestAge && (!onSailing || it.sailDate == sailing?.sailDate) }) return "You already watch this item."
         val w = PriceWatch(
             id = java.util.UUID.randomUUID().toString().take(8), name = name.trim(), prefix = prefix, product = product,
-            reservationId = bookingId, shipCode = sailing?.shipCode ?: "", sailDate = sailing?.sailDate ?: "", guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
+            reservationId = reservation, shipCode = if (onSailing) sailing!!.shipCode else "", sailDate = if (onSailing) sailing!!.sailDate else "", guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
             createdAt = System.currentTimeMillis(),
         )
         Prefs.setPriceWatches(ctx, all + w)

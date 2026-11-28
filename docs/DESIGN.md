@@ -849,7 +849,7 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   checked only on that sailing's bookings (the script's `reservations` list, found
   from earlier runs' history), and rows from other sailings are ignored, so a
   December watch is not priced on a March booking. A linked guest's booking on the
-  same sailing counts; a watch made from a link with a `bookingId` stays on that booking.
+  same sailing counts. A link's `bookingId` also means the sailing when that booking is on the downloaded one; otherwise the watch stays on that booking.
 - Price notifications come one per item with a **Mute this alert** (or **Mute
   this watch**) button; Prices > Summary has **Mute alerts for this item** on
   each drop worth rebooking. **Alert hours** (Prices > Checks): From
