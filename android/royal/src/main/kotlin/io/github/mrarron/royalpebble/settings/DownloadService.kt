@@ -64,9 +64,10 @@ class DownloadService(
     /**
      * Downloads [sailDate] for [ship]. With [login] it also signs in and adds the
      * booking details; with [withCatalog] too it also loads the Cruise Planner list on that same sign-in.
-     * A failure is recorded in the store (status) and returned.
+     * A failure is recorded in the store (status) and returned. With [makeActive] false (background refresh), a sailing
+     * that isn't the active one is updated where it is kept and the app keeps following the active sailing.
      */
-    fun download(ship: RoyalParse.Ship, sailDate: String, login: Login? = null, withCatalog: Boolean = false): DownloadOutcome {
+    fun download(ship: RoyalParse.Ship, sailDate: String, login: Login? = null, withCatalog: Boolean = false, makeActive: Boolean = true): DownloadOutcome {
         val at = stamp()
         return try {
             var got: io.github.mrarron.royalpebble.royal.LoginDownload? = null
@@ -75,7 +76,7 @@ class DownloadService(
             } else {
                 client.download(ship, sailDate) to null
             }
-            val saved = store.saveDownload(bundle, at, mineError)
+            val saved = store.saveDownload(bundle, at, mineError, makeActive = makeActive)
             val mine = store.bundle()?.get("mine")
             DownloadOutcome.Done(
                 summary = RoyalParse.scheduleSummary(bundle["schedule"]!!),

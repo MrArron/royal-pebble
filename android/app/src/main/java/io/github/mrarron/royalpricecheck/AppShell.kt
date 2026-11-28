@@ -130,6 +130,8 @@ fun AppShell(vm: MainViewModel, dark: Boolean) {
     LaunchedEffect(vm.sharedLink) { if (vm.sharedLink != null) openPrices(PriceSeg.WATCHES) }
     // A refresh from Prices changed the shared Royal data: redraw Trip and the rest.
     LaunchedEffect(vm.syncTick) { if (vm.syncTick > 0) cvm.changed() }
+    // Trip kept, switched or removed a sailing: the Prices picker follows.
+    LaunchedEffect(cvm.version) { vm.sailingsChanged() }
     // Another screen can change the shared Royal login or config.yaml: pick it up on every move.
     LaunchedEffect(tab, sub) { vm.accountChanged(); vm.refreshAlerts(); save.action = null }
 

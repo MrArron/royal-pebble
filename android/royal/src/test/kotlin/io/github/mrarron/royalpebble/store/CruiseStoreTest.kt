@@ -67,6 +67,54 @@ class CruiseStoreTest {
     }
 
     @Test
+    fun eachDownloadedSailingIsKeptSeparatelyWithItsOwnStars() {
+        val s = store()
+        val mar = bundle(date = "2027-03-06")
+        val apr = bundle(ship = "XX", date = "2027-04-01")
+        s.saveDownload(mar, "a")
+        s.applyStarChanges(mapOf("Trivia|2027-03-06|14:00|" to true))
+        s.saveDownload(apr, "b")                                   // another sailing becomes the active one
+        assertEquals("XX", s.sailing()!!.shipCode)
+        assertTrue(s.stars().isEmpty())                            // March's stars went away with March
+        assertEquals(listOf("2027-03-06" to false, "2027-04-01" to true), s.sailings().map { it.sailing.sailDate to it.active })
+        assertTrue(s.activate("HM", "2027-03-06"))
+        assertEquals("HM", s.sailing()!!.shipCode)
+        assertEquals(setOf("Trivia|2027-03-06|14:00|"), s.stars().keys)   // and came back with it
+        assertEquals(listOf(true, false), s.sailings().map { it.active })
+        assertFalse(s.activate("ZZ", "2030-01-01"))
+        // Only the active sailing is among the watch's key files.
+        assertFalse(s.snapshot().keys.any { it.contains("2027") })
+    }
+
+    @Test
+    fun aRefreshOfASailingThatIsNotActiveDoesNotSwitchTheApp() {
+        val s = store()
+        s.saveDownload(bundle(mine = true), "a")
+        s.saveDownload(bundle(ship = "XX", date = "2027-04-01"), "b")
+        val r = s.saveDownload(bundle(), "c", makeActive = false)          // March, refreshed in the background
+        assertTrue(r.sameSailing); assertTrue(r.keptMine)
+        assertEquals("XX", s.sailing()!!.shipCode)                          // still April
+        assertTrue(s.bundleOf("HM", "2027-03-06")!!["mine"] is JsonObject)   // March kept its booking details
+    }
+
+    @Test
+    fun removingASailingKeepsTheOthersAndPromotesTheNext() {
+        val s = store()
+        s.saveDownload(bundle(date = "2027-03-06"), "a")
+        s.saveDownload(bundle(ship = "XX", date = "2027-04-01"), "b")
+        s.saveDownload(bundle(ship = "YY", date = "2027-02-01"), "c")       // active
+        assertTrue(s.remove("XX", "2027-04-01", "2027-01-01"))             // one put away
+        assertEquals(2, s.sailings().size)
+        assertTrue(s.remove("YY", "2027-02-01", "2027-02-15"))             // the active one: the next from today takes over
+        assertEquals("HM", s.sailing()!!.shipCode)
+        assertTrue(s.remove("HM", "2027-03-06", "2027-01-01"))
+        assertNull(s.sailing())
+        assertTrue(s.sailings().isEmpty())
+        assertFalse(s.remove("HM", "2027-03-06", "2027-01-01"))
+        assertNull(s.read(CruiseStore.STARS))
+    }
+
+    @Test
     fun failuresAndMissingBookingDetailsAreRecorded() {
         val s = store()
         s.recordFailure("Royal Caribbean returned error 500.", "Nov 13, 5:00p")

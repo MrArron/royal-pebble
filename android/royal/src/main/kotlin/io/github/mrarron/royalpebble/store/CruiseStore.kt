@@ -102,9 +102,11 @@ class CruiseStore(
 
     fun bundle(): JsonObject? = read(BUNDLE) as? JsonObject
 
-    /** A short description of the saved sailing, or null when none is saved. */
-    fun sailing(): Sailing? {
-        val b = bundle() ?: return null
+    /** A short description of the active sailing (the one the app and the watch follow), or null when none is saved. */
+    fun sailing(): Sailing? = describe(bundle())
+
+    private fun describe(b: JsonObject?): Sailing? {
+        b ?: return null
         val ship = b["ship"] as? JsonObject
         return Sailing(
             shipCode = ship.text("code") ?: return null,
@@ -120,38 +122,179 @@ class CruiseStore(
     /**
      * Keeps a downloaded (or pasted) bundle, as index.js useBundle: login data
      * of the same sailing is kept when the new bundle has none, starred events
-     * follow the [reconciler], and a new sailing clears the old one's star
-     * changes and notices. [at] is the status time as the settings page shows
+     * follow the [reconciler], and a sailing's star changes and notices belong
+     * to that sailing. [at] is the status time as the settings page shows
      * it; [mineError] records why booking details didn't download.
+     *
+     * Each sailing is kept on its own (ship and sail date). A download of another
+     * sailing becomes the active one (the one the app screens and the watch follow)
+     * when [makeActive] is true, and the sailing that was active is put away with its
+     * stars; a background refresh passes false so it never switches the app.
      */
     @Synchronized
-    fun saveDownload(bundle: JsonObject, at: String, mineError: String? = null, nowMs: Long = System.currentTimeMillis()): SaveResult {
-        val old = bundle()
-        val same = sameSailing(old, bundle)
+    fun saveDownload(bundle: JsonObject, at: String, mineError: String? = null, nowMs: Long = System.currentTimeMillis(),
+                     makeActive: Boolean = true): SaveResult {
+        val act = activeState()
+        val slot = slotName(bundle)
+        val activeSlot = act?.let { slotName(it.bundle) }
+        val toActive = slot == null || act == null || slot == activeSlot || makeActive
+        val old: SailingState? = if (slot == null || slot == activeSlot) act else readSlot(slot)
+        val same = old != null && sameSailing(old.bundle, bundle)
         var saved = bundle
-        val keptMine = same && bundle["mine"] !is JsonObject && old?.get("mine") is JsonObject
-        if (keptMine) saved = JsonObject(bundle + ("mine" to old!!["mine"]!!))
-        val r = reconciler.reconcile(old, saved, stars(), settings(), nowMs, starTimes())
-        write(STAR_TIMES, longs(r.times))
-        if (r.changes.isNotEmpty()) {
-            write(STARS, booleans(r.stars))
-            val notices = (read(NOTICES) as? JsonArray).orEmpty() + r.notices
-            write(NOTICES, JsonArray(notices.takeLast(8)))
-        }
-        if (same) {
-            write(STAR_CHANGES, JsonObject(mapOf("at" to JsonPrimitive(at), "list" to JsonArray(r.changes))))
+        val keptMine = same && bundle["mine"] !is JsonObject && old!!.bundle["mine"] is JsonObject
+        if (keptMine) saved = JsonObject(bundle + ("mine" to old!!.bundle["mine"]!!))
+        val oldStars = old?.stars.orEmpty()
+        val r = reconciler.reconcile(old?.bundle, saved, oldStars, settings(), nowMs, old?.times.orEmpty())
+        val stars = if (r.changes.isNotEmpty()) r.stars else oldStars
+        var notices: List<JsonElement> = old?.notices ?: emptyList()
+        if (r.changes.isNotEmpty()) notices = (notices + r.notices).takeLast(8)
+        val next = SailingState(
+            saved, stars, r.times,
+            if (same) JsonObject(mapOf("at" to JsonPrimitive(at), "list" to JsonArray(r.changes))) else JsonNull,
+            if (same) JsonArray(notices) else JsonArray(emptyList()),
+        )
+        if (toActive) {
+            // The sailing that was active is put away; a stored copy of this one is now the live one.
+            if (act != null && activeSlot != null && slot != activeSlot) writeSlot(activeSlot, act)
+            if (slot != null && slot != activeSlot) deleteSlot(slot)
+            writeActive(next)
+            write(STATUS, if (mineError == null) JsonObject(emptyMap()) else JsonObject(mapOf(
+                "title" to JsonPrimitive("Booking details not downloaded"),
+                "error" to JsonPrimitive("Your sailing downloaded, but your booking details didn't: $mineError"),
+                "at" to JsonPrimitive(at),
+            )))
         } else {
-            write(STAR_CHANGES, JsonNull)
-            write(NOTICES, JsonArray(emptyList()))
+            writeSlot(slot!!, next)
         }
-        write(BUNDLE, saved)
-        write(STATUS, if (mineError == null) JsonObject(emptyMap()) else JsonObject(mapOf(
-            "title" to JsonPrimitive("Booking details not downloaded"),
-            "error" to JsonPrimitive("Your sailing downloaded, but your booking details didn't: $mineError"),
-            "at" to JsonPrimitive(at),
-        )))
         return SaveResult(sameSailing = same, keptMine = keptMine, starChanges = r.changes.size)
     }
+
+    // ------------------------------------------------------------ several sailings
+
+    /** One saved sailing and whether it is the active one. */
+    data class StoredSailing(val sailing: Sailing, val active: Boolean)
+
+    /** Every saved sailing (the active one and the ones put away), soonest first. */
+    @Synchronized
+    fun sailings(): List<StoredSailing> {
+        val list = ArrayList<StoredSailing>()
+        describe(bundle())?.let { list += StoredSailing(it, true) }
+        archived().forEach { list += StoredSailing(it, false) }
+        return list.sortedBy { it.sailing.sailDate }
+    }
+
+    /** The saved bundle of a sailing, active or put away; null when it isn't saved. */
+    @Synchronized
+    fun bundleOf(shipCode: String, sailDate: String): JsonObject? {
+        val slot = slotName(shipCode, sailDate)
+        val act = bundle()
+        if (act != null && slotName(act) == slot) return act
+        return readSlot(slot)?.bundle
+    }
+
+    /**
+     * Makes a saved sailing the active one: the app screens and the watch follow it. The sailing that was
+     * active is put away with its stars and notices. False when [shipCode] and [sailDate] aren't saved.
+     */
+    @Synchronized
+    fun activate(shipCode: String, sailDate: String): Boolean {
+        val slot = slotName(shipCode, sailDate)
+        val act = activeState()
+        if (act != null && slotName(act.bundle) == slot) return true
+        val s = readSlot(slot) ?: return false
+        if (act != null) slotName(act.bundle)?.let { writeSlot(it, act) }
+        deleteSlot(slot)
+        writeActive(s)
+        return true
+    }
+
+    /**
+     * Removes a saved sailing with its stars (price watches are kept). When it was the active one, the soonest
+     * sailing from [today] (`YYYY-MM-DD`) on takes its place, else the latest. False when it isn't saved.
+     */
+    @Synchronized
+    fun remove(shipCode: String, sailDate: String, today: String): Boolean {
+        val slot = slotName(shipCode, sailDate)
+        val act = activeState()
+        if (act != null && slotName(act.bundle) == slot) {
+            writeActive(null)
+            val rest = archived().sortedBy { it.sailDate }
+            val next = rest.firstOrNull { it.sailDate >= today } ?: rest.lastOrNull()
+            next?.let { activate(it.shipCode, it.sailDate) }
+            return true
+        }
+        if (readSlot(slot) == null) return false
+        deleteSlot(slot)
+        return true
+    }
+
+    private class SailingState(
+        val bundle: JsonObject, val stars: Map<String, Boolean>, val times: Map<String, Long>,
+        val changes: JsonElement, val notices: JsonArray,
+    )
+
+    private fun activeState(): SailingState? {
+        val b = bundle() ?: return null
+        return SailingState(b, stars(), starTimes(), read(STAR_CHANGES) ?: JsonNull, read(NOTICES) as? JsonArray ?: JsonArray(emptyList()))
+    }
+
+    /** Writes the active sailing's files (null: none active). The bundle goes last, as a download always did. */
+    private fun writeActive(s: SailingState?) {
+        write(STAR_TIMES, s?.let { longs(it.times) })
+        write(STARS, s?.takeIf { it.stars.isNotEmpty() }?.let { booleans(it.stars) })
+        write(STAR_CHANGES, s?.changes)
+        write(NOTICES, s?.notices)
+        write(BUNDLE, s?.bundle)
+    }
+
+    // Sailings put away: sailings/<SHIP>_<YYYYMMDD>.json beside the key files, where the watch's JS doesn't look.
+    private fun slotFile(slot: String) = File(File(dir, "sailings"), "$slot.json")
+
+    private fun readSlot(slot: String): SailingState? {
+        val f = slotFile(slot)
+        if (!f.exists()) return null
+        return try {
+            val o = parseJson(f.readText(Charsets.UTF_8)) as? JsonObject ?: return null
+            SailingState(
+                o["bundle"] as? JsonObject ?: return null,
+                (o["stars"] as? JsonObject).orEmpty().mapNotNull { (k, v) -> if ((v as? JsonPrimitive)?.booleanOrNull == true) k to true else null }.toMap(),
+                (o["starTimes"] as? JsonObject).orEmpty().mapNotNull { (k, v) -> (v as? JsonPrimitive)?.longOrNull?.let { k to it } }.toMap(),
+                o["starChanges"] ?: JsonNull,
+                o["notices"] as? JsonArray ?: JsonArray(emptyList()),
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun writeSlot(slot: String, s: SailingState) {
+        val f = slotFile(slot)
+        f.parentFile!!.mkdirs()
+        val text = JsonObject(mapOf(
+            "bundle" to s.bundle, "stars" to booleans(s.stars), "starTimes" to longs(s.times),
+            "starChanges" to s.changes, "notices" to s.notices,
+        )).toString()
+        val tmp = File(f.parentFile, "$slot.json.tmp")
+        tmp.writeText(text, Charsets.UTF_8)
+        if (!tmp.renameTo(f)) {
+            f.delete()
+            if (!tmp.renameTo(f)) throw IOException("could not save a sailing")
+        }
+    }
+
+    private fun deleteSlot(slot: String) { slotFile(slot).delete() }
+
+    private fun archived(): List<Sailing> =
+        (File(dir, "sailings").listFiles() ?: emptyArray()).filter { it.name.endsWith(".json") }
+            .mapNotNull { describe(readSlot(it.name.removeSuffix(".json"))?.bundle) }
+
+    private fun slotName(b: JsonObject): String? {
+        val code = (b["ship"] as? JsonObject).text("code") ?: return null
+        return slotName(code, b.text("sailDate") ?: return null)
+    }
+
+    private fun slotName(shipCode: String, sailDate: String): String =
+        shipCode.uppercase().filter { it.isLetterOrDigit() } + "_" + sailDate.filter { it.isDigit() }
 
     /** A failed download: shown on the settings page until the next one works. */
     fun recordFailure(error: String, at: String) {

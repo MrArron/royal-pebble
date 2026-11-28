@@ -158,6 +158,10 @@ Plain Kotlin, no Android, so `./gradlew :royal:test` runs offline on any JVM.
   so the reused JS packer can read it as it is. On a re-download, stars follow events Royal
   moved or cancelled: the app passes `watch/`'s `JsStarReconciler`, which runs `slice.reconcileStars`,
   `pruneStarTimes` and `buildNotices` in QuickJS (issue 129). The test log gets a `stars` line with counts.
+  Several sailings: the key files are always the **active** sailing (what the screens and the watch's JS read);
+  every other downloaded sailing is put away, with its stars and notices, in `cruise/sailings/<SHIP>_<YYYYMMDD>.json`
+  where the JS doesn't look. `activate` swaps one in, `remove` deletes one, `saveDownload(makeActive = false)` (the
+  background refresh) updates a sailing where it is kept.
 - Tests read the shared fixtures in `test/fixtures/` (the same expected schedule and booking as
   `test/pkjs/royal.test.js` and `test_cruise_sync.py`) and compare output as JSON text, so the
   Kotlin bundle matches `JSON.stringify` byte for byte. Slices for the watch are built from this
