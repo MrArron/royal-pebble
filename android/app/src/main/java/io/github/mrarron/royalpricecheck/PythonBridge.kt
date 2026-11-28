@@ -33,7 +33,7 @@ object PythonBridge {
     private fun assignSailing(context: Context): List<io.github.mrarron.royalpebble.alerts.PriceWatch> {
         val all = Prefs.priceWatches(context)
         if (all.none { it.reservationId.isBlank() && (it.shipCode.isBlank() || it.sailDate.isBlank()) }) return all
-        val sailing = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(context).sailing() ?: return all
+        val sailing = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(context.applicationContext as android.app.Application).sailing() ?: return all
         val fixed = all.map {
             if (it.reservationId.isBlank() && (it.shipCode.isBlank() || it.sailDate.isBlank())) it.copy(shipCode = sailing.shipCode, sailDate = sailing.sailDate) else it
         }
