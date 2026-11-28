@@ -217,9 +217,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (rule == WatchRule.BELOW && tgt <= 0) return "Enter your price."
         val all = Prefs.priceWatches(ctx)
         if (all.any { it.code == "$prefix/$product" && it.reservationId == bookingId && it.guestAge == guestAge }) return "You already watch this item."
+        // A watch is for the sailing it was set from (the downloaded cruise), not every booking the login sees.
+        val sailing = if (bookingId.isBlank()) io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing() else null
         val w = PriceWatch(
             id = java.util.UUID.randomUUID().toString().take(8), name = name.trim(), prefix = prefix, product = product,
-            reservationId = bookingId, guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
+            reservationId = bookingId, shipCode = sailing?.shipCode ?: "", sailDate = sailing?.sailDate ?: "", guestAge = guestAge, rule = rule, percent = pct, target = tgt, baseline = base,
             createdAt = System.currentTimeMillis(),
         )
         Prefs.setPriceWatches(ctx, all + w)

@@ -227,8 +227,47 @@ def _app_watch_entries(app_watches_json: str) -> list:
         }
         if w.get("reservation"):
             entry["reservations"] = [str(w["reservation"])]
+        elif w.get("ship") and w.get("sailDate"):
+            # Kept only to find the sailing's bookings (see _scope_to_sailings); the script ignores it.
+            entry["_ship"], entry["_sailDate"] = str(w["ship"]), str(w["sailDate"]).replace("-", "")
         out.append(entry)
     return out
+
+
+def _scope_to_sailings(entries: list, db_path: str) -> list:
+    """Limit a watch set from one sailing to that sailing's bookings.
+
+    The script checks a watch on every booking unless the entry lists `reservations`. A watch with a
+    ship and sail date gets the booking ids of that sailing from the history of earlier runs (the
+    account's other cruises, and a linked guest's booking on the same sailing, are all in the list the
+    script sees). With no earlier run it stays unscoped; the app drops other sailings' rows after the check.
+    """
+    known: dict = {}
+    for e in entries:
+        ship, sail = e.pop("_ship", None), e.pop("_sailDate", None)
+        if not ship or not sail:
+            continue
+        if (ship, sail) not in known:
+            known[(ship, sail)] = _sailing_reservations(db_path, ship, sail)
+        if known[(ship, sail)]:
+            e["reservations"] = list(known[(ship, sail)])
+    return entries
+
+
+def _sailing_reservations(db_path: str, ship: str, sail_date: str) -> list:
+    if not db_path or not os.path.exists(db_path):
+        return []
+    try:
+        conn = sqlite3.connect(db_path)
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT reservation_id FROM bookings WHERE UPPER(ship_code) = UPPER(?) AND sail_date = ?",
+                (ship, sail_date)).fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return []
+    return [str(r[0]) for r in rows if r[0]]
 
 
 def _write_runtime_config(config_path: str, work_dir: str, app_watches_json: str = "") -> tuple[str, str]:
@@ -236,12 +275,12 @@ def _write_runtime_config(config_path: str, work_dir: str, app_watches_json: str
         data = yaml.safe_load(f) or {}
     if not isinstance(data, dict):
         raise ValueError("config.yaml must be a YAML mapping (key: value pairs)")
-    extra = _app_watch_entries(app_watches_json)
+    db_path = os.path.join(work_dir, "history.db")
+    data["historyDb"] = db_path  # the app reads results from here
+    extra = _scope_to_sailings(_app_watch_entries(app_watches_json), db_path)
     if extra:
         # Added after the user's own watchList entries; config.yaml itself is not changed.
         data["watchList"] = list(data.get("watchList") or []) + extra
-    db_path = os.path.join(work_dir, "history.db")
-    data["historyDb"] = db_path  # the app reads results from here
     log_file = data.get("logFile")
     if log_file and not os.path.isabs(str(log_file)):
         data["logFile"] = os.path.join(work_dir, str(log_file))
@@ -373,7 +412,7 @@ def summarize(db_path: str, app_codes=None) -> dict:
         watched = []
         if has_code and app_codes:
             watched = [dict(r) for r in conn.execute(
-                "SELECT reservation_id, sail_date, item_code, item_name, guest_name, current_price, currency, "
+                "SELECT reservation_id, ship_code, sail_date, item_code, item_name, guest_name, current_price, currency, "
                 "per_night, status FROM price_points WHERE run_id = ? AND item_kind = 'watchlist'", (run_id,))
                 if r["item_code"] in app_codes]
         priced = conn.execute(

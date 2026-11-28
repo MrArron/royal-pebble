@@ -844,6 +844,12 @@ options on the "Royal Pebble Android layouts" design canvas, 2026-11-15):
   Unmute, Remove), then **Muted booked-item alerts** with Unmute. Sharing a
   Cruise Planner link to the app opens this page with the link filled in. The
   Trip screen's price glance counts watches and those below their trigger.
+  A watch belongs to the sailing it was set from (the downloaded cruise: ship and
+  sail date; older watches take the sailing downloaded at their next check). It is
+  checked only on that sailing's bookings (the script's `reservations` list, found
+  from earlier runs' history), and rows from other sailings are ignored, so a
+  December watch is not priced on a March booking. A linked guest's booking on the
+  same sailing counts; a watch made from a link with a `bookingId` stays on that booking.
 - Price notifications come one per item with a **Mute this alert** (or **Mute
   this watch**) button; Prices > Summary has **Mute alerts for this item** on
   each drop worth rebooking. **Alert hours** (Prices > Checks): From

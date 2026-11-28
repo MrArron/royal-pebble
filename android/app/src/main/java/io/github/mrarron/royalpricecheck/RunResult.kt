@@ -109,6 +109,8 @@ data class RunResult(
                         current = if (it.isNull("current_price") || !it.has("current_price")) null else it.optDouble("current_price"),
                         currency = it.optStringOrNull("currency") ?: "USD",
                         status = it.optString("status"),
+                        shipCode = it.optString("ship_code"),
+                        sailDate = it.optString("sail_date"),
                     )
                 },
             )

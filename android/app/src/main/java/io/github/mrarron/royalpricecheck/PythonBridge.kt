@@ -26,6 +26,22 @@ object PythonBridge {
         Python.getInstance().getModule("rcp_runner")
     }
 
+    /**
+     * Watches set before they were tied to a sailing (no booking, no sailing) belong to the cruise
+     * downloaded now: assign it once and keep it, so they stop being checked on other sailings.
+     */
+    private fun assignSailing(context: Context): List<io.github.mrarron.royalpebble.alerts.PriceWatch> {
+        val all = Prefs.priceWatches(context)
+        if (all.none { it.reservationId.isBlank() && (it.shipCode.isBlank() || it.sailDate.isBlank()) }) return all
+        val sailing = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(context).sailing() ?: return all
+        val fixed = all.map {
+            if (it.reservationId.isBlank() && (it.shipCode.isBlank() || it.sailDate.isBlank())) it.copy(shipCode = sailing.shipCode, sailDate = sailing.sailDate) else it
+        }
+        Prefs.setPriceWatches(context, fixed)
+        io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(context, "watches", "${fixed.count { it !in all }} older watches tied to the downloaded sailing")
+        return fixed
+    }
+
     fun workDir(context: Context): File = File(context.filesDir, "rcp").apply { mkdirs() }
 
     fun run(context: Context, onLine: (String) -> Unit): RunResult {
@@ -59,7 +75,7 @@ object PythonBridge {
                     dir.absolutePath,
                     LineSink { onLine(it) },
                     Prefs.useLatestScript(context),
-                    io.github.mrarron.royalpebble.alerts.PriceWatches.scriptJson(Prefs.priceWatches(context)),
+                    io.github.mrarron.royalpebble.alerts.PriceWatches.scriptJson(assignSailing(context)),
                 ).toString()
                 RunResult.parse(json, System.currentTimeMillis())
             } catch (e: Exception) {

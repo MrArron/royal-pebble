@@ -39,6 +39,13 @@ data class PriceWatch(
     val product: String,
     /** The booking to check it for; blank checks it on every booking the login sees. */
     val reservationId: String = "",
+    /**
+     * The sailing the watch was set from (the downloaded cruise: ship code and `YYYY-MM-DD`). With no
+     * [reservationId], the watch is only checked on bookings of this sailing; blank (older watches
+     * not yet assigned) checks every booking.
+     */
+    val shipCode: String = "",
+    val sailDate: String = "",
     val guestAge: String = "adult",
     val rule: WatchRule = WatchRule.ANY_DROP,
     val percent: Double = 0.0,
@@ -53,6 +60,11 @@ data class PriceWatch(
     val lastCheckedAt: Long = 0,
 ) {
     val code: String get() = "$prefix/$product"
+    /** True when [shipCode] and [sailDate] (the sailing's `YYYY-MM-DD`) name the sailing of a booking row. */
+    fun onSailing(rowShip: String, rowSailDate: String): Boolean {
+        if (shipCode.isBlank() || sailDate.isBlank() || rowShip.isBlank() || rowSailDate.isBlank()) return true
+        return shipCode.equals(rowShip, ignoreCase = true) && sailDate.replace("-", "") == rowSailDate.replace("-", "")
+    }
     val muteKey: String get() = "watch|$id"
 
     /** The price at or below which this watch alerts, or null while it waits for a starting price. */
@@ -101,6 +113,9 @@ data class WatchedRow(
     val current: Double?,
     val currency: String,
     val status: String,
+    /** The booking's ship code and sail date (`YYYYMMDD`), from the script's history; blank when unknown. */
+    val shipCode: String = "",
+    val sailDate: String = "",
 )
 
 /** A watch whose price is at or under its trigger. [key] changes with the price, so a further drop alerts again. */
@@ -130,7 +145,7 @@ object PriceWatches {
         var priced = 0
         var started = 0
         val updated = watches.map { w ->
-            val mine = rows.filter { it.code == w.code && (w.reservationId.isBlank() || it.reservationId == w.reservationId) }
+            val mine = rows.filter { it.code == w.code && (w.reservationId.isBlank() || it.reservationId == w.reservationId) && w.onSailing(it.shipCode, it.sailDate) }
             if (mine.isEmpty()) return@map w.copy(lastStatus = "not in the last check", lastCheckedAt = checkedAt)
             val best = mine.filter { it.current != null && it.current > 0 }.minByOrNull { it.current!! }
             if (best == null) return@map w.copy(lastStatus = mine.first().status.ifBlank { "no price" }, lastPrice = null, lastCheckedAt = checkedAt)
@@ -172,6 +187,10 @@ object PriceWatches {
             put("price", JsonPrimitive(w.scriptPrice()))
             put("guestAgeString", JsonPrimitive(w.guestAge))
             if (w.reservationId.isNotBlank()) put("reservation", JsonPrimitive(w.reservationId))
+            else if (w.shipCode.isNotBlank() && w.sailDate.isNotBlank()) {
+                put("ship", JsonPrimitive(w.shipCode))
+                put("sailDate", JsonPrimitive(w.sailDate.replace("-", "")))
+            }
         })
     }).toString()
 
@@ -182,6 +201,8 @@ object PriceWatches {
             put("prefix", JsonPrimitive(w.prefix))
             put("product", JsonPrimitive(w.product))
             put("reservation", JsonPrimitive(w.reservationId))
+            put("ship", JsonPrimitive(w.shipCode))
+            put("sailDate", JsonPrimitive(w.sailDate))
             put("guestAge", JsonPrimitive(w.guestAge))
             put("rule", JsonPrimitive(w.rule.code))
             put("percent", JsonPrimitive(w.percent))
@@ -209,6 +230,8 @@ object PriceWatches {
                     prefix = s("prefix") ?: return@mapNotNull null,
                     product = s("product") ?: return@mapNotNull null,
                     reservationId = s("reservation") ?: "",
+                    shipCode = s("ship") ?: "",
+                    sailDate = s("sailDate") ?: "",
                     guestAge = s("guestAge") ?: "adult",
                     rule = WatchRule.of(s("rule")),
                     percent = d("percent") ?: 0.0,
