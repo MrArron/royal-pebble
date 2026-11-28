@@ -81,6 +81,26 @@ class PullRulesTest {
     }
 
     @Test
+    fun aRejectedPasswordIsSentOnceNotAgainByTheNextStep() {
+        var t = 1_000_000L
+        val cache = SignInCache { t }
+        val fake = FakeRoyal(login = 401 to "{}")
+        val client = RoyalClient(fake, sleep = {})
+        fun attempt(pw: String) = try {
+            cache.get("me@example.com", pw) { client.login("me@example.com", pw) }; null
+        } catch (e: io.github.mrarron.royalpebble.royal.RoyalException) { e.message }
+        assertEquals(RoyalClient.ERR_LOGIN_REJECTED, attempt("bad"))   // the sync's sign-in
+        cache.forget()                                                  // RoyalSync forgets on failure
+        assertEquals(RoyalClient.ERR_LOGIN_REJECTED, attempt("bad"))   // the price check's: not sent
+        assertEquals(1, fake.calls.count { it.path.endsWith("oauth2/access_token") })
+        attempt("other")                                                // a new password is tried at once
+        assertEquals(2, fake.calls.count { it.path.endsWith("oauth2/access_token") })
+        t += SignInCache.REJECTED_HOLD_MS
+        attempt("bad")                                                  // and the old one after the hold
+        assertEquals(3, fake.calls.count { it.path.endsWith("oauth2/access_token") })
+    }
+
+    @Test
     fun aDownloadReusesTheSignInThePriceCheckJustMade() {
         val dir = Files.createTempDirectory("pull").toFile()
         val store = CruiseStore(dir)

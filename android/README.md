@@ -41,8 +41,9 @@ One bottom bar whose tabs follow the trip (`AppShell.kt`, `TripPhase`):
   The sync uses it (`RoyalClient.downloadWithAuth`), and so does the price check: jdeath's script is still run
   unchanged, but `rcp_runner._shared_sign_in` answers the script's own sign-in request for the app's account
   with that token instead of sending a second one (only the HTTP library's request method is wrapped, for
-  the run). An owner-written `config.yaml` or another account signs in as before; a rejected login stops the
-  check rather than trying the password again. Log lines `prices  check started, ..., reused the app's
+  the run). An owner-written `config.yaml` or another account signs in as before. A login Royal rejected is
+  remembered for 30 minutes (same email and password), so the sync and the check of one refresh, or the next
+  background run, don't send it again; a new password is tried at once. Log lines `prices  check started, ..., reused the app's
   sign-in|app signed in once for the check` and `prices  check used the app's sign-in (no second sign-in)`.
   Background runs do the schedule refresh first (when due) and then the check, on the same sign-in.
 - **One Royal sync** (`RoyalSync.kt`): the refresh, Trip's Download and the background schedule refresh share
