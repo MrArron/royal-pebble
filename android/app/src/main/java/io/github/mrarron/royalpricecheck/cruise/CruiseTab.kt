@@ -49,8 +49,28 @@ fun CruiseTab(vm: CruiseViewModel, onCabin: () -> Unit, onFilters: () -> Unit, h
                 Text("You're looking at a made-up cruise, so every screen has something to try. Download your sailing below to replace it. Settings you save now are kept.")
             }
         }
+        val kept = vm.sailings()
+        if (kept.isNotEmpty()) {
+            Section("Your sailings") {
+                kept.forEach { k ->
+                    val sl = k.sailing
+                    var confirm by remember(sl.shipCode, sl.sailDate) { mutableStateOf(false) }
+                    Column {
+                        Text("${sl.shipName} · sails ${CruiseData.sailText(sl.sailDate)}" + if (k.active) "  (showing)" else "", style = MaterialTheme.typography.titleSmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (!k.active) OutlinedButton({ vm.useSailing(sl.shipCode, sl.sailDate)}) { Text("Show this sailing") }
+                            if (confirm) {
+                                Button({ vm.removeSailing(sl.shipCode, sl.sailDate)}) { Text("Remove for sure") }
+                                TextButton({ confirm = false }) { Text("Keep") }
+                            } else TextButton({ confirm = true }) { Text("Remove") }
+                        }
+                    }
+                }
+                Note("Trip, Days, Events, Filters and the watch follow the sailing marked showing. Price checks, schedule refreshes and alerts cover every booking and every sailing here.")
+            }
+        }
         if (sailing != null) {
-            Section("Your sailing") {
+            Section(if (kept.size > 1) "Showing" else "Your sailing") {
                 Text("${sailing.shipName} · sails ${CruiseData.sailText(sailing.sailDate)}", style = MaterialTheme.typography.titleSmall)
                 Text("${sailing.days} days, ${sailing.events} events" + if (sailing.events == 0) " (schedule not published yet)" else "")
                 Text(if (sailing.hasBooking) "Booking details saved on this phone." else "No booking details. Use Download with your Royal login for stateroom, excursions and port times.")
@@ -80,7 +100,7 @@ private fun DownloadCard(vm: CruiseViewModel) {
     // The one Royal login, shared with the Account tab (RoyalAccount).
     val account = remember(vm.version) { vm.account() }
 
-    Section("Download your sailing") {
+    Section(if (vm.sailings().isEmpty()) "Download your sailing" else "Add a sailing") {
         vm.shipsError?.let { ErrorText(it) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f)) {
@@ -109,7 +129,8 @@ private fun DownloadCard(vm: CruiseViewModel) {
         }
         vm.message?.let { Text(it) }
         vm.error?.let { ErrorText(it) }
-        Note("Sailings list the schedule from about two weeks out. This needs the internet once; the watch works offline afterwards.")
+        Note("Sailings list the schedule from about two weeks out. This needs the internet once; the watch works offline afterwards. " +
+            "Each sailing you download is kept on its own: a new one is added and shown, and the others stay until you remove them.")
 
         if (account != null) {
             Text("Royal account: ${io.github.mrarron.royalpricecheck.RoyalAccount.masked(account.email)} (set in Settings > Royal account)")

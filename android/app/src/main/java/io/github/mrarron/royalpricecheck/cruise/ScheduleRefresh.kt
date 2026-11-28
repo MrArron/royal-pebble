@@ -43,46 +43,69 @@ object ScheduleRefresh {
 
     private fun lastRun(c: Context): Long = sp(c).getLong("last_run", 0L)
 
-    /** Runs the refresh if it's due. Blocks: call it off the main thread. */
+    /**
+     * Runs the refresh if it's due, for every sailing kept on the phone (each one that is due, not only the one
+     * the app is showing). Blocks: call it off the main thread.
+     */
     fun runIfDue(c: Context) {
         val app = c.applicationContext as Application
         val store = CruiseHome.store(app)
-        val bundle = store.bundle()
-        val sailing = store.sailing()
         val account = RoyalAccount.current(app)?.takeIf { it.cruiseLine == "royal" }
         val now = System.currentTimeMillis()
-        val skip = RefreshRules.skipReason(
-            enabled(app), sailing?.sailDate, CruiseData.itinerary(bundle).lastOrNull()?.date,
-            LocalDate.now(ZoneId.systemDefault()), account != null, lastRun(app), now,
-        )
-        if (skip != null) {
-            if (skip != "off") WatchHost.logApp(app, "schedule", "background refresh skipped: $skip")
+        val today = LocalDate.now(ZoneId.systemDefault())
+        val kept = store.sailings()
+        if (kept.isEmpty()) {
+            val skip = RefreshRules.skipReason(enabled(app), null, null, today, account != null, lastRun(app), now)
+            if (skip != null && skip != "off") WatchHost.logApp(app, "schedule", "background refresh skipped: $skip")
             return
         }
-        sailing!!; account!!
-        sp(app).edit().putLong("last_run", now).apply()
-        val ship = RoyalParse.Ship(sailing.shipCode, sailing.shipName)
-        val started = System.currentTimeMillis()
-        val before = io.github.mrarron.royalpebble.alerts.ScheduleCounts.of(bundle)
-        // The same shared sync as Trip's download; a planner list loaded earlier is renewed here once it's a day old.
-        val withCatalog = io.github.mrarron.royalpricecheck.RoyalSync.catalogDue(app, now)
-        when (val outcome = io.github.mrarron.royalpricecheck.RoyalSync.run(app, ship, sailing.sailDate, DownloadService.Login(account.email, account.password), withCatalog, "background refresh")) {
-            is DownloadOutcome.Done -> {
-                WatchHost.logApp(app, "schedule", "background refresh done in ${System.currentTimeMillis() - started} ms: " +
-                    outcome.summary + (outcome.mineError?.let { "; booking details failed: $it" } ?: ""))
-                afterDownload(app, store, outcome)
-                // The schedule is up: phone and watch alert (before the watch gets the new data).
-                runCatching {
-                    io.github.mrarron.royalpricecheck.ScheduleNotify.afterRefresh(
-                        app, sailing.shipCode, sailing.shipName, sailing.sailDate,
-                        if (outcome.saved.sameSailing) before else io.github.mrarron.royalpebble.alerts.ScheduleCounts.NONE,
-                        io.github.mrarron.royalpebble.alerts.ScheduleCounts.of(store.bundle()),
-                    )
-                }.onFailure { WatchHost.logApp(app, "schedule", "alert failed unexpectedly (${it::class.java.simpleName})") }
-                WatchHost.storeChanged(app, "schedule refreshed (${sailing.shipCode} ${sailing.sailDate})")
-            }
-            is DownloadOutcome.Failed -> WatchHost.logApp(app, "schedule", "background refresh FAILED: ${outcome.error}")
+        val skips = ArrayList<String>()
+        val due = kept.filter { k ->
+            val s = k.sailing
+            val skip = RefreshRules.skipReason(
+                enabled(app), s.sailDate, CruiseData.itinerary(store.bundleOf(s.shipCode, s.sailDate)).lastOrNull()?.date,
+                today, account != null, lastRun(app), now,
+            )
+            if (skip != null && skip != "off") skips += "${s.shipCode} ${s.sailDate}: $skip"
+            skip == null
         }
+        if (due.isEmpty()) {
+            if (skips.isNotEmpty()) WatchHost.logApp(app, "schedule", "background refresh skipped: " + skips.joinToString("; "))
+            return
+        }
+        account!!
+        sp(app).edit().putLong("last_run", now).apply()
+        var changedActive = false
+        due.forEachIndexed { i, k ->
+            val sailing = k.sailing
+            val ship = RoyalParse.Ship(sailing.shipCode, sailing.shipName)
+            val started = System.currentTimeMillis()
+            val beforeBundle = store.bundleOf(sailing.shipCode, sailing.sailDate)
+            val before = io.github.mrarron.royalpebble.alerts.ScheduleCounts.of(beforeBundle)
+            // The same shared sync as Trip's download; a planner list loaded earlier is renewed once (on the first sailing) when it's a day old.
+            val withCatalog = i == 0 && io.github.mrarron.royalpricecheck.RoyalSync.catalogDue(app, now)
+            // Never switches the sailing the app is showing: each sailing is refreshed where it is kept.
+            val outcome = io.github.mrarron.royalpricecheck.RoyalSync.run(app, ship, sailing.sailDate, DownloadService.Login(account.email, account.password), withCatalog, "background refresh", makeActive = false)
+            when (outcome) {
+                is DownloadOutcome.Done -> {
+                    WatchHost.logApp(app, "schedule", "background refresh of ${sailing.shipCode} ${sailing.sailDate} done in ${System.currentTimeMillis() - started} ms: " +
+                        outcome.summary + (outcome.mineError?.let { "; booking details failed: $it" } ?: ""))
+                    val afterBundle = store.bundleOf(sailing.shipCode, sailing.sailDate)
+                    afterDownload(app, store, outcome, afterBundle, k.active)
+                    // The schedule is up: phone and watch alert (before the watch gets the new data).
+                    runCatching {
+                        io.github.mrarron.royalpricecheck.ScheduleNotify.afterRefresh(
+                            app, sailing.shipCode, sailing.shipName, sailing.sailDate,
+                            if (outcome.saved.sameSailing) before else io.github.mrarron.royalpebble.alerts.ScheduleCounts.NONE,
+                            io.github.mrarron.royalpebble.alerts.ScheduleCounts.of(afterBundle),
+                        )
+                    }.onFailure { WatchHost.logApp(app, "schedule", "alert failed unexpectedly (${it::class.java.simpleName})") }
+                    if (k.active) changedActive = true
+                }
+                is DownloadOutcome.Failed -> WatchHost.logApp(app, "schedule", "background refresh of ${sailing.shipCode} ${sailing.sailDate} FAILED: ${outcome.error}")
+            }
+        }
+        if (changedActive) WatchHost.storeChanged(app, "schedule refreshed")
     }
 
     /**
@@ -90,15 +113,16 @@ object ScheduleRefresh {
      * what a re-download did to stars (counts only, as useBundle's `resync`
      * entries) and how bookings matched the schedule (`booked`, as useBundle).
      */
-    fun afterDownload(app: Application, store: CruiseStore, outcome: DownloadOutcome.Done) {
+    fun afterDownload(app: Application, store: CruiseStore, outcome: DownloadOutcome.Done,
+                      bundle: JsonObject? = store.bundle(), active: Boolean = true) {
         val err = CruiseHome.reconciler.lastError
         if (err != null) {
             WatchHost.logApp(app, "stars", "reconcile failed, stars kept: $err")
-        } else if (outcome.saved.sameSailing) {
+        } else if (outcome.saved.sameSailing && active) {
             val list = ((store.read(CruiseStore.STAR_CHANGES) as? JsonObject)?.get("list") as? JsonArray).orEmpty()
             WatchHost.logApp(app, "stars", "re-download: " + starChangeCounts(list) + ", " +
                 "${store.stars().count { it.value && !it.key.startsWith(CruiseStore.RESERVED_PREFIX) }} starred now")
         }
-        CruiseData.bookedSummary(store.bundle())?.let { WatchHost.logApp(app, "booked", it.logText()) }
+        CruiseData.bookedSummary(bundle)?.let { WatchHost.logApp(app, "booked", it.logText()) }
     }
 }

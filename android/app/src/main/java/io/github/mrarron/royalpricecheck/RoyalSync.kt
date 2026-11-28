@@ -51,11 +51,11 @@ object RoyalSync {
      * login, also the planner list on the same sign-in) and keeps the result. Blocks; one sync at a time.
      * Writes one `sync` line to the app log. [why] names the caller there.
      */
-    fun run(app: Application, ship: RoyalParse.Ship, sailDate: String, login: DownloadService.Login?, withCatalog: Boolean, why: String): DownloadOutcome {
+    fun run(app: Application, ship: RoyalParse.Ship, sailDate: String, login: DownloadService.Login?, withCatalog: Boolean, why: String, makeActive: Boolean = true): DownloadOutcome {
         synchronized(lock) {
             val started = System.currentTimeMillis()
             val service = DownloadService(RoyalClient(UrlConnectionTransport()), CruiseHome.store(app))
-            val outcome = service.download(ship, sailDate, login, withCatalog && login != null)
+            val outcome = service.download(ship, sailDate, login, withCatalog && login != null, makeActive)
             val ms = System.currentTimeMillis() - started
             when (outcome) {
                 is DownloadOutcome.Done -> {

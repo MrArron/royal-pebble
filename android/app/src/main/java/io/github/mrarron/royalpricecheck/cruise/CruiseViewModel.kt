@@ -149,6 +149,25 @@ class CruiseViewModel(app: Application) : AndroidViewModel(app) {
 
     fun selectDate(date: String) { selectedDate = date }
 
+    // ------------------------------------------------------------ several sailings kept on the phone
+
+    /** Every sailing kept on the phone, soonest first; the active one is the one the app and the watch follow. */
+    fun sailings(): List<CruiseStore.StoredSailing> = read { store.sailings() }
+
+    /** Makes a kept sailing the one the app screens and the watch follow. */
+    fun useSailing(shipCode: String, sailDate: String) {
+        if (!store.activate(shipCode, sailDate)) return
+        WatchHost.logApp(getApplication(), "sailing", "app now follows $shipCode $sailDate (picked in Trip)")
+        saved("sailing switched")
+    }
+
+    /** Removes a kept sailing and its stars (price watches stay). */
+    fun removeSailing(shipCode: String, sailDate: String) {
+        if (!store.remove(shipCode, sailDate, java.time.LocalDate.now().toString())) return
+        WatchHost.logApp(getApplication(), "sailing", "removed $shipCode $sailDate")
+        saved("sailing removed")
+    }
+
     val canDownload: Boolean get() = !busy && selectedShip != null && selectedDate != null
 
     /** Downloads the chosen sailing; with [email] and [password] it signs in too and adds the booking details. */

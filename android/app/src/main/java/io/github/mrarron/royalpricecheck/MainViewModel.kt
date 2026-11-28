@@ -57,21 +57,55 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // read Prefs directly and always cover every booking and watch.
     var selectedSailingKey by mutableStateOf(""); private set
 
+    /**
+     * Picks what Prices shows. A sailing kept on the phone (downloaded in Trip) also becomes the one the whole app
+     * follows (Trip, Days, Events, Filters, the schedule and the watch); a booked sailing that isn't downloaded
+     * only limits Prices. All sailings leaves the app on the sailing it follows.
+     */
     fun selectSailing(key: String) {
         selectedSailingKey = key
         Prefs.setSelectedSailing(ctx, key)
+        if (key != io.github.mrarron.royalpebble.alerts.SailingView.ALL) {
+            val store = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx)
+            val target = store.sailings().firstOrNull { !it.active && io.github.mrarron.royalpebble.alerts.SailingView.key(it.sailing.shipCode, it.sailing.sailDate) == key }
+            if (target != null && store.activate(target.sailing.shipCode, target.sailing.sailDate)) {
+                io.github.mrarron.royalpricecheck.watch.WatchHost.logApp(ctx, "sailing", "app now follows ${target.sailing.shipCode} ${target.sailing.sailDate} (picked in Prices)")
+                io.github.mrarron.royalpricecheck.watch.WatchHost.storeChanged(ctx, "sailing switched")
+            }
+        }
+        lastActiveKey = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()?.let { io.github.mrarron.royalpebble.alerts.SailingView.key(it.shipCode, it.sailDate) }
+        syncTick++   // redraws Trip and the other screens that read the saved sailing
     }
 
-    private var optionsFor: Pair<RunResult?, Int>? = null
+    private var optionsTick by mutableIntStateOf(0)
+    private var lastActiveKey: String? = null
+
+    /**
+     * Trip kept, switched or removed a sailing (called after every save there). When the sailing the app follows
+     * changed and a specific sailing is picked in Prices, the pick follows it; the picker's list is read again.
+     */
+    fun sailingsChanged() {
+        val store = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx)
+        val active = store.sailing()?.let { io.github.mrarron.royalpebble.alerts.SailingView.key(it.shipCode, it.sailDate) }
+        if (lastActiveKey != null && active != lastActiveKey && selectedSailingKey != io.github.mrarron.royalpebble.alerts.SailingView.ALL) {
+            selectedSailingKey = active ?: io.github.mrarron.royalpebble.alerts.SailingView.ALL
+            Prefs.setSelectedSailing(ctx, selectedSailingKey)
+        }
+        lastActiveKey = active
+        optionsTick++
+    }
+
+    private var optionsFor: Triple<RunResult?, Int, Int>? = null
     private var optionsCache: List<io.github.mrarron.royalpebble.alerts.SailingOption> = emptyList()
 
-    /** Sailings from the last check's bookings, plus the sailing downloaded in Trip (read again after a check or a sync). */
+    /** Sailings from the last check's bookings, plus the sailings kept in Trip (read again after a check or a sync). */
     fun sailingOptions(): List<io.github.mrarron.royalpebble.alerts.SailingOption> {
-        val stamp = result to syncTick
+        val stamp = Triple(result, syncTick, optionsTick)
         if (optionsFor == stamp) return optionsCache
         val bookings = result?.bookings.orEmpty().map { io.github.mrarron.royalpebble.alerts.BookingRef(it.reservationId, it.shipCode, it.shipName, it.sailDate) }
-        val added = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailing()?.let {
-            io.github.mrarron.royalpebble.alerts.BookingRef("", it.shipCode, it.shipName, it.sailDate)
+        // Every sailing kept on the phone (downloaded or added in Trip) is listed, booked or not.
+        val added = io.github.mrarron.royalpricecheck.cruise.CruiseHome.store(ctx).sailings().map {
+            io.github.mrarron.royalpebble.alerts.BookingRef("", it.sailing.shipCode, it.sailing.shipName, it.sailing.sailDate)
         }
         optionsCache = io.github.mrarron.royalpebble.alerts.SailingView.options(bookings, added)
         optionsFor = stamp
